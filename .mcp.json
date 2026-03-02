@@ -1,0 +1,28 @@
+{
+  "mcpServers": {
+    "cms-facility": {
+      "type": "http",
+      "url": "http://localhost:8006/mcp"
+    },
+    "service-area": {
+      "type": "http",
+      "url": "http://localhost:8002/mcp"
+    },
+    "geo-demographics": {
+      "type": "http",
+      "url": "http://localhost:8003/mcp"
+    },
+    "drive-time": {
+      "type": "http",
+      "url": "http://localhost:8004/mcp"
+    },
+    "hospital-quality": {
+      "type": "http",
+      "url": "http://localhost:8005/mcp"
+    },
+    "health-system-profiler": {
+      "type": "http",
+      "url": "http://localhost:8007/mcp"
+    }
+  }
+}

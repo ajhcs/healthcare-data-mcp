@@ -1,0 +1,116 @@
+services:
+  cms-facility:
+    build: .
+    command: python -m servers.cms_facility.server
+    ports:
+      - "8006:8006"
+    environment:
+      - MCP_TRANSPORT=streamable-http
+      - MCP_PORT=8006
+    volumes:
+      - healthcare-cache:/root/.healthcare-data-mcp/cache
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost',8006),5); s.close()"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  service-area:
+    build: .
+    command: python -m servers.service_area.server
+    ports:
+      - "8002:8002"
+    environment:
+      - MCP_TRANSPORT=streamable-http
+      - MCP_PORT=8002
+    volumes:
+      - healthcare-cache:/root/.healthcare-data-mcp/cache
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost',8002),5); s.close()"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  geo-demographics:
+    build: .
+    command: python -m servers.geo_demographics.server
+    ports:
+      - "8003:8003"
+    environment:
+      - MCP_TRANSPORT=streamable-http
+      - MCP_PORT=8003
+      - CENSUS_API_KEY=${CENSUS_API_KEY:-}
+      - HUD_API_TOKEN=${HUD_API_TOKEN:-}
+    volumes:
+      - healthcare-cache:/root/.healthcare-data-mcp/cache
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost',8003),5); s.close()"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  drive-time:
+    build: .
+    command: python -m servers.drive_time.server
+    ports:
+      - "8004:8004"
+    environment:
+      - MCP_TRANSPORT=streamable-http
+      - MCP_PORT=8004
+      - ORS_API_KEY=${ORS_API_KEY:-}
+      - OSRM_BASE_URL=${OSRM_BASE_URL:-http://router.project-osrm.org}
+    volumes:
+      - healthcare-cache:/root/.healthcare-data-mcp/cache
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost',8004),5); s.close()"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  hospital-quality:
+    build: .
+    command: python -m servers.hospital_quality.server
+    ports:
+      - "8005:8005"
+    environment:
+      - MCP_TRANSPORT=streamable-http
+      - MCP_PORT=8005
+    volumes:
+      - healthcare-cache:/root/.healthcare-data-mcp/cache
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost',8005),5); s.close()"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  health-system-profiler:
+    build: .
+    command: python -m servers.health_system_profiler.server
+    ports:
+      - "8007:8007"
+    environment:
+      - MCP_TRANSPORT=streamable-http
+      - MCP_PORT=8007
+    volumes:
+      - healthcare-cache:/root/.healthcare-data-mcp/cache
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost',8007),5); s.close()"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  healthcare-cache:
+    driver: local
