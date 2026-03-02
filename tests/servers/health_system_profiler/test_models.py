@@ -5,10 +5,6 @@ from servers.health_system_profiler.models import (
     FacilitySummary,
     HealthSystemSummary,
     OffSiteSummary,
-    OutpatientSite,
-    ServiceCapabilities,
-    StaffingCounts,
-    SubEntity,
     SystemProfileResponse,
     SystemSearchResult,
 )

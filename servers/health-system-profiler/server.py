@@ -27,9 +27,7 @@ try:
         BedBreakdown,
         FacilitySummary,
         HealthSystemSummary,
-        OffSiteSummary,
         SystemProfileResponse,
-        SystemSearchResult,
     )
     from .outpatient_discovery import build_search_patterns, parse_nppes_results
     from .system_discovery import fuzzy_search_systems, resolve_system_ccns
@@ -47,9 +45,7 @@ except ImportError:
         BedBreakdown,
         FacilitySummary,
         HealthSystemSummary,
-        OffSiteSummary,
         SystemProfileResponse,
-        SystemSearchResult,
     )
     from outpatient_discovery import build_search_patterns, parse_nppes_results
     from system_discovery import fuzzy_search_systems, resolve_system_ccns

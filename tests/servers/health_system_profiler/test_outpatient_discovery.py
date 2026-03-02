@@ -1,6 +1,5 @@
 """Tests for NPPES-based outpatient site discovery."""
 
-import pytest
 
 from servers.health_system_profiler.outpatient_discovery import (
     categorize_taxonomy,

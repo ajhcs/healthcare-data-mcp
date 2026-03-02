@@ -1,6 +1,5 @@
 """Tests for health system profiler data loaders."""
 
-import pandas as pd
 import pytest
 
 from servers.health_system_profiler.data_loaders import (
