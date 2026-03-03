@@ -50,10 +50,18 @@ def _safe_float(row, col: str, default: float = 0.0) -> float:
         return default
 
 
-def _is_yes(row, col: str) -> bool:
+def _service_available(row, col: str) -> bool:
+    """Check a POS _SRVC_CD column — any non-zero/non-empty value means available.
+
+    POS service codes: 0 = not available, 1 = provided in-facility,
+    2 = provided via agreement, 3 = available through others.
+    """
     if col not in row.index:
         return False
-    return str(row[col]).strip().upper() in ("Y", "YES", "1", "TRUE")
+    val = str(row[col]).strip()
+    if not val or val.upper() in ("0", "NAN", "NONE", ""):
+        return False
+    return True
 
 
 def enrich_facility(ccn: str, pos_df: pd.DataFrame) -> FacilitySummary | None:
@@ -93,31 +101,37 @@ def enrich_facility(ccn: str, pos_df: pd.DataFrame) -> FacilitySummary | None:
     )
 
     services = ServiceCapabilities(
-        cardiac_catheterization=_is_yes(row, "CRDAC_CTHRTZTN_LAB_SW"),
-        open_heart_surgery=_is_yes(row, "OPN_HRT_SRGRY_SW"),
-        mri=_is_yes(row, "MRI_SRVC_SW"),
-        ct_scanner=_is_yes(row, "CT_SCNR_SW"),
-        pet_scanner=_is_yes(row, "PET_SCNR_SW"),
-        nuclear_medicine=_is_yes(row, "NUCLR_MED_SRVC_SW"),
-        trauma_center=_is_yes(row, "TRMA_CTR_SW"),
-        trauma_level=str(row.get("TRMA_CTR_LVL_CD", "") or "").strip(),
-        burn_care=_is_yes(row, "BRNCTR_SW"),
-        neonatal_icu=_is_yes(row, "NNTL_ICU_SW"),
-        obstetrics=_is_yes(row, "OBSTTRCL_SRVC_SW"),
-        transplant=_is_yes(row, "ORNG_TRNSP_SW"),
-        emergency_department=_is_yes(row, "EMER_DEPT_SW"),
-        operating_rooms=_safe_int(row, "OPRTN_RM_CNT"),
-        endoscopy_rooms=_safe_int(row, "ENDSCPY_RM_CNT"),
-        cardiac_cath_rooms=_safe_int(row, "CRDAC_CTHRTZTN_LAB_RM_CNT"),
+        cardiac_catheterization=_service_available(row, "CRDC_CTHRTZTN_LAB_SRVC_CD"),
+        open_heart_surgery=_service_available(row, "OPEN_HRT_SRGRY_SRVC_CD"),
+        mri=_service_available(row, "MGNTC_RSNC_IMG_SRVC_CD"),
+        ct_scanner=_service_available(row, "CT_SCAN_SRVC_CD"),
+        pet_scanner=_service_available(row, "PET_SCAN_SRVC_CD"),
+        nuclear_medicine=_service_available(row, "NUCLR_MDCN_SRVC_CD"),
+        trauma_center=_service_available(row, "SHCK_TRMA_SRVC_CD"),
+        trauma_level=str(row.get("SHCK_TRMA_SRVC_CD", "") or "").strip(),
+        burn_care=_service_available(row, "BURN_CARE_UNIT_SRVC_CD"),
+        neonatal_icu=_service_available(row, "NEONTL_ICU_SRVC_CD"),
+        obstetrics=_service_available(row, "OB_SRVC_CD"),
+        transplant=_service_available(row, "ORGN_TRNSPLNT_SRVC_CD"),
+        emergency_department=_service_available(row, "DCTD_ER_SRVC_CD"),
+        operating_rooms=_safe_int(row, "OPRTG_ROOM_CNT"),
+        endoscopy_rooms=_safe_int(row, "ENDSCPY_PRCDR_ROOMS_CNT"),
+        cardiac_cath_rooms=_safe_int(row, "CRDC_CTHRTZTN_PRCDR_ROOMS_CNT"),
+    )
+
+    therapists = (
+        _safe_int(row, "OCPTNL_THRPST_CNT")
+        + _safe_int(row, "PHYS_THRPST_CNT")
+        + _safe_int(row, "INHLTN_THRPST_CNT")
     )
 
     staffing = StaffingCounts(
         rn=_safe_int(row, "RN_CNT"),
         lpn=_safe_int(row, "LPN_CNT"),
-        physicians=_safe_int(row, "MDCL_STAFF_PHYSCN_CNT"),
-        pharmacists=_safe_int(row, "PHRMCST_CNT"),
-        therapists=_safe_int(row, "THRPST_CNT"),
-        total_fte=_safe_float(row, "TOT_STFNG"),
+        physicians=_safe_int(row, "PHYSN_CNT"),
+        pharmacists=_safe_int(row, "REG_PHRMCST_CNT"),
+        therapists=therapists,
+        total_fte=_safe_float(row, "EMPLEE_CNT"),
     )
 
     return FacilitySummary(

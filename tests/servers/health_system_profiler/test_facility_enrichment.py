@@ -11,7 +11,7 @@ from servers.health_system_profiler.facility_enrichment import (
 
 @pytest.fixture
 def sample_pos_df():
-    """Minimal POS-like DataFrame with key columns."""
+    """Minimal POS-like DataFrame with actual Q4 2025 column names."""
     return pd.DataFrame([
         {
             "PRVDR_NUM": "390001",
@@ -31,33 +31,35 @@ def sample_pos_df():
             "AIDS_BED_CNT": "0",
             "ALZHMR_BED_CNT": "0",
             "DLYS_BED_CNT": "0",
-            "CRDAC_CTHRTZTN_LAB_SW": "Y",
-            "OPN_HRT_SRGRY_SW": "Y",
-            "MRI_SRVC_SW": "Y",
-            "CT_SCNR_SW": "Y",
-            "PET_SCNR_SW": "N",
-            "NUCLR_MED_SRVC_SW": "Y",
-            "TRMA_CTR_SW": "Y",
-            "TRMA_CTR_LVL_CD": "1",
-            "BRNCTR_SW": "N",
-            "NNTL_ICU_SW": "Y",
-            "OBSTTRCL_SRVC_SW": "Y",
-            "ORNG_TRNSP_SW": "N",
-            "EMER_DEPT_SW": "Y",
+            # Service codes: 0=no, 1=in-facility, 2=via agreement, 3=other
+            "CRDC_CTHRTZTN_LAB_SRVC_CD": "1",
+            "OPEN_HRT_SRGRY_SRVC_CD": "1",
+            "MGNTC_RSNC_IMG_SRVC_CD": "1",
+            "CT_SCAN_SRVC_CD": "1",
+            "PET_SCAN_SRVC_CD": "0",
+            "NUCLR_MDCN_SRVC_CD": "1",
+            "SHCK_TRMA_SRVC_CD": "1",
+            "BURN_CARE_UNIT_SRVC_CD": "0",
+            "NEONTL_ICU_SRVC_CD": "1",
+            "OB_SRVC_CD": "1",
+            "ORGN_TRNSPLNT_SRVC_CD": "0",
+            "DCTD_ER_SRVC_CD": "1",
             "RN_CNT": "2000",
             "LPN_CNT": "150",
-            "MDCL_STAFF_PHYSCN_CNT": "500",
-            "PHRMCST_CNT": "50",
-            "THRPST_CNT": "100",
-            "TOT_STFNG": "4500.5",
-            "OPRTN_RM_CNT": "30",
-            "ENDSCPY_RM_CNT": "8",
-            "CRDAC_CTHRTZTN_LAB_RM_CNT": "4",
+            "PHYSN_CNT": "500",
+            "REG_PHRMCST_CNT": "50",
+            "OCPTNL_THRPST_CNT": "30",
+            "PHYS_THRPST_CNT": "40",
+            "INHLTN_THRPST_CNT": "30",
+            "EMPLEE_CNT": "4500.5",
+            "OPRTG_ROOM_CNT": "30",
+            "ENDSCPY_PRCDR_ROOMS_CNT": "8",
+            "CRDC_CTHRTZTN_PRCDR_ROOMS_CNT": "4",
             "TOT_OFSITE_EMER_DEPT_CNT": "2",
             "TOT_OFSITE_URGNT_CARE_CNTR_CNT": "5",
             "TOT_OFSITE_PSYCH_UNIT_CNT": "1",
             "TOT_OFSITE_REHAB_HOSP_CNT": "1",
-            "RLTD_PRVDR_NMBR": "",
+            "RELATED_PROVIDER_NUMBER": "",
             "PRVDR_CTGRY_CD": "01",
             "PRVDR_CTGRY_SBTYP_CD": "01",
             "GNRL_CNTL_TYPE_CD": "04",
@@ -83,11 +85,16 @@ def test_enrich_facility(sample_pos_df):
     assert facility.services.pet_scanner is False
     assert facility.services.trauma_center is True
     assert facility.services.trauma_level == "1"
+    assert facility.services.burn_care is False
     assert facility.services.emergency_department is True
     assert facility.services.operating_rooms == 30
+    assert facility.services.endoscopy_rooms == 8
+    assert facility.services.cardiac_cath_rooms == 4
     # Staffing
     assert facility.staffing.rn == 2000
     assert facility.staffing.physicians == 500
+    assert facility.staffing.pharmacists == 50
+    assert facility.staffing.therapists == 100  # 30 OT + 40 PT + 30 RT
     assert facility.staffing.total_fte == 4500.5
 
 

@@ -11,19 +11,19 @@ def pos_with_related():
     """POS data with related provider linkages."""
     return pd.DataFrame([
         # Parent hospital
-        {"PRVDR_NUM": "390001", "FAC_NAME": "Jefferson Main", "RLTD_PRVDR_NMBR": "",
+        {"PRVDR_NUM": "390001", "FAC_NAME": "Jefferson Main", "RELATED_PROVIDER_NUMBER": "",
          "CITY_NAME": "Philadelphia", "STATE_CD": "PA", "BED_CNT": "900",
          "PRVDR_CTGRY_CD": "01", "PRVDR_CTGRY_SBTYP_CD": "01"},
         # Related dialysis center
-        {"PRVDR_NUM": "392001", "FAC_NAME": "Jefferson Dialysis", "RLTD_PRVDR_NMBR": "390001",
+        {"PRVDR_NUM": "392001", "FAC_NAME": "Jefferson Dialysis", "RELATED_PROVIDER_NUMBER": "390001",
          "CITY_NAME": "Philadelphia", "STATE_CD": "PA", "BED_CNT": "0",
          "PRVDR_CTGRY_CD": "11", "PRVDR_CTGRY_SBTYP_CD": ""},
         # Related rehab facility
-        {"PRVDR_NUM": "393001", "FAC_NAME": "Jefferson Rehab", "RLTD_PRVDR_NMBR": "390001",
+        {"PRVDR_NUM": "393001", "FAC_NAME": "Jefferson Rehab", "RELATED_PROVIDER_NUMBER": "390001",
          "CITY_NAME": "Philadelphia", "STATE_CD": "PA", "BED_CNT": "40",
          "PRVDR_CTGRY_CD": "01", "PRVDR_CTGRY_SBTYP_CD": "02"},
         # Unrelated facility
-        {"PRVDR_NUM": "390500", "FAC_NAME": "Some Other Hospital", "RLTD_PRVDR_NMBR": "",
+        {"PRVDR_NUM": "390500", "FAC_NAME": "Some Other Hospital", "RELATED_PROVIDER_NUMBER": "",
          "CITY_NAME": "Allentown", "STATE_CD": "PA", "BED_CNT": "200",
          "PRVDR_CTGRY_CD": "01", "PRVDR_CTGRY_SBTYP_CD": "01"},
     ])
