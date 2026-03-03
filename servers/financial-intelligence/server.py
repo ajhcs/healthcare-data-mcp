@@ -64,14 +64,14 @@ async def search_form990(query: str, state: str = "", ntee_code: str = "") -> st
         for org in orgs[:25]:
             results.append(Form990Summary(
                 ein=str(org.get("ein", "")),
-                name=org.get("name", ""),
-                city=org.get("city", ""),
-                state=org.get("state", ""),
-                ntee_code=org.get("ntee_code", ""),
+                name=org.get("name") or "",
+                city=org.get("city") or "",
+                state=org.get("state") or "",
+                ntee_code=org.get("ntee_code") or "",
                 total_revenue=_safe_float(org.get("income_amount")),
                 total_expenses=_safe_float(org.get("revenue_amount")),
                 net_assets=_safe_float(org.get("asset_amount")),
-                tax_period=str(org.get("tax_period", "")),
+                tax_period=str(org.get("tax_period") or ""),
             ).model_dump())
 
         return json.dumps({"total_results": data.get("total_results", 0), "organizations": results})
