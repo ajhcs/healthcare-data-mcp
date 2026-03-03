@@ -20,7 +20,6 @@ _CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 _HPSA_CACHE = _CACHE_DIR / "hpsa.parquet"
 _HCRIS_CACHE = _CACHE_DIR / "hcris_staffing.parquet"
-_PBJ_CACHE = _CACHE_DIR / "pbj_staffing.parquet"
 _CACHE_TTL_DAYS = 30
 
 # ACGME static data (bundled with server)
@@ -158,7 +157,7 @@ async def ensure_hcris_cached() -> bool:
         # Pattern: https://downloads.cms.gov/files/hcris/HOSP10FY{year}.zip
         import datetime as dt
         current_year = dt.date.today().year
-        downloaded = False
+        zip_path: Path | None = None
 
         for year in range(current_year, current_year - 3, -1):
             url = f"https://downloads.cms.gov/files/hcris/HOSP10FY{year}.zip"
@@ -168,13 +167,12 @@ async def ensure_hcris_cached() -> bool:
                     if resp.status_code == 200 and len(resp.content) > 10000:
                         zip_path = _CACHE_DIR / f"hcris_fy{year}.zip"
                         zip_path.write_bytes(resp.content)
-                        downloaded = True
                         logger.info("Downloaded HCRIS FY%d (%d bytes)", year, len(resp.content))
                         break
             except Exception:
                 continue
 
-        if not downloaded:
+        if zip_path is None:
             logger.warning("Could not download HCRIS data from CMS")
             return False
 
@@ -219,9 +217,9 @@ async def ensure_hcris_cached() -> bool:
                 name_cols = [c for c in rpt_df.columns if "prvdr" in c or "name" in c]
                 if name_cols:
                     merge_cols = [rpt_rec_col] + name_cols[:2]
+                    deduped = pd.DataFrame(rpt_df[merge_cols]).drop_duplicates(subset=rpt_rec_col)
                     result_df = result_df.merge(
-                        rpt_df[merge_cols].drop_duplicates(subset=[rpt_rec_col]),
-                        on=rpt_rec_col, how="left"
+                        deduped, on=rpt_rec_col, how="left"
                     )
 
         result_df.to_parquet(_HCRIS_CACHE, compression="zstd", index=False)
@@ -249,7 +247,6 @@ def query_hcris_gme(ccn: str) -> dict | None:
             "SELECT column_name FROM information_schema.columns WHERE table_name='hcris'"
         ).fetchall()]
 
-        rpt_col = next((c for c in cols if "rpt_rec" in c), None)
         wksht_col = next((c for c in cols if "wksht" in c), None)
         line_col = next((c for c in cols if "line" in c), None)
         clmn_col = next((c for c in cols if "clmn" in c), None)
@@ -439,24 +436,27 @@ def query_acgme_programs(
                          "Place acgme_programs.csv in the data/ directory."}]
 
     try:
-        df = pd.read_csv(_ACGME_CSV, dtype=str, keep_default_na=False)
-        df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
+        df: pd.DataFrame = pd.read_csv(_ACGME_CSV, dtype=str, keep_default_na=False)
+        df.columns = pd.Index([c.strip().lower().replace(" ", "_") for c in df.columns])
 
         # Apply filters
         if institution:
             inst_col = next((c for c in df.columns if "institution" in c or "sponsor" in c), None)
             if inst_col:
-                df = df[df[inst_col].str.lower().str.contains(institution.lower(), na=False)]
+                mask = df[inst_col].str.lower().str.contains(institution.lower(), na=False)
+                df = pd.DataFrame(df[mask])
 
         if specialty:
             spec_col = next((c for c in df.columns if "specialty" in c), None)
             if spec_col:
-                df = df[df[spec_col].str.lower().str.contains(specialty.lower(), na=False)]
+                mask = df[spec_col].str.lower().str.contains(specialty.lower(), na=False)
+                df = pd.DataFrame(df[mask])
 
         if state:
             state_col = next((c for c in df.columns if c in ("state", "st")), None)
             if state_col:
-                df = df[df[state_col].str.upper() == state.upper()]
+                mask = df[state_col].str.upper() == state.upper()
+                df = pd.DataFrame(df[mask])
 
         results = []
         for _, row in df.head(100).iterrows():
