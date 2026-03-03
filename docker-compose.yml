@@ -166,6 +166,25 @@ services:
       retries: 3
       start_period: 30s
 
+  workforce-analytics:
+    build: .
+    command: python -m servers.workforce_analytics.server
+    ports:
+      - "8011:8011"
+    environment:
+      - MCP_TRANSPORT=streamable-http
+      - MCP_PORT=8011
+      - BLS_API_KEY=${BLS_API_KEY:-}
+    volumes:
+      - healthcare-cache:/root/.healthcare-data-mcp/cache
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost',8011),5); s.close()"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
 volumes:
   healthcare-cache:
     driver: local

@@ -35,6 +35,10 @@
     "physician-referral-network": {
       "type": "http",
       "url": "http://localhost:8010/mcp"
+    },
+    "workforce-analytics": {
+      "type": "http",
+      "url": "http://localhost:8011/mcp"
     }
   }
 }
