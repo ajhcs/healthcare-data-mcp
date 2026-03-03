@@ -393,6 +393,64 @@ async def test_financial_intelligence():
 
 
 # ============================================================
+# Test 7: Price Transparency / MRF Engine Server
+# ============================================================
+async def test_price_transparency():
+    print("\n" + "=" * 60)
+    print("TEST: price-transparency-mcp")
+    print("=" * 60)
+
+    results = {}
+
+    # Test 1: CMS Provider Data Catalog lookup
+    print("\n[1/4] CMS Provider Data Catalog — searching for 'MAYO'...")
+    from servers.price_transparency.mrf_registry import search_cms_providers
+    t0 = time.time()
+    providers = await search_cms_providers("MAYO")
+    elapsed = time.time() - t0
+    print(f"  -> Found {len(providers)} providers in {elapsed:.1f}s")
+    if providers:
+        p = providers[0]
+        print(f"  -> First: {p.get('facility_name')} ({p.get('state')})")
+    results["cms_provider_count"] = len(providers)
+    assert len(providers) > 0, "Expected CMS Provider results for MAYO"
+
+    # Test 2: CMS Physician Fee Schedule lookup
+    print("\n[2/4] CMS PFS — looking up CPT 99213...")
+    from servers.price_transparency.benchmark_client import get_pfs_rate, calculate_medicare_allowed
+    t0 = time.time()
+    pfs = await get_pfs_rate("99213")
+    elapsed = time.time() - t0
+    if pfs:
+        print(f"  -> Work RVU: {pfs.get('rvu_work')} in {elapsed:.1f}s")
+        print(f"  -> Total RVU (non-facility): {pfs.get('full_nfac_total')}")
+        allowed = calculate_medicare_allowed(pfs)
+        print(f"  -> Medicare allowed (national): ${allowed}")
+        results["pfs_allowed"] = allowed
+    else:
+        print("  -> PFS lookup returned None")
+        results["pfs_allowed"] = None
+    assert pfs is not None, "Expected PFS data for 99213"
+
+    # Test 3: Registry search (local)
+    print("\n[3/4] MRF Registry — local registry search...")
+    from servers.price_transparency.mrf_registry import search_registry
+    local = search_registry("test")
+    print(f"  -> Local registry entries matching 'test': {len(local)}")
+    results["local_registry_count"] = len(local)
+
+    # Test 4: MRF processor — cache status
+    print("\n[4/4] MRF Processor — cache status...")
+    from servers.price_transparency.mrf_processor import get_all_cached_hospitals
+    cached = get_all_cached_hospitals()
+    print(f"  -> Cached hospitals: {len(cached)}")
+    results["cached_hospitals"] = len(cached)
+
+    print("\n  PRICE-TRANSPARENCY: ALL PASSED")
+    return results
+
+
+# ============================================================
 # Main runner
 # ============================================================
 async def main():
@@ -410,6 +468,7 @@ async def main():
         ("drive-time", test_drive_time),
         ("hospital-quality", test_hospital_quality),
         ("financial-intelligence", test_financial_intelligence),
+        ("price-transparency", test_price_transparency),
     ]
 
     for name, test_fn in tests:
