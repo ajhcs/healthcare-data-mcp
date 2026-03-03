@@ -36,18 +36,19 @@ DEFAULT_LOCALITY = "0000000"
 # Source 1: CMS Physician Fee Schedule (PFS)
 # ---------------------------------------------------------------------------
 
-async def get_pfs_rate(hcpcs_code: str, locality: str | None = None) -> dict | None:
+async def get_pfs_rate(hcpcs_code: str) -> dict | None:
     """Fetch PFS indicator data for an HCPCS code.
+
+    PFS indicators are national-level (not locality-specific). Use
+    get_locality_gpci() separately to apply geographic adjustments.
 
     Args:
         hcpcs_code: HCPCS/CPT code (e.g. "99213").
-        locality: Medicare locality code. Defaults to national average ("0000000").
 
     Returns:
         Dict with RVU fields (rvu_work, rvu_mp, full_nfac_pe, full_nfac_total,
         full_fac_total, conv_fact, year, hcpc, modifier, sdesc) or None on failure.
     """
-    loc = locality or DEFAULT_LOCALITY
     payload = {
         "conditions": [
             {"property": "hcpc", "value": hcpcs_code.strip(), "operator": "="},
@@ -162,11 +163,14 @@ def calculate_medicare_allowed(pfs_data: dict, gpci_data: dict | None = None) ->
         rvu_work = _safe_float(pfs_data.get("rvu_work"))
         rvu_pe = _safe_float(pfs_data.get("full_nfac_pe"))
         rvu_mp = _safe_float(pfs_data.get("rvu_mp"))
-        gpci_work = gpci_data.get("gpci_work")
-        gpci_pe = gpci_data.get("gpci_pe")
-        gpci_mp = gpci_data.get("gpci_mp")
+        gpci_work = _safe_float(gpci_data.get("gpci_work"))
+        gpci_pe = _safe_float(gpci_data.get("gpci_pe"))
+        gpci_mp = _safe_float(gpci_data.get("gpci_mp"))
 
-        if all(v is not None for v in [rvu_work, rvu_pe, rvu_mp, gpci_work, gpci_pe, gpci_mp]):
+        if (
+            rvu_work is not None and rvu_pe is not None and rvu_mp is not None
+            and gpci_work is not None and gpci_pe is not None and gpci_mp is not None
+        ):
             total_rvu = (rvu_work * gpci_work) + (rvu_pe * gpci_pe) + (rvu_mp * gpci_mp)
             return round(total_rvu * cf, 2)
 
