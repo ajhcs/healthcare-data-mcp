@@ -5,11 +5,9 @@ import logging
 import os
 import re
 import time
-from pathlib import Path
-
 import httpx
 
-from shared.utils.cms_client import DATA_DIR, get_cache_path
+from shared.utils.cms_client import get_cache_path
 
 logger = logging.getLogger(__name__)
 
