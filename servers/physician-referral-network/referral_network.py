@@ -105,7 +105,7 @@ def load_docgraph_csv(csv_path: str | Path) -> int:
 
     # Convert numeric columns
     for col in ["shared_count", "transaction_count", "same_day_count"]:
-        df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0).astype(int)
+        df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0).astype(int)  # type: ignore[union-attr]
 
     # Keep only standard columns
     df = df[["npi_from", "npi_to", "shared_count", "transaction_count", "same_day_count"]]

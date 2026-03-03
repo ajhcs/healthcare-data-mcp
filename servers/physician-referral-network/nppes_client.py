@@ -33,11 +33,6 @@ UTILIZATION_DATASET_URL = (
     "medicare-physician-other-practitioners/"
     "medicare-physician-other-practitioners-by-provider-and-service"
 )
-# The data-api endpoint for this dataset (GET-based, filter by NPI)
-UTILIZATION_API_BASE = "https://data.cms.gov/data-api/v1/dataset"
-# Dataset UUID — resolve on first use from the catalog page
-_utilization_dataset_id: str | None = None
-
 NPPES_API_URL = "https://npiregistry.cms.hhs.gov/api/"
 
 
