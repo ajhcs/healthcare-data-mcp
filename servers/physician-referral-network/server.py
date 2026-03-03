@@ -278,17 +278,21 @@ async def detect_leakage(
         if "error" in leakage:
             return json.dumps(leakage)
 
-        # Enrich top destinations with NPPES data
+        # Enrich top destinations with NPPES data, filter by specialty if requested
         enriched_destinations = []
+        specialty_lower = specialty.strip().lower() if specialty else ""
         for dest in leakage.get("top_leakage_destinations", [])[:25]:
             try:
                 physicians = await nppes_client.search_physicians(dest["npi"], limit=1)
                 if physicians:
                     p = physicians[0]
+                    dest_specialty = p.get("specialty", "")
+                    if specialty_lower and specialty_lower not in dest_specialty.lower():
+                        continue
                     enriched_destinations.append(LeakageDestination(
                         npi=dest["npi"],
                         name=f"{p.get('first_name', '')} {p.get('last_name', '')}".strip(),
-                        specialty=p.get("specialty", ""),
+                        specialty=dest_specialty,
                         shared_count=dest.get("shared_count", 0),
                         city=p.get("city", ""),
                         state=p.get("state", ""),
