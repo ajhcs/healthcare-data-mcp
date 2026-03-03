@@ -137,6 +137,10 @@ def search_nlrb_elections(
             where_parts.append(f"UPPER({state_col}) = ?")
             params.append(state.upper())
 
+        if date_col:
+            where_parts.append(f"SUBSTR({date_col},1,4) BETWEEN ? AND ?")
+            params.extend([str(year_start), str(year_end)])
+
         where = " AND ".join(where_parts) if where_parts else "1=1"
 
         rows = con.execute(
