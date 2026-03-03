@@ -8,10 +8,9 @@ HCRIS cost report staffing analysis.
 import json
 import logging
 import os as _os
-
 from mcp.server.fastmcp import FastMCP
 
-from . import bls_client, labor_data, workforce_data
+from . import bls_client, labor_data, workforce_data  # pyright: ignore[reportAttributeAccessIssue]
 from .models import (
     BLSEmploymentResponse,
     CostReportStaffingResponse,
@@ -43,7 +42,7 @@ mcp = FastMCP(**_mcp_kwargs)
 @mcp.tool()
 async def get_bls_employment(
     occupation: str, area_code: str = "", state: str = "",
-    include_projections: bool = True,
+    include_projections: bool = True,  # noqa: ARG001 — exposed in MCP schema
 ) -> str:
     """Get occupation-level employment counts, wages, and projections by MSA or state.
 
@@ -327,4 +326,4 @@ async def get_cost_report_staffing(ccn: str, year: int = 0) -> str:
 
 
 if __name__ == "__main__":
-    mcp.run(transport=_transport)
+    mcp.run(transport=_transport)  # type: ignore[arg-type]
