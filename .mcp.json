@@ -31,6 +31,10 @@
     "price-transparency": {
       "type": "http",
       "url": "http://localhost:8009/mcp"
+    },
+    "physician-referral-network": {
+      "type": "http",
+      "url": "http://localhost:8010/mcp"
     }
   }
 }
