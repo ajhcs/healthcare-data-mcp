@@ -23,6 +23,10 @@
     "health-system-profiler": {
       "type": "http",
       "url": "http://localhost:8007/mcp"
+    },
+    "financial-intelligence": {
+      "type": "http",
+      "url": "http://localhost:8008/mcp"
     }
   }
 }
