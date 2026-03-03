@@ -1022,6 +1022,18 @@ def get_rate_stats(hospital_id: str, cpt_codes: list[str]) -> list[dict]:
     return rows
 
 
+def get_cache_metadata(hospital_id: str) -> dict:
+    """Read cache metadata for a hospital. Returns empty dict if not cached."""
+    d = _hospital_cache_dir(hospital_id)
+    meta_path = d / "metadata.json"
+    if meta_path.exists():
+        try:
+            return json.loads(meta_path.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    return {}
+
+
 def get_all_cached_hospitals() -> list[dict]:
     """List all hospitals with valid cached Parquet data.
 

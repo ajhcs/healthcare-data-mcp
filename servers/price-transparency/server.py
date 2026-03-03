@@ -8,6 +8,7 @@ statistics, cross-hospital comparisons, and Medicare benchmark analysis.
 import json
 import logging
 import os as _os
+import statistics as _stats
 
 from mcp.server.fastmcp import FastMCP
 
@@ -63,25 +64,9 @@ async def search_mrf_index(query: str, state: str = "") -> str:
             if hospital_id:
                 cached = mrf_processor.is_cached(hospital_id)
                 if cached:
-                    # Read metadata for cache details
-                    try:
-                        cache_dir = mrf_processor._hospital_cache_dir(hospital_id)
-                        meta = json.loads(
-                            (cache_dir / "metadata.json").read_text(encoding="utf-8")
-                        )
-                        cache_date = meta.get("cached_at", "")
-                        row_count = meta.get("row_count")
-                    except Exception:
-                        pass
-
-            # Build MRFLocation list from raw mrf_urls
-            mrf_urls = []
-            for u in hosp.get("mrf_urls", []):
-                mrf_urls.append(MRFLocation(
-                    url=u.get("url", ""),
-                    format=u.get("format", "csv"),
-                    last_verified=u.get("last_verified", ""),
-                ).model_dump())
+                    meta = mrf_processor.get_cache_metadata(hospital_id)
+                    cache_date = meta.get("cached_at", "")
+                    row_count = meta.get("row_count")
 
             results.append(MRFIndexResult(
                 hospital_name=hosp.get("name", ""),
@@ -89,7 +74,7 @@ async def search_mrf_index(query: str, state: str = "") -> str:
                 ein=hosp.get("ein", ""),
                 city=hosp.get("city", ""),
                 state=hosp.get("state", ""),
-                mrf_urls=[MRFLocation(**u) for u in mrf_urls],
+                mrf_urls=[MRFLocation(**u) for u in hosp.get("mrf_urls", [])],
                 cached=cached,
                 cache_date=cache_date,
                 row_count=row_count,
@@ -145,26 +130,17 @@ async def get_negotiated_rates(
         # Query rates from Parquet cache
         raw_rates = mrf_processor.get_rates(hospital_id, cpt_codes, payer=payer)
 
-        # Read hospital name from metadata
-        hospital_name = hospital_id
-        try:
-            cache_dir = mrf_processor._hospital_cache_dir(hospital_id)
-            meta = json.loads(
-                (cache_dir / "metadata.json").read_text(encoding="utf-8")
-            )
-            hospital_name = meta.get("hospital_name", hospital_id)
-        except Exception:
-            pass
+        meta = mrf_processor.get_cache_metadata(hospital_id)
+        hospital_name = meta.get("hospital_name", hospital_id)
 
-        rates = [NegotiatedRate(**r).model_dump() for r in raw_rates]
-
+        rates = [NegotiatedRate(**r) for r in raw_rates]
         source = "live_download" if mrf_url and not cached else "parquet_cache"
 
         response = NegotiatedRatesResponse(
             hospital_name=hospital_name,
             hospital_id=hospital_id,
             cpt_codes_requested=cpt_codes,
-            rates=[NegotiatedRate(**r) for r in raw_rates],
+            rates=rates,
             total_rates=len(rates),
             source=source,
         )
@@ -200,7 +176,7 @@ async def compute_rate_dispersion(hospital_id: str, cpt_codes: list[str]) -> str
         raw_stats = mrf_processor.get_rate_stats(hospital_id, cpt_codes)
 
         results = [RateDispersion(**s).model_dump() for s in raw_stats]
-        return json.dumps({"hospital_id": hospital_id, "dispersions": results})
+        return json.dumps({"hospital_id": hospital_id, "dispersion": results})
     except Exception as e:
         logger.exception("compute_rate_dispersion failed")
         return json.dumps({"error": f"compute_rate_dispersion failed: {e}"})
@@ -297,16 +273,8 @@ async def benchmark_rates(
                 )
             })
 
-        # Read hospital name from metadata
-        hospital_name = hospital_id
-        try:
-            cache_dir = mrf_processor._hospital_cache_dir(hospital_id)
-            meta = json.loads(
-                (cache_dir / "metadata.json").read_text(encoding="utf-8")
-            )
-            hospital_name = meta.get("hospital_name", hospital_id)
-        except Exception:
-            pass
+        meta = mrf_processor.get_cache_metadata(hospital_id)
+        hospital_name = meta.get("hospital_name", hospital_id)
 
         # Fetch GPCI data for the locality (or national default)
         gpci_data = await benchmark_client.get_locality_gpci(
@@ -335,8 +303,6 @@ async def benchmark_rates(
                     float(dollar)
                 )
         # Compute median per hospital per code
-        import statistics as _stats
-
         for code, hospitals_map in hosp_rates.items():
             medians: list[float] = []
             for hid, vals in hospitals_map.items():
