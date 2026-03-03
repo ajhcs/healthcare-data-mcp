@@ -13,10 +13,16 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import httpx
+import pandas as pd
 
 from shared.utils.cms_client import get_cache_path
 
 logger = logging.getLogger(__name__)
+
+IRS_EFILE_INDEX_BASE = "https://apps.irs.gov/pub/epostcard/990/xml"
+
+# In-memory cache for loaded indexes
+_index_cache: dict[str, pd.DataFrame] = {}
 
 
 def _strip_ns(tree: ET.Element) -> ET.Element:
@@ -67,6 +73,100 @@ async def download_990_xml(xml_url: str, ein: str, tax_period: str) -> Path | No
     except Exception as e:
         logger.warning("Failed to download 990 XML from %s: %s", xml_url, e)
         return None
+
+
+async def load_efile_index(year: str) -> pd.DataFrame:
+    """Download and cache the IRS 990 e-file index CSV for a given year.
+
+    Index contains RETURN_ID, FILING_TYPE, EIN, TAX_PERIOD, SUB_DATE,
+    TAXPAYER_NAME, RETURN_TYPE, DLN, OBJECT_ID.
+    """
+    if year in _index_cache:
+        return _index_cache[year]
+
+    cache_key = f"irs990_index_{year}"
+    cached = get_cache_path(cache_key, suffix=".csv")
+
+    if not cached.exists():
+        url = f"{IRS_EFILE_INDEX_BASE}/{year}/index_{year}.csv"
+        try:
+            async with httpx.AsyncClient(timeout=300.0, follow_redirects=True) as client:
+                resp = await client.get(url)
+                resp.raise_for_status()
+                cached.write_bytes(resp.content)
+                logger.info("Cached IRS e-file index for year %s (%d bytes)", year, len(resp.content))
+        except Exception as e:
+            logger.warning("Failed to download IRS e-file index for %s: %s", year, e)
+            return pd.DataFrame()
+
+    try:
+        df = pd.read_csv(cached, dtype=str, keep_default_na=False)
+        df.columns = [c.strip().upper() for c in df.columns]
+        _index_cache[year] = df
+        return df
+    except Exception as e:
+        logger.warning("Failed to parse IRS e-file index for %s: %s", year, e)
+        return pd.DataFrame()
+
+
+async def lookup_xml_url(ein: str, tax_period: str) -> str | None:
+    """Look up the IRS e-file XML URL for a given EIN and tax period.
+
+    Args:
+        ein: Employer Identification Number (digits only, no hyphens).
+        tax_period: Tax period in YYYYMM or YYYY format.
+
+    Returns:
+        Full URL to the XML file, or None if not found.
+    """
+    # Extract year from tax_period (YYYYMM -> YYYY)
+    year = tax_period[:4] if len(tax_period) >= 4 else ""
+    if not year or not year.isdigit():
+        return None
+
+    # Try the filing year and the next year (filings may appear in index of following year)
+    for try_year in (year, str(int(year) + 1)):
+        df = await load_efile_index(try_year)
+        if df.empty:
+            continue
+
+        ein_col = "EIN" if "EIN" in df.columns else None
+        if not ein_col:
+            continue
+
+        # Filter by EIN (strip leading zeros for comparison)
+        matches = df[df[ein_col].str.strip() == ein.strip().lstrip("0")]
+        if matches.empty:
+            # Try with original (some EINs have leading zeros in index)
+            matches = df[df[ein_col].str.strip() == ein.strip()]
+
+        if matches.empty:
+            continue
+
+        # If we have a specific tax_period (YYYYMM), filter further
+        if len(tax_period) >= 6 and "TAX_PERIOD" in matches.columns:
+            period_matches = matches[matches["TAX_PERIOD"].str.strip() == tax_period.strip()]
+            if not period_matches.empty:
+                matches = period_matches
+
+        # Take the most recent by TAX_PERIOD
+        if "TAX_PERIOD" in matches.columns:
+            matches = matches.sort_values("TAX_PERIOD", ascending=False)
+
+        # Get OBJECT_ID from the first (most recent) match
+        obj_id_col = "OBJECT_ID" if "OBJECT_ID" in matches.columns else None
+        if not obj_id_col:
+            continue
+
+        object_id = str(matches.iloc[0][obj_id_col]).strip()
+        if not object_id:
+            continue
+
+        xml_url = f"{IRS_EFILE_INDEX_BASE}/{try_year}/{object_id}_public.xml"
+        logger.info("Found IRS e-file XML for EIN %s: %s", ein, xml_url)
+        return xml_url
+
+    return None
 
 
 def parse_990_xml(xml_path: Path) -> dict:

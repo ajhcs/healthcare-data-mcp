@@ -11,7 +11,7 @@ import os as _os
 from mcp.server.fastmcp import FastMCP
 
 from . import edgar_client, propublica_client
-from .irs990_parser import download_990_xml, parse_990_xml
+from .irs990_parser import download_990_xml, lookup_xml_url, parse_990_xml
 from .models import (
     Form990Details,
     Form990Summary,
@@ -110,6 +110,10 @@ async def get_form990_details(ein: str) -> str:
 
         # Try to get XML URL — ProPublica may or may not include it
         xml_url = latest.get("xml_url", "")
+
+        # If ProPublica doesn't provide XML URL, try IRS e-file index
+        if not xml_url:
+            xml_url = await lookup_xml_url(ein, tax_period) or ""
 
         if xml_url:
             xml_path = await download_990_xml(xml_url, ein, tax_period)
