@@ -35,10 +35,63 @@ UTILIZATION_DATASET_URL = (
 )
 NPPES_API_URL = "https://npiregistry.cms.hhs.gov/api/"
 
+# Mapping from common/shorthand specialty names to official NPPES taxonomy
+# descriptions.  Keys are lowercased for case-insensitive lookup.
+_SPECIALTY_ALIASES: dict[str, str] = {
+    "cardiology": "Cardiovascular Disease",
+    "cardiac surgery": "Thoracic Surgery (Cardiothoracic Vascular Surgery)",
+    "dermatology": "Dermatology",
+    "emergency medicine": "Emergency Medicine",
+    "endocrinology": "Endocrinology, Diabetes & Metabolism",
+    "ent": "Otolaryngology",
+    "family medicine": "Family Medicine",
+    "gastroenterology": "Gastroenterology",
+    "general surgery": "Surgery",
+    "geriatrics": "Geriatric Medicine",
+    "hematology": "Hematology & Oncology",
+    "hospitalist": "Hospitalist",
+    "infectious disease": "Infectious Disease",
+    "internal medicine": "Internal Medicine",
+    "nephrology": "Nephrology",
+    "neurology": "Neurology",
+    "neurosurgery": "Neurological Surgery",
+    "ob/gyn": "Obstetrics & Gynecology",
+    "obstetrics": "Obstetrics & Gynecology",
+    "gynecology": "Obstetrics & Gynecology",
+    "oncology": "Medical Oncology",
+    "ophthalmology": "Ophthalmology",
+    "orthopedic surgery": "Orthopaedic Surgery",
+    "orthopedics": "Orthopaedic Surgery",
+    "pain management": "Pain Medicine",
+    "pathology": "Pathology",
+    "pediatrics": "Pediatrics",
+    "physical medicine": "Physical Medicine & Rehabilitation",
+    "plastic surgery": "Plastic and Reconstructive Surgery",
+    "psychiatry": "Psychiatry & Neurology",
+    "pulmonology": "Pulmonary Disease",
+    "radiology": "Diagnostic Radiology",
+    "rheumatology": "Rheumatology",
+    "sports medicine": "Sports Medicine",
+    "urology": "Urology",
+    "vascular surgery": "Vascular Surgery",
+}
+
 
 # ---------------------------------------------------------------------------
 # NPPES Search
 # ---------------------------------------------------------------------------
+
+def _resolve_specialty(specialty: str) -> str:
+    """Resolve a user-facing specialty name to an NPPES taxonomy description.
+
+    If the specialty matches a known alias (case-insensitive), the official
+    taxonomy description is returned.  Otherwise the input is passed through
+    unchanged so the NPPES API can attempt its own matching.
+    """
+    if not specialty:
+        return specialty
+    return _SPECIALTY_ALIASES.get(specialty.strip().lower(), specialty)
+
 
 async def search_physicians(
     query: str,
@@ -50,7 +103,8 @@ async def search_physicians(
 
     Args:
         query: First/last name, full name, or NPI number.
-        specialty: Taxonomy description filter (e.g. "Cardiology").
+        specialty: Specialty filter — accepts common names (e.g. "Cardiology")
+                   which are mapped to official NPPES taxonomy descriptions.
         state: Two-letter state code.
         limit: Max results (1-200).
 
@@ -76,7 +130,7 @@ async def search_physicians(
         params["last_name"] = query.strip()
 
     if specialty:
-        params["taxonomy_description"] = specialty
+        params["taxonomy_description"] = _resolve_specialty(specialty)
     if state:
         params["state"] = state.upper()
 
