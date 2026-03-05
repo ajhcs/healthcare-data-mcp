@@ -223,6 +223,27 @@ services:
       retries: 3
       start_period: 30s
 
+  web-intelligence:
+    build: .
+    command: python -m servers.web_intelligence.server
+    ports:
+      - "8014:8014"
+    environment:
+      - MCP_TRANSPORT=streamable-http
+      - MCP_PORT=8014
+      - GOOGLE_CSE_API_KEY=${GOOGLE_CSE_API_KEY:-}
+      - GOOGLE_CSE_ID=${GOOGLE_CSE_ID:-}
+      - PROXYCURL_API_KEY=${PROXYCURL_API_KEY:-}
+    volumes:
+      - healthcare-cache:/root/.healthcare-data-mcp/cache
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost',8014),5); s.close()"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
 volumes:
   healthcare-cache:
     driver: local
