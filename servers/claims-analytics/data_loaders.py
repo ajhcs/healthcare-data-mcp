@@ -118,13 +118,23 @@ async def ensure_all_years_cached(include_outpatient: bool = True) -> list[str]:
 
 
 def _get_con_with_view(dataset: str, year: str) -> duckdb.DuckDBPyConnection | None:
-    """Create DuckDB connection with a view for the cached Parquet file."""
+    """Create DuckDB connection with a view for the cached Parquet file.
+
+    If the Parquet file is corrupted, deletes it and returns None so the
+    caller can trigger a re-download on the next request.
+    """
     path = _cache_path(dataset, year)
     if not path.exists():
         return None
     con = duckdb.connect(":memory:")
-    con.execute(f"CREATE VIEW data AS SELECT * FROM read_parquet('{path}')")
-    return con
+    try:
+        con.execute(f"CREATE VIEW data AS SELECT * FROM read_parquet('{path}')")
+        return con
+    except Exception:
+        logger.warning("Corrupt Parquet cache, deleting: %s", path)
+        con.close()
+        path.unlink(missing_ok=True)
+        return None
 
 
 def _detect_columns(con: duckdb.DuckDBPyConnection) -> dict[str, str | None]:
@@ -174,6 +184,20 @@ def _detect_columns(con: duckdb.DuckDBPyConnection) -> dict[str, str | None]:
     }
 
 
+def _row_str(row: pd.Series, col: str | None) -> str:  # type: ignore[type-arg]
+    """Extract a string value from a DataFrame row by column name."""
+    return str(row.get(col, "")).strip() if col and col in row.index else ""
+
+
+def _row_float(row: pd.Series, col: str | None) -> float:  # type: ignore[type-arg]
+    """Extract a float value from a DataFrame row by column name."""
+    v = _row_str(row, col)
+    try:
+        return float(v.replace(",", "")) if v else 0.0
+    except ValueError:
+        return 0.0
+
+
 def query_inpatient(
     year: str = LATEST_YEAR,
     ccn: str = "",
@@ -196,7 +220,6 @@ def query_inpatient(
         col_map = _detect_columns(con)
         ccn_col = col_map["ccn"]
         if not ccn_col:
-            con.close()
             return []
 
         where_parts: list[str] = []
@@ -217,7 +240,6 @@ def query_inpatient(
 
         where = " AND ".join(where_parts) if where_parts else "1=1"
         rows = con.execute(f"SELECT * FROM data WHERE {where}", params).fetchdf()
-        con.close()
 
         results: list[dict] = []
         name_col = col_map["provider_name"]
@@ -230,35 +252,25 @@ def query_inpatient(
         mcr_col = col_map["avg_medicare_payment"]
 
         for _, row in rows.iterrows():
-            def _str(col: str | None) -> str:
-                return str(row.get(col, "")).strip() if col and col in row.index else ""
-
-            def _float(col: str | None) -> float:
-                v = _str(col)
-                try:
-                    return float(v.replace(",", "")) if v else 0.0
-                except ValueError:
-                    return 0.0
-
             results.append({
-                "ccn": _str(ccn_col),
-                "provider_name": _str(name_col),
-                "state": _str(state_col),
-                "drg_code": _str(drg_cd_col),
-                "drg_desc": _str(desc_col),
-                "discharges": int(_float(disch_col)),
-                "avg_charges": _float(chrg_col),
-                "avg_total_payment": _float(tot_col),
-                "avg_medicare_payment": _float(mcr_col),
+                "ccn": _row_str(row, ccn_col),
+                "provider_name": _row_str(row, name_col),
+                "state": _row_str(row, state_col),
+                "drg_code": _row_str(row, drg_cd_col),
+                "drg_desc": _row_str(row, desc_col),
+                "discharges": int(_row_float(row, disch_col)),
+                "avg_charges": _row_float(row, chrg_col),
+                "avg_total_payment": _row_float(row, tot_col),
+                "avg_medicare_payment": _row_float(row, mcr_col),
             })
 
         return results
 
     except Exception as e:
         logger.warning("Inpatient query failed: %s", e)
-        if con:
-            con.close()
         return []
+    finally:
+        con.close()
 
 
 def query_outpatient(
@@ -276,7 +288,6 @@ def query_outpatient(
         col_map = _detect_columns(con)
         ccn_col = col_map["ccn"]
         if not ccn_col:
-            con.close()
             return []
 
         where_parts: list[str] = []
@@ -297,7 +308,6 @@ def query_outpatient(
 
         where = " AND ".join(where_parts) if where_parts else "1=1"
         rows = con.execute(f"SELECT * FROM data WHERE {where}", params).fetchdf()
-        con.close()
 
         results: list[dict] = []
         name_col = col_map["provider_name"]
@@ -310,32 +320,22 @@ def query_outpatient(
         mcr_col = col_map["avg_medicare_payment"]
 
         for _, row in rows.iterrows():
-            def _str(col: str | None) -> str:
-                return str(row.get(col, "")).strip() if col and col in row.index else ""
-
-            def _float(col: str | None) -> float:
-                v = _str(col)
-                try:
-                    return float(v.replace(",", "")) if v else 0.0
-                except ValueError:
-                    return 0.0
-
             results.append({
-                "ccn": _str(ccn_col),
-                "provider_name": _str(name_col),
-                "state": _str(state_col),
-                "apc_code": _str(apc_cd_col),
-                "apc_desc": _str(apc_desc_col),
-                "services": int(_float(svc_col)),
-                "avg_charges": _float(chrg_col),
-                "avg_total_payment": _float(tot_col),
-                "avg_medicare_payment": _float(mcr_col),
+                "ccn": _row_str(row, ccn_col),
+                "provider_name": _row_str(row, name_col),
+                "state": _row_str(row, state_col),
+                "apc_code": _row_str(row, apc_cd_col),
+                "apc_desc": _row_str(row, apc_desc_col),
+                "services": int(_row_float(row, svc_col)),
+                "avg_charges": _row_float(row, chrg_col),
+                "avg_total_payment": _row_float(row, tot_col),
+                "avg_medicare_payment": _row_float(row, mcr_col),
             })
 
         return results
 
     except Exception as e:
         logger.warning("Outpatient query failed: %s", e)
-        if con:
-            con.close()
         return []
+    finally:
+        con.close()

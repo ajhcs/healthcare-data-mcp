@@ -39,6 +39,15 @@ if _transport in ("sse", "streamable-http"):
 mcp = FastMCP(**_mcp_kwargs)
 
 
+def _validate_year(year: str) -> str | None:
+    """Validate year parameter. Returns error JSON string or None if valid."""
+    if year and year not in data_loaders.AVAILABLE_YEARS:
+        return json.dumps({
+            "error": f"Invalid year: {year}. Available: {data_loaders.AVAILABLE_YEARS}"
+        })
+    return None
+
+
 # ---------------------------------------------------------------------------
 # Tool 1: get_inpatient_volumes
 # ---------------------------------------------------------------------------
@@ -57,6 +66,8 @@ async def get_inpatient_volumes(
         year: Discharge year ("2021", "2022", "2023"). Default: latest available.
     """
     try:
+        if err := _validate_year(year):
+            return err
         yr = year or data_loaders.LATEST_YEAR
         await data_loaders.ensure_inpatient_cached(yr)
 
@@ -145,6 +156,8 @@ async def get_outpatient_volumes(
         year: Discharge year ("2021", "2022", "2023"). Default: latest available.
     """
     try:
+        if err := _validate_year(year):
+            return err
         yr = year or data_loaders.LATEST_YEAR
         await data_loaders.ensure_outpatient_cached(yr)
 
@@ -318,6 +331,8 @@ async def compute_case_mix(ccn: str, year: str = "") -> str:
         year: Discharge year. Default: latest available.
     """
     try:
+        if err := _validate_year(year):
+            return err
         yr = year or data_loaders.LATEST_YEAR
         await data_loaders.ensure_inpatient_cached(yr)
 
@@ -403,6 +418,8 @@ async def analyze_market_volumes(
         year: Discharge year. Default: latest available.
     """
     try:
+        if err := _validate_year(year):
+            return err
         yr = year or data_loaders.LATEST_YEAR
         await data_loaders.ensure_inpatient_cached(yr)
 
