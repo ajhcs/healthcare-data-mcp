@@ -497,5 +497,123 @@ async def get_executive_profiles(
         return json.dumps({"error": f"get_executive_profiles failed: {e}"})
 
 
+# ---------------------------------------------------------------------------
+# Google News RSS helper (fallback for monitor_newsroom)
+# ---------------------------------------------------------------------------
+
+async def _fetch_google_news_rss(query: str, days_back: int = 90) -> list[dict]:
+    """Fetch Google News RSS as fallback. Returns list of {title, link, date, source, snippet}."""
+    import xml.etree.ElementTree as ET
+    from urllib.parse import quote
+
+    url = f"https://news.google.com/rss/search?q={quote(query)}&hl=en-US&gl=US&ceid=US:en"
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.get(url)
+            resp.raise_for_status()
+
+        root = ET.fromstring(resp.text)
+        items = []
+        for item in root.findall(".//item"):
+            title = item.findtext("title", "")
+            link = item.findtext("link", "")
+            pub_date = item.findtext("pubDate", "")
+            source_el = item.find("source")
+            source = source_el.text if source_el is not None else ""
+            description = item.findtext("description", "")
+
+            items.append({
+                "headline": title,
+                "url": link,
+                "date": pub_date,
+                "source": source,
+                "snippet": description[:300] if description else "",
+            })
+
+        return items[:50]
+    except Exception as e:
+        logger.debug("Google News RSS failed: %s", e)
+        return []
+
+
+# ---------------------------------------------------------------------------
+# Tool 4: monitor_newsroom
+# ---------------------------------------------------------------------------
+@mcp.tool()
+async def monitor_newsroom(
+    system_name: str,
+    days_back: int = 90,
+    max_results: int = 25,
+) -> str:
+    """Retrieve recent press releases and news mentions for a health system.
+
+    Primary: Google Custom Search with date restriction.
+    Fallback: Google News RSS feed.
+
+    Args:
+        system_name: Health system name.
+        days_back: How many days of news to retrieve (default 90, max 365).
+        max_results: Max news items (default 25, max 100).
+    """
+    try:
+        days_back = min(days_back, 365)
+        max_results = min(max_results, 100)
+
+        cache_params = {"system_name": system_name, "days_back": days_back}
+        cached = data_loaders.load_cached_response("news", cache_params, data_loaders._NEWS_TTL_DAYS)
+        if cached is not None:
+            return json.dumps(cached)
+
+        items: list[NewsItem] = []
+
+        # Primary: Google CSE with date restriction
+        news_query = f'"{system_name}"'
+        date_restrict = f"d{days_back}"
+
+        news_raw = await search_client.search(
+            news_query, num=10, date_restrict=date_restrict,
+        )
+
+        if "error" not in news_raw:
+            cse_results = search_client.extract_results(news_raw)
+            for r in cse_results:
+                items.append(NewsItem(
+                    headline=r.get("title", ""),
+                    source=r.get("display_link", ""),
+                    snippet=r.get("snippet", ""),
+                    url=r.get("link", ""),
+                ))
+
+        # Fallback: Google News RSS (if CSE returned few results or errored)
+        if len(items) < 5:
+            rss_items = await _fetch_google_news_rss(f'"{system_name}"', days_back)
+            seen_headlines = {i.headline.lower() for i in items}
+            for ri in rss_items:
+                if ri["headline"].lower() not in seen_headlines:
+                    items.append(NewsItem(
+                        headline=ri["headline"],
+                        source=ri["source"],
+                        date=ri["date"],
+                        snippet=ri["snippet"],
+                        url=ri["url"],
+                    ))
+                    seen_headlines.add(ri["headline"].lower())
+
+        items = items[:max_results]
+
+        response = NewsroomResponse(
+            system_name=system_name,
+            days_back=days_back,
+            total_results=len(items),
+            items=items,
+        )
+        result = response.model_dump()
+        data_loaders.cache_response("news", cache_params, result)
+        return json.dumps(result)
+    except Exception as e:
+        logger.exception("monitor_newsroom failed")
+        return json.dumps({"error": f"monitor_newsroom failed: {e}"})
+
+
 if __name__ == "__main__":
     mcp.run(transport=_transport)  # type: ignore[arg-type]
