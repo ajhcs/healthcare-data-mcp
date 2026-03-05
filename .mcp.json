@@ -43,6 +43,10 @@
     "claims-analytics": {
       "type": "http",
       "url": "http://localhost:8012/mcp"
+    },
+    "public-records": {
+      "type": "http",
+      "url": "http://localhost:8013/mcp"
     }
   }
 }
