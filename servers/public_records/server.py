@@ -130,9 +130,11 @@ async def search_usaspending(
         total_obligation = sum(a.total_obligation for a in awards)
         total_awards = raw.get("page_metadata", {}).get("total", len(awards))
 
+        from datetime import datetime as _dt
+        fy = fiscal_year or str(_dt.now().year)
         response = USAspendingResponse(
             recipient_search=recipient_name,
-            fiscal_year=fiscal_year,
+            fiscal_year=fy,
             total_awards=total_awards,
             total_obligation=total_obligation,
             awards=awards,
@@ -294,22 +296,17 @@ async def get_breach_history(
 
         breaches: list[BreachRecord] = []
         for r in rows:
-            # Extract individuals_affected — look for key containing "individuals" or "affected"
             individuals = r.get("individuals_affected", 0)
-            if not individuals:
-                for k, v in r.items():
-                    if "individuals" in k.lower() or "affected" in k.lower():
-                        try:
-                            individuals = int(float(v)) if v else 0
-                        except (ValueError, TypeError):
-                            individuals = 0
-                        break
+            try:
+                individuals = int(float(individuals)) if individuals else 0
+            except (ValueError, TypeError):
+                individuals = 0
 
             breaches.append(BreachRecord(
                 entity_name=r.get("entity_name", ""),
                 state=r.get("state", ""),
                 covered_entity_type=r.get("covered_entity_type", ""),
-                individuals_affected=int(float(individuals)) if individuals else 0,
+                individuals_affected=individuals,
                 breach_submission_date=r.get("breach_submission_date", ""),
                 breach_type=r.get("breach_type", ""),
                 location_of_breached_info=r.get("location_of_breached_info", ""),
@@ -421,18 +418,26 @@ async def get_interop_status(
 
         chpl_api_key = _os.environ.get("CHPL_API_KEY", "")
 
+        # Deduplicate CHPL lookups: fetch each unique cehrt_id only once
+        chpl_cache: dict[str, dict] = {}
+        if chpl_api_key:
+            unique_ids = {r.get("cehrt_id", "") for r in rows} - {""}
+            for cid in list(unique_ids)[:10]:  # cap at 10 lookups
+                chpl_data = await _lookup_chpl(cid, chpl_api_key)
+                if chpl_data:
+                    chpl_cache[cid] = chpl_data
+
         records: list[InteropRecord] = []
         for r in rows:
             ehr_product = r.get("ehr_product_name", "")
             ehr_developer = r.get("ehr_developer", "")
             cehrt_id = r.get("cehrt_id", "")
 
-            # Optionally enrich with CHPL data
-            if chpl_api_key and cehrt_id and not ehr_product:
-                chpl_data = await _lookup_chpl(cehrt_id, chpl_api_key)
-                if chpl_data:
-                    ehr_product = chpl_data.get("ehr_product_name", ehr_product)
-                    ehr_developer = chpl_data.get("ehr_developer", ehr_developer)
+            # Enrich from pre-fetched CHPL data
+            if cehrt_id in chpl_cache and not ehr_product:
+                chpl_data = chpl_cache[cehrt_id]
+                ehr_product = chpl_data.get("ehr_product_name", ehr_product)
+                ehr_developer = chpl_data.get("ehr_developer", ehr_developer)
 
             records.append(InteropRecord(
                 facility_name=r.get("facility_name", ""),
