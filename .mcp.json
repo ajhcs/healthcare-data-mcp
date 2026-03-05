@@ -39,6 +39,10 @@
     "workforce-analytics": {
       "type": "http",
       "url": "http://localhost:8011/mcp"
+    },
+    "claims-analytics": {
+      "type": "http",
+      "url": "http://localhost:8012/mcp"
     }
   }
 }

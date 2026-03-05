@@ -60,7 +60,7 @@ def _load_drg_weights() -> dict[str, float]:
         for _, row in df.iterrows():
             code = str(row["drg_code"]).strip().zfill(3)
             try:
-                _weights[code] = float(row["weight"])
+                _weights[code] = float(str(row["weight"]))
             except (ValueError, KeyError):
                 continue
         logger.info("Loaded %d DRG weights", len(_weights))
