@@ -615,5 +615,74 @@ async def monitor_newsroom(
         return json.dumps({"error": f"monitor_newsroom failed: {e}"})
 
 
+# ---------------------------------------------------------------------------
+# Tool 5: detect_gpo_affiliation
+# ---------------------------------------------------------------------------
+@mcp.tool()
+async def detect_gpo_affiliation(
+    system_name: str,
+) -> str:
+    """Match a health system to known Group Purchasing Organization partners.
+
+    Searches for the system name alongside GPO-related keywords and matches
+    results against a curated GPO directory.
+
+    Args:
+        system_name: Health system name.
+    """
+    try:
+        cache_params = {"system_name": system_name}
+        cached = data_loaders.load_cached_response("gpo", cache_params, data_loaders._SEARCH_TTL_DAYS)
+        if cached is not None:
+            return json.dumps(cached)
+
+        gpo_list = data_loaders.load_gpo_directory()
+        if not gpo_list:
+            return json.dumps({"error": "GPO directory not found"})
+
+        # Build search query with top GPO names
+        top_gpos = "OR".join(f' "{g["gpo_name"]}"' for g in gpo_list[:6])
+        search_query = f'"{system_name}" GPO OR "group purchasing"{top_gpos}'
+
+        raw = await search_client.search(search_query, num=10)
+        if "error" in raw:
+            return json.dumps(raw)
+
+        results = search_client.extract_results(raw)
+
+        # Match each result's snippet/title against GPO names
+        matches: list[GpoMatch] = []
+        seen_gpos: set[str] = set()
+
+        for r in results:
+            combined = r.get("title", "") + " " + r.get("snippet", "")
+            matched = data_loaders.match_gpo_in_text(combined, gpo_list)
+
+            for m in matched:
+                gpo_name = m["gpo_name"]
+                if gpo_name in seen_gpos:
+                    continue
+                seen_gpos.add(gpo_name)
+
+                matches.append(GpoMatch(
+                    gpo_name=gpo_name,
+                    confidence="strong" if gpo_name.lower() in r.get("snippet", "").lower() else "moderate",
+                    evidence_snippet=r.get("snippet", "")[:300],
+                    evidence_url=r.get("link", ""),
+                ))
+
+        response = GpoAffiliationResponse(
+            system_name=system_name,
+            matches=matches,
+            search_terms_used=search_query[:200],
+        )
+        result = response.model_dump()
+        data_loaders.cache_response("gpo", cache_params, result)
+        return json.dumps(result)
+    except Exception as e:
+        logger.exception("detect_gpo_affiliation failed")
+        return json.dumps({"error": f"detect_gpo_affiliation failed: {e}"})
+
+
 if __name__ == "__main__":
     mcp.run(transport=_transport)  # type: ignore[arg-type]
