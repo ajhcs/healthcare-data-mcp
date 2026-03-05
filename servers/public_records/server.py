@@ -13,7 +13,7 @@ from pathlib import Path
 import httpx
 from mcp.server.fastmcp import FastMCP
 
-from . import data_loaders, usaspending_client, sam_client
+from . import data_loaders, usaspending_client, sam_client  # pyright: ignore[reportAttributeAccessIssue]
 from .models import (
     USAspendingAward,
     USAspendingResponse,
@@ -362,7 +362,7 @@ async def get_accreditation(
         for r in rows:
             # Map accreditation_type_code to org name
             code = r.get("accreditation_type_code", "")
-            accred_org = _ACCR_CODES.get(code.strip(), code)
+            accred_org = _ACCR_CODES.get(code.strip()) or code
 
             providers.append(AccreditationRecord(
                 ccn=r.get("ccn", ""),
