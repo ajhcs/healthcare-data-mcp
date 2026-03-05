@@ -344,5 +344,158 @@ async def detect_ehr_vendor(
         return json.dumps({"error": f"detect_ehr_vendor failed: {e}"})
 
 
+# ---------------------------------------------------------------------------
+# Tool 3: get_executive_profiles
+# ---------------------------------------------------------------------------
+@mcp.tool()
+async def get_executive_profiles(
+    system_name: str,
+    system_domain: str = "",
+    include_linkedin: bool = True,
+    max_results: int = 20,
+) -> str:
+    """Pull executive bios, titles, and tenure from official sites and LinkedIn.
+
+    Searches for the health system's leadership page, parses executive entries,
+    and optionally enriches with LinkedIn data via Google CSE + Proxycurl.
+
+    Args:
+        system_name: Health system name.
+        system_domain: Website domain for site-scoped search. Discovered if omitted.
+        include_linkedin: Enable LinkedIn enrichment (default true).
+        max_results: Max executives to return (default 20).
+    """
+    try:
+        cache_params = {
+            "system_name": system_name, "system_domain": system_domain,
+            "include_linkedin": include_linkedin, "max_results": max_results,
+        }
+        cached = data_loaders.load_cached_response("exec", cache_params, data_loaders._EXEC_TTL_DAYS)
+        if cached is not None:
+            return json.dumps(cached)
+
+        # Step 1: Find the leadership page
+        lead_query = f'"{system_name}" leadership "executive team" OR "senior leadership" OR "board of"'
+        lead_raw = await search_client.search(
+            lead_query, num=5,
+            site_search=system_domain if system_domain else "",
+        )
+        if "error" in lead_raw:
+            return json.dumps(lead_raw)
+
+        lead_results = search_client.extract_results(lead_raw)
+
+        if not system_domain and lead_results:
+            system_domain = lead_results[0].get("display_link", "")
+
+        # Step 2: Fetch and parse leadership page
+        executives: list[ExecutiveProfile] = []
+        source_urls: list[str] = []
+
+        for result in lead_results[:2]:
+            url = result.get("link", "")
+            if not url:
+                continue
+            source_urls.append(url)
+
+            html, soup = await _fetch_and_parse(url)
+            if not soup:
+                continue
+
+            text = _extract_text_content(soup)
+            if len(text) < 50:
+                continue
+
+            # Parse executive entries -- look for common patterns:
+            # 1. Heading tags (h2/h3/h4) followed by title text
+            # 2. Structured divs with name and title classes
+            # 3. Bold/strong tags as names
+
+            # Pattern 1: heading + adjacent text
+            for heading in soup.find_all(["h2", "h3", "h4"]):
+                name_text = heading.get_text(strip=True)
+                # Skip obviously non-name headings
+                if len(name_text) > 60 or len(name_text) < 4:
+                    continue
+                if any(skip in name_text.lower() for skip in [
+                    "leadership", "executive", "team", "board", "about",
+                    "contact", "news", "menu", "search",
+                ]):
+                    continue
+
+                # Get the next sibling text as title/bio
+                title_text = ""
+                bio_text = ""
+                sibling = heading.find_next_sibling()
+                if sibling:
+                    sib_text = sibling.get_text(strip=True)
+                    if len(sib_text) < 200:
+                        title_text = sib_text
+                    else:
+                        bio_text = sib_text[:300]
+
+                if name_text:
+                    executives.append(ExecutiveProfile(
+                        name=name_text[:100],
+                        title=title_text[:200],
+                        bio_snippet=bio_text[:300],
+                        source_url=url,
+                    ))
+
+            if executives:
+                break  # Got results from first page, no need to try second
+
+        # Fallback: if parsing yielded nothing, extract from CSE snippets
+        if not executives:
+            for r in lead_results:
+                snippet = r.get("snippet", "")
+                title = r.get("title", "")
+                if snippet:
+                    executives.append(ExecutiveProfile(
+                        name=title[:100],
+                        bio_snippet=snippet[:300],
+                        source_url=r.get("link", ""),
+                    ))
+
+        # Limit results
+        executives = executives[:max_results]
+
+        # Step 3: LinkedIn enrichment
+        if include_linkedin and executives:
+            for exec_profile in executives[:10]:  # cap LinkedIn lookups
+                if not exec_profile.name:
+                    continue
+
+                # Google CSE to find LinkedIn profile
+                li_query = f'site:linkedin.com/in/ "{exec_profile.name}" "{system_name}"'
+                li_raw = await search_client.search(li_query, num=2)
+                if "error" not in li_raw:
+                    li_results = search_client.extract_results(li_raw)
+                    for li in li_results:
+                        link = li.get("link", "")
+                        if "linkedin.com/in/" in link:
+                            exec_profile.linkedin_url = link
+
+                            # Optional Proxycurl enrichment
+                            if proxycurl_client.is_available():
+                                profile_data = await proxycurl_client.lookup_profile(link)
+                                if profile_data:
+                                    exec_profile.linkedin_data = LinkedInData(**profile_data)
+                            break
+
+        response = ExecutiveProfilesResponse(
+            system_name=system_name,
+            total_results=len(executives),
+            executives=executives,
+            source_urls=source_urls,
+        )
+        result = response.model_dump()
+        data_loaders.cache_response("exec", cache_params, result)
+        return json.dumps(result)
+    except Exception as e:
+        logger.exception("get_executive_profiles failed")
+        return json.dumps({"error": f"get_executive_profiles failed: {e}"})
+
+
 if __name__ == "__main__":
     mcp.run(transport=_transport)  # type: ignore[arg-type]
