@@ -223,5 +223,126 @@ async def scrape_system_profile(
         return json.dumps({"error": f"scrape_system_profile failed: {e}"})
 
 
+# ---------------------------------------------------------------------------
+# Tool 2: detect_ehr_vendor
+# ---------------------------------------------------------------------------
+@mcp.tool()
+async def detect_ehr_vendor(
+    system_name: str,
+    ccn: str = "",
+    state: str = "",
+) -> str:
+    """Identify the EHR vendor for a health system or facility.
+
+    Uses a waterfall strategy:
+    1. CMS Promoting Interoperability data (authoritative)
+    2. Career page keyword search (inferred)
+    3. News mention search (weak signal)
+
+    Returns confidence level: PI_DATA > CAREER_PAGE > NEWS_MENTION.
+
+    Args:
+        system_name: Health system or facility name.
+        ccn: CMS Certification Number for precise PI lookup.
+        state: State filter for PI data disambiguation.
+    """
+    try:
+        # Check cache
+        cache_params = {"system_name": system_name, "ccn": ccn, "state": state}
+        cached = data_loaders.load_cached_response("ehr", cache_params, data_loaders._SEARCH_TTL_DAYS)
+        if cached is not None:
+            return json.dumps(cached)
+
+        # Strategy 1: CMS Promoting Interoperability (authoritative)
+        await data_loaders.ensure_pi_cached()
+        pi_rows = data_loaders.query_pi_for_ehr(
+            facility_name=system_name, ccn=ccn, state=state,
+        )
+
+        if pi_rows:
+            # Find the best row (one with ehr_developer populated)
+            best = pi_rows[0]
+            for row in pi_rows:
+                if row.get("ehr_developer"):
+                    best = row
+                    break
+
+            raw_dev = best.get("ehr_developer", "")
+            vendor = data_loaders.resolve_vendor_name(raw_dev) if raw_dev else ""
+            product = best.get("ehr_product_name", "")
+            cehrt = best.get("cehrt_id", "")
+
+            if vendor or product:
+                response = EhrDetectionResponse(
+                    system_name=system_name,
+                    vendor_name=vendor,
+                    product_name=product,
+                    confidence="PI_DATA",
+                    evidence_summary=f"CMS Promoting Interoperability attestation (CCN: {best.get('ccn', '')})",
+                    source_url="https://data.cms.gov/provider-data/topics/hospitals/promoting-interoperability",
+                    cehrt_id=cehrt,
+                )
+                result = response.model_dump()
+                data_loaders.cache_response("ehr", cache_params, result)
+                return json.dumps(result)
+
+        # Strategy 2: Career page keyword search (inferred)
+        vendor_terms = " OR ".join(f'"{v}"' for v in [
+            "Epic", "Cerner", "Oracle Health", "MEDITECH",
+            "Altera", "athenahealth", "eClinicalWorks",
+        ])
+        career_query = f'"{system_name}" careers jobs ({vendor_terms})'
+        career_raw = await search_client.search(career_query, num=5)
+
+        if "error" not in career_raw:
+            career_results = search_client.extract_results(career_raw)
+            for r in career_results:
+                snippet = (r.get("snippet", "") + " " + r.get("title", "")).lower()
+                for keyword, canonical in data_loaders.VENDOR_KEYWORDS.items():
+                    if keyword in snippet:
+                        response = EhrDetectionResponse(
+                            system_name=system_name,
+                            vendor_name=canonical,
+                            confidence="CAREER_PAGE",
+                            evidence_summary=f"Found '{keyword}' in: {r.get('snippet', '')[:200]}",
+                            source_url=r.get("link", ""),
+                        )
+                        result = response.model_dump()
+                        data_loaders.cache_response("ehr", cache_params, result)
+                        return json.dumps(result)
+
+        # Strategy 3: News mention (weak signal)
+        news_query = f'"{system_name}" EHR "electronic health record"'
+        news_raw = await search_client.search(news_query, num=5, date_restrict="m12")
+
+        if "error" not in news_raw:
+            news_results = search_client.extract_results(news_raw)
+            for r in news_results:
+                snippet = (r.get("snippet", "") + " " + r.get("title", "")).lower()
+                for keyword, canonical in data_loaders.VENDOR_KEYWORDS.items():
+                    if keyword in snippet:
+                        response = EhrDetectionResponse(
+                            system_name=system_name,
+                            vendor_name=canonical,
+                            confidence="NEWS_MENTION",
+                            evidence_summary=f"Found '{keyword}' in news: {r.get('snippet', '')[:200]}",
+                            source_url=r.get("link", ""),
+                        )
+                        result = response.model_dump()
+                        data_loaders.cache_response("ehr", cache_params, result)
+                        return json.dumps(result)
+
+        # No match found
+        response = EhrDetectionResponse(
+            system_name=system_name,
+            confidence="NOT_FOUND",
+            evidence_summary="No EHR vendor identified from PI data, career pages, or news.",
+        )
+        return json.dumps(response.model_dump())
+    except Exception as e:
+        logger.exception("detect_ehr_vendor failed")
+        return json.dumps({"error": f"detect_ehr_vendor failed: {e}"})
+
+
 if __name__ == "__main__":
     mcp.run(transport=_transport)  # type: ignore[arg-type]
