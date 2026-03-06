@@ -47,6 +47,10 @@
     "public-records": {
       "type": "http",
       "url": "http://localhost:8013/mcp"
+    },
+    "web-intelligence": {
+      "type": "http",
+      "url": "http://localhost:8014/mcp"
     }
   }
 }
