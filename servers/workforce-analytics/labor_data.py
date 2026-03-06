@@ -92,7 +92,10 @@ def search_nlrb_elections(
     year_end: int = 2026,
     limit: int = 50,
 ) -> list[dict]:
-    """Search NLRB election records, filtered to healthcare employers."""
+    """Search NLRB election records, filtered to healthcare employers.
+
+    Joins filing (employer info) + election (dates/unit size) + participant (union name).
+    """
     if not _NLRB_DB.exists():
         return []
 
@@ -100,73 +103,71 @@ def search_nlrb_elections(
         con = sqlite3.connect(str(_NLRB_DB))
         con.row_factory = sqlite3.Row
 
-        # Discover table names
-        tables = [r[0] for r in con.execute(
-            "SELECT name FROM sqlite_master WHERE type='table'"
-        ).fetchall()]
-
-        # Look for elections table
-        election_table = next(
-            (t for t in tables if "election" in t.lower() or "case" in t.lower()),
-            tables[0] if tables else None,
-        )
-
-        if not election_table:
-            con.close()
-            return []
-
-        # Get column names
-        cols = [info[1] for info in con.execute(f"PRAGMA table_info({election_table})").fetchall()]
-
-        name_col = next((c for c in cols if c in ("name", "employer", "employer_name")), None)
-        state_col = next((c for c in cols if c == "state"), None)
-        date_col = next((c for c in cols if "date" in c and "filed" in c), cols[0] if cols else None)
-        case_col = next((c for c in cols if "case" in c), None)
-        union_col = next((c for c in cols if "union" in c or "labor_organization" in c), None)
-        voters_col = next((c for c in cols if "eligible" in c or "voter" in c), None)
-        status_col = next((c for c in cols if "status" in c or "reason" in c), None)
-
         where_parts = []
         params: list = []
 
-        if employer_name and name_col:
-            where_parts.append(f"LOWER({name_col}) LIKE ?")
+        if employer_name:
+            where_parts.append("LOWER(f.name) LIKE ?")
             params.append(f"%{employer_name.lower()}%")
 
-        if state and state_col:
-            where_parts.append(f"UPPER({state_col}) = ?")
+        if state:
+            where_parts.append("UPPER(f.state) = ?")
             params.append(state.upper())
 
-        if date_col:
-            where_parts.append(f"SUBSTR({date_col},1,4) BETWEEN ? AND ?")
-            params.extend([str(year_start), str(year_end)])
+        where_parts.append("SUBSTR(f.date_filed, 1, 4) BETWEEN ? AND ?")
+        params.extend([str(year_start), str(year_end)])
 
-        where = " AND ".join(where_parts) if where_parts else "1=1"
+        where_clause = " AND ".join(where_parts) if where_parts else "1=1"
 
-        rows = con.execute(
-            f"SELECT * FROM {election_table} WHERE {where} LIMIT ?",
-            params + [limit * 3],  # Overfetch for healthcare filtering
-        ).fetchall()
+        query = f"""
+            SELECT
+                f.case_number,
+                f.name AS employer,
+                f.city,
+                f.state,
+                f.date_filed,
+                f.status,
+                f.number_of_eligible_voters,
+                e.date AS election_date,
+                e.unit_size,
+                p.name AS union_name
+            FROM filing f
+            LEFT JOIN election e ON f.case_number = e.case_number
+            LEFT JOIN (
+                SELECT case_number, name
+                FROM participant
+                WHERE role = 'Petitioner' AND type = 'Union'
+                GROUP BY case_number
+            ) p ON f.case_number = p.case_number
+            WHERE {where_clause}
+            ORDER BY f.date_filed DESC
+            LIMIT ?
+        """
+        # If no specific employer, overfetch for healthcare filtering
+        fetch_limit = limit * 3 if not employer_name else limit
+        params.append(fetch_limit)
+
+        rows = con.execute(query, params).fetchall()
         con.close()
 
         results = []
         for row in rows:
             r = dict(row)
-            name = str(r.get(name_col, "")) if name_col else ""
+            name = r.get("employer", "")
 
             # Filter to healthcare if no specific employer search
             if not employer_name and not _is_healthcare_employer(name):
                 continue
 
             results.append({
-                "case_number": str(r.get(case_col, "")) if case_col else "",
+                "case_number": r.get("case_number", ""),
                 "employer": name,
-                "union": str(r.get(union_col, "")) if union_col else "",
-                "date": str(r.get(date_col, "")) if date_col else "",
-                "result": str(r.get(status_col, "")) if status_col else "",
-                "unit_size": int(float(r.get(voters_col, 0) or 0)) if voters_col else 0,
-                "city": str(r.get("city", "")),
-                "state": str(r.get(state_col, "")) if state_col else "",
+                "union": r.get("union_name", "") or "",
+                "date": r.get("election_date", "") or r.get("date_filed", ""),
+                "result": r.get("status", ""),
+                "unit_size": int(r.get("unit_size") or r.get("number_of_eligible_voters") or 0),
+                "city": r.get("city", ""),
+                "state": r.get("state", ""),
             })
 
             if len(results) >= limit:
