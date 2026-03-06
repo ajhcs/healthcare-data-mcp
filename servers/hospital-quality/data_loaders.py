@@ -1,0 +1,108 @@
+"""Data loading and caching for CMS hospital quality datasets.
+
+Uses the shared cms_client for HTTP downloads and caching.
+"""
+
+import logging
+import sys
+from pathlib import Path
+
+import pandas as pd
+
+# Add project root to path so shared utils are importable
+_project_root = Path(__file__).resolve().parent.parent.parent
+if str(_project_root) not in sys.path:
+    sys.path.insert(0, str(_project_root))
+
+from shared.utils.cms_client import CMS_API_BASE, DATA_DIR, cms_download_csv  # noqa: E402
+
+logger = logging.getLogger(__name__)
+
+# Dataset IDs on data.cms.gov Provider Data Catalog
+DATASETS = {
+    "hospital_info": "xubh-q36u",
+    "hrrp": "9n3s-kdb3",
+    "hac": "yq43-i98g",
+    "hcahps": "dgck-syfz",
+    "complications": "ynj2-r877",
+}
+
+# In-memory DataFrame cache to avoid re-reading CSV on every call
+_df_cache: dict[str, pd.DataFrame] = {}
+
+
+def _csv_url(dataset_id: str) -> str:
+    """Build the CSV download URL for a CMS Provider Data Catalog dataset."""
+    return f"{CMS_API_BASE}/provider-data/api/1/datastore/query/{dataset_id}/0/download?format=csv"
+
+
+async def _load_dataset(key: str) -> pd.DataFrame:
+    """Load a CMS dataset by key, downloading and caching as needed."""
+    if key in _df_cache:
+        return _df_cache[key]
+
+    dataset_id = DATASETS[key]
+    cache_key = f"hospital_quality_{key}"
+    url = _csv_url(dataset_id)
+
+    try:
+        path = await cms_download_csv(url, cache_key=cache_key)
+        df = pd.read_csv(path, dtype=str, keep_default_na=False)
+        df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
+        _df_cache[key] = df
+        return df
+    except Exception:
+        logger.warning("Could not load %s dataset — returning empty DataFrame", key, exc_info=True)
+        _df_cache[key] = pd.DataFrame()
+        return _df_cache[key]
+
+
+async def load_hospital_info() -> pd.DataFrame:
+    """Load the Hospital General Information dataset (xubh-q36u)."""
+    return await _load_dataset("hospital_info")
+
+
+async def load_hrrp() -> pd.DataFrame:
+    """Load the Hospital Readmissions Reduction Program dataset (9n3s-kdb3)."""
+    return await _load_dataset("hrrp")
+
+
+async def load_hac() -> pd.DataFrame:
+    """Load the HAC Reduction Program dataset (yq43-i98g)."""
+    return await _load_dataset("hac")
+
+
+async def load_hcahps() -> pd.DataFrame:
+    """Load the HCAHPS Patient Experience dataset (dgck-syfz)."""
+    return await _load_dataset("hcahps")
+
+
+async def load_complications() -> pd.DataFrame:
+    """Load the Complications and Deaths dataset (ynj2-r877)."""
+    return await _load_dataset("complications")
+
+
+async def load_cost_report() -> pd.DataFrame:
+    """Load CMS Hospital Cost Report data for financial profiling.
+
+    Uses the CMS Cost Report PUF direct CSV download.
+    Falls back to empty DataFrame if unavailable.
+    """
+    key = "cost_report"
+    if key in _df_cache:
+        return _df_cache[key]
+
+    url = (
+        "https://data.cms.gov/sites/default/files/2026-01/"
+        "3c39f483-c7e0-4025-8396-4df76942e10f/CostReport_2023_Final.csv"
+    )
+    try:
+        path = await cms_download_csv(url, cache_key="hospital_quality_cost_report")
+        df = pd.read_csv(path, dtype=str, keep_default_na=False)
+        df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
+        _df_cache[key] = df
+        return df
+    except Exception:
+        logger.warning("Could not load cost report data — returning empty DataFrame", exc_info=True)
+        _df_cache[key] = pd.DataFrame()
+        return _df_cache[key]
