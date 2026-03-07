@@ -69,13 +69,23 @@ def query_gv(geo_level: str, geo_code: str) -> dict | None:
         con = duckdb.connect(":memory:")
         con.execute(f"CREATE VIEW gv AS SELECT * FROM read_parquet('{_GV_PARQUET}')")
 
-        rows = con.execute("""
-            SELECT * FROM gv
-            WHERE BENE_GEO_LVL = ?
-              AND BENE_GEO_CD = ?
-            ORDER BY CAST(YEAR AS INTEGER) DESC
-            LIMIT 1
-        """, [geo_level, geo_code]).fetchdf()
+        if geo_level == "State" and len(geo_code) == 2 and geo_code.isalpha():
+            # State abbreviations are stored in BENE_GEO_DESC, not BENE_GEO_CD
+            rows = con.execute("""
+                SELECT * FROM gv
+                WHERE BENE_GEO_LVL = 'State'
+                  AND UPPER(BENE_GEO_DESC) = ?
+                ORDER BY CAST(YEAR AS INTEGER) DESC
+                LIMIT 1
+            """, [geo_code.upper()]).fetchdf()
+        else:
+            rows = con.execute("""
+                SELECT * FROM gv
+                WHERE BENE_GEO_LVL = ?
+                  AND BENE_GEO_CD = ?
+                ORDER BY CAST(YEAR AS INTEGER) DESC
+                LIMIT 1
+            """, [geo_level, geo_code]).fetchdf()
         con.close()
 
         if rows.empty:

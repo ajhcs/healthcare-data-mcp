@@ -12,9 +12,11 @@ NOTE: The OSRM public demo server (router.project-osrm.org) is rate-limited.
 For production use, deploy a self-hosted OSRM instance and set OSRM_BASE_URL.
 """
 
+import io
 import json
 import logging
 import os
+import zipfile
 
 import httpx
 import pandas as pd
@@ -98,8 +100,8 @@ async def _load_facilities() -> pd.DataFrame:
     return df
 
 
-# Census Gazetteer ZIP centroid file (~1MB, tab-delimited)
-GAZETTEER_URL = "https://www2.census.gov/geo/docs/maps-data/data/gazetteer/2023_Gazetteer/2023_Gaz_zcta_national.txt"
+# Census Gazetteer ZIP centroid file (~1MB ZIP archive, pipe-delimited inside)
+GAZETTEER_URL = "https://www2.census.gov/geo/docs/maps-data/data/gazetteer/2023_Gazetteer/2023_Gaz_zcta_national.zip"
 _ZIP_CENTROIDS: dict[str, tuple[float, float]] | None = None
 
 
@@ -109,14 +111,18 @@ async def _ensure_zip_centroids() -> dict[str, tuple[float, float]]:
     if _ZIP_CENTROIDS is not None:
         return _ZIP_CENTROIDS
 
-    cache_path = os.path.join(CACHE_DIR, "zip_centroids.csv")
+    cache_path = os.path.join(CACHE_DIR, "zip_centroids.txt")
     if not os.path.exists(cache_path):
         logger.info("Downloading Census ZIP centroids...")
         async with httpx.AsyncClient(timeout=120.0, follow_redirects=True) as client:
             resp = await client.get(GAZETTEER_URL)
             resp.raise_for_status()
+            # Extract the text file from the ZIP archive
+            with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
+                txt_files = [n for n in zf.namelist() if n.endswith(".txt")]
+                content = zf.read(txt_files[0]) if txt_files else zf.read(zf.namelist()[0])
             with open(cache_path, "wb") as f:
-                f.write(resp.content)
+                f.write(content)
 
     df = pd.read_csv(cache_path, sep="\t", dtype=str, keep_default_na=False)
     df.columns = [c.strip() for c in df.columns]

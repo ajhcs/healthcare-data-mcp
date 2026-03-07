@@ -134,9 +134,9 @@ def search_nlrb_elections(
             FROM filing f
             LEFT JOIN election e ON f.case_number = e.case_number
             LEFT JOIN (
-                SELECT case_number, name
+                SELECT case_number, participant AS name
                 FROM participant
-                WHERE role = 'Petitioner' AND type = 'Union'
+                WHERE type = 'Petitioner' AND subtype = 'Union'
                 GROUP BY case_number
             ) p ON f.case_number = p.case_number
             WHERE {where_clause}
