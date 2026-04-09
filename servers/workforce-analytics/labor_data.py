@@ -12,6 +12,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import httpx
+
+from shared.utils.http_client import resilient_request, get_client
 import pandas as pd
 
 logger = logging.getLogger(__name__)
@@ -55,9 +57,7 @@ async def ensure_nlrb_cached() -> bool:
 
     logger.info("Downloading NLRB database...")
     try:
-        async with httpx.AsyncClient(timeout=300.0, follow_redirects=True) as client:
-            resp = await client.get(NLRB_DB_URL)
-            resp.raise_for_status()
+        resp = await resilient_request("GET", NLRB_DB_URL, timeout=300.0)
 
         zip_path = _CACHE_DIR / "nlrb.db.zip"
         zip_path.write_bytes(resp.content)
@@ -191,9 +191,7 @@ async def ensure_stoppages_cached() -> bool:
 
     logger.info("Downloading BLS work stoppage data...")
     try:
-        async with httpx.AsyncClient(timeout=120.0, follow_redirects=True) as client:
-            resp = await client.get(BLS_STOPPAGES_URL)
-            resp.raise_for_status()
+        resp = await resilient_request("GET", BLS_STOPPAGES_URL, timeout=120.0)
 
         # Tab-delimited file
         lines = resp.text.strip().split("\n")

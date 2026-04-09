@@ -4,6 +4,8 @@ import logging
 from pathlib import Path
 
 import httpx
+
+from shared.utils.http_client import resilient_request, get_client
 import pandas as pd
 
 logger = logging.getLogger(__name__)
@@ -27,10 +29,8 @@ async def _download_csv(url: str, cache_name: str) -> Path:
         return cached
 
     logger.info("Downloading %s ...", url)
-    async with httpx.AsyncClient(timeout=300.0, follow_redirects=True) as client:
-        resp = await client.get(url)
-        resp.raise_for_status()
-        cached.write_bytes(resp.content)
+    resp = await resilient_request("GET", url, timeout=300.0)
+    cached.write_bytes(resp.content)
 
     logger.info("Saved to: %s", cached)
     return cached
@@ -99,8 +99,6 @@ async def search_nppes(
     if enumeration_type:
         params["enumeration_type"] = enumeration_type
 
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        resp = await client.get(NPPES_API_URL, params=params)
-        resp.raise_for_status()
-        data = resp.json()
-        return data.get("results", [])
+    resp = await resilient_request("GET", NPPES_API_URL, params=params, timeout=30.0)
+    data = resp.json()
+    return data.get("results", [])

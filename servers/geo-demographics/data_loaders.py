@@ -6,6 +6,8 @@ from pathlib import Path
 
 import duckdb
 import httpx
+
+from shared.utils.http_client import resilient_request, get_client
 import pandas as pd
 
 logger = logging.getLogger(__name__)
@@ -37,9 +39,7 @@ async def ensure_gv_cached() -> bool:
 
     logger.info("Downloading Geographic Variation PUF...")
     try:
-        async with httpx.AsyncClient(timeout=600.0, follow_redirects=True) as client:
-            resp = await client.get(GV_CSV_URL)
-            resp.raise_for_status()
+        resp = await resilient_request("GET", GV_CSV_URL, timeout=600.0)
 
         csv_path = _CACHE_DIR / "gv_raw.csv"
         csv_path.write_bytes(resp.content)

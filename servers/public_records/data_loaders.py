@@ -13,6 +13,8 @@ from pathlib import Path
 
 import duckdb
 import httpx
+
+from shared.utils.http_client import resilient_request, get_client
 import pandas as pd
 
 logger = logging.getLogger(__name__)
@@ -147,9 +149,7 @@ async def ensure_pos_cached() -> bool:
 
     logger.info("Downloading CMS POS file from %s ...", POS_URL[:80])
     try:
-        async with httpx.AsyncClient(timeout=300.0, follow_redirects=True) as client:
-            resp = await client.get(POS_URL)
-            resp.raise_for_status()
+        resp = await resilient_request("GET", POS_URL, timeout=300.0)
 
         csv_path = _CACHE_DIR / "pos_raw.csv"
         csv_path.write_bytes(resp.content)
@@ -180,9 +180,7 @@ async def ensure_pi_cached() -> bool:
 
     logger.info("Downloading CMS PI file from %s ...", PI_URL[:80])
     try:
-        async with httpx.AsyncClient(timeout=300.0, follow_redirects=True) as client:
-            resp = await client.get(PI_URL)
-            resp.raise_for_status()
+        resp = await resilient_request("GET", PI_URL, timeout=300.0)
 
         csv_path = _CACHE_DIR / "pi_raw.csv"
         csv_path.write_bytes(resp.content)

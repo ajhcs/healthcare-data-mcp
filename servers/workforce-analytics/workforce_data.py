@@ -11,6 +11,8 @@ from pathlib import Path
 
 import duckdb
 import httpx
+
+from shared.utils.http_client import resilient_request, get_client
 import pandas as pd
 
 logger = logging.getLogger(__name__)
@@ -54,9 +56,7 @@ async def ensure_hpsa_cached() -> bool:
 
     logger.info("Downloading HRSA HPSA data...")
     try:
-        async with httpx.AsyncClient(timeout=300.0, follow_redirects=True) as client:
-            resp = await client.get(HPSA_CSV_URL)
-            resp.raise_for_status()
+        resp = await resilient_request("GET", HPSA_CSV_URL, timeout=300.0)
 
         csv_path = _CACHE_DIR / "hpsa_raw.csv"
         csv_path.write_bytes(resp.content)
@@ -162,13 +162,12 @@ async def ensure_hcris_cached() -> bool:
         for year in range(current_year, current_year - 3, -1):
             url = f"https://downloads.cms.gov/files/hcris/HOSP10FY{year}.zip"
             try:
-                async with httpx.AsyncClient(timeout=600.0, follow_redirects=True) as client:
-                    resp = await client.get(url)
-                    if resp.status_code == 200 and len(resp.content) > 10000:
-                        zip_path = _CACHE_DIR / f"hcris_fy{year}.zip"
-                        zip_path.write_bytes(resp.content)
-                        logger.info("Downloaded HCRIS FY%d (%d bytes)", year, len(resp.content))
-                        break
+                resp = await resilient_request("GET", url, timeout=600.0)
+                if resp.status_code == 200 and len(resp.content) > 10000:
+                    zip_path = _CACHE_DIR / f"hcris_fy{year}.zip"
+                    zip_path.write_bytes(resp.content)
+                    logger.info("Downloaded HCRIS FY%d (%d bytes)", year, len(resp.content))
+                    break
             except Exception:
                 continue
 
@@ -389,10 +388,8 @@ async def query_pbj_staffing(ccn: str = "", state: str = "") -> list[dict]:
         return []
 
     try:
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            resp = await client.get(PBJ_API_URL, params=params)
-            resp.raise_for_status()
-            records = resp.json()
+        resp = await resilient_request("GET", PBJ_API_URL, params=params, timeout=60.0)
+        records = resp.json()
 
         results = []
         for r in records:

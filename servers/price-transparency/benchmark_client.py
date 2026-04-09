@@ -11,6 +11,8 @@ import statistics
 
 import httpx
 
+from shared.utils.http_client import resilient_request, get_client
+
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -59,10 +61,8 @@ async def get_pfs_rate(hcpcs_code: str) -> dict | None:
     url = f"{PFS_BASE}/{PFS_INDICATORS_DATASET}/0"
 
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.post(url, json=payload)
-            resp.raise_for_status()
-            data = resp.json()
+        resp = await resilient_request("POST", url, json=payload, timeout=30.0)
+        data = resp.json()
 
         results = data.get("results", [])
         if not results:
@@ -117,10 +117,8 @@ async def get_locality_gpci(locality: str | None = None) -> dict | None:
     url = f"{PFS_BASE}/{PFS_LOCALITIES_DATASET}/0"
 
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.post(url, json=payload)
-            resp.raise_for_status()
-            data = resp.json()
+        resp = await resilient_request("POST", url, json=payload, timeout=30.0)
+        data = resp.json()
 
         results = data.get("results", [])
         if not results:
@@ -208,32 +206,30 @@ async def get_utilization_data(hcpcs_code: str) -> dict | None:
     all_rows: list[dict] = []
 
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            # Paginate to collect provider rows via GET with filter params
-            while True:
-                params = {
-                    "filter[HCPCS_Cd]": hcpcs_code.strip(),
-                    "size": UTILIZATION_PAGE_SIZE,
-                    "offset": offset,
-                }
-                resp = await client.get(url, params=params)
-                resp.raise_for_status()
-                results = resp.json()
+        # Paginate to collect provider rows via GET with filter params
+        while True:
+            params = {
+                "filter[HCPCS_Cd]": hcpcs_code.strip(),
+                "size": UTILIZATION_PAGE_SIZE,
+                "offset": offset,
+            }
+            resp = await resilient_request("GET", url, params=params, timeout=30.0)
+            results = resp.json()
 
-                if not isinstance(results, list) or not results:
-                    break
+            if not isinstance(results, list) or not results:
+                break
 
-                all_rows.extend(results)
+            all_rows.extend(results)
 
-                # If we got fewer than page size, we're done
-                if len(results) < UTILIZATION_PAGE_SIZE:
-                    break
+            # If we got fewer than page size, we're done
+            if len(results) < UTILIZATION_PAGE_SIZE:
+                break
 
-                offset += UTILIZATION_PAGE_SIZE
+            offset += UTILIZATION_PAGE_SIZE
 
-                # Safety cap: don't pull more than 10k rows
-                if len(all_rows) >= 10000:
-                    break
+            # Safety cap: don't pull more than 10k rows
+            if len(all_rows) >= 10000:
+                break
 
         if not all_rows:
             logger.warning("Utilization: no data for HCPCS %s", hcpcs_code)

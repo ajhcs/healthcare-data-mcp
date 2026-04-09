@@ -6,6 +6,8 @@ import zipfile
 from pathlib import Path
 
 import httpx
+
+from shared.utils.http_client import resilient_request, get_client
 import pandas as pd
 
 logger = logging.getLogger(__name__)
@@ -95,10 +97,8 @@ async def download_hsaf(force: bool = False) -> pd.DataFrame:
         return _normalize_hsaf(df)
 
     logger.info("Downloading HSAF from %s", HSAF_CSV_URL)
-    async with httpx.AsyncClient(timeout=300.0, follow_redirects=True) as client:
-        resp = await client.get(HSAF_CSV_URL)
-        resp.raise_for_status()
-        HSAF_CACHE_PATH.write_bytes(resp.content)
+    resp = await resilient_request("GET", HSAF_CSV_URL, timeout=300.0)
+    HSAF_CACHE_PATH.write_bytes(resp.content)
 
     logger.info("HSAF cached to %s (%d bytes)", HSAF_CACHE_PATH, HSAF_CACHE_PATH.stat().st_size)
     df = pd.read_csv(HSAF_CACHE_PATH, dtype=str)
@@ -116,9 +116,7 @@ async def download_dartmouth_crosswalk(force: bool = False) -> pd.DataFrame:
         return _normalize_dartmouth(df)
 
     logger.info("Downloading Dartmouth crosswalk from %s", DARTMOUTH_CROSSWALK_URL)
-    async with httpx.AsyncClient(timeout=120.0, follow_redirects=True) as client:
-        resp = await client.get(DARTMOUTH_CROSSWALK_URL)
-        resp.raise_for_status()
+    resp = await resilient_request("GET", DARTMOUTH_CROSSWALK_URL, timeout=120.0)
 
     # Handle ZIP archive: extract the CSV inside
     content = resp.content
@@ -149,10 +147,8 @@ async def load_hospital_names() -> dict[str, str]:
     """
     if not _HOSP_INFO_CACHE.exists():
         logger.info("Downloading Hospital General Info for name lookup...")
-        async with httpx.AsyncClient(timeout=300.0, follow_redirects=True) as client:
-            resp = await client.get(_HOSP_INFO_URL)
-            resp.raise_for_status()
-            _HOSP_INFO_CACHE.write_bytes(resp.content)
+        resp = await resilient_request("GET", _HOSP_INFO_URL, timeout=300.0)
+        _HOSP_INFO_CACHE.write_bytes(resp.content)
 
     df = pd.read_csv(_HOSP_INFO_CACHE, dtype=str, keep_default_na=False,
                       usecols=lambda c: c.strip() in ("Facility ID", "Facility Name"))

@@ -10,6 +10,8 @@ import os
 
 import httpx
 
+from shared.utils.http_client import resilient_request, get_client
+
 logger = logging.getLogger(__name__)
 
 _BASE_URL = "https://nubela.co/proxycurl/api/v2/linkedin"
@@ -39,21 +41,19 @@ async def lookup_profile(linkedin_url: str) -> dict:
         return {}
 
     try:
-        async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
-            resp = await client.get(
-                _BASE_URL,
-                params={"linkedin_profile_url": linkedin_url, "use_cache": "if-recent"},
-                headers={"Authorization": f"Bearer {api_key}"},
-            )
-            resp.raise_for_status()
-            data = resp.json()
+        resp = await client.get(
+            _BASE_URL,
+            params={"linkedin_profile_url": linkedin_url, "use_cache": "if-recent"},
+            headers={"Authorization": f"Bearer {api_key}"},
+        )
+        data = resp.json()
 
-            return {
-                "headline": data.get("headline", ""),
-                "summary": data.get("summary", ""),
-                "education": _format_education(data.get("education", [])),
-                "linkedin_url": linkedin_url,
-            }
+        return {
+            "headline": data.get("headline", ""),
+            "summary": data.get("summary", ""),
+            "education": _format_education(data.get("education", [])),
+            "linkedin_url": linkedin_url,
+        }
     except httpx.HTTPStatusError as e:
         if e.response.status_code == 429:
             logger.warning("Proxycurl rate limit hit")

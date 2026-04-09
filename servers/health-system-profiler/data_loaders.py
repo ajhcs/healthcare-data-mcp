@@ -4,6 +4,8 @@ import logging
 from pathlib import Path
 
 import httpx
+
+from shared.utils.http_client import resilient_request, get_client
 import pandas as pd
 
 logger = logging.getLogger(__name__)
@@ -128,22 +130,21 @@ async def _download_if_missing(url: str, cache_path: Path) -> Path:
         return cache_path
 
     logger.info("Downloading %s ...", url)
-    async with httpx.AsyncClient(timeout=300.0, follow_redirects=True) as client:
-        resp = await client.get(url)
+    resp = await resilient_request("GET", url, timeout=300.0)
 
-        # Detect WAF challenge (AHRQ returns 202 with empty body or HTML)
-        if resp.status_code == 202 or (
-            resp.status_code == 200
-            and b"<!DOCTYPE" in resp.content[:200]
-        ):
-            raise RuntimeError(
-                f"Download blocked by WAF for {url}. "
-                f"Run 'python scripts/download_ahrq.py' to download via browser, "
-                f"or manually download and place at {cache_path}"
-            )
+    # Detect WAF challenge (AHRQ returns 202 with empty body or HTML)
+    if resp.status_code == 202 or (
+        resp.status_code == 200
+        and b"<!DOCTYPE" in resp.content[:200]
+    ):
+        raise RuntimeError(
+            f"Download blocked by WAF for {url}. "
+            f"Run 'python scripts/download_ahrq.py' to download via browser, "
+            f"or manually download and place at {cache_path}"
+        )
 
-        resp.raise_for_status()
-        cache_path.write_bytes(resp.content)
+    resp.raise_for_status()
+    cache_path.write_bytes(resp.content)
 
     logger.info("Saved to: %s (%d bytes)", cache_path, cache_path.stat().st_size)
     return cache_path
@@ -219,8 +220,6 @@ async def search_nppes(
     if enumeration_type:
         params["enumeration_type"] = enumeration_type
 
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        resp = await client.get(NPPES_API_URL, params=params)
-        resp.raise_for_status()
-        data = resp.json()
-        return data.get("results", [])
+    resp = await resilient_request("GET", NPPES_API_URL, params=params, timeout=30.0)
+    data = resp.json()
+    return data.get("results", [])

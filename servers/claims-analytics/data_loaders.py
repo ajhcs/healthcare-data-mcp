@@ -10,6 +10,8 @@ from pathlib import Path
 
 import duckdb
 import httpx
+
+from shared.utils.http_client import resilient_request, get_client
 import pandas as pd
 
 logger = logging.getLogger(__name__)
@@ -55,9 +57,7 @@ async def _download_and_cache_csv(url: str, cache_path: Path, dataset_name: str)
     """Download CSV from CMS and cache as Parquet."""
     logger.info("Downloading %s from %s ...", dataset_name, url[:80])
     try:
-        async with httpx.AsyncClient(timeout=300.0, follow_redirects=True) as client:
-            resp = await client.get(url)
-            resp.raise_for_status()
+        resp = await resilient_request("GET", url, timeout=300.0)
 
         csv_path = _CACHE_DIR / f"{cache_path.stem}_raw.csv"
         csv_path.write_bytes(resp.content)
