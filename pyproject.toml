@@ -35,6 +35,7 @@ dependencies = [
     "duckdb>=1.0.0",
     "beautifulsoup4>=4.12.0",
     "lxml>=5.0.0",
+    "polars>=1.0.0",
 ]
 
 [project.optional-dependencies]
