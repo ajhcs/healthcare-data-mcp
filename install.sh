@@ -17,7 +17,7 @@ set -euo pipefail
 
 # ── Constants ────────────────────────────────────────────────────────────────
 
-REPO_URL="https://github.com/open-informatics/healthcare-data-mcp.git"
+REPO_URL="https://github.com/ajhcs/healthcare-data-mcp.git"
 PACKAGE_NAME="healthcare-data-mcp"
 INSTALL_DIR="${HEALTHCARE_MCP_DIR:-$HOME/.healthcare-data-mcp}"
 
@@ -63,7 +63,6 @@ NO_KEY_SERVERS=(
   hc-price-transparency
   hc-physician-referral-network
   hc-claims-analytics
-  hc-financial-intelligence
 )
 
 # ── Colors ───────────────────────────────────────────────────────────────────
@@ -212,9 +211,8 @@ if [ "$MODE" = "pip" ]; then
   else
     info "Cloning repository..."
     git clone --depth 1 "$REPO_URL" "$INSTALL_DIR" 2>/dev/null || {
-      warn "Git clone failed — trying pip install from PyPI..."
-      $PYTHON_CMD -m pip install --user "$PACKAGE_NAME"
-      INSTALL_DIR="$($PYTHON_CMD -c 'import healthcare_data_mcp; print(healthcare_data_mcp.__path__[0])' 2>/dev/null || echo "$INSTALL_DIR")"
+      err "Git clone failed. Re-run with network access or clone the repository manually."
+      exit 1
     }
   fi
 
@@ -251,7 +249,7 @@ elif [ "$MODE" = "docker" ]; then
   info "Building Docker images..."
   docker compose -f "$INSTALL_DIR/docker-compose.zero-config.yml" build --quiet
 
-  info "Starting zero-config servers (8 servers, no API keys needed)..."
+  info "Starting zero-config servers (7 servers, no API keys needed)..."
   docker compose -f "$INSTALL_DIR/docker-compose.zero-config.yml" up -d
 
   ok "Docker containers running"
@@ -302,6 +300,10 @@ prompt_key "ORS_API_KEY" \
   "OpenRouteService (drive-time isochrones)" \
   "https://openrouteservice.org/dev/#/signup"
 
+prompt_key "SEC_USER_AGENT" \
+  "SEC EDGAR fair-access header (financial-intelligence, required for that server)" \
+  "https://www.sec.gov/os/accessing-edgar-data"
+
 prompt_key "BLS_API_KEY" \
   "Bureau of Labor Statistics (workforce analytics)" \
   "https://data.bls.gov/registrationEngine/"
@@ -309,6 +311,22 @@ prompt_key "BLS_API_KEY" \
 prompt_key "SAM_GOV_API_KEY" \
   "SAM.gov Entity API (public records)" \
   "https://sam.gov/content/entity-information"
+
+prompt_key "CHPL_API_KEY" \
+  "ONC CHPL API (public records)" \
+  "https://chpl.healthit.gov/#/resources/api"
+
+prompt_key "GOOGLE_CSE_API_KEY" \
+  "Google Custom Search API (web intelligence)" \
+  "https://developers.google.com/custom-search/v1/introduction"
+
+prompt_key "GOOGLE_CSE_ID" \
+  "Google Programmable Search Engine ID (web intelligence)" \
+  "https://programmablesearchengine.google.com/controlpanel/all"
+
+prompt_key "PROXYCURL_API_KEY" \
+  "Proxycurl API (optional LinkedIn enrichment for web intelligence)" \
+  "https://nubela.co/proxycurl/"
 
 # ── Register with MCP clients ───────────────────────────────────────────────
 
@@ -434,7 +452,7 @@ if [ "$MODE" = "pip" ]; then
   echo "  # Claude Code picks up .mcp.json automatically"
   echo "  # For Docker: docker compose up -d"
 elif [ "$MODE" = "docker" ]; then
-  echo "  # 8 zero-config servers are already running!"
+  echo "  # 7 zero-config servers are already running!"
   echo "  # For all 13 servers: cd $INSTALL_DIR && cp .env.example .env"
   echo "  # Edit .env, then: docker compose up -d"
 fi
@@ -450,6 +468,7 @@ echo ""
 echo -e "${BOLD}Servers needing API keys:${NC}"
 echo -e "  ${YELLOW}hc-geo-demographics${NC}  — Census + HUD keys"
 echo -e "  ${YELLOW}hc-drive-time${NC}        — OpenRouteService key"
+echo -e "  ${YELLOW}hc-financial-intelligence${NC} — SEC_USER_AGENT header"
 echo -e "  ${YELLOW}hc-workforce-analytics${NC} — BLS key"
 echo -e "  ${YELLOW}hc-public-records${NC}    — SAM.gov + CHPL keys"
 echo -e "  ${YELLOW}hc-web-intelligence${NC}  — Google CSE + Proxycurl keys"

@@ -1,7 +1,6 @@
 """Shared HTTP client utilities for CMS data.cms.gov API and bulk downloads."""
 
 import hashlib
-import json
 import logging
 from pathlib import Path
 

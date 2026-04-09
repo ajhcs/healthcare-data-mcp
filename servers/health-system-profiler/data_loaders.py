@@ -5,12 +5,9 @@ This module re-exports them for backward compatibility and adds NPPES search.
 """
 
 import logging
-from pathlib import Path
 
-import httpx
 
-from shared.utils.http_client import resilient_request, get_client
-import pandas as pd
+from shared.utils.http_client import resilient_request
 
 # Re-export shared AHRQ/POS loaders for backward compatibility.
 # Other servers should import directly from shared.utils.ahrq_data.

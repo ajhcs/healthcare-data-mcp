@@ -7,7 +7,7 @@ import re
 import time
 import httpx
 
-from shared.utils.http_client import resilient_request, get_client
+from shared.utils.http_client import resilient_request
 
 from shared.utils.cms_client import get_cache_path
 

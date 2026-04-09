@@ -7,6 +7,7 @@ Atlas HSA/HRR crosswalk lookups.
 
 import json
 import logging
+import os
 import sys
 from pathlib import Path
 
@@ -25,13 +26,11 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-import os as _os
-
-_transport = _os.environ.get("MCP_TRANSPORT", "stdio")
+_transport = os.environ.get("MCP_TRANSPORT", "stdio")
 _mcp_kwargs = {"name": "service-area"}
 if _transport in ("sse", "streamable-http"):
     _mcp_kwargs["host"] = "0.0.0.0"
-    _mcp_kwargs["port"] = int(_os.environ.get("MCP_PORT", "8002"))
+    _mcp_kwargs["port"] = int(os.environ.get("MCP_PORT", "8002"))
 mcp = FastMCP(**_mcp_kwargs)
 
 

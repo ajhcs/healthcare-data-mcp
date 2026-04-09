@@ -6,8 +6,22 @@ build-backend = "hatchling.build"
 name = "healthcare-data-mcp"
 version = "0.1.0"
 description = "MCP servers for public healthcare facility data, service areas, demographics, and quality metrics"
+readme = "README.md"
 requires-python = ">=3.11"
-license = "MIT"
+license = { text = "MIT" }
+authors = [
+    { name = "AJ HCS" },
+]
+keywords = ["mcp", "healthcare", "cms", "analytics", "public-data", "duckdb"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
 
 dependencies = [
     "mcp[cli]>=1.0.0",
@@ -30,6 +44,11 @@ dev = ["pytest>=8.0", "pytest-asyncio>=0.23", "ruff>=0.5.0"]
 
 [project.scripts]
 hc-mcp-all = "servers._launcher:main"
+
+[project.urls]
+Homepage = "https://github.com/ajhcs/healthcare-data-mcp"
+Repository = "https://github.com/ajhcs/healthcare-data-mcp"
+Issues = "https://github.com/ajhcs/healthcare-data-mcp/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["servers", "shared"]

@@ -7,9 +7,8 @@ API docs: https://api.usaspending.gov/
 import logging
 from datetime import datetime
 
-import httpx
 
-from shared.utils.http_client import resilient_request, get_client
+from shared.utils.http_client import resilient_request
 
 logger = logging.getLogger(__name__)
 

@@ -18,11 +18,9 @@ import logging
 import os
 import zipfile
 
-import httpx
-
-from shared.utils.http_client import resilient_request, get_client
 import pandas as pd
 from mcp.server.fastmcp import FastMCP
+from shared.utils.http_client import resilient_request
 
 from .accessibility import compute_e2sfca, summarize_scores
 from .models import (
@@ -55,13 +53,11 @@ _facility_df: pd.DataFrame | None = None
 # ---------------------------------------------------------------------------
 # MCP Server
 # ---------------------------------------------------------------------------
-import os as _os
-
-_transport = _os.environ.get("MCP_TRANSPORT", "stdio")
+_transport = os.environ.get("MCP_TRANSPORT", "stdio")
 _mcp_kwargs = {"name": "drive-time"}
 if _transport in ("sse", "streamable-http"):
     _mcp_kwargs["host"] = "0.0.0.0"
-    _mcp_kwargs["port"] = int(_os.environ.get("MCP_PORT", "8004"))
+    _mcp_kwargs["port"] = int(os.environ.get("MCP_PORT", "8004"))
 mcp = FastMCP(**_mcp_kwargs)
 
 
@@ -84,7 +80,6 @@ async def _load_facilities() -> pd.DataFrame:
     if _facility_df is not None:
         return _facility_df
 
-    import httpx
 
     cache_path = os.path.join(CACHE_DIR, "hospital_general_info.csv")
     if not os.path.exists(cache_path):

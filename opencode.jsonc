@@ -69,7 +69,7 @@
       "args": ["-m", "servers.financial_intelligence.server"],
       "env": {
         "PYTHONPATH": ".",
-        "SEC_USER_AGENT": "healthcare-data-mcp support@example.com"
+        "SEC_USER_AGENT": ""
       }
     },
     "hc-price-transparency": {

@@ -1,5 +1,5 @@
 # Healthcare Data MCP — Zero-Config Docker Compose
-# Runs the 8 servers that need NO API keys. Just works.
+# Runs the 7 servers that need no external keys.
 #
 # Usage:
 #   docker compose -f docker-compose.zero-config.yml up -d
@@ -129,25 +129,6 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost',8012),5); s.close()"]
-      interval: 60s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
-
-  financial-intelligence:
-    build: .
-    command: python -m servers.financial_intelligence.server
-    ports:
-      - "8008:8008"
-    environment:
-      - MCP_TRANSPORT=streamable-http
-      - MCP_PORT=8008
-      - SEC_USER_AGENT=healthcare-data-mcp support@example.com
-    volumes:
-      - healthcare-cache:/root/.healthcare-data-mcp/cache
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost',8008),5); s.close()"]
       interval: 60s
       timeout: 10s
       retries: 3

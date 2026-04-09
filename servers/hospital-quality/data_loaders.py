@@ -15,8 +15,7 @@ _project_root = Path(__file__).resolve().parent.parent.parent
 if str(_project_root) not in sys.path:
     sys.path.insert(0, str(_project_root))
 
-from shared.utils.cache import is_cache_valid  # noqa: E402
-from shared.utils.cms_client import CMS_API_BASE, DATA_DIR, cms_download_csv  # noqa: E402
+from shared.utils.cms_client import CMS_API_BASE, cms_download_csv  # noqa: E402
 
 logger = logging.getLogger(__name__)
 

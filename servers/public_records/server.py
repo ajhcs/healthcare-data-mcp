@@ -10,9 +10,8 @@ import logging
 import os as _os
 from pathlib import Path
 
-import httpx
 
-from shared.utils.http_client import resilient_request, get_client
+from shared.utils.http_client import resilient_request
 from mcp.server.fastmcp import FastMCP
 
 from . import data_loaders, usaspending_client, sam_client  # pyright: ignore[reportAttributeAccessIssue]

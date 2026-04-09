@@ -9,10 +9,10 @@ import logging
 import os
 
 import httpx
-
-from shared.utils.http_client import resilient_request, get_client
 from mcp.server.fastmcp import FastMCP
+from shared.utils.http_client import resilient_request
 
+from . import data_loaders as gv_loaders
 from .census_client import get_demographics_batch, get_demographics_for_zcta
 from .geography import get_adjacent_zctas
 from .models import (
@@ -26,16 +26,12 @@ from .models import (
 
 logger = logging.getLogger(__name__)
 
-import os as _os
-
-_transport = _os.environ.get("MCP_TRANSPORT", "stdio")
+_transport = os.environ.get("MCP_TRANSPORT", "stdio")
 _mcp_kwargs = {"name": "geo-demographics"}
 if _transport in ("sse", "streamable-http"):
     _mcp_kwargs["host"] = "0.0.0.0"
-    _mcp_kwargs["port"] = int(_os.environ.get("MCP_PORT", "8003"))
+    _mcp_kwargs["port"] = int(os.environ.get("MCP_PORT", "8003"))
 mcp = FastMCP(**_mcp_kwargs)
-
-from . import data_loaders as gv_loaders
 
 # HUD USPS Crosswalk API
 HUD_CROSSWALK_BASE = "https://www.huduser.gov/hudapi/public/usps"

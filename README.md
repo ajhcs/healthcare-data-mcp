@@ -17,7 +17,7 @@ The [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) lets AI ass
 - "Compare readmission rates across these five hospitals."
 - "Who are the top employers of registered nurses in Philadelphia?"
 
-Every tool returns structured JSON. No API keys are required for the core servers -- optional keys unlock deeper features like Census demographics, isochrone generation, and web intelligence.
+Every tool returns structured JSON. Most servers work without API keys, optional keys unlock deeper features like Census demographics, isochrone generation, and web intelligence, and the `financial-intelligence` server requires a real `SEC_USER_AGENT` header for SEC fair-access compliance.
 
 ## Architecture
 
@@ -78,8 +78,10 @@ MCP Client (Claude Code, VS Code, Cursor, etc.)
 ### Option A: pip install (single server, stdio)
 
 ```bash
-git clone https://github.com/Open-Informatics/healthcare-data-mcp.git
+git clone https://github.com/ajhcs/healthcare-data-mcp.git
 cd healthcare-data-mcp
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -e ".[dev]"
 
 # Run a single server
@@ -89,7 +91,7 @@ python -m servers.cms_facility.server
 ### Option B: Docker Compose (all servers, HTTP)
 
 ```bash
-git clone https://github.com/Open-Informatics/healthcare-data-mcp.git
+git clone https://github.com/ajhcs/healthcare-data-mcp.git
 cd healthcare-data-mcp
 cp .env.example .env          # edit to add API keys
 docker compose up -d
@@ -97,10 +99,18 @@ docker compose up -d
 
 All servers start on ports 8002-8014 with `streamable-http` transport.
 
+To run only the servers that need no external keys, use:
+
+```bash
+docker compose -f docker-compose.zero-config.yml up -d
+```
+
+That profile starts 7 servers. `financial-intelligence` is excluded because the SEC requires a real `SEC_USER_AGENT`.
+
 ### Option C: Interactive setup
 
 ```bash
-git clone https://github.com/Open-Informatics/healthcare-data-mcp.git
+git clone https://github.com/ajhcs/healthcare-data-mcp.git
 cd healthcare-data-mcp
 bash scripts/setup.sh
 ```
@@ -109,7 +119,7 @@ The setup script checks prerequisites, configures API keys interactively, and re
 
 ## Configuration
 
-Copy `.env.example` to `.env` and fill in the keys you have. Every key is optional -- servers that need a missing key will run in degraded mode or return a clear error message explaining what to register.
+Copy `.env.example` to `.env` and fill in the keys you have. Most keys are optional. `SEC_USER_AGENT` is required only if you want to run the `financial-intelligence` server, and the remaining keyed servers degrade gracefully when their credentials are missing.
 
 ```bash
 cp .env.example .env
@@ -264,6 +274,8 @@ healthcare-data-mcp/
 ### Running tests
 
 ```bash
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -e ".[dev]"
 pytest tests/ -v
 ```
@@ -329,4 +341,10 @@ All data comes from publicly available US government sources. No PHI, no HIPAA-c
 
 ## License
 
-MIT
+MIT. See [LICENSE](LICENSE).
+
+## Project Docs
+
+- [CONTRIBUTING.md](CONTRIBUTING.md)
+- [SECURITY.md](SECURITY.md)
+- [CHANGELOG.md](CHANGELOG.md)

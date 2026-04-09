@@ -368,7 +368,7 @@ else
     report_server "drive-time" "DEGRADED" "4/5 tools work; isochrones need ORS_API_KEY"
 fi
 
-if [ -n "${SEC_USER_AGENT:-}" ] && [ "${SEC_USER_AGENT}" != "healthcare-data-mcp support@example.com" ]; then
+if [ -n "${SEC_USER_AGENT:-}" ]; then
     report_server "financial-intelligence" "READY" "6 tools, SEC user agent set"
 else
     report_server "financial-intelligence" "DEGRADED" "Set SEC_USER_AGENT to your app + email"
@@ -451,7 +451,7 @@ READY_COUNT=$(grep -c "READY" <<< "$(
     echo "READY"; echo "READY"; echo "READY"; echo "READY"; echo "READY"; echo "READY"; echo "READY"
     [ -n "${GOOGLE_CSE_API_KEY:-}" ] && [ -n "${GOOGLE_CSE_ID:-}" ] && echo "READY" || echo "DEGRADED"
     [ -n "${SAM_GOV_API_KEY:-}" ] && [ -n "${CHPL_API_KEY:-}" ] && echo "READY" || echo "DEGRADED"
-    [ -n "${SEC_USER_AGENT:-}" ] && [ "${SEC_USER_AGENT:-}" != "healthcare-data-mcp support@example.com" ] && echo "READY" || echo "DEGRADED"
+    [ -n "${SEC_USER_AGENT:-}" ] && echo "READY" || echo "DEGRADED"
 )" 2>/dev/null || echo "7")
 
 echo "  $READY_COUNT/13 servers at full capacity"

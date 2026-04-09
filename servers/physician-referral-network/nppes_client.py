@@ -9,9 +9,8 @@ from pathlib import Path
 
 import duckdb
 from shared.utils.duckdb_safe import safe_parquet_sql
-import httpx
 
-from shared.utils.http_client import resilient_request, get_client
+from shared.utils.http_client import resilient_request
 import pandas as pd
 
 import sys as _sys
@@ -353,7 +352,8 @@ async def ensure_utilization_cached() -> bool:
         # If this doesn't work, try the direct download pattern
         if resp.status_code != 200 or len(resp.content) < 1000:
             # Try data-api pattern
-            resp = await client.get(
+            resp = await resilient_request(
+                "GET",
                 "https://data.cms.gov/data-api/v1/dataset/3614c3f0-21a5-4a7f-8e37-7cf21b6caa5d/data",
                 params={"size": 0},
                 timeout=30.0,

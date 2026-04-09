@@ -11,10 +11,8 @@ import logging
 from datetime import datetime, timezone
 from pathlib import Path
 
-import duckdb
-import httpx
 
-from shared.utils.http_client import resilient_request, get_client
+from shared.utils.http_client import resilient_request
 import pandas as pd
 
 # Ensure shared utils are importable

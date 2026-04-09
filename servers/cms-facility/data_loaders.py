@@ -4,10 +4,9 @@ import asyncio
 import logging
 from pathlib import Path
 
-import httpx
-
-from shared.utils.http_client import resilient_request, get_client
 import pandas as pd
+from shared.utils.cache import is_cache_valid
+from shared.utils.http_client import resilient_request
 
 logger = logging.getLogger(__name__)
 
@@ -68,20 +67,20 @@ async def load_cost_report() -> pd.DataFrame:
             return _cost_report_df
 
         # CMS Cost Report PUF — direct CSV download (2023 Final, published Jan 2026)
-    cost_report_url = (
-        "https://data.cms.gov/sites/default/files/2026-01/"
-        "3c39f483-c7e0-4025-8396-4df76942e10f/CostReport_2023_Final.csv"
-    )
-    try:
-        path = await _download_csv(cost_report_url, "hospital_cost_report.csv")
-        df = pd.read_csv(path, dtype=str, keep_default_na=False)
-        df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
-        _cost_report_df = df
-        return df
-    except Exception:
-        logger.warning("Could not load cost report data — returning empty DataFrame", exc_info=True)
-        _cost_report_df = pd.DataFrame()
-        return _cost_report_df
+        cost_report_url = (
+            "https://data.cms.gov/sites/default/files/2026-01/"
+            "3c39f483-c7e0-4025-8396-4df76942e10f/CostReport_2023_Final.csv"
+        )
+        try:
+            path = await _download_csv(cost_report_url, "hospital_cost_report.csv")
+            df = pd.read_csv(path, dtype=str, keep_default_na=False)
+            df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
+            _cost_report_df = df
+            return df
+        except Exception:
+            logger.warning("Could not load cost report data — returning empty DataFrame", exc_info=True)
+            _cost_report_df = pd.DataFrame()
+            return _cost_report_df
 
 
 async def search_nppes(

@@ -9,9 +9,8 @@ import logging
 import os as _os
 import re
 
-import httpx
 
-from shared.utils.http_client import resilient_request, get_client
+from shared.utils.http_client import resilient_request
 from bs4 import BeautifulSoup
 from mcp.server.fastmcp import FastMCP
 
@@ -189,7 +188,7 @@ async def scrape_system_profile(
         locations: list[LocationEntry] = []
         if system_domain:
             loc_raw = await search_client.search(
-                f"locations facilities",
+                "locations facilities",
                 num=5,
                 site_search=system_domain,
             )

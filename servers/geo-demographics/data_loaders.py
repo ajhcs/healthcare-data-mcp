@@ -4,9 +4,8 @@ import logging
 from pathlib import Path
 
 import duckdb
-import httpx
 
-from shared.utils.http_client import resilient_request, get_client
+from shared.utils.http_client import resilient_request
 import pandas as pd
 
 import sys as _sys
