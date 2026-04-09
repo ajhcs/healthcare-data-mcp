@@ -12,6 +12,8 @@ from pathlib import Path
 
 import duckdb
 import httpx
+
+from shared.utils.http_client import resilient_request, get_client
 import pandas as pd
 
 logger = logging.getLogger(__name__)
@@ -128,9 +130,7 @@ async def ensure_hsa_crosswalk_cached() -> bool:
 
     logger.info("Downloading Dartmouth Atlas HSA/HRR crosswalk...")
     try:
-        async with httpx.AsyncClient(timeout=120.0, follow_redirects=True) as client:
-            resp = await client.get(DARTMOUTH_HSA_URL)
-            resp.raise_for_status()
+        resp = await resilient_request("GET", DARTMOUTH_HSA_URL, timeout=120.0)
 
         csv_path = _DARTMOUTH_DIR / "zip_hsa_hrr_raw.csv"
         csv_path.write_bytes(resp.content)

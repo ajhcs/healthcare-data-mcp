@@ -5,12 +5,20 @@ converts to Parquet with zstd compression, and queries with DuckDB.
 """
 
 import logging
-from datetime import datetime, timezone
 from pathlib import Path
 
 import duckdb
 import httpx
+
+from shared.utils.http_client import resilient_request, get_client
 import pandas as pd
+
+import sys as _sys
+_project_root = __import__("pathlib").Path(__file__).resolve().parent.parent.parent
+if str(_project_root) not in _sys.path:
+    _sys.path.insert(0, str(_project_root))
+
+from shared.utils.cache import is_cache_valid  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -45,19 +53,14 @@ def _cache_path(dataset: str, year: str) -> Path:
 
 def _is_cache_valid(path: Path, ttl_days: int = _CACHE_TTL_DAYS) -> bool:
     """Check if a cached file exists and is within TTL."""
-    if not path.exists():
-        return False
-    age_days = (datetime.now(timezone.utc).timestamp() - path.stat().st_mtime) / 86400
-    return age_days < ttl_days
+    return is_cache_valid(path, max_age_days=ttl_days)
 
 
 async def _download_and_cache_csv(url: str, cache_path: Path, dataset_name: str) -> bool:
     """Download CSV from CMS and cache as Parquet."""
     logger.info("Downloading %s from %s ...", dataset_name, url[:80])
     try:
-        async with httpx.AsyncClient(timeout=300.0, follow_redirects=True) as client:
-            resp = await client.get(url)
-            resp.raise_for_status()
+        resp = await resilient_request("GET", url, timeout=300.0)
 
         csv_path = _CACHE_DIR / f"{cache_path.stem}_raw.csv"
         csv_path.write_bytes(resp.content)

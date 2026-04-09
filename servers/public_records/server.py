@@ -11,6 +11,8 @@ import os as _os
 from pathlib import Path
 
 import httpx
+
+from shared.utils.http_client import resilient_request, get_client
 from mcp.server.fastmcp import FastMCP
 
 from . import data_loaders, usaspending_client, sam_client  # pyright: ignore[reportAttributeAccessIssue]
@@ -58,18 +60,16 @@ async def _lookup_chpl(cehrt_id: str, api_key: str) -> dict:
     """
     url = f"https://chpl.healthit.gov/rest/certification_ids/{cehrt_id}"
     try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            resp = await client.get(url, headers={"API-key": api_key})
-            resp.raise_for_status()
-            data = resp.json()
-            products = data.get("products", [])
-            if products:
-                product = products[0]
-                return {
-                    "ehr_product_name": product.get("name", ""),
-                    "ehr_developer": product.get("developer", ""),
-                }
-            return {}
+        resp = await resilient_request("GET", url, headers={"API-key": api_key}, timeout=15.0)
+        data = resp.json()
+        products = data.get("products", [])
+        if products:
+            product = products[0]
+            return {
+                "ehr_product_name": product.get("name", ""),
+                "ehr_developer": product.get("developer", ""),
+            }
+        return {}
     except Exception as e:
         logger.debug("CHPL lookup failed for %s: %s", cehrt_id, e)
         return {}

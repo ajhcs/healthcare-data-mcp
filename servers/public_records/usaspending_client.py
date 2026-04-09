@@ -9,6 +9,8 @@ from datetime import datetime
 
 import httpx
 
+from shared.utils.http_client import resilient_request, get_client
+
 logger = logging.getLogger(__name__)
 
 _BASE_URL = "https://api.usaspending.gov/api/v2"
@@ -73,10 +75,8 @@ async def search_awards(
     }
 
     try:
-        async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
-            resp = await client.post(f"{_BASE_URL}/search/spending_by_award/", json=payload)
-            resp.raise_for_status()
-            return resp.json()
+        resp = await resilient_request("POST", f"{_BASE_URL}/search/spending_by_award/", json=payload, timeout=_TIMEOUT)
+        return resp.json()
     except Exception as e:
         logger.warning("USAspending search failed: %s", e)
         return {"error": str(e)}

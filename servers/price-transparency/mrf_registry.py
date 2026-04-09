@@ -12,6 +12,8 @@ from pathlib import Path
 
 import httpx
 
+from shared.utils.http_client import resilient_request, get_client
+
 logger = logging.getLogger(__name__)
 
 _CACHE_DIR = Path.home() / ".healthcare-data-mcp" / "cache" / "mrf"
@@ -108,11 +110,9 @@ async def search_cms_providers(query: str, state: str = "") -> list[dict]:
     }
 
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.post(CMS_PROVIDER_API, json=payload)
-            resp.raise_for_status()
-            data = resp.json()
-            return data.get("results", [])
+        resp = await resilient_request("POST", CMS_PROVIDER_API, json=payload, timeout=30.0)
+        data = resp.json()
+        return data.get("results", [])
     except Exception as e:
         logger.warning("CMS provider search failed: %s", e)
         return []
@@ -133,10 +133,8 @@ async def fetch_cms_hpt_txt(domain: str) -> list[dict]:
     """
     url = f"https://{domain}/cms-hpt.txt"
     try:
-        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
-            resp = await client.get(url)
-            resp.raise_for_status()
-            return _parse_cms_hpt_txt(resp.text)
+        resp = await resilient_request("GET", url, timeout=30.0)
+        return _parse_cms_hpt_txt(resp.text)
     except Exception as e:
         logger.warning("Failed to fetch cms-hpt.txt from %s: %s", domain, e)
         return []

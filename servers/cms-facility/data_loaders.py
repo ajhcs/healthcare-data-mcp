@@ -1,9 +1,12 @@
 """Data loading and caching for CMS facility datasets."""
 
+import asyncio
 import logging
 from pathlib import Path
 
 import httpx
+
+from shared.utils.http_client import resilient_request, get_client
 import pandas as pd
 
 logger = logging.getLogger(__name__)
@@ -14,23 +17,24 @@ CACHE_DIR.mkdir(parents=True, exist_ok=True)
 HOSPITAL_INFO_URL = "https://data.cms.gov/provider-data/api/1/datastore/query/xubh-q36u/0/download?format=csv"
 NPPES_API_URL = "https://npiregistry.cms.hhs.gov/api/"
 
+_BULK_TTL_DAYS = 90  # CMS bulk data refresh cadence
+
 # In-memory DataFrames to avoid re-reading CSV on every call
 _hospital_info_df: pd.DataFrame | None = None
 _cost_report_df: pd.DataFrame | None = None
+_df_lock = asyncio.Lock()
 
 
 async def _download_csv(url: str, cache_name: str) -> Path:
     """Download a CSV from CMS and cache it locally."""
     cached = CACHE_DIR / cache_name
-    if cached.exists():
+    if is_cache_valid(cached, max_age_days=_BULK_TTL_DAYS):
         logger.info("Using cached file: %s", cached)
         return cached
 
     logger.info("Downloading %s ...", url)
-    async with httpx.AsyncClient(timeout=300.0, follow_redirects=True) as client:
-        resp = await client.get(url)
-        resp.raise_for_status()
-        cached.write_bytes(resp.content)
+    resp = await resilient_request("GET", url, timeout=300.0)
+    cached.write_bytes(resp.content)
 
     logger.info("Saved to: %s", cached)
     return cached
@@ -39,15 +43,16 @@ async def _download_csv(url: str, cache_name: str) -> Path:
 async def load_hospital_info() -> pd.DataFrame:
     """Load the Hospital General Information dataset, downloading if needed."""
     global _hospital_info_df
-    if _hospital_info_df is not None:
-        return _hospital_info_df
+    async with _df_lock:
+        if _hospital_info_df is not None:
+            return _hospital_info_df
 
-    path = await _download_csv(HOSPITAL_INFO_URL, "hospital_general_info.csv")
-    df = pd.read_csv(path, dtype=str, keep_default_na=False)
-    # Normalize column names to lowercase with underscores
-    df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
-    _hospital_info_df = df
-    return df
+        path = await _download_csv(HOSPITAL_INFO_URL, "hospital_general_info.csv")
+        df = pd.read_csv(path, dtype=str, keep_default_na=False)
+        # Normalize column names to lowercase with underscores
+        df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
+        _hospital_info_df = df
+        return df
 
 
 async def load_cost_report() -> pd.DataFrame:
@@ -58,10 +63,11 @@ async def load_cost_report() -> pd.DataFrame:
     we return an empty DataFrame so the server stays functional.
     """
     global _cost_report_df
-    if _cost_report_df is not None:
-        return _cost_report_df
+    async with _df_lock:
+        if _cost_report_df is not None:
+            return _cost_report_df
 
-    # CMS Cost Report PUF — direct CSV download (2023 Final, published Jan 2026)
+        # CMS Cost Report PUF — direct CSV download (2023 Final, published Jan 2026)
     cost_report_url = (
         "https://data.cms.gov/sites/default/files/2026-01/"
         "3c39f483-c7e0-4025-8396-4df76942e10f/CostReport_2023_Final.csv"
@@ -99,8 +105,6 @@ async def search_nppes(
     if enumeration_type:
         params["enumeration_type"] = enumeration_type
 
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        resp = await client.get(NPPES_API_URL, params=params)
-        resp.raise_for_status()
-        data = resp.json()
-        return data.get("results", [])
+    resp = await resilient_request("GET", NPPES_API_URL, params=params, timeout=30.0)
+    data = resp.json()
+    return data.get("results", [])

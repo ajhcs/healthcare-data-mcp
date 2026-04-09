@@ -11,6 +11,8 @@ import os
 
 import httpx
 
+from shared.utils.http_client import resilient_request, get_client
+
 logger = logging.getLogger(__name__)
 
 _BASE_URL = "https://www.googleapis.com/customsearch/v1"
@@ -78,10 +80,8 @@ async def search(
         params["dateRestrict"] = date_restrict
 
     try:
-        async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
-            resp = await client.get(_BASE_URL, params=params)
-            resp.raise_for_status()
-            return resp.json()
+        resp = await resilient_request("GET", _BASE_URL, params=params, timeout=_TIMEOUT)
+        return resp.json()
     except httpx.HTTPStatusError as e:
         if e.response.status_code == 429:
             logger.warning("Google CSE quota exceeded")

@@ -1,12 +1,20 @@
 """Data loaders for CMS Geographic Variation PUF."""
 
 import logging
-from datetime import datetime, timezone
 from pathlib import Path
 
 import duckdb
 import httpx
+
+from shared.utils.http_client import resilient_request, get_client
 import pandas as pd
+
+import sys as _sys
+_project_root = __import__("pathlib").Path(__file__).resolve().parent.parent.parent
+if str(_project_root) not in _sys.path:
+    _sys.path.insert(0, str(_project_root))
+
+from shared.utils.cache import is_cache_valid  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -24,10 +32,7 @@ GV_CSV_URL = (
 
 
 def _is_cache_valid(path: Path) -> bool:
-    if not path.exists():
-        return False
-    age_days = (datetime.now(timezone.utc).timestamp() - path.stat().st_mtime) / 86400
-    return age_days < _CACHE_TTL_DAYS
+    return is_cache_valid(path, max_age_days=_CACHE_TTL_DAYS)
 
 
 async def ensure_gv_cached() -> bool:
@@ -37,9 +42,7 @@ async def ensure_gv_cached() -> bool:
 
     logger.info("Downloading Geographic Variation PUF...")
     try:
-        async with httpx.AsyncClient(timeout=600.0, follow_redirects=True) as client:
-            resp = await client.get(GV_CSV_URL)
-            resp.raise_for_status()
+        resp = await resilient_request("GET", GV_CSV_URL, timeout=600.0)
 
         csv_path = _CACHE_DIR / "gv_raw.csv"
         csv_path.write_bytes(resp.content)

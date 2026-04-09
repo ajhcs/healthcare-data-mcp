@@ -824,6 +824,7 @@ async def download_mrf(url: str, hospital_id: str) -> Path:
     Returns the path to the downloaded file.
     """
     import httpx as _httpx
+    from shared.utils.http_client import get_client
 
     cache_dir = _hospital_cache_dir(hospital_id)
     cache_dir.mkdir(parents=True, exist_ok=True)
@@ -836,15 +837,16 @@ async def download_mrf(url: str, hospital_id: str) -> Path:
 
     logger.info("Downloading MRF: %s -> %s", url, dest)
 
-    async with _httpx.AsyncClient(
+    # Streaming downloads use the pooled client directly (not resilient_request)
+    client = get_client()
+    async with client.stream(
+        "GET", url,
         timeout=_httpx.Timeout(600.0, connect=30.0),
-        follow_redirects=True,
-    ) as client:
-        async with client.stream("GET", url) as response:
-            response.raise_for_status()
-            with open(dest, "wb") as f:
-                async for chunk in response.aiter_bytes(chunk_size=1024 * 1024):
-                    f.write(chunk)
+    ) as response:
+        response.raise_for_status()
+        with open(dest, "wb") as f:
+            async for chunk in response.aiter_bytes(chunk_size=1024 * 1024):
+                f.write(chunk)
 
     logger.info("Downloaded %s (%.1f MB)", dest.name, dest.stat().st_size / 1024 / 1024)
     return dest
