@@ -25,7 +25,14 @@ async def search_awards(
 
     Returns raw API response dict.
     """
-    fy = fiscal_year or str(datetime.now().year)
+    if fiscal_year:
+        fy = int(fiscal_year)
+    else:
+        # Federal fiscal year runs Oct 1 -- Sep 30.
+        # FY 2026 = Oct 1 2025 through Sep 30 2026.
+        # If today is Oct-Dec 2025, we are in FY 2026.
+        now = datetime.now()
+        fy = now.year + 1 if now.month >= 10 else now.year
 
     # Map friendly award_type to USAspending codes
     type_map = {
@@ -38,7 +45,7 @@ async def search_awards(
 
     filters: dict = {
         "recipient_search_text": [recipient_name],
-        "time_period": [{"start_date": f"{fy}-10-01", "end_date": f"{int(fy)+1}-09-30"}],
+        "time_period": [{"start_date": f"{fy - 1}-10-01", "end_date": f"{fy}-09-30"}],
     }
     if award_types:
         filters["award_type_codes"] = award_types
