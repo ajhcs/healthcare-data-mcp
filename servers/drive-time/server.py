@@ -20,6 +20,7 @@ import zipfile
 
 import pandas as pd
 from mcp.server.fastmcp import FastMCP
+from shared.utils.cms_client import load_hospital_general_info
 from shared.utils.http_client import resilient_request
 
 from .accessibility import compute_e2sfca, summarize_scores
@@ -45,10 +46,6 @@ METERS_PER_MILE = 1609.344
 # Facility data cache
 CACHE_DIR = os.path.join(os.path.expanduser("~"), ".healthcare-data-mcp", "cache")
 os.makedirs(CACHE_DIR, exist_ok=True)
-HOSPITAL_INFO_URL = "https://data.cms.gov/provider-data/api/1/datastore/query/xubh-q36u/0/download?format=csv"
-
-# In-memory cache of facility DataFrame
-_facility_df: pd.DataFrame | None = None
 
 # ---------------------------------------------------------------------------
 # MCP Server
@@ -75,24 +72,12 @@ def _get_ors() -> ORSRouter:
 
 
 async def _load_facilities() -> pd.DataFrame:
-    """Load CMS Hospital General Info, downloading and caching if needed."""
-    global _facility_df
-    if _facility_df is not None:
-        return _facility_df
+    """Load CMS Hospital General Info via the shared loader.
 
-
-    cache_path = os.path.join(CACHE_DIR, "hospital_general_info.csv")
-    if not os.path.exists(cache_path):
-        logger.info("Downloading Hospital General Info from CMS...")
-        resp = await resilient_request("GET", HOSPITAL_INFO_URL, timeout=300.0)
-        with open(cache_path, "wb") as f:
-            f.write(resp.content)
-        logger.info("Saved to %s", cache_path)
-
-    df = pd.read_csv(cache_path, dtype=str, keep_default_na=False)
-    df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
-    _facility_df = df
-    return df
+    Delegates to :func:`shared.utils.cms_client.load_hospital_general_info`
+    so the file is downloaded and cached once across all servers.
+    """
+    return await load_hospital_general_info(normalize_columns=True)
 
 
 # Census Gazetteer ZIP centroid file (~1MB ZIP archive, pipe-delimited inside)
