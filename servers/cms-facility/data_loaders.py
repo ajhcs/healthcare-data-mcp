@@ -5,8 +5,7 @@ import logging
 from pathlib import Path
 
 import pandas as pd
-from shared.utils.cache import is_cache_valid
-from shared.utils.cms_client import cms_discover_download_url
+from shared.utils.cms_client import cms_discover_download_url, load_hospital_general_info
 from shared.utils.http_client import resilient_request
 
 logger = logging.getLogger(__name__)
@@ -14,20 +13,20 @@ logger = logging.getLogger(__name__)
 CACHE_DIR = Path.home() / ".healthcare-data-mcp" / "cache"
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
-HOSPITAL_INFO_URL = "https://data.cms.gov/provider-data/api/1/datastore/query/xubh-q36u/0/download?format=csv"
 NPPES_API_URL = "https://npiregistry.cms.hhs.gov/api/"
 
 _BULK_TTL_DAYS = 90  # CMS bulk data refresh cadence
 _COST_REPORT_DATASET_TITLE = "Hospital Provider Cost Report"
 
 # In-memory DataFrames to avoid re-reading CSV on every call
-_hospital_info_df: pd.DataFrame | None = None
 _cost_report_df: pd.DataFrame | None = None
 _df_lock = asyncio.Lock()
 
 
 async def _download_csv(url: str, cache_name: str) -> Path:
     """Download a CSV from CMS and cache it locally."""
+    from shared.utils.cache import is_cache_valid
+
     cached = CACHE_DIR / cache_name
     if is_cache_valid(cached, max_age_days=_BULK_TTL_DAYS):
         logger.info("Using cached file: %s", cached)
@@ -42,18 +41,13 @@ async def _download_csv(url: str, cache_name: str) -> Path:
 
 
 async def load_hospital_info() -> pd.DataFrame:
-    """Load the Hospital General Information dataset, downloading if needed."""
-    global _hospital_info_df
-    async with _df_lock:
-        if _hospital_info_df is not None:
-            return _hospital_info_df
+    """Load the Hospital General Information dataset, downloading if needed.
 
-        path = await _download_csv(HOSPITAL_INFO_URL, "hospital_general_info.csv")
-        df = pd.read_csv(path, dtype=str, keep_default_na=False)
-        # Normalize column names to lowercase with underscores
-        df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
-        _hospital_info_df = df
-        return df
+    Delegates to the shared loader so the file is downloaded and cached once
+    across all servers.  Columns are normalized to lowercase with underscores
+    to preserve the existing API of this function.
+    """
+    return await load_hospital_general_info(normalize_columns=True)
 
 
 async def load_cost_report() -> pd.DataFrame:

@@ -243,6 +243,88 @@ async def cms_download_csv(url: str, cache_key: str | None = None) -> Path:
     return cached
 
 
+_HOSPITAL_INFO_DATASET_ID = "xubh-q36u"
+_HOSPITAL_INFO_URL = (
+    f"{CMS_API_BASE}/provider-data/api/1/datastore/query/{_HOSPITAL_INFO_DATASET_ID}/0/download?format=csv"
+)
+_HOSPITAL_INFO_CACHE_PATH = DATA_DIR / "hospital_general_info.csv"
+_HOSPITAL_INFO_TTL_DAYS = 90  # CMS bulk data refresh cadence
+
+# In-memory cache — keyed by column normalization mode
+_hospital_info_raw: "pd.DataFrame | None" = None
+_hospital_info_normalized: "pd.DataFrame | None" = None
+
+
+async def load_hospital_general_info(normalize_columns: bool = False) -> "pd.DataFrame":
+    """Download and cache the CMS Hospital General Information CSV (xubh-q36u).
+
+    The file is stored at ``~/.healthcare-data-mcp/cache/hospital_general_info.csv``
+    and refreshed after ``_HOSPITAL_INFO_TTL_DAYS`` days.
+
+    Args:
+        normalize_columns: When *True*, strip and lowercase column names,
+            replacing spaces with underscores.  When *False*, original
+            CMS column names are preserved (e.g. ``"Facility ID"``,
+            ``"Facility Name"``).
+
+    Returns:
+        A :class:`pandas.DataFrame` with all columns as ``str``.
+    """
+    import pandas as pd
+
+    global _hospital_info_raw, _hospital_info_normalized
+
+    if normalize_columns and _hospital_info_normalized is not None:
+        return _hospital_info_normalized
+    if not normalize_columns and _hospital_info_raw is not None:
+        return _hospital_info_raw
+
+    if not is_cache_valid(_HOSPITAL_INFO_CACHE_PATH, max_age_days=_HOSPITAL_INFO_TTL_DAYS):
+        logger.info("Downloading Hospital General Info from CMS (%s)…", _HOSPITAL_INFO_URL)
+        resp = await resilient_request("GET", _HOSPITAL_INFO_URL, timeout=300.0)
+        _HOSPITAL_INFO_CACHE_PATH.write_bytes(resp.content)
+        logger.info(
+            "Hospital General Info cached to %s (%d bytes)",
+            _HOSPITAL_INFO_CACHE_PATH,
+            _HOSPITAL_INFO_CACHE_PATH.stat().st_size,
+        )
+        # Invalidate in-memory copies after a fresh download
+        _hospital_info_raw = None
+        _hospital_info_normalized = None
+
+    df = pd.read_csv(_HOSPITAL_INFO_CACHE_PATH, dtype=str, keep_default_na=False)
+    if normalize_columns:
+        df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
+        _hospital_info_normalized = df
+    else:
+        _hospital_info_raw = df
+
+    return df
+
+
+async def load_hospital_names() -> dict[str, str]:
+    """Return a CCN → facility-name mapping from CMS Hospital General Info.
+
+    Convenience wrapper around :func:`load_hospital_general_info` that returns
+    a plain dict suitable for quick lookups.
+    """
+    df = await load_hospital_general_info(normalize_columns=False)
+    # Find the columns regardless of minor whitespace variations in the CSV header.
+    facility_id_col = next(
+        (c for c in df.columns if c.strip() == "Facility ID"),
+        None,
+    )
+    facility_name_col = next(
+        (c for c in df.columns if c.strip() == "Facility Name"),
+        None,
+    )
+    if not facility_id_col or not facility_name_col:
+        raise ValueError(
+            f"Expected 'Facility ID' and 'Facility Name' columns; found: {list(df.columns)}"
+        )
+    return dict(zip(df[facility_id_col].str.strip(), df[facility_name_col].str.strip()))
+
+
 async def nppes_lookup(number: str | None = None, **kwargs) -> list[dict]:
     """Query the NPPES NPI Registry REST API.
 

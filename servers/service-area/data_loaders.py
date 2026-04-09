@@ -15,7 +15,7 @@ if str(_project_root) not in _sys.path:
     _sys.path.insert(0, str(_project_root))
 
 from shared.utils.cache import is_cache_valid  # noqa: E402
-from shared.utils.cms_client import cms_discover_download_url  # noqa: E402
+from shared.utils.cms_client import cms_discover_download_url, load_hospital_names  # noqa: E402
 from shared.utils.column_detection import find_df_column  # noqa: E402
 
 logger = logging.getLogger(__name__)
@@ -147,27 +147,7 @@ async def download_dartmouth_crosswalk(force: bool = False) -> pd.DataFrame:
     return _normalize_dartmouth(df)
 
 
-# Hospital General Info for facility name cross-reference
-_HOSP_INFO_URL = "https://data.cms.gov/provider-data/api/1/datastore/query/xubh-q36u/0/download?format=csv"
-_HOSP_INFO_CACHE = CACHE_DIR / "hospital_general_info.csv"
-
-
-async def load_hospital_names() -> dict[str, str]:
-    """Load a CCN → facility name mapping from CMS Hospital General Info.
-
-    Returns dict mapping CCN strings to facility name strings.
-    """
-    if not _HOSP_INFO_CACHE.exists():
-        logger.info("Downloading Hospital General Info for name lookup...")
-        resp = await resilient_request("GET", _HOSP_INFO_URL, timeout=300.0)
-        _HOSP_INFO_CACHE.write_bytes(resp.content)
-
-    df = pd.read_csv(_HOSP_INFO_CACHE, dtype=str, keep_default_na=False,
-                      usecols=lambda c: c.strip() in ("Facility ID", "Facility Name"))
-    return dict(zip(
-        df["Facility ID"].str.strip(),
-        df["Facility Name"].str.strip(),
-    ))
+# load_hospital_names is imported from shared.utils.cms_client
 
 
 def _normalize_dartmouth(df: pd.DataFrame) -> pd.DataFrame:
