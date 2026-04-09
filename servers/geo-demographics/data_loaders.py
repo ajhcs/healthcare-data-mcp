@@ -14,7 +14,7 @@ if str(_project_root) not in _sys.path:
     _sys.path.insert(0, str(_project_root))
 
 from shared.utils.cache import is_cache_valid  # noqa: E402
-from shared.utils.cms_client import cms_discover_download_url  # noqa: E402
+from shared.utils.cms_url_resolver import resolve_cms_download_url  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -43,10 +43,7 @@ async def ensure_gv_cached() -> bool:
 
     logger.info("Downloading Geographic Variation PUF...")
     try:
-        gv_url = await cms_discover_download_url(
-            title=_GV_DATASET_TITLE,
-            fallback_url=GV_CSV_URL,
-        )
+        gv_url = await resolve_cms_download_url("gv-puf", "Geographic_Variation")
         if not gv_url:
             raise RuntimeError("Unable to resolve Geographic Variation download URL")
 
