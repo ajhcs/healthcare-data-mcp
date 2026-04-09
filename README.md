@@ -349,6 +349,32 @@ All data comes from publicly available US government sources. No PHI, no HIPAA-c
 | ONC CHPL | ONC | [chpl.healthit.gov](https://chpl.healthit.gov/) |
 | HUD USPS Crosswalk | HUD | [huduser.gov](https://www.huduser.gov/portal/dataset/uspszip-api.html) |
 
+## Pair with Healthcare Agents
+
+These MCP servers give your AI **data access**. For **domain expertise**, pair them with [Healthcare Agents](https://github.com/ajhcs/healthcare-agents) -- 51 specialized AI agents covering revenue cycle, compliance, quality improvement, clinical ops, payer relations, and more.
+
+Together, you get agents that know *what to ask* backed by servers that know *where to find the answer*:
+
+```
+Healthcare Agents (expertise)     Healthcare Data MCP (data)
+================================  ================================
+Revenue Cycle Specialist     -->  claims-analytics, price-transparency
+Compliance Officer           -->  public-records, cms-facility
+Quality Improvement Lead     -->  hospital-quality, claims-analytics
+Workforce Planner            -->  workforce-analytics, geo-demographics
+Market Analyst               -->  service-area, drive-time, financial-intelligence
+Health System Strategist     -->  health-system-profiler, physician-referral-network
+```
+
+Install both:
+```bash
+# Data (this repo)
+pip install -e .
+
+# Agents
+curl -fsSL https://raw.githubusercontent.com/ajhcs/healthcare-agents/main/install.sh | bash
+```
+
 ## License
 
 MIT. See [LICENSE](LICENSE).
