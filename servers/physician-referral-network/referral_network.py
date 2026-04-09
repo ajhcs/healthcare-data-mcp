@@ -12,6 +12,8 @@ from pathlib import Path
 
 import duckdb
 import httpx
+
+from shared.utils.http_client import resilient_request, get_client
 import pandas as pd
 
 from shared.utils.duckdb_safe import safe_parquet_sql
