@@ -20,6 +20,7 @@ Discovery order:
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from datetime import datetime, timezone
@@ -27,6 +28,9 @@ from pathlib import Path
 from typing import TypedDict
 
 logger = logging.getLogger(__name__)
+
+# Module-level lock protecting the URL registry read-modify-write cycle.
+_registry_lock = asyncio.Lock()
 
 # ---------------------------------------------------------------------------
 # Cache configuration
@@ -271,17 +275,18 @@ def _get_cached_url(dataset_id: str, filename_hint: str) -> str | None:
     return None
 
 
-def _store_cached_url(dataset_id: str, filename_hint: str, url: str) -> None:
-    """Store a resolved URL in the registry cache."""
-    registry = _load_registry()
-    key = _cache_key(dataset_id, filename_hint)
-    registry[key] = {
-        "url": url,
-        "resolved_at": datetime.now(timezone.utc).timestamp(),
-        "dataset_id": dataset_id,
-        "filename_hint": filename_hint,
-    }
-    _save_registry(registry)
+async def _store_cached_url(dataset_id: str, filename_hint: str, url: str) -> None:
+    """Store a resolved URL in the registry cache (thread-safe via asyncio.Lock)."""
+    async with _registry_lock:
+        registry = _load_registry()
+        key = _cache_key(dataset_id, filename_hint)
+        registry[key] = {
+            "url": url,
+            "resolved_at": datetime.now(timezone.utc).timestamp(),
+            "dataset_id": dataset_id,
+            "filename_hint": filename_hint,
+        }
+        _save_registry(registry)
 
 
 # ---------------------------------------------------------------------------
@@ -351,12 +356,14 @@ async def _try_metastore_api(dataset_id: str, filename_hint: str) -> str | None:
     if found:
         return found
 
-    # Fall back to the direct datastore download endpoint (works for most DKAN datasets)
+    # No distribution found — return None so the next resolution level is tried.
+    # We do NOT construct a datastore URL here because that URL may be dead and
+    # would get cached for 7 days, silently breaking downloads.
     logger.debug(
-        "Metastore for %s has no matching distribution; trying datastore download endpoint",
+        "Metastore for %s has no matching distribution; falling through to catalog",
         dataset_id,
     )
-    return _CMS_DATASTORE_DOWNLOAD_URL.format(dataset_id=dataset_id)
+    return None
 
 
 def _looks_like_cms_dataset_id(dataset_id: str) -> bool:
@@ -439,7 +446,7 @@ async def resolve_cms_download_url(
             logger.info(
                 "Resolved %s via metastore API: %s", dataset_id, discovered[:80]
             )
-            _store_cached_url(dataset_id, filename_hint, discovered)
+            await _store_cached_url(dataset_id, filename_hint, discovered)
             return discovered
 
     # 3. CMS data.json catalog
@@ -448,7 +455,7 @@ async def resolve_cms_download_url(
         logger.info(
             "Resolved %s via data.json catalog: %s", dataset_id, catalog_url[:80]
         )
-        _store_cached_url(dataset_id, filename_hint, catalog_url)
+        await _store_cached_url(dataset_id, filename_hint, catalog_url)
         return catalog_url
 
     # 4. Hardcoded fallback
