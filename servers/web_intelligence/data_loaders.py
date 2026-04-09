@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import duckdb
+from shared.utils.duckdb_safe import safe_parquet_sql
 import httpx
 
 from shared.utils.http_client import resilient_request, get_client
@@ -91,7 +92,7 @@ def _get_con(parquet_path: Path, view_name: str = "data") -> duckdb.DuckDBPyConn
     con = duckdb.connect(":memory:")
     try:
         con.execute(
-            f"CREATE VIEW {view_name} AS SELECT * FROM read_parquet('{parquet_path}')"
+            f"CREATE VIEW {view_name} AS SELECT * FROM {safe_parquet_sql(parquet_path)}"
         )
         return con
     except Exception:

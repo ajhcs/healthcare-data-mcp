@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import duckdb
+from shared.utils.duckdb_safe import safe_parquet_sql
 import httpx
 
 from shared.utils.http_client import resilient_request, get_client
@@ -81,7 +82,7 @@ def query_hpsas(state: str, discipline: str = "", county_fips: str = "") -> list
 
     try:
         con = duckdb.connect(":memory:")
-        con.execute(f"CREATE VIEW hpsa AS SELECT * FROM read_parquet('{_HPSA_CACHE}')")
+        con.execute(f"CREATE VIEW hpsa AS SELECT * FROM {safe_parquet_sql(_HPSA_CACHE)}")
 
         # Find relevant columns
         cols = [r[0] for r in con.execute(
@@ -240,7 +241,7 @@ def query_hcris_gme(ccn: str) -> dict | None:
 
     try:
         con = duckdb.connect(":memory:")
-        con.execute(f"CREATE VIEW hcris AS SELECT * FROM read_parquet('{_HCRIS_CACHE}')")
+        con.execute(f"CREATE VIEW hcris AS SELECT * FROM {safe_parquet_sql(_HCRIS_CACHE)}")
 
         cols = [r[0] for r in con.execute(
             "SELECT column_name FROM information_schema.columns WHERE table_name='hcris'"
@@ -304,7 +305,7 @@ def query_hcris_staffing(ccn: str) -> dict | None:
 
     try:
         con = duckdb.connect(":memory:")
-        con.execute(f"CREATE VIEW hcris AS SELECT * FROM read_parquet('{_HCRIS_CACHE}')")
+        con.execute(f"CREATE VIEW hcris AS SELECT * FROM {safe_parquet_sql(_HCRIS_CACHE)}")
 
         cols = [r[0] for r in con.execute(
             "SELECT column_name FROM information_schema.columns WHERE table_name='hcris'"

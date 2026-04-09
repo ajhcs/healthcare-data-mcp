@@ -224,8 +224,9 @@ def query_work_stoppages(year_start: int = 2015, year_end: int = 2026) -> list[d
 
     try:
         import duckdb
+        from shared.utils.duckdb_safe import safe_parquet_sql
         con = duckdb.connect(":memory:")
-        con.execute(f"CREATE VIEW ws AS SELECT * FROM read_parquet('{_STOPPAGES_CACHE}')")
+        con.execute(f"CREATE VIEW ws AS SELECT * FROM {safe_parquet_sql(_STOPPAGES_CACHE)}")
 
         cols = [r[0] for r in con.execute(
             "SELECT column_name FROM information_schema.columns WHERE table_name='ws'"

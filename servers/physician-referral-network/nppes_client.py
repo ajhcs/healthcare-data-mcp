@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import duckdb
+from shared.utils.duckdb_safe import safe_parquet_sql
 import httpx
 
 from shared.utils.http_client import resilient_request, get_client
@@ -284,7 +285,7 @@ def get_quality_info(npi: str) -> dict | None:
     try:
         con = duckdb.connect(":memory:")
         con.execute(
-            f"CREATE VIEW pc AS SELECT * FROM read_parquet('{_PHYSICIAN_COMPARE_CACHE}')"
+            f"CREATE VIEW pc AS SELECT * FROM {safe_parquet_sql(_PHYSICIAN_COMPARE_CACHE)}"
         )
 
         # Find NPI column (may be "npi" or "ind_pac_id" etc.)
@@ -388,7 +389,7 @@ def get_utilization_summary(npi: str) -> dict | None:
     try:
         con = duckdb.connect(":memory:")
         con.execute(
-            f"CREATE VIEW util AS SELECT * FROM read_parquet('{_UTILIZATION_CACHE}')"
+            f"CREATE VIEW util AS SELECT * FROM {safe_parquet_sql(_UTILIZATION_CACHE)}"
         )
 
         cols = [r[0] for r in con.execute("SELECT column_name FROM information_schema.columns WHERE table_name='util'").fetchall()]

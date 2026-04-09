@@ -66,8 +66,9 @@ def query_gv(geo_level: str, geo_code: str) -> dict | None:
         return None
 
     try:
+        from shared.utils.duckdb_safe import safe_parquet_sql
         con = duckdb.connect(":memory:")
-        con.execute(f"CREATE VIEW gv AS SELECT * FROM read_parquet('{_GV_PARQUET}')")
+        con.execute(f"CREATE VIEW gv AS SELECT * FROM {safe_parquet_sql(_GV_PARQUET)}")
 
         if geo_level == "State" and len(geo_code) == 2 and geo_code.isalpha():
             # State abbreviations are stored in BENE_GEO_DESC, not BENE_GEO_CD
