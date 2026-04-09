@@ -81,6 +81,29 @@ class PatientExperience(BaseModel):
     domains: list[ExperienceDomain] = Field(default_factory=list)
 
 
+class ComplicationRecord(BaseModel):
+    """A single complication or death measure for a hospital."""
+
+    measure_id: str = Field(default="", description="CMS measure identifier (e.g. PSI_90)")
+    measure_name: str = ""
+    compared_to_national: str = Field(
+        default="", description="National comparison label (e.g. 'Better than the National Rate')"
+    )
+    denominator: int | None = Field(default=None, description="Number of cases/patients")
+    score: float | None = Field(default=None, description="Observed rate or score")
+    lower_estimate: float | None = None
+    higher_estimate: float | None = None
+    footnote: str = ""
+
+
+class ComplicationsData(BaseModel):
+    """Complications and Deaths data for a hospital (CMS dataset ynj2-r877)."""
+
+    ccn: str = Field(description="CMS Certification Number")
+    facility_name: str = ""
+    measures: list[ComplicationRecord] = Field(default_factory=list)
+
+
 class FinancialProfile(BaseModel):
     """Financial profile derived from CMS Cost Report or IPPS Impact File."""
 
