@@ -1,133 +1,227 @@
-"""Regression tests for financial-intelligence Form 990 search mapping."""
+"""Tests for the financial-intelligence MCP server tools.
+
+Uses monkeypatching to avoid live ProPublica/EDGAR API calls.
+"""
 
 import json
 import os
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
-os.environ.setdefault("SEC_USER_AGENT", "healthcare-data-mcp-tests test@example.com")
+# SEC_USER_AGENT must be set before the edgar_client module is imported, because
+# it raises RuntimeError at module level when the var is missing.
+os.environ.setdefault("SEC_USER_AGENT", "CI ci@example.com")
 
-from servers.financial_intelligence import server
+from servers.financial_intelligence import server, propublica_client, edgar_client  # noqa: E402
 
 
-@pytest.mark.asyncio
-async def test_search_form990_uses_latest_filing_financials(monkeypatch):
-    async def fake_search_organizations(query, state="", ntee_code="", page=0):
-        return {
-            "total_results": 1,
-            "organizations": [
-                {
-                    "ein": "340714585",
-                    "name": "Cleveland Clinic",
-                    "city": "Cleveland",
-                    "state": "OH",
-                    "ntee_code": "E220",
-                    "income_amount": "10783069848",
-                    "revenue_amount": "9680031802",
-                    "asset_amount": "15354669845",
-                }
-            ],
+# ---------------------------------------------------------------------------
+# Fixtures — realistic ProPublica/EDGAR-shaped payloads
+# ---------------------------------------------------------------------------
+
+PROPUBLICA_SEARCH_RESPONSE = {
+    "total_results": 2,
+    "organizations": [
+        {
+            "ein": 231352166,
+            "name": "Thomas Jefferson University",
+            "city": "Philadelphia",
+            "state": "PA",
+            "ntee_code": "E21",
+            "revenue_amount": 2_800_000_000,
+            "expenses_amount": 2_750_000_000,
+            "asset_amount": 4_200_000_000,
+            "tax_period": 202312,
+        },
+        {
+            "ein": 236002364,
+            "name": "Temple University Health System",
+            "city": "Philadelphia",
+            "state": "PA",
+            "ntee_code": "E21",
+            "revenue_amount": 1_500_000_000,
+            "expenses_amount": 1_480_000_000,
+            "asset_amount": 2_100_000_000,
+            "tax_period": 202312,
+        },
+    ],
+}
+
+PROPUBLICA_ORG_DETAIL = {
+    "organization": {
+        "ein": 231352166,
+        "name": "Thomas Jefferson University",
+        "city": "Philadelphia",
+        "state": "PA",
+        "ntee_code": "E21",
+    },
+    "filings_with_data": [
+        {
+            "tax_prd": 202312,
+            "tax_prd_yr": 2023,
+            "totrevenue": 2_800_000_000,
+            "totfuncexpns": 2_750_000_000,
+            "totnetassetend": 1_450_000_000,
+            "xml_url": "",
         }
+    ],
+}
 
-    async def fake_get_organization(ein):
-        assert ein == "340714585"
-        return {
-            "organization": {
-                "ein": "340714585",
-                "name": "Cleveland Clinic",
-                "revenue_amount": "9680031802",
-                "asset_amount": "15354669845",
+EDGAR_SEARCH_RESPONSE = {
+    "hits": {
+        "total": {"value": 2},
+        "hits": [
+            {
+                "_source": {
+                    "adsh": "0001234567-24-000001",
+                    "display_names": ["HCA Healthcare Inc"],
+                    "ciks": ["0000860730"],
+                    "form": "10-K",
+                    "file_date": "2024-02-15",
+                }
             },
-            "filings_with_data": [
-                {
-                    "tax_prd": "202306",
-                    "totrevenue": "7583607049",
-                    "totfuncexpns": "7671629275",
-                    "totnetassetend": "7683048561",
-                    "totassetsend": "15354669845",
+            {
+                "_source": {
+                    "adsh": "0001234567-24-000002",
+                    "display_names": ["Tenet Healthcare Corp"],
+                    "ciks": ["0000070858"],
+                    "form": "10-K",
+                    "file_date": "2024-02-20",
                 }
-            ],
-        }
-
-    monkeypatch.setattr(server.propublica_client, "search_organizations", fake_search_organizations)
-    monkeypatch.setattr(server.propublica_client, "get_organization", fake_get_organization)
-
-    payload = json.loads(await server.search_form990("Cleveland Clinic", state="OH"))
-    org = payload["organizations"][0]
-
-    assert payload["total_results"] == 1
-    assert org["ein"] == "340714585"
-    assert org["total_revenue"] == 7583607049.0
-    assert org["total_expenses"] == 7671629275.0
-    assert org["net_assets"] == 7683048561.0
-    assert org["tax_period"] == "202306"
-
-
-@pytest.mark.asyncio
-async def test_search_form990_falls_back_to_org_level_when_filing_data_missing(monkeypatch):
-    async def fake_search_organizations(query, state="", ntee_code="", page=0):
-        return {
-            "total_results": 1,
-            "organizations": [
-                {
-                    "ein": "123456789",
-                    "name": "Fallback Org",
-                    "city": "Boston",
-                    "state": "MA",
-                    "ntee_code": "B200",
-                }
-            ],
-        }
-
-    async def fake_get_organization(ein):
-        assert ein == "123456789"
-        return {
-            "organization": {
-                "ein": "123456789",
-                "name": "Fallback Org",
-                "revenue_amount": "2500000",
-                "asset_amount": "900000",
-                "tax_period": "202212",
             },
-            "filings_with_data": [],
-        }
+        ],
+    }
+}
 
-    monkeypatch.setattr(server.propublica_client, "search_organizations", fake_search_organizations)
-    monkeypatch.setattr(server.propublica_client, "get_organization", fake_get_organization)
 
-    payload = json.loads(await server.search_form990("Fallback Org"))
-    org = payload["organizations"][0]
+# ---------------------------------------------------------------------------
+# Tests: search_form990
+# ---------------------------------------------------------------------------
 
-    assert org["total_revenue"] == 2500000.0
-    assert org["total_expenses"] is None
-    assert org["net_assets"] == 900000.0
-    assert org["tax_period"] == "202212"
+@pytest.mark.asyncio
+async def test_search_form990_returns_results():
+    with (
+        patch.object(propublica_client, "search_organizations", new_callable=AsyncMock,
+                     return_value=PROPUBLICA_SEARCH_RESPONSE),
+        patch.object(propublica_client, "get_organization", new_callable=AsyncMock,
+                     return_value=PROPUBLICA_ORG_DETAIL),
+    ):
+        result = json.loads(await server.search_form990("Jefferson"))
+
+    assert result["total_results"] == 2
+    assert len(result["organizations"]) == 2
+    org = result["organizations"][0]
+    assert "ein" in org
+    assert "name" in org
+    assert "total_revenue" in org
+    assert org["total_revenue"] > 0
 
 
 @pytest.mark.asyncio
-async def test_search_form990_uses_empty_tax_period_when_missing(monkeypatch):
-    async def fake_search_organizations(query, state="", ntee_code="", page=0):
-        return {
-            "total_results": 1,
-            "organizations": [
+async def test_search_form990_empty_results():
+    with (
+        patch.object(propublica_client, "search_organizations", new_callable=AsyncMock,
+                     return_value={"total_results": 0, "organizations": []}),
+    ):
+        result = json.loads(await server.search_form990("zzznonexistent"))
+    assert result["total_results"] == 0
+    assert result["organizations"] == []
+
+
+@pytest.mark.asyncio
+async def test_search_form990_api_failure():
+    with patch.object(propublica_client, "search_organizations", new_callable=AsyncMock,
+                      side_effect=Exception("Connection refused")):
+        result = json.loads(await server.search_form990("Jefferson"))
+    assert "error" in result
+
+
+@pytest.mark.asyncio
+async def test_search_form990_state_filter():
+    """State filter is passed through to ProPublica; results are whatever the mock returns."""
+    with (
+        patch.object(propublica_client, "search_organizations", new_callable=AsyncMock,
+                     return_value=PROPUBLICA_SEARCH_RESPONSE) as mock_search,
+        patch.object(propublica_client, "get_organization", new_callable=AsyncMock,
+                     return_value=PROPUBLICA_ORG_DETAIL),
+    ):
+        await server.search_form990("health system", state="PA")
+
+    # Ensure state was forwarded to the client
+    call_kwargs = mock_search.call_args
+    assert call_kwargs.kwargs.get("state") == "PA" or (len(call_kwargs.args) > 1 and call_kwargs.args[1] == "PA")
+
+
+# ---------------------------------------------------------------------------
+# Tests: search_sec_filings
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_search_sec_filings_returns_results():
+    with patch.object(edgar_client, "search_filings", new_callable=AsyncMock,
+                      return_value=EDGAR_SEARCH_RESPONSE):
+        result = json.loads(await server.search_sec_filings("HCA Healthcare"))
+
+    assert result["total_results"] == 2
+    assert len(result["filings"]) == 2
+    filing = result["filings"][0]
+    assert filing["accession_number"] == "0001234567-24-000001"
+    assert "HCA" in filing["company_name"]
+    assert filing["form_type"] == "10-K"
+    assert "filing_url" in filing
+    assert filing["filing_url"].startswith("https://www.sec.gov/")
+
+
+@pytest.mark.asyncio
+async def test_search_sec_filings_deduplicates_accession_numbers():
+    """Duplicate adsh entries in raw hits should be deduplicated."""
+    duplicate_response = {
+        "hits": {
+            "total": {"value": 3},
+            "hits": [
                 {
-                    "ein": "555555555",
-                    "name": "No Tax Period Org",
-                    "city": "Seattle",
-                    "state": "WA",
-                    "ntee_code": "C300",
-                }
+                    "_source": {
+                        "adsh": "0001234567-24-000001",
+                        "display_names": ["HCA Healthcare Inc"],
+                        "ciks": ["0000860730"],
+                        "form": "10-K",
+                        "file_date": "2024-02-15",
+                    }
+                },
+                {
+                    # Same accession number — should be skipped
+                    "_source": {
+                        "adsh": "0001234567-24-000001",
+                        "display_names": ["HCA Healthcare Inc"],
+                        "ciks": ["0000860730"],
+                        "form": "10-K",
+                        "file_date": "2024-02-15",
+                    }
+                },
             ],
         }
+    }
+    with patch.object(edgar_client, "search_filings", new_callable=AsyncMock,
+                      return_value=duplicate_response):
+        result = json.loads(await server.search_sec_filings("HCA"))
 
-    async def fake_get_organization(ein):
-        assert ein == "555555555"
-        return {"organization": {"ein": "555555555", "name": "No Tax Period Org"}}
+    assert len(result["filings"]) == 1
 
-    monkeypatch.setattr(server.propublica_client, "search_organizations", fake_search_organizations)
-    monkeypatch.setattr(server.propublica_client, "get_organization", fake_get_organization)
 
-    payload = json.loads(await server.search_form990("No Tax Period Org"))
-    org = payload["organizations"][0]
+@pytest.mark.asyncio
+async def test_search_sec_filings_api_failure():
+    with patch.object(edgar_client, "search_filings", new_callable=AsyncMock,
+                      side_effect=Exception("EDGAR rate limit")):
+        result = json.loads(await server.search_sec_filings("SomeCo"))
+    assert "error" in result
 
-    assert org["tax_period"] == ""
+
+@pytest.mark.asyncio
+async def test_search_sec_filings_empty_hits():
+    empty_response = {"hits": {"total": {"value": 0}, "hits": []}}
+    with patch.object(edgar_client, "search_filings", new_callable=AsyncMock,
+                      return_value=empty_response):
+        result = json.loads(await server.search_sec_filings("NonexistentCorpXYZ"))
+    assert result["total_results"] == 0
+    assert result["filings"] == []

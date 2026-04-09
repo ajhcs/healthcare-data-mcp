@@ -41,7 +41,7 @@ dependencies = [
 [project.optional-dependencies]
 census = ["censusdis>=0.15.0"]
 routing = ["osmnx>=2.0.0", "aceso>=0.1.0"]
-dev = ["pytest>=8.0", "pytest-asyncio>=0.23", "ruff>=0.5.0"]
+dev = ["pytest>=8.0", "pytest-asyncio>=0.23", "pytest-cov>=5.0", "ruff>=0.5.0"]
 
 [project.scripts]
 hc-mcp-all = "servers._launcher:main"
@@ -53,6 +53,9 @@ Issues = "https://github.com/ajhcs/healthcare-data-mcp/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["servers", "shared"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
 
 [tool.ruff]
 target-version = "py311"
