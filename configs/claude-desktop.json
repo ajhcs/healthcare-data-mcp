@@ -1,0 +1,106 @@
+{
+  "mcpServers": {
+    "hc-service-area": {
+      "command": "python",
+      "args": ["-m", "servers.service_area.server"],
+      "env": {
+        "PYTHONPATH": "/REPLACE/WITH/PATH/TO/healthcare-data-mcp"
+      }
+    },
+    "hc-geo-demographics": {
+      "command": "python",
+      "args": ["-m", "servers.geo_demographics.server"],
+      "env": {
+        "PYTHONPATH": "/REPLACE/WITH/PATH/TO/healthcare-data-mcp",
+        "CENSUS_API_KEY": "",
+        "HUD_API_TOKEN": ""
+      }
+    },
+    "hc-drive-time": {
+      "command": "python",
+      "args": ["-m", "servers.drive_time.server"],
+      "env": {
+        "PYTHONPATH": "/REPLACE/WITH/PATH/TO/healthcare-data-mcp",
+        "ORS_API_KEY": "",
+        "OSRM_BASE_URL": "http://router.project-osrm.org"
+      }
+    },
+    "hc-hospital-quality": {
+      "command": "python",
+      "args": ["-m", "servers.hospital_quality.server"],
+      "env": {
+        "PYTHONPATH": "/REPLACE/WITH/PATH/TO/healthcare-data-mcp"
+      }
+    },
+    "hc-cms-facility": {
+      "command": "python",
+      "args": ["-m", "servers.cms_facility.server"],
+      "env": {
+        "PYTHONPATH": "/REPLACE/WITH/PATH/TO/healthcare-data-mcp"
+      }
+    },
+    "hc-health-system-profiler": {
+      "command": "python",
+      "args": ["-m", "servers.health_system_profiler.server"],
+      "env": {
+        "PYTHONPATH": "/REPLACE/WITH/PATH/TO/healthcare-data-mcp"
+      }
+    },
+    "hc-financial-intelligence": {
+      "command": "python",
+      "args": ["-m", "servers.financial_intelligence.server"],
+      "env": {
+        "PYTHONPATH": "/REPLACE/WITH/PATH/TO/healthcare-data-mcp",
+        "SEC_USER_AGENT": ""
+      }
+    },
+    "hc-price-transparency": {
+      "command": "python",
+      "args": ["-m", "servers.price_transparency.server"],
+      "env": {
+        "PYTHONPATH": "/REPLACE/WITH/PATH/TO/healthcare-data-mcp"
+      }
+    },
+    "hc-physician-referral-network": {
+      "command": "python",
+      "args": ["-m", "servers.physician_referral_network.server"],
+      "env": {
+        "PYTHONPATH": "/REPLACE/WITH/PATH/TO/healthcare-data-mcp"
+      }
+    },
+    "hc-workforce-analytics": {
+      "command": "python",
+      "args": ["-m", "servers.workforce_analytics.server"],
+      "env": {
+        "PYTHONPATH": "/REPLACE/WITH/PATH/TO/healthcare-data-mcp",
+        "BLS_API_KEY": ""
+      }
+    },
+    "hc-claims-analytics": {
+      "command": "python",
+      "args": ["-m", "servers.claims_analytics.server"],
+      "env": {
+        "PYTHONPATH": "/REPLACE/WITH/PATH/TO/healthcare-data-mcp"
+      }
+    },
+    "hc-public-records": {
+      "command": "python",
+      "args": ["-m", "servers.public_records.server"],
+      "env": {
+        "PYTHONPATH": "/REPLACE/WITH/PATH/TO/healthcare-data-mcp",
+        "SAM_GOV_API_KEY": "",
+        "CHPL_API_KEY": ""
+      }
+    },
+    "hc-web-intelligence": {
+      "command": "python",
+      "args": ["-m", "servers.web_intelligence.server"],
+      "env": {
+        "PYTHONPATH": "/REPLACE/WITH/PATH/TO/healthcare-data-mcp",
+        "GOOGLE_CSE_API_KEY": "",
+        "GOOGLE_CSE_ID": "",
+        "PROXYCURL_API_KEY": ""
+      }
+    }
+  }
+}

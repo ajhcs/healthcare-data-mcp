@@ -8,7 +8,8 @@ import logging
 import os
 from pathlib import Path
 
-import httpx
+
+from shared.utils.http_client import resilient_request
 
 logger = logging.getLogger(__name__)
 
@@ -155,10 +156,8 @@ async def get_oes_data(
     }
 
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.post(BLS_API_URL, json=payload)
-            resp.raise_for_status()
-            data = resp.json()
+        resp = await resilient_request("POST", BLS_API_URL, json=payload, timeout=30.0)
+        data = resp.json()
 
         if data.get("status") != "REQUEST_SUCCEEDED":
             msg = "; ".join(data.get("message", []))

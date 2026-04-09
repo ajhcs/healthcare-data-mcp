@@ -9,7 +9,8 @@ import logging
 import os as _os
 import re
 
-import httpx
+
+from shared.utils.http_client import resilient_request
 from bs4 import BeautifulSoup
 from mcp.server.fastmcp import FastMCP
 
@@ -47,14 +48,14 @@ async def _fetch_and_parse(url: str) -> tuple[str, BeautifulSoup | None]:
     Returns ("", None) on failure. Timeout 15s.
     """
     try:
-        async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
-            resp = await client.get(url, headers={
-                "User-Agent": "Mozilla/5.0 (compatible; HealthcareDataMCP/1.0)",
-            })
-            resp.raise_for_status()
-            html = resp.text
-            soup = BeautifulSoup(html, "lxml")
-            return html, soup
+        resp = await resilient_request(
+            "GET", url,
+            headers={"User-Agent": "Mozilla/5.0 (compatible; HealthcareDataMCP/1.0)"},
+            timeout=15.0,
+        )
+        html = resp.text
+        soup = BeautifulSoup(html, "lxml")
+        return html, soup
     except Exception as e:
         logger.debug("Fetch failed for %s: %s", url, e)
         return "", None
@@ -187,7 +188,7 @@ async def scrape_system_profile(
         locations: list[LocationEntry] = []
         if system_domain:
             loc_raw = await search_client.search(
-                f"locations facilities",
+                "locations facilities",
                 num=5,
                 site_search=system_domain,
             )
@@ -508,9 +509,7 @@ async def _fetch_google_news_rss(query: str, days_back: int = 90) -> list[dict]:
 
     url = f"https://news.google.com/rss/search?q={quote(query)}&hl=en-US&gl=US&ceid=US:en"
     try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            resp = await client.get(url)
-            resp.raise_for_status()
+        resp = await resilient_request("GET", url, timeout=15.0)
 
         root = ET.fromstring(resp.text)
         items = []

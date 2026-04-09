@@ -12,7 +12,8 @@ import logging
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-import httpx
+
+from shared.utils.http_client import resilient_request
 import pandas as pd
 
 from shared.utils.cms_client import get_cache_path
@@ -64,12 +65,10 @@ async def download_990_xml(xml_url: str, ein: str, tax_period: str) -> Path | No
         return cached
 
     try:
-        async with httpx.AsyncClient(timeout=120.0, follow_redirects=True) as client:
-            resp = await client.get(xml_url)
-            resp.raise_for_status()
-            cached.write_bytes(resp.content)
-            logger.info("Cached 990 XML for EIN %s period %s", ein, tax_period)
-            return cached
+        resp = await resilient_request("GET", xml_url, timeout=120.0)
+        cached.write_bytes(resp.content)
+        logger.info("Cached 990 XML for EIN %s period %s", ein, tax_period)
+        return cached
     except Exception as e:
         logger.warning("Failed to download 990 XML from %s: %s", xml_url, e)
         return None
@@ -90,11 +89,9 @@ async def load_efile_index(year: str) -> pd.DataFrame:
     if not cached.exists():
         url = f"{IRS_EFILE_INDEX_BASE}/{year}/index_{year}.csv"
         try:
-            async with httpx.AsyncClient(timeout=300.0, follow_redirects=True) as client:
-                resp = await client.get(url)
-                resp.raise_for_status()
-                cached.write_bytes(resp.content)
-                logger.info("Cached IRS e-file index for year %s (%d bytes)", year, len(resp.content))
+            resp = await resilient_request("GET", url, timeout=300.0)
+            cached.write_bytes(resp.content)
+            logger.info("Cached IRS e-file index for year %s (%d bytes)", year, len(resp.content))
         except Exception as e:
             logger.warning("Failed to download IRS e-file index for %s: %s", year, e)
             return pd.DataFrame()

@@ -1,0 +1,130 @@
+// OpenCode MCP configuration for Healthcare Data MCP servers.
+// Place this file in the project root, or merge the "mcp" block into
+// your global ~/.opencode/opencode.jsonc.
+//
+// Two transport modes:
+//   stdio  -- servers run as local child processes (default, zero setup)
+//   remote -- connect to Docker Compose HTTP endpoints on ports 8002-8014
+//
+// To use HTTP mode instead, run `docker compose up -d` first, then switch
+// each entry to:   { "type": "remote", "url": "http://localhost:PORT/mcp" }
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "hc-service-area": {
+      "type": "local",
+      "command": "python",
+      "args": ["-m", "servers.service_area.server"],
+      "env": {
+        "PYTHONPATH": "."
+      }
+    },
+    "hc-geo-demographics": {
+      "type": "local",
+      "command": "python",
+      "args": ["-m", "servers.geo_demographics.server"],
+      "env": {
+        "PYTHONPATH": ".",
+        "CENSUS_API_KEY": "{env:CENSUS_API_KEY}",
+        "HUD_API_TOKEN": "{env:HUD_API_TOKEN}"
+      }
+    },
+    "hc-drive-time": {
+      "type": "local",
+      "command": "python",
+      "args": ["-m", "servers.drive_time.server"],
+      "env": {
+        "PYTHONPATH": ".",
+        "ORS_API_KEY": "{env:ORS_API_KEY}",
+        "OSRM_BASE_URL": "http://router.project-osrm.org"
+      }
+    },
+    "hc-hospital-quality": {
+      "type": "local",
+      "command": "python",
+      "args": ["-m", "servers.hospital_quality.server"],
+      "env": {
+        "PYTHONPATH": "."
+      }
+    },
+    "hc-cms-facility": {
+      "type": "local",
+      "command": "python",
+      "args": ["-m", "servers.cms_facility.server"],
+      "env": {
+        "PYTHONPATH": "."
+      }
+    },
+    "hc-health-system-profiler": {
+      "type": "local",
+      "command": "python",
+      "args": ["-m", "servers.health_system_profiler.server"],
+      "env": {
+        "PYTHONPATH": "."
+      }
+    },
+    "hc-financial-intelligence": {
+      "type": "local",
+      "command": "python",
+      "args": ["-m", "servers.financial_intelligence.server"],
+      "env": {
+        "PYTHONPATH": ".",
+        "SEC_USER_AGENT": ""
+      }
+    },
+    "hc-price-transparency": {
+      "type": "local",
+      "command": "python",
+      "args": ["-m", "servers.price_transparency.server"],
+      "env": {
+        "PYTHONPATH": "."
+      }
+    },
+    "hc-physician-referral-network": {
+      "type": "local",
+      "command": "python",
+      "args": ["-m", "servers.physician_referral_network.server"],
+      "env": {
+        "PYTHONPATH": "."
+      }
+    },
+    "hc-workforce-analytics": {
+      "type": "local",
+      "command": "python",
+      "args": ["-m", "servers.workforce_analytics.server"],
+      "env": {
+        "PYTHONPATH": ".",
+        "BLS_API_KEY": "{env:BLS_API_KEY}"
+      }
+    },
+    "hc-claims-analytics": {
+      "type": "local",
+      "command": "python",
+      "args": ["-m", "servers.claims_analytics.server"],
+      "env": {
+        "PYTHONPATH": "."
+      }
+    },
+    "hc-public-records": {
+      "type": "local",
+      "command": "python",
+      "args": ["-m", "servers.public_records.server"],
+      "env": {
+        "PYTHONPATH": ".",
+        "SAM_GOV_API_KEY": "{env:SAM_GOV_API_KEY}",
+        "CHPL_API_KEY": "{env:CHPL_API_KEY}"
+      }
+    },
+    "hc-web-intelligence": {
+      "type": "local",
+      "command": "python",
+      "args": ["-m", "servers.web_intelligence.server"],
+      "env": {
+        "PYTHONPATH": ".",
+        "GOOGLE_CSE_API_KEY": "{env:GOOGLE_CSE_API_KEY}",
+        "GOOGLE_CSE_ID": "{env:GOOGLE_CSE_ID}",
+        "PROXYCURL_API_KEY": "{env:PROXYCURL_API_KEY}"
+      }
+    }
+  }
+}

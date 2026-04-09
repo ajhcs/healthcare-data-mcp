@@ -11,8 +11,11 @@ import logging
 from pathlib import Path
 
 import duckdb
-import httpx
+from shared.utils.duckdb_safe import safe_parquet_sql
+
+from shared.utils.http_client import resilient_request
 import pandas as pd
+
 
 logger = logging.getLogger(__name__)
 
@@ -128,9 +131,7 @@ async def ensure_hsa_crosswalk_cached() -> bool:
 
     logger.info("Downloading Dartmouth Atlas HSA/HRR crosswalk...")
     try:
-        async with httpx.AsyncClient(timeout=120.0, follow_redirects=True) as client:
-            resp = await client.get(DARTMOUTH_HSA_URL)
-            resp.raise_for_status()
+        resp = await resilient_request("GET", DARTMOUTH_HSA_URL, timeout=120.0)
 
         csv_path = _DARTMOUTH_DIR / "zip_hsa_hrr_raw.csv"
         csv_path.write_bytes(resp.content)
@@ -155,7 +156,7 @@ def get_hsa_for_zip(zip_code: str) -> str | None:
 
     try:
         con = duckdb.connect(":memory:")
-        con.execute(f"CREATE VIEW hsa AS SELECT * FROM read_parquet('{_HSA_CROSSWALK_CACHE}')")
+        con.execute(f"CREATE VIEW hsa AS SELECT * FROM {safe_parquet_sql(_HSA_CROSSWALK_CACHE)}")
 
         cols = [r[0] for r in con.execute("SELECT column_name FROM information_schema.columns WHERE table_name='hsa'").fetchall()]
         zip_col = next((c for c in cols if "zip" in c), None)
@@ -180,7 +181,7 @@ def get_zips_for_hsa(hsa_number: str) -> list[str]:
 
     try:
         con = duckdb.connect(":memory:")
-        con.execute(f"CREATE VIEW hsa AS SELECT * FROM read_parquet('{_HSA_CROSSWALK_CACHE}')")
+        con.execute(f"CREATE VIEW hsa AS SELECT * FROM {safe_parquet_sql(_HSA_CROSSWALK_CACHE)}")
 
         cols = [r[0] for r in con.execute("SELECT column_name FROM information_schema.columns WHERE table_name='hsa'").fetchall()]
         zip_col = next((c for c in cols if "zip" in c), None)
@@ -217,7 +218,7 @@ def get_referral_network(npi: str, depth: int = 1, min_shared: int = 11) -> dict
         return {"error": "DocGraph data not cached. Load with load_docgraph_csv()."}
 
     con = duckdb.connect(":memory:")
-    con.execute(f"CREATE VIEW dg AS SELECT * FROM read_parquet('{_SHARED_PATIENTS_CACHE}')")
+    con.execute(f"CREATE VIEW dg AS SELECT * FROM {safe_parquet_sql(_SHARED_PATIENTS_CACHE)}")
 
     # Direct connections (depth 1)
     edges = con.execute("""
@@ -287,7 +288,7 @@ def get_top_referral_pairs(npi: str, direction: str = "both", limit: int = 25) -
         return []
 
     con = duckdb.connect(":memory:")
-    con.execute(f"CREATE VIEW dg AS SELECT * FROM read_parquet('{_SHARED_PATIENTS_CACHE}')")
+    con.execute(f"CREATE VIEW dg AS SELECT * FROM {safe_parquet_sql(_SHARED_PATIENTS_CACHE)}")
 
     if direction == "outgoing":
         where = "npi_from = ?"
@@ -346,7 +347,7 @@ def detect_leakage(
         return {"error": "DocGraph data not cached."}
 
     con = duckdb.connect(":memory:")
-    con.execute(f"CREATE VIEW dg AS SELECT * FROM read_parquet('{_SHARED_PATIENTS_CACHE}')")
+    con.execute(f"CREATE VIEW dg AS SELECT * FROM {safe_parquet_sql(_SHARED_PATIENTS_CACHE)}")
 
     # Get all outbound referrals from system NPIs
     npi_list = list(system_npis)
@@ -378,7 +379,6 @@ def detect_leakage(
     # Classify each destination
     total_shared = int(outbound["total_shared"].sum())
     in_network_shared = 0
-    out_network_in_area = 0
     out_of_area = 0
     leakage_destinations = []
 

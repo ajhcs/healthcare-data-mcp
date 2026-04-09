@@ -1,56 +1,132 @@
 {
   "mcpServers": {
-    "cms-facility": {
-      "type": "http",
-      "url": "http://localhost:8006/mcp"
+    "hc-service-area": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["-m", "servers.service_area.server"],
+      "cwd": ".",
+      "env": {
+        "PYTHONPATH": "."
+      }
     },
-    "service-area": {
-      "type": "http",
-      "url": "http://localhost:8002/mcp"
+    "hc-geo-demographics": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["-m", "servers.geo_demographics.server"],
+      "cwd": ".",
+      "env": {
+        "PYTHONPATH": ".",
+        "CENSUS_API_KEY": "${CENSUS_API_KEY}",
+        "HUD_API_TOKEN": "${HUD_API_TOKEN}"
+      }
     },
-    "geo-demographics": {
-      "type": "http",
-      "url": "http://localhost:8003/mcp"
+    "hc-drive-time": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["-m", "servers.drive_time.server"],
+      "cwd": ".",
+      "env": {
+        "PYTHONPATH": ".",
+        "ORS_API_KEY": "${ORS_API_KEY}",
+        "OSRM_BASE_URL": "${OSRM_BASE_URL:-http://router.project-osrm.org}"
+      }
     },
-    "drive-time": {
-      "type": "http",
-      "url": "http://localhost:8004/mcp"
+    "hc-hospital-quality": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["-m", "servers.hospital_quality.server"],
+      "cwd": ".",
+      "env": {
+        "PYTHONPATH": "."
+      }
     },
-    "hospital-quality": {
-      "type": "http",
-      "url": "http://localhost:8005/mcp"
+    "hc-cms-facility": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["-m", "servers.cms_facility.server"],
+      "cwd": ".",
+      "env": {
+        "PYTHONPATH": "."
+      }
     },
-    "health-system-profiler": {
-      "type": "http",
-      "url": "http://localhost:8007/mcp"
+    "hc-health-system-profiler": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["-m", "servers.health_system_profiler.server"],
+      "cwd": ".",
+      "env": {
+        "PYTHONPATH": "."
+      }
     },
-    "financial-intelligence": {
-      "type": "http",
-      "url": "http://localhost:8008/mcp"
+    "hc-financial-intelligence": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["-m", "servers.financial_intelligence.server"],
+      "cwd": ".",
+      "env": {
+        "PYTHONPATH": ".",
+        "SEC_USER_AGENT": "${SEC_USER_AGENT}"
+      }
     },
-    "price-transparency": {
-      "type": "http",
-      "url": "http://localhost:8009/mcp"
+    "hc-price-transparency": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["-m", "servers.price_transparency.server"],
+      "cwd": ".",
+      "env": {
+        "PYTHONPATH": "."
+      }
     },
-    "physician-referral-network": {
-      "type": "http",
-      "url": "http://localhost:8010/mcp"
+    "hc-physician-referral-network": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["-m", "servers.physician_referral_network.server"],
+      "cwd": ".",
+      "env": {
+        "PYTHONPATH": "."
+      }
     },
-    "workforce-analytics": {
-      "type": "http",
-      "url": "http://localhost:8011/mcp"
+    "hc-workforce-analytics": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["-m", "servers.workforce_analytics.server"],
+      "cwd": ".",
+      "env": {
+        "PYTHONPATH": ".",
+        "BLS_API_KEY": "${BLS_API_KEY}"
+      }
     },
-    "claims-analytics": {
-      "type": "http",
-      "url": "http://localhost:8012/mcp"
+    "hc-claims-analytics": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["-m", "servers.claims_analytics.server"],
+      "cwd": ".",
+      "env": {
+        "PYTHONPATH": "."
+      }
     },
-    "public-records": {
-      "type": "http",
-      "url": "http://localhost:8013/mcp"
+    "hc-public-records": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["-m", "servers.public_records.server"],
+      "cwd": ".",
+      "env": {
+        "PYTHONPATH": ".",
+        "SAM_GOV_API_KEY": "${SAM_GOV_API_KEY}",
+        "CHPL_API_KEY": "${CHPL_API_KEY}"
+      }
     },
-    "web-intelligence": {
-      "type": "http",
-      "url": "http://localhost:8014/mcp"
+    "hc-web-intelligence": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["-m", "servers.web_intelligence.server"],
+      "cwd": ".",
+      "env": {
+        "PYTHONPATH": ".",
+        "GOOGLE_CSE_API_KEY": "${GOOGLE_CSE_API_KEY}",
+        "GOOGLE_CSE_ID": "${GOOGLE_CSE_ID}",
+        "PROXYCURL_API_KEY": "${PROXYCURL_API_KEY}"
+      }
     }
   }
 }

@@ -6,7 +6,8 @@ a health system by cross-referencing NPPES, AHRQ Compendium, and CMS POS data.
 
 import logging
 
-import httpx
+
+from shared.utils.http_client import resilient_request
 from rapidfuzz import fuzz
 
 logger = logging.getLogger(__name__)
@@ -37,11 +38,9 @@ async def _search_nppes_physicians(
     if taxonomy:
         params["taxonomy_description"] = taxonomy
 
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        resp = await client.get(NPPES_API_URL, params=params)
-        resp.raise_for_status()
-        data = resp.json()
-        return data.get("results", [])
+    resp = await resilient_request("GET", NPPES_API_URL, params=params, timeout=30.0)
+    data = resp.json()
+    return data.get("results", [])
 
 
 # ---------------------------------------------------------------------------
@@ -168,15 +167,15 @@ async def analyze_system_mix(
     Returns:
         Dict with employed/affiliated/independent counts and percentages.
     """
-    # Load facility data from health-system-profiler's data loaders
+    # Load facility data from shared AHRQ data loaders
     try:
-        from servers.health_system_profiler.data_loaders import (
+        from shared.utils.ahrq_data import (
             load_ahrq_hospital_linkage,
             load_ahrq_systems,
             load_pos,
         )
     except ImportError:
-        return {"error": "health-system-profiler data loaders not available"}
+        return {"error": "shared AHRQ data loaders not available (shared/utils/ahrq_data.py)"}
 
     # Find system in AHRQ Compendium
     systems_df = await load_ahrq_systems()

@@ -9,7 +9,8 @@ Provides three benchmark sources for comparing hospital negotiated rates:
 import logging
 import statistics
 
-import httpx
+
+from shared.utils.http_client import resilient_request, get_client
 
 logger = logging.getLogger(__name__)
 
@@ -59,10 +60,8 @@ async def get_pfs_rate(hcpcs_code: str) -> dict | None:
     url = f"{PFS_BASE}/{PFS_INDICATORS_DATASET}/0"
 
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.post(url, json=payload)
-            resp.raise_for_status()
-            data = resp.json()
+        resp = await resilient_request("POST", url, json=payload, timeout=30.0)
+        data = resp.json()
 
         results = data.get("results", [])
         if not results:
@@ -117,10 +116,8 @@ async def get_locality_gpci(locality: str | None = None) -> dict | None:
     url = f"{PFS_BASE}/{PFS_LOCALITIES_DATASET}/0"
 
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.post(url, json=payload)
-            resp.raise_for_status()
-            data = resp.json()
+        resp = await resilient_request("POST", url, json=payload, timeout=30.0)
+        data = resp.json()
 
         results = data.get("results", [])
         if not results:
@@ -208,9 +205,9 @@ async def get_utilization_data(hcpcs_code: str) -> dict | None:
     all_rows: list[dict] = []
 
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            # Paginate to collect provider rows via GET with filter params
-            while True:
+        client = get_client()
+        # Paginate to collect provider rows via GET with filter params
+        while True:
                 params = {
                     "filter[HCPCS_Cd]": hcpcs_code.strip(),
                     "size": UTILIZATION_PAGE_SIZE,

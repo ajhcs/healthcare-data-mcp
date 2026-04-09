@@ -2,7 +2,8 @@
 
 import logging
 
-import httpx
+
+from shared.utils.http_client import resilient_request
 
 logger = logging.getLogger(__name__)
 
@@ -21,10 +22,8 @@ async def search_organizations(query: str, state: str = "", ntee_code: str = "",
         params["ntee[id]"] = ntee_code
 
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.get(f"{PROPUBLICA_BASE}/search.json", params=params)
-            resp.raise_for_status()
-            return resp.json()
+        resp = await resilient_request("GET", f"{PROPUBLICA_BASE}/search.json", params=params, timeout=30.0)
+        return resp.json()
     except Exception as e:
         logger.warning("ProPublica search failed: %s", e)
         return {"organizations": [], "total_results": 0}
@@ -36,10 +35,8 @@ async def get_organization(ein: str) -> dict:
     Returns raw JSON with 'organization' dict and 'filings_with_data' list.
     """
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.get(f"{PROPUBLICA_BASE}/organizations/{ein}.json")
-            resp.raise_for_status()
-            return resp.json()
+        resp = await resilient_request("GET", f"{PROPUBLICA_BASE}/organizations/{ein}.json", timeout=30.0)
+        return resp.json()
     except Exception as e:
         logger.warning("ProPublica org lookup failed for EIN %s: %s", ein, e)
         return {}

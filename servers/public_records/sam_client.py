@@ -9,7 +9,8 @@ import logging
 import os
 from datetime import datetime, timedelta
 
-import httpx
+
+from shared.utils.http_client import resilient_request
 
 logger = logging.getLogger(__name__)
 
@@ -55,10 +56,8 @@ async def search_opportunities(
         params["ptype"] = ptype
 
     try:
-        async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
-            resp = await client.get(_BASE_URL, params=params)
-            resp.raise_for_status()
-            return resp.json()
+        resp = await resilient_request("GET", _BASE_URL, params=params, timeout=_TIMEOUT)
+        return resp.json()
     except Exception as e:
         logger.warning("SAM.gov search failed: %s", e)
         return {"error": str(e)}

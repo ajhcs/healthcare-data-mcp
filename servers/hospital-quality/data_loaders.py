@@ -3,6 +3,7 @@
 Uses the shared cms_client for HTTP downloads and caching.
 """
 
+import asyncio
 import logging
 import sys
 from pathlib import Path
@@ -14,7 +15,7 @@ _project_root = Path(__file__).resolve().parent.parent.parent
 if str(_project_root) not in sys.path:
     sys.path.insert(0, str(_project_root))
 
-from shared.utils.cms_client import CMS_API_BASE, DATA_DIR, cms_download_csv  # noqa: E402
+from shared.utils.cms_client import CMS_API_BASE, cms_download_csv  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +29,10 @@ DATASETS = {
 }
 
 # In-memory DataFrame cache to avoid re-reading CSV on every call
+_BULK_TTL_DAYS = 90  # CMS bulk data refresh cadence
+
 _df_cache: dict[str, pd.DataFrame] = {}
+_df_lock = asyncio.Lock()
 
 
 def _csv_url(dataset_id: str) -> str:
@@ -38,8 +42,9 @@ def _csv_url(dataset_id: str) -> str:
 
 async def _load_dataset(key: str) -> pd.DataFrame:
     """Load a CMS dataset by key, downloading and caching as needed."""
-    if key in _df_cache:
-        return _df_cache[key]
+    async with _df_lock:
+        if key in _df_cache:
+            return _df_cache[key]
 
     dataset_id = DATASETS[key]
     cache_key = f"hospital_quality_{key}"

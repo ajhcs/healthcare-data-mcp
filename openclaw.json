@@ -1,0 +1,119 @@
+{
+  "mcpServers": {
+    "hc-service-area": {
+      "command": "python",
+      "args": ["-m", "servers.service_area.server"],
+      "type": "stdio",
+      "env": {
+        "PYTHONPATH": "."
+      }
+    },
+    "hc-geo-demographics": {
+      "command": "python",
+      "args": ["-m", "servers.geo_demographics.server"],
+      "type": "stdio",
+      "env": {
+        "PYTHONPATH": ".",
+        "CENSUS_API_KEY": "",
+        "HUD_API_TOKEN": ""
+      }
+    },
+    "hc-drive-time": {
+      "command": "python",
+      "args": ["-m", "servers.drive_time.server"],
+      "type": "stdio",
+      "env": {
+        "PYTHONPATH": ".",
+        "ORS_API_KEY": "",
+        "OSRM_BASE_URL": "http://router.project-osrm.org"
+      }
+    },
+    "hc-hospital-quality": {
+      "command": "python",
+      "args": ["-m", "servers.hospital_quality.server"],
+      "type": "stdio",
+      "env": {
+        "PYTHONPATH": "."
+      }
+    },
+    "hc-cms-facility": {
+      "command": "python",
+      "args": ["-m", "servers.cms_facility.server"],
+      "type": "stdio",
+      "env": {
+        "PYTHONPATH": "."
+      }
+    },
+    "hc-health-system-profiler": {
+      "command": "python",
+      "args": ["-m", "servers.health_system_profiler.server"],
+      "type": "stdio",
+      "env": {
+        "PYTHONPATH": "."
+      }
+    },
+    "hc-financial-intelligence": {
+      "command": "python",
+      "args": ["-m", "servers.financial_intelligence.server"],
+      "type": "stdio",
+      "env": {
+        "PYTHONPATH": ".",
+        "SEC_USER_AGENT": ""
+      }
+    },
+    "hc-price-transparency": {
+      "command": "python",
+      "args": ["-m", "servers.price_transparency.server"],
+      "type": "stdio",
+      "env": {
+        "PYTHONPATH": "."
+      }
+    },
+    "hc-physician-referral-network": {
+      "command": "python",
+      "args": ["-m", "servers.physician_referral_network.server"],
+      "type": "stdio",
+      "env": {
+        "PYTHONPATH": "."
+      }
+    },
+    "hc-workforce-analytics": {
+      "command": "python",
+      "args": ["-m", "servers.workforce_analytics.server"],
+      "type": "stdio",
+      "env": {
+        "PYTHONPATH": ".",
+        "BLS_API_KEY": ""
+      }
+    },
+    "hc-claims-analytics": {
+      "command": "python",
+      "args": ["-m", "servers.claims_analytics.server"],
+      "type": "stdio",
+      "env": {
+        "PYTHONPATH": "."
+      }
+    },
+    "hc-public-records": {
+      "command": "python",
+      "args": ["-m", "servers.public_records.server"],
+      "type": "stdio",
+      "env": {
+        "PYTHONPATH": ".",
+        "SAM_GOV_API_KEY": "",
+        "CHPL_API_KEY": ""
+      }
+    },
+    "hc-web-intelligence": {
+      "command": "python",
+      "args": ["-m", "servers.web_intelligence.server"],
+      "type": "stdio",
+      "env": {
+        "PYTHONPATH": ".",
+        "GOOGLE_CSE_API_KEY": "",
+        "GOOGLE_CSE_ID": "",
+        "PROXYCURL_API_KEY": ""
+      }
+    }
+  }
+}
