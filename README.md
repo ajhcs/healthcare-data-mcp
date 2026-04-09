@@ -68,7 +68,7 @@ MCP Client (Claude Code, VS Code, Cursor, etc.)
 | 7 | **financial-intelligence** | `search_form990`, `get_form990_details`, `search_sec_filings`, `get_sec_filing`, `search_muni_bonds`, `get_muni_bond_details` (6) | IRS Form 990 via ProPublica, SEC EDGAR XBRL, Municipal Bond Official Statements | `SEC_USER_AGENT` |
 | 8 | **price-transparency** | `search_mrf_index`, `get_negotiated_rates`, `compute_rate_dispersion`, `compare_rates_system`, `benchmark_rates` (5) | Hospital MRF files, CMS Physician Fee Schedule, Medicare Utilization | None |
 | 9 | **physician-referral-network** | `search_physicians`, `get_physician_profile`, `map_referral_network`, `analyze_physician_mix`, `detect_leakage` (5) | NPPES, CMS Physician Compare, Medicare Utilization, DocGraph | None |
-| 10 | **workforce-analytics** | `get_bls_employment`, `get_hrsa_workforce`, `get_gme_profile`, `get_residency_programs`, `search_union_activity`, `get_staffing_benchmarks`, `get_cost_report_staffing` (7) | BLS OES, HRSA HPSA, CMS HCRIS, ACGME, NLRB Elections, CMS PBJ | `BLS_API_KEY` |
+| 10 | **workforce-analytics** | `get_bls_employment`, `get_hrsa_workforce`, `get_gme_profile`, `get_residency_programs`, `search_union_activity`, `get_staffing_benchmarks`, `get_cost_report_staffing` (7) | BLS OES, HRSA HPSA, CMS HCRIS, ACGME, NLRB Elections, CMS PBJ | `BLS_API_KEY`, optional `ACGME_PROGRAMS_CSV` |
 | 11 | **claims-analytics** | `get_inpatient_volumes`, `get_outpatient_volumes`, `trend_service_lines`, `compute_case_mix`, `analyze_market_volumes` (5) | CMS Medicare Inpatient/Outpatient PUF | None |
 | 12 | **public-records** | `search_usaspending`, `search_sam_gov`, `get_340b_status`, `get_breach_history`, `get_accreditation`, `get_interop_status` (6) | USAspending.gov, SAM.gov, HRSA 340B OPAIS, HHS OCR Breach Portal, CMS POS, CMS Promoting Interoperability | `SAM_GOV_API_KEY`, `CHPL_API_KEY` |
 | 13 | **web-intelligence** | `scrape_system_profile`, `detect_ehr_vendor`, `get_executive_profiles`, `monitor_newsroom`, `detect_gpo_affiliation` (5) | Google Custom Search, CMS Promoting Interoperability, Proxycurl, Google News RSS | `GOOGLE_CSE_API_KEY`, `GOOGLE_CSE_ID`, `PROXYCURL_API_KEY` |
@@ -119,7 +119,7 @@ The setup script checks prerequisites, configures API keys interactively, and re
 
 ## Configuration
 
-Copy `.env.example` to `.env` and fill in the keys you have. Most keys are optional. `SEC_USER_AGENT` is required only if you want to run the `financial-intelligence` server, and the remaining keyed servers degrade gracefully when their credentials are missing.
+Copy `.env.example` to `.env` and fill in the keys you have. Most keys are optional. `SEC_USER_AGENT` is required only if you want to run the `financial-intelligence` server, and the remaining keyed servers degrade gracefully when their credentials are missing. `get_residency_programs` also supports an optional local `ACGME_PROGRAMS_CSV` path if you want to point the workforce server at a normalized ACGME Program Search export.
 
 ```bash
 cp .env.example .env
@@ -134,6 +134,7 @@ cp .env.example .env
 | `ORS_API_KEY` | drive-time (isochrones) | Yes (2,000 req/day) | [openrouteservice.org/dev/#/signup](https://openrouteservice.org/dev/#/signup) |
 | `SEC_USER_AGENT` | financial-intelligence | N/A (just a header) | Set to `"YourApp your@email.com"` |
 | `BLS_API_KEY` | workforce-analytics | Yes (v2, 500 req/day) | [bls.gov/developers/home.htm](https://www.bls.gov/developers/home.htm) |
+| `ACGME_PROGRAMS_CSV` | workforce-analytics | No | Optional path to a normalized ACGME Program Search export imported with `python3 scripts/import_acgme_programs.py /path/to/export.csv` |
 | `SAM_GOV_API_KEY` | public-records (SAM.gov) | Yes | [sam.gov/content/entity-registration](https://sam.gov/content/entity-registration) |
 | `CHPL_API_KEY` | public-records (interop) | Yes | [chpl.healthit.gov/#/resources/api](https://chpl.healthit.gov/#/resources/api) |
 | `GOOGLE_CSE_API_KEY` | web-intelligence | Yes (100 queries/day) | [developers.google.com/custom-search](https://developers.google.com/custom-search/v1/introduction) |

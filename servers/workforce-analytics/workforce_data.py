@@ -5,6 +5,7 @@ for healthcare workforce analysis.
 """
 
 import logging
+import os
 import zipfile
 from pathlib import Path
 
@@ -33,6 +34,14 @@ _CACHE_TTL_DAYS = 30
 # ACGME static data (bundled with server)
 _ACGME_DATA_DIR = Path(__file__).parent / "data"
 _ACGME_CSV = _ACGME_DATA_DIR / "acgme_programs.csv"
+_ACGME_CACHE_CSV = _CACHE_DIR / "acgme_programs.csv"
+_ACGME_ENV_VAR = "ACGME_PROGRAMS_CSV"
+_ACGME_SOURCE_URL = "https://acgmecloud.org/analytics/explore-public-data/program-search"
+_ACGME_IMPORT_HINT = (
+    "Import a public ACGME Program Search export with "
+    "python3 scripts/import_acgme_programs.py /path/to/acgme-program-search-export.csv. "
+    f"Source: {_ACGME_SOURCE_URL}"
+)
 
 # URLs
 HPSA_CSV_URL = "https://data.hrsa.gov/DataDownload/DD_Files/BCD_HPSA_FCT_DET_DH.csv"
@@ -41,6 +50,147 @@ PBJ_API_URL = "https://data.cms.gov/data-api/v1/dataset/7e0d53ba-8f02-4c66-98a5-
 # HCRIS: CMS Cost Report fiscal year page
 # We use the provider-compliance API for structured access
 HCRIS_API_URL = "https://data.cms.gov/provider-compliance/cost-reports/hospital-provider-cost-report"
+
+_ACGME_COLUMN_ALIASES: dict[str, tuple[str, ...]] = {
+    "program_id": (
+        "program_id",
+        "program id",
+        "acgme_program_id",
+        "program number",
+        "program_no",
+        "program code",
+        "program_code",
+        "program",
+        "id",
+    ),
+    "specialty": (
+        "specialty",
+        "specialty_name",
+        "specialty name",
+        "program specialty",
+        "discipline",
+    ),
+    "institution": (
+        "institution",
+        "institution_name",
+        "sponsoring institution",
+        "sponsoring_institution",
+        "sponsor institution",
+        "sponsor_institution",
+        "sponsor",
+        "sponsor_name",
+    ),
+    "city": ("city", "institution_city", "program_city"),
+    "state": ("state", "st", "institution_state", "program_state"),
+    "total_positions": (
+        "total_positions",
+        "approved_positions",
+        "approved positions",
+        "program_complement",
+        "program complement",
+        "resident_complement",
+        "positions",
+    ),
+    "filled_positions": (
+        "filled_positions",
+        "filled positions",
+        "on_duty",
+        "on duty",
+        "active_trainees",
+        "current_filled_positions",
+    ),
+    "accreditation_status": (
+        "accreditation_status",
+        "accreditation status",
+        "status",
+    ),
+}
+
+_ACGME_REQUIRED_COLUMNS = ("specialty", "institution", "state")
+
+
+def _normalize_column_name(name: str) -> str:
+    return (
+        name.strip()
+        .lower()
+        .replace("/", " ")
+        .replace("-", " ")
+        .replace(".", " ")
+        .replace("(", " ")
+        .replace(")", " ")
+        .replace("#", " number ")
+    )
+
+
+def _find_column(columns: pd.Index, aliases: tuple[str, ...]) -> str | None:
+    normalized = {_normalize_column_name(column): column for column in columns}
+    for alias in aliases:
+        match = normalized.get(_normalize_column_name(alias))
+        if match:
+            return match
+    return None
+
+
+def normalize_acgme_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+    """Normalize an ACGME export into the canonical queryable schema."""
+    if df.empty:
+        return pd.DataFrame(columns=list(_ACGME_COLUMN_ALIASES))
+
+    selected: dict[str, pd.Series] = {}
+    for canonical_name, aliases in _ACGME_COLUMN_ALIASES.items():
+        source_column = _find_column(df.columns, aliases)
+        if source_column:
+            selected[canonical_name] = df[source_column]
+
+    missing_required = [column for column in _ACGME_REQUIRED_COLUMNS if column not in selected]
+    if missing_required:
+        raise ValueError(
+            "Missing required ACGME columns: "
+            + ", ".join(missing_required)
+            + ". Available columns: "
+            + ", ".join(str(column) for column in df.columns)
+        )
+
+    normalized = pd.DataFrame(selected)
+
+    for column in _ACGME_COLUMN_ALIASES:
+        if column not in normalized.columns:
+            normalized[column] = ""
+
+    for column in ("program_id", "specialty", "institution", "city", "state", "accreditation_status"):
+        normalized[column] = normalized[column].fillna("").astype(str).str.strip()
+
+    for column in ("total_positions", "filled_positions"):
+        normalized[column] = pd.to_numeric(normalized[column], errors="coerce").fillna(0).astype(int)
+
+    normalized = normalized[
+        (normalized["specialty"] != "")
+        & (normalized["institution"] != "")
+        & (normalized["state"] != "")
+    ].copy()
+    normalized["state"] = normalized["state"].str.upper()
+    return normalized[list(_ACGME_COLUMN_ALIASES)]
+
+
+def resolve_acgme_csv_path() -> Path | None:
+    """Return the first available ACGME CSV path from env, cache, or bundled data."""
+    configured_path = os.environ.get(_ACGME_ENV_VAR, "").strip()
+    candidates = [
+        Path(configured_path).expanduser() if configured_path else None,
+        _ACGME_CACHE_CSV,
+        _ACGME_CSV,
+    ]
+    for candidate in candidates:
+        if candidate and candidate.exists():
+            return candidate
+    return None
+
+
+def acgme_missing_data_error() -> str:
+    return (
+        f"ACGME data file not found. Checked {_ACGME_ENV_VAR}, {_ACGME_CACHE_CSV}, and {_ACGME_CSV}. "
+        + _ACGME_IMPORT_HINT
+    )
 
 
 def _is_cache_valid(path: Path, ttl_days: int = _CACHE_TTL_DAYS) -> bool:
@@ -433,50 +583,44 @@ def query_acgme_programs(
 ) -> list[dict]:
     """Query bundled ACGME program data.
 
-    If the static CSV doesn't exist, returns a helpful error message.
+    If the canonical CSV doesn't exist, returns a helpful error message.
     """
-    if not _ACGME_CSV.exists():
-        return [{"error": f"ACGME data file not found at {_ACGME_CSV}. "
-                         "Place acgme_programs.csv in the data/ directory."}]
+    acgme_csv = resolve_acgme_csv_path()
+    if acgme_csv is None:
+        return [{"error": acgme_missing_data_error()}]
 
     try:
-        df: pd.DataFrame = pd.read_csv(_ACGME_CSV, dtype=str, keep_default_na=False)
-        df.columns = pd.Index([c.strip().lower().replace(" ", "_") for c in df.columns])
+        df = pd.read_csv(acgme_csv, dtype=str, keep_default_na=False)
+        df = normalize_acgme_dataframe(df)
 
         # Apply filters
         if institution:
-            inst_col = next((c for c in df.columns if "institution" in c or "sponsor" in c), None)
-            if inst_col:
-                mask = df[inst_col].str.lower().str.contains(institution.lower(), na=False)
-                df = pd.DataFrame(df[mask])
+            mask = df["institution"].str.lower().str.contains(institution.lower(), na=False)
+            df = pd.DataFrame(df[mask])
 
         if specialty:
-            spec_col = next((c for c in df.columns if "specialty" in c), None)
-            if spec_col:
-                mask = df[spec_col].str.lower().str.contains(specialty.lower(), na=False)
-                df = pd.DataFrame(df[mask])
+            mask = df["specialty"].str.lower().str.contains(specialty.lower(), na=False)
+            df = pd.DataFrame(df[mask])
 
         if state:
-            state_col = next((c for c in df.columns if c in ("state", "st")), None)
-            if state_col:
-                mask = df[state_col].str.upper() == state.upper()
-                df = pd.DataFrame(df[mask])
+            mask = df["state"].str.upper() == state.upper()
+            df = pd.DataFrame(df[mask])
 
         results = []
         for _, row in df.head(100).iterrows():
             results.append({
-                "program_id": str(row.get("program_id", row.get("id", ""))),
-                "specialty": str(row.get("specialty", row.get("specialty_name", ""))),
-                "institution": str(row.get("institution", row.get("sponsor_institution", ""))),
+                "program_id": str(row.get("program_id", "")),
+                "specialty": str(row.get("specialty", "")),
+                "institution": str(row.get("institution", "")),
                 "city": str(row.get("city", "")),
-                "state": str(row.get("state", row.get("st", ""))),
-                "total_positions": int(float(row.get("total_positions", row.get("approved_positions", 0)) or 0)),
-                "filled_positions": int(float(row.get("filled_positions", row.get("on_duty", 0)) or 0)),
-                "accreditation_status": str(row.get("accreditation_status", row.get("status", ""))),
+                "state": str(row.get("state", "")),
+                "total_positions": int(row.get("total_positions", 0) or 0),
+                "filled_positions": int(row.get("filled_positions", 0) or 0),
+                "accreditation_status": str(row.get("accreditation_status", "")),
             })
 
         return results
 
     except Exception as e:
         logger.warning("ACGME query failed: %s", e)
-        return []
+        return [{"error": f"ACGME query failed: {e}. {_ACGME_IMPORT_HINT}"}]
