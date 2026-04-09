@@ -1,0 +1,57 @@
+{
+  "_comment": "HTTP transport config for any MCP client. Requires: docker compose up -d",
+  "mcpServers": {
+    "hc-service-area": {
+      "type": "http",
+      "url": "http://localhost:8002/mcp"
+    },
+    "hc-geo-demographics": {
+      "type": "http",
+      "url": "http://localhost:8003/mcp"
+    },
+    "hc-drive-time": {
+      "type": "http",
+      "url": "http://localhost:8004/mcp"
+    },
+    "hc-hospital-quality": {
+      "type": "http",
+      "url": "http://localhost:8005/mcp"
+    },
+    "hc-cms-facility": {
+      "type": "http",
+      "url": "http://localhost:8006/mcp"
+    },
+    "hc-health-system-profiler": {
+      "type": "http",
+      "url": "http://localhost:8007/mcp"
+    },
+    "hc-financial-intelligence": {
+      "type": "http",
+      "url": "http://localhost:8008/mcp"
+    },
+    "hc-price-transparency": {
+      "type": "http",
+      "url": "http://localhost:8009/mcp"
+    },
+    "hc-physician-referral-network": {
+      "type": "http",
+      "url": "http://localhost:8010/mcp"
+    },
+    "hc-workforce-analytics": {
+      "type": "http",
+      "url": "http://localhost:8011/mcp"
+    },
+    "hc-claims-analytics": {
+      "type": "http",
+      "url": "http://localhost:8012/mcp"
+    },
+    "hc-public-records": {
+      "type": "http",
+      "url": "http://localhost:8013/mcp"
+    },
+    "hc-web-intelligence": {
+      "type": "http",
+      "url": "http://localhost:8014/mcp"
+    }
+  }
+}
