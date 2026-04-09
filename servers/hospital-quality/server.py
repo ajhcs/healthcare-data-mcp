@@ -12,6 +12,8 @@ from mcp.server.fastmcp import FastMCP
 
 from . import data_loaders
 from .models import (
+    ComplicationRecord,
+    ComplicationsData,
     ConditionReadmission,
     DomainScores,
     ExperienceDomain,
@@ -494,6 +496,72 @@ async def get_financial_profile(ccn: str) -> str:
         dsh_pct=dsh,
         wage_index=wage,
         geographic_location=geo,
+    )
+    return json.dumps(result.model_dump())
+
+
+# ---------------------------------------------------------------------------
+# Tool: get_complications_data
+# ---------------------------------------------------------------------------
+@mcp.tool()
+async def get_complications_data(ccn: str) -> str:
+    """Get complications and deaths data for a hospital from CMS dataset ynj2-r877.
+
+    Returns per-measure complication and death rates including observed score,
+    confidence interval estimates, denominator (case count), and national
+    comparison label for each reported measure (e.g. PSI-90, mortality
+    indicators, post-surgical complications).
+
+    Args:
+        ccn: The 6-character CMS Certification Number (e.g. "050454").
+    """
+    df = await data_loaders.load_complications()
+    if df.empty:
+        return json.dumps({"error": "Complications and Deaths data not available"})
+
+    matches = _filter_by_ccn(df, ccn)
+    if matches.empty:
+        return json.dumps({"error": f"No complications data found for CCN: {ccn}"})
+
+    facility_name = ""
+    name_col = _col(matches, "facility_name", "hospital_name", "provider_name")
+    if name_col:
+        facility_name = str(matches.iloc[0][name_col]).strip()
+
+    measure_id_col = _col(matches, "measure_id", "measure_code", "hqi_measure_id")
+    measure_name_col = _col(matches, "measure_name", "measure_description", "condition")
+    compared_col = _col(
+        matches,
+        "compared_to_national",
+        "national_comparison",
+        "compared_to_national_rate",
+        "compared_to_us_rate",
+    )
+    denominator_col = _col(matches, "denominator", "cases", "number_of_cases", "eligible_cases")
+    score_col = _col(matches, "score", "rate", "observed_rate", "measure_score")
+    lower_col = _col(matches, "lower_estimate", "lower_ci", "lower_confidence_limit",
+                     "lower_95pct_ci")
+    higher_col = _col(matches, "higher_estimate", "upper_ci", "upper_confidence_limit",
+                      "upper_95pct_ci")
+    footnote_col = _col(matches, "footnote", "footnote_id", "foot_note")
+
+    measures = []
+    for _, row in matches.iterrows():
+        measures.append(ComplicationRecord(
+            measure_id=str(row.get(measure_id_col, "")).strip() if measure_id_col else "",
+            measure_name=str(row.get(measure_name_col, "")).strip() if measure_name_col else "",
+            compared_to_national=str(row.get(compared_col, "")).strip() if compared_col else "",
+            denominator=_safe_int(row.get(denominator_col, "")) if denominator_col else None,
+            score=_safe_float(row.get(score_col, "")) if score_col else None,
+            lower_estimate=_safe_float(row.get(lower_col, "")) if lower_col else None,
+            higher_estimate=_safe_float(row.get(higher_col, "")) if higher_col else None,
+            footnote=str(row.get(footnote_col, "")).strip() if footnote_col else "",
+        ))
+
+    result = ComplicationsData(
+        ccn=ccn,
+        facility_name=facility_name,
+        measures=measures,
     )
     return json.dumps(result.model_dump())
 
