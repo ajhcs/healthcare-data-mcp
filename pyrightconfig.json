@@ -1,0 +1,11 @@
+{
+  "typeCheckingMode": "basic",
+  "exclude": [
+    "venv",
+    ".venv",
+    "test-results",
+    "**/__pycache__"
+  ],
+  "reportMissingImports": "warning",
+  "reportMissingModuleSource": "none"
+}

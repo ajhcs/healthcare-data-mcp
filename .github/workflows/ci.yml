@@ -20,6 +20,28 @@ jobs:
       - name: Ruff
         run: ruff check .
 
+  typecheck:
+    runs-on: ubuntu-latest
+    continue-on-error: true  # non-blocking: known FastMCP kwargs issues
+    env:
+      SEC_USER_AGENT: "CI ci@example.com"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgeos-dev libgdal-dev libproj-dev
+      - name: Install package and pyright
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+          python -m pip install pyright
+      - name: Pyright type check
+        run: pyright
+
   tests:
     runs-on: ubuntu-latest
     env:
@@ -37,10 +59,21 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e ".[dev]"
-      - name: Unit tests
-        run: pytest tests/servers/health_system_profiler -q
+          python -m pip install pytest-cov
+      - name: Unit tests (health_system_profiler)
+        run: pytest tests/servers/health_system_profiler -q --cov=servers --cov-report=term-missing
+      - name: Unit tests (cms_facility)
+        run: pytest tests/servers/cms_facility -q --cov=servers --cov-append --cov-report=term-missing
+      - name: Unit tests (hospital_quality)
+        run: pytest tests/servers/hospital_quality -q --cov=servers --cov-append --cov-report=term-missing
+      - name: Unit tests (claims_analytics)
+        run: pytest tests/servers/claims_analytics -q --cov=servers --cov-append --cov-report=term-missing
+      - name: Unit tests (financial_intelligence)
+        run: pytest tests/servers/financial_intelligence -q --cov=servers --cov-append --cov-report=term-missing
       - name: Server smoke tests
-        run: pytest tests/servers/test_smoke_servers.py -q
+        run: pytest tests/servers/test_smoke_servers.py -q --cov=servers --cov-append --cov-report=term-missing
+      - name: Coverage summary
+        run: pytest tests/ -q --cov=servers --cov-report=term-missing --ignore=tests/servers/test_smoke_servers.py 2>/dev/null || true
 
   docker:
     runs-on: ubuntu-latest
