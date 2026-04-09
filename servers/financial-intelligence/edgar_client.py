@@ -7,11 +7,20 @@ import re
 import time
 import httpx
 
+from shared.utils.http_client import resilient_request, get_client
+
 from shared.utils.cms_client import get_cache_path
 
 logger = logging.getLogger(__name__)
 
-SEC_USER_AGENT = os.environ.get("SEC_USER_AGENT", "healthcare-data-mcp support@example.com")
+SEC_USER_AGENT = os.environ.get("SEC_USER_AGENT", "")
+if not SEC_USER_AGENT:
+    raise RuntimeError(
+        "SEC_USER_AGENT environment variable is required but not set. "
+        "SEC's EDGAR API blocks requests without a valid User-Agent identifying "
+        "your application. Set it to 'YourAppName your-email@domain.com' in your "
+        ".env file. See: https://www.sec.gov/os/accessing-edgar-data"
+    )
 EFTS_BASE = "https://efts.sec.gov/LATEST/search-index"
 XBRL_BASE = "https://data.sec.gov/api/xbrl/companyfacts"
 SUBMISSIONS_BASE = "https://data.sec.gov/submissions"
@@ -24,15 +33,15 @@ def _headers() -> dict[str, str]:
     return {"User-Agent": SEC_USER_AGENT, "Accept": "application/json"}
 
 
-async def _rate_limited_get(client: httpx.AsyncClient, url: str, **kwargs) -> httpx.Response:
-    """GET with rate limiting for SEC fair access policy."""
+async def _sec_rate_limited_get(url: str, *, timeout: float = 30.0, **kwargs) -> httpx.Response:
+    """GET with SEC fair-access rate limiting (max 10 req/sec) and resilient retry."""
     global _last_request_time
+    import asyncio
     elapsed = time.monotonic() - _last_request_time
     if elapsed < 0.1:
-        import asyncio
         await asyncio.sleep(0.1 - elapsed)
     _last_request_time = time.monotonic()
-    return await client.get(url, headers=_headers(), **kwargs)
+    return await resilient_request("GET", url, headers=_headers(), timeout=timeout, **kwargs)
 
 
 # ---------------------------------------------------------------------------
@@ -55,9 +64,7 @@ async def search_filings(
             params["enddt"] = date_to
 
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await _rate_limited_get(client, EFTS_BASE, params=params)
-            resp.raise_for_status()
+                    resp = await _sec_rate_limited_get(EFTS_BASE, params=params, timeout=30.0)
             return resp.json()
     except Exception as e:
         logger.warning("EDGAR EFTS search failed: %s", e)
@@ -80,9 +87,7 @@ async def get_company_submissions(cik: str) -> dict:
             return json.loads(cached.read_text())
 
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await _rate_limited_get(client, f"{SUBMISSIONS_BASE}/CIK{padded_cik}.json")
-            resp.raise_for_status()
+                    resp = await _sec_rate_limited_get(f"{SUBMISSIONS_BASE}/CIK{padded_cik}.json", timeout=30.0)
             data = resp.json()
             cached.write_text(json.dumps(data))
             return data
@@ -107,9 +112,7 @@ async def get_company_facts(cik: str) -> dict:
             return json.loads(cached.read_text())
 
     try:
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            resp = await _rate_limited_get(client, f"{XBRL_BASE}/CIK{padded_cik}.json")
-            resp.raise_for_status()
+                    resp = await _sec_rate_limited_get(f"{XBRL_BASE}/CIK{padded_cik}.json", timeout=60.0)
             data = resp.json()
             cached.write_text(json.dumps(data))
             return data
@@ -197,9 +200,7 @@ async def download_filing_html(cik: str, accession_number: str) -> str | None:
     index_url = f"{ARCHIVES_BASE}/{padded_cik}/{acc_no_hyphens}/{accession_number}-index.htm"
 
     try:
-        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
-            resp = await _rate_limited_get(client, index_url)
-            resp.raise_for_status()
+                    resp = await _sec_rate_limited_get(index_url, timeout=30.0)
             index_html = resp.text
 
             doc_match = re.search(r'href="([^"]+\.htm)"', index_html)
@@ -213,7 +214,7 @@ async def download_filing_html(cik: str, accession_number: str) -> str | None:
             else:
                 doc_url = doc_path
 
-            resp = await _rate_limited_get(client, doc_url)
+            resp = await _sec_rate_limited_get(doc_url)
             resp.raise_for_status()
             html = resp.text
             cached.write_text(html)
@@ -277,9 +278,7 @@ async def get_filing_index(cik: str, accession_number: str) -> dict:
     index_url = f"{ARCHIVES_BASE}/{padded_cik}/{acc_no_hyphens}/{accession_number}-index.htm"
 
     try:
-        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
-            resp = await _rate_limited_get(client, index_url)
-            resp.raise_for_status()
+                    resp = await _sec_rate_limited_get(index_url, timeout=30.0)
             html = resp.text
 
             documents = []

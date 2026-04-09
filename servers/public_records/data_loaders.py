@@ -13,7 +13,23 @@ from pathlib import Path
 
 import duckdb
 import httpx
+
+from shared.utils.http_client import resilient_request, get_client
 import pandas as pd
+
+# Ensure shared utils are importable
+import sys as _sys
+_project_root = __import__("pathlib").Path(__file__).resolve().parent.parent.parent
+if str(_project_root) not in _sys.path:
+    _sys.path.insert(0, str(_project_root))
+
+from shared.utils.cache import is_cache_valid as _is_cache_valid  # noqa: E402
+from shared.utils.duckdb_helpers import (  # noqa: E402
+    detect_columns as _detect_columns,
+    find_column as _find_col,
+    get_connection as _get_con,
+)
+from shared.utils.extraction import safe_int as _i, safe_str as _s  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -51,30 +67,8 @@ _340B_JSON = _CACHE_DIR / "340b_covered_entities.json"
 _BREACH_CSV = _CACHE_DIR / "hipaa_breaches.csv"
 
 
-# ---------------------------------------------------------------------------
-# TTL helpers
-# ---------------------------------------------------------------------------
-
-def _is_cache_valid(path: Path, ttl_days: int) -> bool:
-    """Check if a cached file exists and is within TTL."""
-    if not path.exists():
-        return False
-    age_days = (datetime.now(timezone.utc).timestamp() - path.stat().st_mtime) / 86400
-    return age_days < ttl_days
 
 
-# ---------------------------------------------------------------------------
-# DuckDB connection helper
-# ---------------------------------------------------------------------------
-
-def _get_con(parquet_path: Path, view_name: str = "data") -> duckdb.DuckDBPyConnection | None:
-    """Create DuckDB in-memory connection with a view over the Parquet file.
-
-    If the Parquet file is corrupted, deletes it and returns None so the
-    caller can trigger a re-download on the next request.
-    """
-    if not parquet_path.exists():
-        return None
     con = duckdb.connect(":memory:")
     try:
         con.execute(
@@ -88,49 +82,8 @@ def _get_con(parquet_path: Path, view_name: str = "data") -> duckdb.DuckDBPyConn
         return None
 
 
-# ---------------------------------------------------------------------------
-# Safe row extraction helpers
-# ---------------------------------------------------------------------------
-
-def _s(row: dict, col: str | None) -> str:
-    """Safe string extraction from a dict row."""
-    if not col or col not in row:
-        return ""
-    v = row.get(col)
-    return str(v).strip() if v is not None else ""
 
 
-def _i(row: dict, col: str | None) -> int:
-    """Safe int extraction from a dict row."""
-    v = _s(row, col)
-    try:
-        return int(float(v)) if v else 0
-    except (ValueError, TypeError):
-        return 0
-
-
-# ---------------------------------------------------------------------------
-# Dynamic column detection
-# ---------------------------------------------------------------------------
-
-def _detect_columns(con: duckdb.DuckDBPyConnection, view_name: str = "data") -> list[str]:
-    """Return list of column names in the view."""
-    return [
-        r[0]
-        for r in con.execute(
-            f"SELECT column_name FROM information_schema.columns "
-            f"WHERE table_name='{view_name}'"
-        ).fetchall()
-    ]
-
-
-def _find_col(cols: list[str], candidates: list[str]) -> str | None:
-    """Find the first matching column name from a list of candidates."""
-    col_set = set(cols)
-    for c in candidates:
-        if c in col_set:
-            return c
-    return None
 
 
 # ============================================================
@@ -147,9 +100,7 @@ async def ensure_pos_cached() -> bool:
 
     logger.info("Downloading CMS POS file from %s ...", POS_URL[:80])
     try:
-        async with httpx.AsyncClient(timeout=300.0, follow_redirects=True) as client:
-            resp = await client.get(POS_URL)
-            resp.raise_for_status()
+        resp = await resilient_request("GET", POS_URL, timeout=300.0)
 
         csv_path = _CACHE_DIR / "pos_raw.csv"
         csv_path.write_bytes(resp.content)
@@ -180,9 +131,7 @@ async def ensure_pi_cached() -> bool:
 
     logger.info("Downloading CMS PI file from %s ...", PI_URL[:80])
     try:
-        async with httpx.AsyncClient(timeout=300.0, follow_redirects=True) as client:
-            resp = await client.get(PI_URL)
-            resp.raise_for_status()
+        resp = await resilient_request("GET", PI_URL, timeout=300.0)
 
         csv_path = _CACHE_DIR / "pi_raw.csv"
         csv_path.write_bytes(resp.content)

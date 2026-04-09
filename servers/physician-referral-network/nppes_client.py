@@ -5,12 +5,20 @@ CMS Physician Compare and Medicare Utilization PUF data.
 """
 
 import logging
-from datetime import datetime, timezone
 from pathlib import Path
 
 import duckdb
 import httpx
+
+from shared.utils.http_client import resilient_request, get_client
 import pandas as pd
+
+import sys as _sys
+_project_root = __import__("pathlib").Path(__file__).resolve().parent.parent.parent
+if str(_project_root) not in _sys.path:
+    _sys.path.insert(0, str(_project_root))
+
+from shared.utils.cache import is_cache_valid  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -134,10 +142,8 @@ async def search_physicians(
     if state:
         params["state"] = state.upper()
 
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        resp = await client.get(NPPES_API_URL, params=params)
-        resp.raise_for_status()
-        data = resp.json()
+    resp = await resilient_request("GET", NPPES_API_URL, params=params, timeout=30.0)
+    data = resp.json()
 
     results = data.get("results", [])
     physicians = []
@@ -179,10 +185,8 @@ async def get_physician_detail(npi: str) -> dict | None:
     """
     params = {"version": "2.1", "number": npi.strip()}
 
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        resp = await client.get(NPPES_API_URL, params=params)
-        resp.raise_for_status()
-        data = resp.json()
+    resp = await resilient_request("GET", NPPES_API_URL, params=params, timeout=30.0)
+    data = resp.json()
 
     results = data.get("results", [])
     if not results:
@@ -240,10 +244,7 @@ async def get_physician_detail(npi: str) -> dict | None:
 
 def _is_cache_valid(path: Path) -> bool:
     """Check if a cached Parquet file exists and is within TTL."""
-    if not path.exists():
-        return False
-    age_days = (datetime.now(timezone.utc).timestamp() - path.stat().st_mtime) / 86400
-    return age_days < _CACHE_TTL_DAYS
+    return is_cache_valid(path, max_age_days=_CACHE_TTL_DAYS)
 
 
 async def ensure_physician_compare_cached() -> bool:
@@ -256,9 +257,7 @@ async def ensure_physician_compare_cached() -> bool:
 
     logger.info("Downloading Physician Compare data...")
     try:
-        async with httpx.AsyncClient(timeout=600.0, follow_redirects=True) as client:
-            resp = await client.get(PHYSICIAN_COMPARE_CSV_URL)
-            resp.raise_for_status()
+        resp = await resilient_request("GET", PHYSICIAN_COMPARE_CSV_URL, timeout=600.0)
 
         # Write CSV temporarily, convert to Parquet
         csv_path = _CACHE_DIR / "physician_compare_raw.csv"
@@ -349,17 +348,16 @@ async def ensure_utilization_cached() -> bool:
     logger.info("Downloading Medicare Utilization data (by Provider)...")
     try:
         # First, get the dataset page to find the download URL
-        async with httpx.AsyncClient(timeout=60.0, follow_redirects=True) as client:
-            resp = await client.get(f"{PROVIDER_AGG_URL}?format=csv")
-            # If this doesn't work, try the direct download pattern
-            if resp.status_code != 200 or len(resp.content) < 1000:
-                # Try data-api pattern
-                resp = await client.get(
-                    "https://data.cms.gov/data-api/v1/dataset/3614c3f0-21a5-4a7f-8e37-7cf21b6caa5d/data",
-                    params={"size": 0},
-                    timeout=30.0,
-                )
-                resp.raise_for_status()
+        resp = await resilient_request("GET", f"{PROVIDER_AGG_URL}?format=csv", timeout=60.0)
+        # If this doesn't work, try the direct download pattern
+        if resp.status_code != 200 or len(resp.content) < 1000:
+            # Try data-api pattern
+            resp = await client.get(
+                "https://data.cms.gov/data-api/v1/dataset/3614c3f0-21a5-4a7f-8e37-7cf21b6caa5d/data",
+                params={"size": 0},
+                timeout=30.0,
+            )
+            resp.raise_for_status()
 
         # If we got CSV data, save it
         if resp.headers.get("content-type", "").startswith("text/csv") or len(resp.content) > 10000:

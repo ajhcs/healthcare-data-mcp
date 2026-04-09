@@ -6,7 +6,17 @@ import zipfile
 from pathlib import Path
 
 import httpx
+
+from shared.utils.http_client import resilient_request, get_client
 import pandas as pd
+
+import sys as _sys
+_project_root = __import__("pathlib").Path(__file__).resolve().parent.parent.parent
+if str(_project_root) not in _sys.path:
+    _sys.path.insert(0, str(_project_root))
+
+from shared.utils.cache import is_cache_valid  # noqa: E402
+from shared.utils.column_detection import find_df_column  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -43,16 +53,12 @@ _CASES_COLS = [
 ]
 
 
+_BULK_TTL_DAYS = 90  # CMS bulk data refresh cadence
+
+
 def _find_column(df: pd.DataFrame, candidates: list[str]) -> str | None:
     """Find the first matching column name from a list of candidates."""
-    for c in candidates:
-        if c in df.columns:
-            return c
-        # Case-insensitive fallback
-        lower_map = {col.lower().replace(" ", "_"): col for col in df.columns}
-        if c.lower().replace(" ", "_") in lower_map:
-            return lower_map[c.lower().replace(" ", "_")]
-    return None
+    return find_df_column(df, candidates)
 
 
 def _normalize_hsaf(df: pd.DataFrame) -> pd.DataFrame:
@@ -89,16 +95,14 @@ async def download_hsaf(force: bool = False) -> pd.DataFrame:
 
     Returns a normalized DataFrame with columns: ccn, facility_name, zip_code, discharges.
     """
-    if not force and HSAF_CACHE_PATH.exists():
+    if not force and is_cache_valid(HSAF_CACHE_PATH, max_age_days=_BULK_TTL_DAYS):
         logger.info("Loading cached HSAF from %s", HSAF_CACHE_PATH)
         df = pd.read_csv(HSAF_CACHE_PATH, dtype=str)
         return _normalize_hsaf(df)
 
     logger.info("Downloading HSAF from %s", HSAF_CSV_URL)
-    async with httpx.AsyncClient(timeout=300.0, follow_redirects=True) as client:
-        resp = await client.get(HSAF_CSV_URL)
-        resp.raise_for_status()
-        HSAF_CACHE_PATH.write_bytes(resp.content)
+    resp = await resilient_request("GET", HSAF_CSV_URL, timeout=300.0)
+    HSAF_CACHE_PATH.write_bytes(resp.content)
 
     logger.info("HSAF cached to %s (%d bytes)", HSAF_CACHE_PATH, HSAF_CACHE_PATH.stat().st_size)
     df = pd.read_csv(HSAF_CACHE_PATH, dtype=str)
@@ -110,15 +114,13 @@ async def download_dartmouth_crosswalk(force: bool = False) -> pd.DataFrame:
 
     Returns a DataFrame with columns: zip_code, hsanum, hsacity, hsastate, hrrnum, hrrcity, hrrstate.
     """
-    if not force and DARTMOUTH_CACHE_PATH.exists():
+    if not force and is_cache_valid(DARTMOUTH_CACHE_PATH, max_age_days=_BULK_TTL_DAYS):
         logger.info("Loading cached Dartmouth crosswalk from %s", DARTMOUTH_CACHE_PATH)
         df = pd.read_csv(DARTMOUTH_CACHE_PATH, dtype=str)
         return _normalize_dartmouth(df)
 
     logger.info("Downloading Dartmouth crosswalk from %s", DARTMOUTH_CROSSWALK_URL)
-    async with httpx.AsyncClient(timeout=120.0, follow_redirects=True) as client:
-        resp = await client.get(DARTMOUTH_CROSSWALK_URL)
-        resp.raise_for_status()
+    resp = await resilient_request("GET", DARTMOUTH_CROSSWALK_URL, timeout=120.0)
 
     # Handle ZIP archive: extract the CSV inside
     content = resp.content
@@ -149,10 +151,8 @@ async def load_hospital_names() -> dict[str, str]:
     """
     if not _HOSP_INFO_CACHE.exists():
         logger.info("Downloading Hospital General Info for name lookup...")
-        async with httpx.AsyncClient(timeout=300.0, follow_redirects=True) as client:
-            resp = await client.get(_HOSP_INFO_URL)
-            resp.raise_for_status()
-            _HOSP_INFO_CACHE.write_bytes(resp.content)
+        resp = await resilient_request("GET", _HOSP_INFO_URL, timeout=300.0)
+        _HOSP_INFO_CACHE.write_bytes(resp.content)
 
     df = pd.read_csv(_HOSP_INFO_CACHE, dtype=str, keep_default_na=False,
                       usecols=lambda c: c.strip() in ("Facility ID", "Facility Name"))
