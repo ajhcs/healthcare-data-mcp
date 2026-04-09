@@ -5,7 +5,7 @@
 ![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)
 ![MCP 1.0](https://img.shields.io/badge/MCP-1.0-green)
 ![Servers](https://img.shields.io/badge/servers-13-purple)
-![Tools](https://img.shields.io/badge/tools-68-orange)
+![Tools](https://img.shields.io/badge/tools-69-orange)
 ![License: MIT](https://img.shields.io/badge/license-MIT-yellow)
 
 ## What is this
