@@ -69,23 +69,6 @@ _BREACH_CSV = _CACHE_DIR / "hipaa_breaches.csv"
 
 
 
-    con = duckdb.connect(":memory:")
-    try:
-        con.execute(
-            f"CREATE VIEW {view_name} AS SELECT * FROM read_parquet('{parquet_path}')"
-        )
-        return con
-    except Exception:
-        logger.warning("Corrupt Parquet cache, deleting: %s", parquet_path)
-        con.close()
-        parquet_path.unlink(missing_ok=True)
-        return None
-
-
-
-
-
-
 # ============================================================
 # Auto-download functions (CMS bulk CSV -> Parquet)
 # ============================================================
