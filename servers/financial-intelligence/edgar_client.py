@@ -13,7 +13,14 @@ from shared.utils.cms_client import get_cache_path
 
 logger = logging.getLogger(__name__)
 
-SEC_USER_AGENT = os.environ.get("SEC_USER_AGENT", "healthcare-data-mcp support@example.com")
+SEC_USER_AGENT = os.environ.get("SEC_USER_AGENT", "")
+if not SEC_USER_AGENT:
+    raise RuntimeError(
+        "SEC_USER_AGENT environment variable is required but not set. "
+        "SEC's EDGAR API blocks requests without a valid User-Agent identifying "
+        "your application. Set it to 'YourAppName your-email@domain.com' in your "
+        ".env file. See: https://www.sec.gov/os/accessing-edgar-data"
+    )
 EFTS_BASE = "https://efts.sec.gov/LATEST/search-index"
 XBRL_BASE = "https://data.sec.gov/api/xbrl/companyfacts"
 SUBMISSIONS_BASE = "https://data.sec.gov/submissions"
