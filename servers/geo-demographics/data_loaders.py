@@ -1,12 +1,19 @@
 """Data loaders for CMS Geographic Variation PUF."""
 
 import logging
-from datetime import datetime, timezone
+import sys
 from pathlib import Path
 
 import duckdb
-import httpx
 import pandas as pd
+
+# Ensure shared utils are importable
+_project_root = Path(__file__).resolve().parent.parent.parent
+if str(_project_root) not in sys.path:
+    sys.path.insert(0, str(_project_root))
+
+from shared.utils.cache import is_cache_valid  # noqa: E402
+from shared.utils.http_client import resilient_request  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -24,10 +31,7 @@ GV_CSV_URL = (
 
 
 def _is_cache_valid(path: Path) -> bool:
-    if not path.exists():
-        return False
-    age_days = (datetime.now(timezone.utc).timestamp() - path.stat().st_mtime) / 86400
-    return age_days < _CACHE_TTL_DAYS
+    return is_cache_valid(path, max_age_days=_CACHE_TTL_DAYS)
 
 
 async def ensure_gv_cached() -> bool:
@@ -37,9 +41,7 @@ async def ensure_gv_cached() -> bool:
 
     logger.info("Downloading Geographic Variation PUF...")
     try:
-        async with httpx.AsyncClient(timeout=600.0, follow_redirects=True) as client:
-            resp = await client.get(GV_CSV_URL)
-            resp.raise_for_status()
+        resp = await resilient_request("GET", GV_CSV_URL, timeout=600.0)
 
         csv_path = _CACHE_DIR / "gv_raw.csv"
         csv_path.write_bytes(resp.content)
@@ -66,8 +68,9 @@ def query_gv(geo_level: str, geo_code: str) -> dict | None:
         return None
 
     try:
+        from shared.utils.duckdb_safe import safe_parquet_sql
         con = duckdb.connect(":memory:")
-        con.execute(f"CREATE VIEW gv AS SELECT * FROM read_parquet('{_GV_PARQUET}')")
+        con.execute(f"CREATE VIEW gv AS SELECT * FROM {safe_parquet_sql(_GV_PARQUET)}")
 
         if geo_level == "State" and len(geo_code) == 2 and geo_code.isalpha():
             # State abbreviations are stored in BENE_GEO_DESC, not BENE_GEO_CD

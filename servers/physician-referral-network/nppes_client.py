@@ -5,12 +5,20 @@ CMS Physician Compare and Medicare Utilization PUF data.
 """
 
 import logging
-from datetime import datetime, timezone
+import sys
 from pathlib import Path
 
 import duckdb
 import httpx
 import pandas as pd
+
+# Ensure shared utils are importable
+_project_root = Path(__file__).resolve().parent.parent.parent
+if str(_project_root) not in sys.path:
+    sys.path.insert(0, str(_project_root))
+
+from shared.utils.cache import is_cache_valid  # noqa: E402
+from shared.utils.duckdb_safe import safe_parquet_sql  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -240,10 +248,7 @@ async def get_physician_detail(npi: str) -> dict | None:
 
 def _is_cache_valid(path: Path) -> bool:
     """Check if a cached Parquet file exists and is within TTL."""
-    if not path.exists():
-        return False
-    age_days = (datetime.now(timezone.utc).timestamp() - path.stat().st_mtime) / 86400
-    return age_days < _CACHE_TTL_DAYS
+    return is_cache_valid(path, max_age_days=_CACHE_TTL_DAYS)
 
 
 async def ensure_physician_compare_cached() -> bool:
@@ -288,7 +293,7 @@ def get_quality_info(npi: str) -> dict | None:
     try:
         con = duckdb.connect(":memory:")
         con.execute(
-            f"CREATE VIEW pc AS SELECT * FROM read_parquet('{_PHYSICIAN_COMPARE_CACHE}')"
+            f"CREATE VIEW pc AS SELECT * FROM {safe_parquet_sql(_PHYSICIAN_COMPARE_CACHE)}"
         )
 
         # Find NPI column (may be "npi" or "ind_pac_id" etc.)

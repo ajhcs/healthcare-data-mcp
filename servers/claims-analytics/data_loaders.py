@@ -5,12 +5,19 @@ converts to Parquet with zstd compression, and queries with DuckDB.
 """
 
 import logging
-from datetime import datetime, timezone
+import sys
 from pathlib import Path
 
 import duckdb
 import httpx
 import pandas as pd
+
+# Ensure shared utils are importable
+_project_root = Path(__file__).resolve().parent.parent.parent
+if str(_project_root) not in sys.path:
+    sys.path.insert(0, str(_project_root))
+
+from shared.utils.cache import is_cache_valid  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -45,10 +52,7 @@ def _cache_path(dataset: str, year: str) -> Path:
 
 def _is_cache_valid(path: Path, ttl_days: int = _CACHE_TTL_DAYS) -> bool:
     """Check if a cached file exists and is within TTL."""
-    if not path.exists():
-        return False
-    age_days = (datetime.now(timezone.utc).timestamp() - path.stat().st_mtime) / 86400
-    return age_days < ttl_days
+    return is_cache_valid(path, max_age_days=ttl_days)
 
 
 async def _download_and_cache_csv(url: str, cache_path: Path, dataset_name: str) -> bool:
@@ -128,7 +132,8 @@ def _get_con_with_view(dataset: str, year: str) -> duckdb.DuckDBPyConnection | N
         return None
     con = duckdb.connect(":memory:")
     try:
-        con.execute(f"CREATE VIEW data AS SELECT * FROM read_parquet('{path}')")
+        from shared.utils.duckdb_safe import safe_parquet_sql
+        con.execute(f"CREATE VIEW data AS SELECT * FROM {safe_parquet_sql(path)}")
         return con
     except Exception:
         logger.warning("Corrupt Parquet cache, deleting: %s", path)

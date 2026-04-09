@@ -18,9 +18,10 @@ import logging
 import os
 import zipfile
 
-import httpx
 import pandas as pd
 from mcp.server.fastmcp import FastMCP
+
+from shared.utils.http_client import resilient_request
 
 from .accessibility import compute_e2sfca, summarize_scores
 from .models import (
@@ -82,16 +83,12 @@ async def _load_facilities() -> pd.DataFrame:
     if _facility_df is not None:
         return _facility_df
 
-    import httpx
-
     cache_path = os.path.join(CACHE_DIR, "hospital_general_info.csv")
     if not os.path.exists(cache_path):
         logger.info("Downloading Hospital General Info from CMS...")
-        async with httpx.AsyncClient(timeout=300.0, follow_redirects=True) as client:
-            resp = await client.get(HOSPITAL_INFO_URL)
-            resp.raise_for_status()
-            with open(cache_path, "wb") as f:
-                f.write(resp.content)
+        resp = await resilient_request("GET", HOSPITAL_INFO_URL, timeout=300.0)
+        with open(cache_path, "wb") as f:
+            f.write(resp.content)
         logger.info("Saved to %s", cache_path)
 
     df = pd.read_csv(cache_path, dtype=str, keep_default_na=False)
@@ -114,10 +111,8 @@ async def _ensure_zip_centroids() -> dict[str, tuple[float, float]]:
     cache_path = os.path.join(CACHE_DIR, "zip_centroids.txt")
     if not os.path.exists(cache_path):
         logger.info("Downloading Census ZIP centroids...")
-        async with httpx.AsyncClient(timeout=120.0, follow_redirects=True) as client:
-            resp = await client.get(GAZETTEER_URL)
-            resp.raise_for_status()
-            # Extract the text file from the ZIP archive
+        resp = await resilient_request("GET", GAZETTEER_URL, timeout=120.0)
+        # Extract the text file from the ZIP archive
             with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
                 txt_files = [n for n in zf.namelist() if n.endswith(".txt")]
                 content = zf.read(txt_files[0]) if txt_files else zf.read(zf.namelist()[0])

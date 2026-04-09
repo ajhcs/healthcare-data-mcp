@@ -7,12 +7,19 @@ Sources:
 
 import logging
 import sqlite3
+import sys
 import zipfile
-from datetime import datetime, timezone
 from pathlib import Path
 
 import httpx
 import pandas as pd
+
+# Ensure shared utils are importable
+_project_root = Path(__file__).resolve().parent.parent.parent
+if str(_project_root) not in sys.path:
+    sys.path.insert(0, str(_project_root))
+
+from shared.utils.cache import is_cache_valid  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -38,10 +45,7 @@ HEALTHCARE_PATTERNS = [
 
 def _is_cache_valid(path: Path, ttl_days: int = _CACHE_TTL_DAYS) -> bool:
     """Check if a cached file exists and is within TTL."""
-    if not path.exists():
-        return False
-    age_days = (datetime.now(timezone.utc).timestamp() - path.stat().st_mtime) / 86400
-    return age_days < ttl_days
+    return is_cache_valid(path, max_age_days=ttl_days)
 
 
 # ---------------------------------------------------------------------------
@@ -226,8 +230,9 @@ def query_work_stoppages(year_start: int = 2015, year_end: int = 2026) -> list[d
 
     try:
         import duckdb
+        from shared.utils.duckdb_safe import safe_parquet_sql
         con = duckdb.connect(":memory:")
-        con.execute(f"CREATE VIEW ws AS SELECT * FROM read_parquet('{_STOPPAGES_CACHE}')")
+        con.execute(f"CREATE VIEW ws AS SELECT * FROM {safe_parquet_sql(_STOPPAGES_CACHE)}")
 
         cols = [r[0] for r in con.execute(
             "SELECT column_name FROM information_schema.columns WHERE table_name='ws'"

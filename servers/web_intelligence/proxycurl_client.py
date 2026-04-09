@@ -10,6 +10,8 @@ import os
 
 import httpx
 
+from shared.utils.http_client import resilient_request
+
 logger = logging.getLogger(__name__)
 
 _BASE_URL = "https://nubela.co/proxycurl/api/v2/linkedin"

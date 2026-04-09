@@ -5,13 +5,22 @@ for healthcare workforce analysis.
 """
 
 import logging
+import sys
 import zipfile
-from datetime import datetime, timezone
 from pathlib import Path
 
 import duckdb
 import httpx
 import pandas as pd
+
+# Ensure shared utils are importable
+_project_root = Path(__file__).resolve().parent.parent.parent
+if str(_project_root) not in sys.path:
+    sys.path.insert(0, str(_project_root))
+
+from shared.utils.duckdb_safe import safe_parquet_sql  # noqa: E402
+
+from shared.utils.cache import is_cache_valid  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -37,10 +46,7 @@ HCRIS_API_URL = "https://data.cms.gov/provider-compliance/cost-reports/hospital-
 
 def _is_cache_valid(path: Path, ttl_days: int = _CACHE_TTL_DAYS) -> bool:
     """Check if a cached file exists and is within TTL."""
-    if not path.exists():
-        return False
-    age_days = (datetime.now(timezone.utc).timestamp() - path.stat().st_mtime) / 86400
-    return age_days < ttl_days
+    return is_cache_valid(path, max_age_days=ttl_days)
 
 
 # ---------------------------------------------------------------------------
@@ -81,7 +87,7 @@ def query_hpsas(state: str, discipline: str = "", county_fips: str = "") -> list
 
     try:
         con = duckdb.connect(":memory:")
-        con.execute(f"CREATE VIEW hpsa AS SELECT * FROM read_parquet('{_HPSA_CACHE}')")
+        con.execute(f"CREATE VIEW hpsa AS SELECT * FROM {safe_parquet_sql(_HPSA_CACHE)}")
 
         # Find relevant columns
         cols = [r[0] for r in con.execute(
@@ -241,7 +247,7 @@ def query_hcris_gme(ccn: str) -> dict | None:
 
     try:
         con = duckdb.connect(":memory:")
-        con.execute(f"CREATE VIEW hcris AS SELECT * FROM read_parquet('{_HCRIS_CACHE}')")
+        con.execute(f"CREATE VIEW hcris AS SELECT * FROM {safe_parquet_sql(_HCRIS_CACHE)}")
 
         cols = [r[0] for r in con.execute(
             "SELECT column_name FROM information_schema.columns WHERE table_name='hcris'"
@@ -305,7 +311,7 @@ def query_hcris_staffing(ccn: str) -> dict | None:
 
     try:
         con = duckdb.connect(":memory:")
-        con.execute(f"CREATE VIEW hcris AS SELECT * FROM read_parquet('{_HCRIS_CACHE}')")
+        con.execute(f"CREATE VIEW hcris AS SELECT * FROM {safe_parquet_sql(_HCRIS_CACHE)}")
 
         cols = [r[0] for r in con.execute(
             "SELECT column_name FROM information_schema.columns WHERE table_name='hcris'"

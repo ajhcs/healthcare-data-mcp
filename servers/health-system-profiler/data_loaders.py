@@ -1,10 +1,20 @@
 """Data loading and caching for AHRQ Compendium, CMS POS, and NPPES."""
 
+import asyncio
 import logging
+import sys
 from pathlib import Path
 
 import httpx
 import pandas as pd
+
+# Ensure shared utils are importable
+_project_root = Path(__file__).resolve().parent.parent.parent
+if str(_project_root) not in sys.path:
+    sys.path.insert(0, str(_project_root))
+
+from shared.utils.cache import is_cache_valid  # noqa: E402
+from shared.utils.column_detection import find_df_column  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -32,21 +42,19 @@ POS_CACHE = CACHE_DIR / "pos_q4_2025.csv"
 # --- NPPES API ---
 NPPES_API_URL = "https://npiregistry.cms.hhs.gov/api/"
 
-# --- In-memory caches ---
+# --- Cache TTL ---
+_BULK_TTL_DAYS = 90  # CMS bulk data refresh cadence
+
+# --- In-memory caches (protected by _df_lock for concurrent access) ---
 _ahrq_systems_df: pd.DataFrame | None = None
 _ahrq_hospitals_df: pd.DataFrame | None = None
 _pos_df: pd.DataFrame | None = None
+_df_lock = asyncio.Lock()
 
 
 def _find_column(df: pd.DataFrame, candidates: list[str]) -> str | None:
     """Find the first matching column name (case-insensitive)."""
-    lower_map = {col.lower().strip(): col for col in df.columns}
-    for c in candidates:
-        if c in df.columns:
-            return c
-        if c.lower().strip() in lower_map:
-            return lower_map[c.lower().strip()]
-    return None
+    return find_df_column(df, candidates)
 
 
 # ============================================================
@@ -152,23 +160,29 @@ async def _download_if_missing(url: str, cache_path: Path) -> Path:
 async def load_ahrq_systems(force: bool = False) -> pd.DataFrame:
     """Load the AHRQ Compendium system file."""
     global _ahrq_systems_df
-    if not force and _ahrq_systems_df is not None:
-        return _ahrq_systems_df
+    async with _df_lock:
+        if not force and _ahrq_systems_df is not None:
+            if is_cache_valid(AHRQ_SYSTEM_CACHE, max_age_days=_BULK_TTL_DAYS):
+                return _ahrq_systems_df
+            _ahrq_systems_df = None  # stale — force re-download
 
-    path = await _download_if_missing(AHRQ_SYSTEM_URL, AHRQ_SYSTEM_CACHE)
-    _ahrq_systems_df = parse_ahrq_system_file(path)
-    return _ahrq_systems_df
+        path = await _download_if_missing(AHRQ_SYSTEM_URL, AHRQ_SYSTEM_CACHE)
+        _ahrq_systems_df = parse_ahrq_system_file(path)
+        return _ahrq_systems_df
 
 
 async def load_ahrq_hospital_linkage(force: bool = False) -> pd.DataFrame:
     """Load the AHRQ Compendium hospital linkage file."""
     global _ahrq_hospitals_df
-    if not force and _ahrq_hospitals_df is not None:
-        return _ahrq_hospitals_df
+    async with _df_lock:
+        if not force and _ahrq_hospitals_df is not None:
+            if is_cache_valid(AHRQ_HOSPITAL_LINKAGE_CACHE, max_age_days=_BULK_TTL_DAYS):
+                return _ahrq_hospitals_df
+            _ahrq_hospitals_df = None
 
-    path = await _download_if_missing(AHRQ_HOSPITAL_LINKAGE_URL, AHRQ_HOSPITAL_LINKAGE_CACHE)
-    _ahrq_hospitals_df = parse_ahrq_hospital_linkage(path)
-    return _ahrq_hospitals_df
+        path = await _download_if_missing(AHRQ_HOSPITAL_LINKAGE_URL, AHRQ_HOSPITAL_LINKAGE_CACHE)
+        _ahrq_hospitals_df = parse_ahrq_hospital_linkage(path)
+        return _ahrq_hospitals_df
 
 
 # ============================================================
@@ -189,12 +203,15 @@ def parse_pos_file(path: Path) -> pd.DataFrame:
 async def load_pos(force: bool = False) -> pd.DataFrame:
     """Load the CMS Provider of Services file."""
     global _pos_df
-    if not force and _pos_df is not None:
-        return _pos_df
+    async with _df_lock:
+        if not force and _pos_df is not None:
+            if is_cache_valid(POS_CACHE, max_age_days=_BULK_TTL_DAYS):
+                return _pos_df
+            _pos_df = None
 
-    path = await _download_if_missing(POS_URL, POS_CACHE)
-    _pos_df = parse_pos_file(path)
-    return _pos_df
+        path = await _download_if_missing(POS_URL, POS_CACHE)
+        _pos_df = parse_pos_file(path)
+        return _pos_df
 
 
 # ============================================================

@@ -9,7 +9,7 @@ API docs: https://developers.google.com/custom-search/v1/reference/rest/v1/cse/l
 import logging
 import os
 
-import httpx
+from shared.utils.http_client import resilient_request
 
 logger = logging.getLogger(__name__)
 
@@ -78,17 +78,13 @@ async def search(
         params["dateRestrict"] = date_restrict
 
     try:
-        async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
-            resp = await client.get(_BASE_URL, params=params)
-            resp.raise_for_status()
-            return resp.json()
-    except httpx.HTTPStatusError as e:
-        if e.response.status_code == 429:
+        resp = await resilient_request("GET", _BASE_URL, params=params, timeout=_TIMEOUT)
+        return resp.json()
+    except Exception as e:
+        import httpx as _httpx
+        if isinstance(e, _httpx.HTTPStatusError) and e.response.status_code == 429:
             logger.warning("Google CSE quota exceeded")
             return {"error": "Google CSE daily quota exceeded (100 free/day)"}
-        logger.warning("Google CSE HTTP error: %s", e)
-        return {"error": f"Google CSE request failed: {e.response.status_code}"}
-    except Exception as e:
         logger.warning("Google CSE request failed: %s", e)
         return {"error": str(e)}
 

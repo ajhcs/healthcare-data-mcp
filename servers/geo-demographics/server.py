@@ -8,8 +8,9 @@ import json
 import logging
 import os
 
-import httpx
 from mcp.server.fastmcp import FastMCP
+
+from shared.utils.http_client import resilient_request
 
 from .census_client import get_demographics_batch, get_demographics_for_zcta
 from .geography import get_adjacent_zctas
@@ -225,10 +226,8 @@ async def crosswalk_zip(zip_code: str, target: str = "county") -> str:
         params = {"type": type_code, "query": zip_code}
         headers = {"Authorization": f"Bearer {hud_token}"}
 
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.get(url, params=params, headers=headers)
-            resp.raise_for_status()
-            data = resp.json()
+        resp = await resilient_request("GET", url, params=params, headers=headers, timeout=30.0)
+        data = resp.json()
 
         results_data = data.get("data", {}).get("results", data) if isinstance(data, dict) else data
 
