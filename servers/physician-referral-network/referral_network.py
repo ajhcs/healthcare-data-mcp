@@ -11,6 +11,7 @@ import logging
 from pathlib import Path
 
 import duckdb
+from shared.utils.duckdb_safe import safe_parquet_sql
 import httpx
 
 from shared.utils.http_client import resilient_request, get_client

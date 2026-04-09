@@ -129,9 +129,10 @@ def _get_con_with_view(dataset: str, year: str) -> duckdb.DuckDBPyConnection | N
     path = _cache_path(dataset, year)
     if not path.exists():
         return None
+    from shared.utils.duckdb_safe import safe_parquet_sql
     con = duckdb.connect(":memory:")
     try:
-        con.execute(f"CREATE VIEW data AS SELECT * FROM read_parquet('{path}')")
+        con.execute(f"CREATE VIEW data AS SELECT * FROM {safe_parquet_sql(path)}")
         return con
     except Exception:
         logger.warning("Corrupt Parquet cache, deleting: %s", path)
