@@ -168,15 +168,15 @@ async def analyze_system_mix(
     Returns:
         Dict with employed/affiliated/independent counts and percentages.
     """
-    # Load facility data from health-system-profiler's data loaders
+    # Load facility data from shared AHRQ data loaders
     try:
-        from servers.health_system_profiler.data_loaders import (
+        from shared.utils.ahrq_data import (
             load_ahrq_hospital_linkage,
             load_ahrq_systems,
             load_pos,
         )
     except ImportError:
-        return {"error": "health-system-profiler data loaders not available"}
+        return {"error": "shared AHRQ data loaders not available (shared/utils/ahrq_data.py)"}
 
     # Find system in AHRQ Compendium
     systems_df = await load_ahrq_systems()
