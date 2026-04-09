@@ -127,6 +127,10 @@ async def search_facilities(
 async def get_facility(ccn: str) -> str:
     """Get full facility details by CMS Certification Number (CCN).
 
+    Returns Hospital General Information including quality ratings (overall,
+    mortality, safety, readmission, patient experience) for the facility.
+    Use this tool for any hospital info lookup by CCN.
+
     Args:
         ccn: The 6-character CMS Certification Number.
     """
@@ -257,28 +261,6 @@ async def get_facility_financials(ccn: str) -> str:
     )
     return json.dumps(profile.model_dump())
 
-
-@mcp.tool()
-async def get_hospital_info(ccn: str) -> str:
-    """Get Hospital General Information including quality ratings for a facility.
-
-    Args:
-        ccn: The CMS Certification Number of the hospital.
-    """
-    df = await data_loaders.load_hospital_info()
-    if df.empty:
-        return json.dumps({"error": "Hospital data not available"})
-
-    ccn_col = _col(df, "facility_id", "ccn", "provider_id", "cms_certification_number", "provider_number")
-    if not ccn_col:
-        return json.dumps({"error": "Cannot identify CCN column in dataset"})
-
-    matches = df[df[ccn_col].str.strip() == ccn.strip()]
-    if matches.empty:
-        return json.dumps({"error": f"No hospital found with CCN: {ccn}"})
-
-    facility = _row_to_facility(matches.iloc[0])
-    return json.dumps(facility.model_dump())
 
 
 if __name__ == "__main__":
