@@ -15,6 +15,7 @@ if str(_project_root) not in _sys.path:
     _sys.path.insert(0, str(_project_root))
 
 from shared.utils.cache import is_cache_valid  # noqa: E402
+from shared.utils.cms_client import cms_discover_download_url  # noqa: E402
 from shared.utils.column_detection import find_df_column  # noqa: E402
 
 logger = logging.getLogger(__name__)
@@ -29,6 +30,7 @@ HSAF_CSV_URL = (
     "https://data.cms.gov/sites/default/files/2025-07/"
     "8fca1932-adaa-411d-a912-78fb0854a286/Hospital_Service_Area_2024.csv"
 )
+_HSAF_DATASET_TITLE = "Hospital Service Area"
 # API endpoint (JSON):
 HSAF_API_URL = "https://data.cms.gov/data-api/v1/dataset/8708ca8b-8636-44ed-8303-724cbfaf78ad/data"
 HSAF_CACHE_PATH = CACHE_DIR / "hsaf.csv"
@@ -99,8 +101,15 @@ async def download_hsaf(force: bool = False) -> pd.DataFrame:
         df = pd.read_csv(HSAF_CACHE_PATH, dtype=str)
         return _normalize_hsaf(df)
 
-    logger.info("Downloading HSAF from %s", HSAF_CSV_URL)
-    resp = await resilient_request("GET", HSAF_CSV_URL, timeout=300.0)
+    hsaf_url = await cms_discover_download_url(
+        title=_HSAF_DATASET_TITLE,
+        fallback_url=HSAF_CSV_URL,
+    )
+    if not hsaf_url:
+        raise RuntimeError("Unable to resolve Hospital Service Area download URL")
+
+    logger.info("Downloading HSAF from %s", hsaf_url)
+    resp = await resilient_request("GET", hsaf_url, timeout=300.0)
     HSAF_CACHE_PATH.write_bytes(resp.content)
 
     logger.info("HSAF cached to %s (%d bytes)", HSAF_CACHE_PATH, HSAF_CACHE_PATH.stat().st_size)

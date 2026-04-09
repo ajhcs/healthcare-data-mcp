@@ -14,6 +14,7 @@ if str(_project_root) not in _sys.path:
     _sys.path.insert(0, str(_project_root))
 
 from shared.utils.cache import is_cache_valid  # noqa: E402
+from shared.utils.cms_client import cms_discover_download_url  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,7 @@ GV_CSV_URL = (
     "a40ac71d-9f80-4d99-92d2-fd149433d7d8/"
     "2014-2023%20Medicare%20Fee-for-Service%20Geographic%20Variation%20Public%20Use%20File.csv"
 )
+_GV_DATASET_TITLE = "Medicare Geographic Variation - by National, State & County"
 
 
 def _is_cache_valid(path: Path) -> bool:
@@ -41,7 +43,14 @@ async def ensure_gv_cached() -> bool:
 
     logger.info("Downloading Geographic Variation PUF...")
     try:
-        resp = await resilient_request("GET", GV_CSV_URL, timeout=600.0)
+        gv_url = await cms_discover_download_url(
+            title=_GV_DATASET_TITLE,
+            fallback_url=GV_CSV_URL,
+        )
+        if not gv_url:
+            raise RuntimeError("Unable to resolve Geographic Variation download URL")
+
+        resp = await resilient_request("GET", gv_url, timeout=600.0)
 
         csv_path = _CACHE_DIR / "gv_raw.csv"
         csv_path.write_bytes(resp.content)

@@ -15,7 +15,7 @@ _project_root = Path(__file__).resolve().parent.parent.parent
 if str(_project_root) not in sys.path:
     sys.path.insert(0, str(_project_root))
 
-from shared.utils.cms_client import CMS_API_BASE, cms_download_csv  # noqa: E402
+from shared.utils.cms_client import CMS_API_BASE, cms_discover_download_url, cms_download_csv  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +27,7 @@ DATASETS = {
     "hcahps": "dgck-syfz",
     "complications": "ynj2-r877",
 }
+_COST_REPORT_DATASET_TITLE = "Hospital Provider Cost Report"
 
 # In-memory DataFrame cache to avoid re-reading CSV on every call
 _BULK_TTL_DAYS = 90  # CMS bulk data refresh cadence
@@ -97,11 +98,17 @@ async def load_cost_report() -> pd.DataFrame:
     if key in _df_cache:
         return _df_cache[key]
 
-    url = (
+    fallback_url = (
         "https://data.cms.gov/sites/default/files/2026-01/"
         "3c39f483-c7e0-4025-8396-4df76942e10f/CostReport_2023_Final.csv"
     )
     try:
+        url = await cms_discover_download_url(
+            title=_COST_REPORT_DATASET_TITLE,
+            fallback_url=fallback_url,
+        )
+        if not url:
+            raise RuntimeError("Unable to resolve Hospital Provider Cost Report download URL")
         path = await cms_download_csv(url, cache_key="hospital_quality_cost_report")
         df = pd.read_csv(path, dtype=str, keep_default_na=False)
         df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]

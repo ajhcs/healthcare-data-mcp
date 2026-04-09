@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pandas as pd
 from shared.utils.cache import is_cache_valid
+from shared.utils.cms_client import cms_discover_download_url
 from shared.utils.http_client import resilient_request
 
 logger = logging.getLogger(__name__)
@@ -17,6 +18,7 @@ HOSPITAL_INFO_URL = "https://data.cms.gov/provider-data/api/1/datastore/query/xu
 NPPES_API_URL = "https://npiregistry.cms.hhs.gov/api/"
 
 _BULK_TTL_DAYS = 90  # CMS bulk data refresh cadence
+_COST_REPORT_DATASET_TITLE = "Hospital Provider Cost Report"
 
 # In-memory DataFrames to avoid re-reading CSV on every call
 _hospital_info_df: pd.DataFrame | None = None
@@ -67,11 +69,17 @@ async def load_cost_report() -> pd.DataFrame:
             return _cost_report_df
 
         # CMS Cost Report PUF — direct CSV download (2023 Final, published Jan 2026)
-        cost_report_url = (
+        fallback_url = (
             "https://data.cms.gov/sites/default/files/2026-01/"
             "3c39f483-c7e0-4025-8396-4df76942e10f/CostReport_2023_Final.csv"
         )
         try:
+            cost_report_url = await cms_discover_download_url(
+                title=_COST_REPORT_DATASET_TITLE,
+                fallback_url=fallback_url,
+            )
+            if not cost_report_url:
+                raise RuntimeError("Unable to resolve Hospital Provider Cost Report download URL")
             path = await _download_csv(cost_report_url, "hospital_cost_report.csv")
             df = pd.read_csv(path, dtype=str, keep_default_na=False)
             df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]

@@ -24,6 +24,7 @@ if str(_project_root) not in _sys.path:
     _sys.path.insert(0, str(_project_root))
 
 from shared.utils.cache import is_cache_valid  # noqa: E402
+from shared.utils.cms_client import cms_discover_download_url  # noqa: E402
 from shared.utils.duckdb_helpers import get_connection  # noqa: E402
 
 logger = logging.getLogger(__name__)
@@ -129,9 +130,18 @@ async def ensure_pi_cached() -> bool:
     if _is_cache_valid(_PI_PARQUET, _PI_TTL_DAYS):
         return True
 
+    pi_url = await cms_discover_download_url(
+        title_contains="Promoting Interoperability",
+        landing_page_contains="/promoting-interoperability",
+        distribution_title_contains="Promoting Interoperability",
+        fallback_url=PI_URL,
+    )
+    if not pi_url:
+        raise RuntimeError("Unable to resolve Promoting Interoperability download URL")
+
     logger.info("Downloading CMS PI file for EHR detection ...")
     try:
-        resp = await resilient_request("GET", PI_URL, timeout=300.0)
+        resp = await resilient_request("GET", pi_url, timeout=300.0)
 
         csv_path = _CACHE_DIR / "pi_raw.csv"
         csv_path.write_bytes(resp.content)

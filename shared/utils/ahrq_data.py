@@ -13,6 +13,7 @@ from pathlib import Path
 
 import httpx
 import pandas as pd
+from shared.utils.cms_client import cms_discover_download_url
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +36,7 @@ POS_URL = (
     "https://data.cms.gov/sites/default/files/2026-01/"
     "c500f848-83b3-4f29-a677-562243a2f23b/Hospital_and_other.DATA.Q4_2025.csv"
 )
+_POS_DATASET_TITLE = "Provider of Services File - Quality Improvement and Evaluation System"
 POS_CACHE = CACHE_DIR / "pos_q4_2025.csv"
 
 # --- In-memory caches ---
@@ -193,6 +195,13 @@ async def load_pos(force: bool = False) -> pd.DataFrame:
     if not force and _pos_df is not None:
         return _pos_df
 
-    path = await _download_if_missing(POS_URL, POS_CACHE)
+    pos_url = await cms_discover_download_url(
+        title=_POS_DATASET_TITLE,
+        fallback_url=POS_URL,
+    )
+    if not pos_url:
+        raise RuntimeError("Unable to resolve Provider of Services download URL")
+
+    path = await _download_if_missing(pos_url, POS_CACHE)
     _pos_df = parse_pos_file(path)
     return _pos_df

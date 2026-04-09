@@ -22,6 +22,7 @@ if str(_project_root) not in _sys.path:
     _sys.path.insert(0, str(_project_root))
 
 from shared.utils.cache import is_cache_valid as _is_cache_valid  # noqa: E402
+from shared.utils.cms_client import cms_discover_download_url  # noqa: E402
 from shared.utils.duckdb_helpers import (  # noqa: E402
     detect_columns as _detect_columns,
     find_column as _find_col,
@@ -53,6 +54,7 @@ PI_URL = (
     "https://data.cms.gov/provider-data/sites/default/files/resources/"
     "5462b19a756c53c1becccf13787d9157_1770163678/Promoting_Interoperability-Hospital.csv"
 )
+_POS_DATASET_TITLE = "Provider of Services File - Quality Improvement and Evaluation System"
 
 # Parquet cache paths
 _POS_PARQUET = _CACHE_DIR / "pos_q4_2025.parquet"
@@ -79,9 +81,16 @@ async def ensure_pos_cached() -> bool:
     if _is_cache_valid(_POS_PARQUET, _BULK_TTL_DAYS):
         return True
 
-    logger.info("Downloading CMS POS file from %s ...", POS_URL[:80])
+    pos_url = await cms_discover_download_url(
+        title=_POS_DATASET_TITLE,
+        fallback_url=POS_URL,
+    )
+    if not pos_url:
+        raise RuntimeError("Unable to resolve Provider of Services download URL")
+
+    logger.info("Downloading CMS POS file from %s ...", pos_url[:80])
     try:
-        resp = await resilient_request("GET", POS_URL, timeout=300.0)
+        resp = await resilient_request("GET", pos_url, timeout=300.0)
 
         csv_path = _CACHE_DIR / "pos_raw.csv"
         csv_path.write_bytes(resp.content)
@@ -110,9 +119,18 @@ async def ensure_pi_cached() -> bool:
     if _is_cache_valid(_PI_PARQUET, _BULK_TTL_DAYS):
         return True
 
-    logger.info("Downloading CMS PI file from %s ...", PI_URL[:80])
+    pi_url = await cms_discover_download_url(
+        title_contains="Promoting Interoperability",
+        landing_page_contains="/promoting-interoperability",
+        distribution_title_contains="Promoting Interoperability",
+        fallback_url=PI_URL,
+    )
+    if not pi_url:
+        raise RuntimeError("Unable to resolve Promoting Interoperability download URL")
+
+    logger.info("Downloading CMS PI file from %s ...", pi_url[:80])
     try:
-        resp = await resilient_request("GET", PI_URL, timeout=300.0)
+        resp = await resilient_request("GET", pi_url, timeout=300.0)
 
         csv_path = _CACHE_DIR / "pi_raw.csv"
         csv_path.write_bytes(resp.content)
