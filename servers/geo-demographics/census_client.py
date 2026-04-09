@@ -1,5 +1,6 @@
 """Census ACS API wrapper for querying demographic data by ZCTA."""
 
+from collections.abc import Iterable
 import logging
 import os
 
@@ -226,25 +227,37 @@ async def get_demographics_for_zcta(zcta: str, year: int = 2023) -> dict:
 async def get_demographics_batch(zctas: list[str], year: int = 2023) -> list[dict]:
     """Fetch demographics for multiple ZCTAs efficiently.
 
-    Queries all ZCTAs at once and filters to the requested set.
-    For small batches (<=10), uses comma-separated query.
-    For larger batches, queries all ZCTAs and filters.
+    Census supports comma-separated ZCTA requests, but not arbitrarily large
+    batches. We therefore chunk targeted requests into groups of 10 instead of
+    fetching all ~33K ZCTAs and filtering client-side.
     """
     variables = _all_variable_codes()
-    zcta_set = set(zctas)
+    unique_zctas = list(dict.fromkeys(zctas))
+    if not unique_zctas:
+        return []
 
-    if len(zctas) <= 10:
-        # Census API supports comma-separated ZCTA values
-        zcta_param = ",".join(zctas)
+    results_by_zcta: dict[str, dict] = {}
+    for zcta_chunk in _chunked(unique_zctas, size=10):
+        zcta_param = ",".join(zcta_chunk)
         rows = await query_acs(variables, zcta=zcta_param, year=year)
-    else:
-        # Query all ZCTAs and filter
-        rows = await query_acs(variables, zcta="*", year=year)
 
-    results = []
-    for row in rows:
-        row_zcta = row.get("zip code tabulation area", "")
-        if row_zcta in zcta_set:
-            results.append(parse_demographics(row, row_zcta, year))
+        for row in rows:
+            row_zcta = row.get("zip code tabulation area", "")
+            if row_zcta:
+                results_by_zcta[row_zcta] = parse_demographics(row, row_zcta, year)
 
-    return results
+    return [results_by_zcta[zcta] for zcta in unique_zctas if zcta in results_by_zcta]
+
+
+def _chunked(values: Iterable[str], size: int) -> list[list[str]]:
+    """Split an iterable into fixed-size chunks."""
+    chunk: list[str] = []
+    chunks: list[list[str]] = []
+    for value in values:
+        chunk.append(value)
+        if len(chunk) == size:
+            chunks.append(chunk)
+            chunk = []
+    if chunk:
+        chunks.append(chunk)
+    return chunks
