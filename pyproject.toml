@@ -54,6 +54,9 @@ Issues = "https://github.com/ajhcs/healthcare-data-mcp/issues"
 [tool.hatch.build.targets.wheel]
 packages = ["servers", "shared"]
 
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+
 [tool.ruff]
 target-version = "py311"
 line-length = 120

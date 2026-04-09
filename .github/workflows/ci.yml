@@ -73,7 +73,7 @@ jobs:
       - name: Server smoke tests
         run: pytest tests/servers/test_smoke_servers.py -q --cov=servers --cov-append --cov-report=term-missing
       - name: Coverage summary
-        run: pytest tests/ -q --cov=servers --cov-report=term-missing --ignore=tests/servers/test_smoke_servers.py 2>/dev/null || true
+        run: pytest tests/ -q --cov=servers --cov-report=term-missing --ignore=tests/servers/test_smoke_servers.py || true
 
   docker:
     runs-on: ubuntu-latest
