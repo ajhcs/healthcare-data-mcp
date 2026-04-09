@@ -14,7 +14,9 @@ from __future__ import annotations
 import csv
 import json
 import logging
+import os
 import re
+import shutil
 from datetime import datetime, timezone
 from difflib import SequenceMatcher
 from pathlib import Path
@@ -32,12 +34,54 @@ logger = logging.getLogger(__name__)
 _CACHE_DIR = Path.home() / ".healthcare-data-mcp" / "cache" / "mrf"
 _CACHE_DIR.mkdir(parents=True, exist_ok=True)
 _CACHE_TTL_DAYS = 30
+_DEFAULT_MAX_DOWNLOAD_BYTES = 10 * 1024 * 1024 * 1024
+_DEFAULT_MIN_FREE_BYTES = 2 * 1024 * 1024 * 1024
+_DEFAULT_PROGRESS_INTERVAL_BYTES = 250 * 1024 * 1024
 
 
 def _hospital_cache_dir(hospital_id: str) -> Path:
     """Return cache directory for a hospital, using a filesystem-safe ID."""
     safe_id = re.sub(r"[^a-zA-Z0-9_-]", "_", hospital_id.strip())
     return _CACHE_DIR / safe_id
+
+
+def _get_max_download_bytes() -> int:
+    """Return the maximum allowed raw MRF download size."""
+    return max(1, int(os.environ.get("MRF_MAX_DOWNLOAD_BYTES", str(_DEFAULT_MAX_DOWNLOAD_BYTES))))
+
+
+def _get_min_free_bytes() -> int:
+    """Return the minimum free disk headroom to preserve during downloads."""
+    return max(0, int(os.environ.get("MRF_MIN_FREE_BYTES", str(_DEFAULT_MIN_FREE_BYTES))))
+
+
+def _get_progress_interval_bytes() -> int:
+    """Return the byte interval for download progress logging."""
+    return max(1, int(os.environ.get("MRF_DOWNLOAD_PROGRESS_INTERVAL_BYTES", str(_DEFAULT_PROGRESS_INTERVAL_BYTES))))
+
+
+def _format_bytes(num_bytes: int) -> str:
+    """Render a byte count in human-readable units."""
+    value = float(num_bytes)
+    for unit in ("B", "KB", "MB", "GB", "TB"):
+        if value < 1024 or unit == "TB":
+            return f"{value:.1f} {unit}"
+        value /= 1024
+    return f"{num_bytes} B"
+
+
+def _ensure_download_capacity(cache_dir: Path, *, expected_bytes: int | None = None) -> None:
+    """Fail early when the cache volume lacks enough free space."""
+    free_bytes = shutil.disk_usage(cache_dir).free
+    required_bytes = _get_min_free_bytes()
+    if expected_bytes is not None:
+        required_bytes += max(0, expected_bytes)
+    if free_bytes < required_bytes:
+        raise ValueError(
+            "Insufficient disk space for MRF download: "
+            f"need {_format_bytes(required_bytes)}, have {_format_bytes(free_bytes)} free. "
+            "Adjust MRF_MIN_FREE_BYTES or clear ~/.healthcare-data-mcp/cache/mrf."
+        )
 
 
 def is_cached(hospital_id: str) -> bool:
@@ -834,19 +878,67 @@ async def download_mrf(url: str, hospital_id: str) -> Path:
     if not url_path:
         url_path = "mrf_file"
     dest = cache_dir / url_path
+    temp_dest = dest.with_name(f"{dest.name}.part")
 
     logger.info("Downloading MRF: %s -> %s", url, dest)
 
     # Streaming downloads use the pooled client directly (not resilient_request)
     client = get_client()
-    async with client.stream(
-        "GET", url,
-        timeout=_httpx.Timeout(600.0, connect=30.0),
-    ) as response:
-        response.raise_for_status()
-        with open(dest, "wb") as f:
-            async for chunk in response.aiter_bytes(chunk_size=1024 * 1024):
-                f.write(chunk)
+    max_download_bytes = _get_max_download_bytes()
+    progress_interval = _get_progress_interval_bytes()
+
+    temp_dest.unlink(missing_ok=True)
+    try:
+        async with client.stream(
+            "GET", url,
+            timeout=_httpx.Timeout(600.0, connect=30.0),
+        ) as response:
+            response.raise_for_status()
+
+            content_length: int | None = None
+            if response.headers.get("Content-Length"):
+                content_length = int(response.headers["Content-Length"])
+                if content_length > max_download_bytes:
+                    raise ValueError(
+                        "MRF download exceeds configured max size: "
+                        f"{_format_bytes(content_length)} > {_format_bytes(max_download_bytes)}. "
+                        "Override with MRF_MAX_DOWNLOAD_BYTES if this file is expected."
+                    )
+
+            _ensure_download_capacity(cache_dir, expected_bytes=content_length)
+
+            downloaded = 0
+            next_progress_log = progress_interval
+            next_capacity_check = progress_interval
+
+            with open(temp_dest, "wb") as f:
+                async for chunk in response.aiter_bytes(chunk_size=1024 * 1024):
+                    downloaded += len(chunk)
+                    if downloaded > max_download_bytes:
+                        raise ValueError(
+                            "MRF download exceeded configured max size while streaming: "
+                            f"{_format_bytes(downloaded)} > {_format_bytes(max_download_bytes)}. "
+                            "Override with MRF_MAX_DOWNLOAD_BYTES if this file is expected."
+                        )
+                    if downloaded >= next_capacity_check:
+                        remaining = None
+                        if content_length is not None:
+                            remaining = max(0, content_length - downloaded)
+                        _ensure_download_capacity(cache_dir, expected_bytes=remaining)
+                        next_capacity_check += progress_interval
+                    f.write(chunk)
+                    if downloaded >= next_progress_log:
+                        logger.info(
+                            "MRF download progress for %s: %s",
+                            hospital_id,
+                            _format_bytes(downloaded),
+                        )
+                        next_progress_log += progress_interval
+
+        temp_dest.replace(dest)
+    except Exception:
+        temp_dest.unlink(missing_ok=True)
+        raise
 
     logger.info("Downloaded %s (%.1f MB)", dest.name, dest.stat().st_size / 1024 / 1024)
     return dest

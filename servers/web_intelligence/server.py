@@ -8,6 +8,7 @@ import json
 import logging
 import os as _os
 import re
+from urllib.parse import urlparse
 
 
 from shared.utils.http_client import resilient_request
@@ -59,6 +60,39 @@ async def _fetch_and_parse(url: str) -> tuple[str, BeautifulSoup | None]:
     except Exception as e:
         logger.debug("Fetch failed for %s: %s", url, e)
         return "", None
+
+
+def _build_domain_candidate_results(
+    system_domain: str,
+    paths: list[str],
+    *,
+    title_prefix: str,
+) -> list[dict]:
+    """Build synthetic search results from common paths on a known domain."""
+    domain = system_domain.strip()
+    if not domain:
+        return []
+
+    if "://" not in domain:
+        domain = f"https://{domain}"
+    parsed = urlparse(domain)
+    base = f"{parsed.scheme or 'https'}://{parsed.netloc or parsed.path}".rstrip("/")
+    display_link = parsed.netloc or parsed.path
+
+    results = []
+    seen: set[str] = set()
+    for path in paths:
+        url = f"{base}/{path.lstrip('/')}"
+        if url in seen:
+            continue
+        seen.add(url)
+        results.append({
+            "title": f"{title_prefix} - {display_link}",
+            "link": url,
+            "snippet": "",
+            "display_link": display_link,
+        })
+    return results
 
 
 def _extract_meta(html: str) -> dict[str, str]:
@@ -123,27 +157,36 @@ async def scrape_system_profile(
             return json.dumps(cached)
 
         # Step 1: Search for About/Mission pages
+        data_quality = "snippets_only"
         about_query = f'"{system_name}" about us mission vision'
         about_raw = await search_client.search(
             about_query,
             num=5,
             site_search=system_domain if system_domain else "",
         )
-        if "error" in about_raw:
-            return json.dumps(about_raw)
-
-        about_results = search_client.extract_results(about_raw)
+        about_results = []
+        if "error" not in about_raw:
+            about_results = search_client.extract_results(about_raw)
 
         # If no domain was provided, detect it from results
         if not system_domain and about_results:
             system_domain = about_results[0].get("display_link", "")
+        if not about_results and system_domain:
+            about_results = _build_domain_candidate_results(
+                system_domain,
+                ["/about", "/about-us", "/our-story", "/mission-vision-values", "/locations"],
+                title_prefix=f"{system_name} about",
+            )
+            if about_results:
+                data_quality = "direct_domain_guess"
+        elif "error" in about_raw:
+            return json.dumps(about_raw)
 
         # Step 2: Fetch and parse the top About page
         mission = ""
         vision = ""
         values = ""
         tagline = ""
-        data_quality = "snippets_only"
         source_urls: list[str] = []
 
         for result in about_results[:2]:
@@ -192,17 +235,24 @@ async def scrape_system_profile(
                 num=5,
                 site_search=system_domain,
             )
+            loc_results = []
             if "error" not in loc_raw:
                 loc_results = search_client.extract_results(loc_raw)
-                for r in loc_results:
-                    # Extract location hints from snippet
-                    snippet = r.get("snippet", "")
-                    title = r.get("title", "")
-                    if snippet:
-                        locations.append(LocationEntry(
-                            name=title[:100],
-                            address=snippet[:200],
-                        ))
+            if not loc_results:
+                loc_results = _build_domain_candidate_results(
+                    system_domain,
+                    ["/locations", "/find-a-location", "/our-locations", "/facilities"],
+                    title_prefix=f"{system_name} locations",
+                )
+            for r in loc_results:
+                # Extract location hints from snippet
+                snippet = r.get("snippet", "")
+                title = r.get("title", "")
+                if snippet or r.get("link"):
+                    locations.append(LocationEntry(
+                        name=title[:100],
+                        address=(snippet or r.get("link", ""))[:200],
+                    ))
 
         response = SystemProfileResponse(
             system_name=system_name,
@@ -381,13 +431,20 @@ async def get_executive_profiles(
             lead_query, num=5,
             site_search=system_domain if system_domain else "",
         )
-        if "error" in lead_raw:
-            return json.dumps(lead_raw)
-
-        lead_results = search_client.extract_results(lead_raw)
+        lead_results = []
+        if "error" not in lead_raw:
+            lead_results = search_client.extract_results(lead_raw)
 
         if not system_domain and lead_results:
             system_domain = lead_results[0].get("display_link", "")
+        if not lead_results and system_domain:
+            lead_results = _build_domain_candidate_results(
+                system_domain,
+                ["/leadership", "/about/leadership", "/about-us/leadership", "/our-leaders", "/executive-team"],
+                title_prefix=f"{system_name} leadership",
+            )
+        elif "error" in lead_raw:
+            return json.dumps(lead_raw)
 
         # Step 2: Fetch and parse leadership page
         executives: list[ExecutiveProfile] = []

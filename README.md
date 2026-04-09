@@ -19,6 +19,8 @@ The [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) lets AI ass
 
 Every tool returns structured JSON. Most servers work without API keys, optional keys unlock deeper features like Census demographics, isochrone generation, and web intelligence, and the `financial-intelligence` server requires a real `SEC_USER_AGENT` header for SEC fair-access compliance.
 
+The `web-intelligence` server now uses an in-process Google CSE quota guard with query caching and session caps, and the `price-transparency` server refuses oversized MRF downloads before they can fill the cache volume.
+
 ## Architecture
 
 ```
@@ -149,6 +151,10 @@ cp .env.example .env
 | `MCP_PORT` | per-server | HTTP port when using non-stdio transport |
 | `OSRM_BASE_URL` | `http://router.project-osrm.org` | OSRM routing backend (self-host for production) |
 | `DOCGRAPH_CSV_PATH` | unset | Optional local path used by `load_docgraph_cache()` for CareSet DocGraph imports |
+| `GOOGLE_CSE_SESSION_LIMIT` | `40` | Max live Google CSE calls per server process (`0` disables the guard) |
+| `GOOGLE_CSE_CACHE_TTL_SECONDS` | `21600` | In-memory TTL for identical Google CSE queries |
+| `MRF_MAX_DOWNLOAD_BYTES` | `10737418240` | Abort raw MRF downloads above this size (10 GiB default) |
+| `MRF_MIN_FREE_BYTES` | `2147483648` | Minimum disk headroom preserved during MRF downloads (2 GiB default) |
 
 ## MCP Client Setup
 
