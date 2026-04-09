@@ -39,31 +39,8 @@ jobs:
           python -m pip install -e ".[dev]"
       - name: Unit tests
         run: pytest tests/servers/health_system_profiler -q
-      - name: Import smoke test
-        run: |
-          python - <<'PY'
-          import importlib
-
-          modules = [
-              "servers.claims_analytics.server",
-              "servers.cms_facility.server",
-              "servers.drive_time.server",
-              "servers.financial_intelligence.server",
-              "servers.geo_demographics.server",
-              "servers.health_system_profiler.server",
-              "servers.hospital_quality.server",
-              "servers.physician_referral_network.server",
-              "servers.price_transparency.server",
-              "servers.public_records.server",
-              "servers.service_area.server",
-              "servers.web_intelligence.server",
-              "servers.workforce_analytics.server",
-          ]
-
-          for module in modules:
-              importlib.import_module(module)
-              print(f"ok {module}")
-          PY
+      - name: Server smoke tests
+        run: pytest tests/servers/test_smoke_servers.py -q
 
   docker:
     runs-on: ubuntu-latest
