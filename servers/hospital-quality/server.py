@@ -10,6 +10,12 @@ import os
 
 from mcp.server.fastmcp import FastMCP
 
+from shared.utils.cost_report import (
+    cr_safe_float,
+    cr_safe_int,
+    load_cost_report_row,
+)
+
 from . import data_loaders
 from .models import (
     ComplicationRecord,
@@ -423,21 +429,9 @@ async def get_financial_profile(ccn: str) -> str:
     Args:
         ccn: The 6-character CMS Certification Number.
     """
-    df = await data_loaders.load_cost_report()
-    if df.empty:
-        return json.dumps({"error": "Cost report data not available"})
-
-    matches = _filter_by_ccn(df, ccn)
-    if matches.empty:
-        return json.dumps({"error": f"No cost report data found for CCN: {ccn}"})
-
-    # Take the most recent row if multiple years exist
-    fy_col = _col(matches, "fiscal_year_end", "fy_end", "fiscal_year_end_date", "fy_end_dt",
-                  "fiscal_year_end_dt")
-    if fy_col and fy_col in matches.columns:
-        matches = matches.sort_values(fy_col, ascending=False)
-
-    row = matches.iloc[0]
+    row, error = await load_cost_report_row(data_loaders, ccn)
+    if error:
+        return json.dumps({"error": error})
 
     def val(*keys):
         for k in keys:
@@ -448,16 +442,16 @@ async def get_financial_profile(ccn: str) -> str:
     facility_name = val("facility_name", "hospital_name", "provider_name", "name")
 
     # Case mix index
-    cmi = _safe_float(val("case_mix_index", "cmi", "casemix_index", "case_mix"))
+    cmi = cr_safe_float(row, "case_mix_index", "cmi", "casemix_index", "case_mix")
 
     # Discharges and beds
-    total_discharges = _safe_int(val("total_discharges", "discharges", "tot_dschrgs"))
-    total_beds = _safe_int(val("total_bed_days_available", "beds", "total_beds",
-                               "bed_size", "number_of_beds", "hospital_bed_count"))
+    total_discharges = cr_safe_int(row, "total_discharges", "discharges", "tot_dschrgs")
+    total_beds = cr_safe_int(row, "total_bed_days_available", "beds", "total_beds",
+                             "bed_size", "number_of_beds", "hospital_bed_count")
 
     # Teaching: resident-to-bed ratio
-    rtb_raw = _safe_float(val("resident_to_bed_ratio", "rtb_ratio", "teaching_ratio",
-                              "resident_to_adb_ratio", "residents_to_beds"))
+    rtb_raw = cr_safe_float(row, "resident_to_bed_ratio", "rtb_ratio", "teaching_ratio",
+                            "resident_to_adb_ratio", "residents_to_beds")
     teaching_status = ""
     if rtb_raw is not None:
         if rtb_raw == 0:
@@ -468,11 +462,11 @@ async def get_financial_profile(ccn: str) -> str:
             teaching_status = "Major teaching"
 
     # DSH
-    dsh = _safe_float(val("dsh_pct", "dsh_percent", "disproportionate_share",
-                          "dsh_adjustment_percent", "dsh_patient_percent"))
+    dsh = cr_safe_float(row, "dsh_pct", "dsh_percent", "disproportionate_share",
+                        "dsh_adjustment_percent", "dsh_patient_percent")
 
     # Wage index
-    wage = _safe_float(val("wage_index", "area_wage_index", "cbsa_wage_index"))
+    wage = cr_safe_float(row, "wage_index", "area_wage_index", "cbsa_wage_index")
 
     # Urban/Rural
     geo = val("urban_rural", "urban_rural_indicator", "geographic_location",

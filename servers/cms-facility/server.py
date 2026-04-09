@@ -12,6 +12,13 @@ from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 
+from shared.utils.cost_report import (
+    cr_safe_float,
+    cr_safe_int,
+    get_fiscal_year_end,
+    load_cost_report_row,
+)
+
 # Support running both as a package and as a standalone script
 try:
     from . import data_loaders
@@ -216,48 +223,19 @@ async def get_facility_financials(ccn: str) -> str:
     Args:
         ccn: The CMS Certification Number of the facility.
     """
-    df = await data_loaders.load_cost_report()
-    if df.empty:
-        return json.dumps({"error": "Cost report data not available"})
-
-    # Identify CCN column
-    ccn_col = _col(df, "provider_ccn", "provider_number", "ccn", "provider_id", "prvdr_num")
-    if not ccn_col:
-        return json.dumps({"error": "Cannot identify CCN column in cost report dataset"})
-
-    matches = df[df[ccn_col].str.strip() == ccn.strip()]
-    if matches.empty:
-        return json.dumps({"error": f"No cost report data found for CCN: {ccn}"})
-
-    # Take the most recent row if multiple years exist
-    fy_col = _col(df, "fiscal_year_end", "fy_end", "fiscal_year_end_date", "fy_end_dt")
-    if fy_col and fy_col in matches.columns:
-        matches = matches.sort_values(fy_col, ascending=False)
-
-    row = matches.iloc[0]
-
-    def num(col_name, *alts):
-        for c in (col_name, *alts):
-            if c in row.index and row[c]:
-                try:
-                    return float(str(row[c]).replace(",", ""))
-                except (ValueError, TypeError):
-                    pass
-        return None
-
-    def intval(col_name, *alts):
-        v = num(col_name, *alts)
-        return int(v) if v is not None else None
+    row, error = await load_cost_report_row(data_loaders, ccn)
+    if error:
+        return json.dumps({"error": error})
 
     profile = FinancialProfile(
         ccn=ccn,
-        fiscal_year_end=str(row.get(fy_col, "")) if fy_col else "",
-        total_beds=intval("total_bed_days_available", "beds", "total_beds", "bed_size"),
-        total_discharges=intval("total_discharges", "discharges", "tot_dschrgs"),
-        total_patient_days=intval("total_days", "total_patient_days", "patient_days", "ip_days"),
-        net_patient_revenue=num("net_patient_revenue", "net_revenue", "net_pat_rev"),
-        total_costs=num("total_costs", "tot_costs", "total_operating_costs"),
-        fte_employees=num("fte_employees", "fte", "total_fte"),
+        fiscal_year_end=get_fiscal_year_end(row),
+        total_beds=cr_safe_int(row, "total_bed_days_available", "beds", "total_beds", "bed_size"),
+        total_discharges=cr_safe_int(row, "total_discharges", "discharges", "tot_dschrgs"),
+        total_patient_days=cr_safe_int(row, "total_days", "total_patient_days", "patient_days", "ip_days"),
+        net_patient_revenue=cr_safe_float(row, "net_patient_revenue", "net_revenue", "net_pat_rev"),
+        total_costs=cr_safe_float(row, "total_costs", "tot_costs", "total_operating_costs"),
+        fte_employees=cr_safe_float(row, "fte_employees", "fte", "total_fte"),
     )
     return json.dumps(profile.model_dump())
 
