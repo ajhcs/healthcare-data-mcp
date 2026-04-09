@@ -22,7 +22,7 @@ if str(_project_root) not in _sys.path:
     _sys.path.insert(0, str(_project_root))
 
 from shared.utils.cache import is_cache_valid as _is_cache_valid  # noqa: E402
-from shared.utils.cms_client import cms_discover_download_url  # noqa: E402
+from shared.utils.cms_url_resolver import resolve_cms_download_url  # noqa: E402
 from shared.utils.duckdb_helpers import (  # noqa: E402
     detect_columns as _detect_columns,
     find_column as _find_col,
@@ -81,10 +81,7 @@ async def ensure_pos_cached() -> bool:
     if _is_cache_valid(_POS_PARQUET, _BULK_TTL_DAYS):
         return True
 
-    pos_url = await cms_discover_download_url(
-        title=_POS_DATASET_TITLE,
-        fallback_url=POS_URL,
-    )
+    pos_url = await resolve_cms_download_url("pos-file", "Hospital_and_other.DATA")
     if not pos_url:
         raise RuntimeError("Unable to resolve Provider of Services download URL")
 
@@ -119,12 +116,7 @@ async def ensure_pi_cached() -> bool:
     if _is_cache_valid(_PI_PARQUET, _BULK_TTL_DAYS):
         return True
 
-    pi_url = await cms_discover_download_url(
-        title_contains="Promoting Interoperability",
-        landing_page_contains="/promoting-interoperability",
-        distribution_title_contains="Promoting Interoperability",
-        fallback_url=PI_URL,
-    )
+    pi_url = await resolve_cms_download_url("pi-hospital", "Promoting_Interoperability-Hospital")
     if not pi_url:
         raise RuntimeError("Unable to resolve Promoting Interoperability download URL")
 

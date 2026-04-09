@@ -13,7 +13,7 @@ from pathlib import Path
 
 import httpx
 import pandas as pd
-from shared.utils.cms_client import cms_discover_download_url
+from shared.utils.cms_url_resolver import resolve_cms_download_url as _resolve_cms_url
 
 logger = logging.getLogger(__name__)
 
@@ -195,10 +195,7 @@ async def load_pos(force: bool = False) -> pd.DataFrame:
     if not force and _pos_df is not None:
         return _pos_df
 
-    pos_url = await cms_discover_download_url(
-        title=_POS_DATASET_TITLE,
-        fallback_url=POS_URL,
-    )
+    pos_url = await _resolve_cms_url("pos-file", "Hospital_and_other.DATA")
     if not pos_url:
         raise RuntimeError("Unable to resolve Provider of Services download URL")
 

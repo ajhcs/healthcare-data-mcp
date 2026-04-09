@@ -15,7 +15,8 @@ _project_root = Path(__file__).resolve().parent.parent.parent
 if str(_project_root) not in sys.path:
     sys.path.insert(0, str(_project_root))
 
-from shared.utils.cms_client import CMS_API_BASE, cms_discover_download_url, cms_download_csv  # noqa: E402
+from shared.utils.cms_client import CMS_API_BASE, cms_download_csv  # noqa: E402
+from shared.utils.cms_url_resolver import resolve_cms_download_url  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -98,15 +99,8 @@ async def load_cost_report() -> pd.DataFrame:
     if key in _df_cache:
         return _df_cache[key]
 
-    fallback_url = (
-        "https://data.cms.gov/sites/default/files/2026-01/"
-        "3c39f483-c7e0-4025-8396-4df76942e10f/CostReport_2023_Final.csv"
-    )
     try:
-        url = await cms_discover_download_url(
-            title=_COST_REPORT_DATASET_TITLE,
-            fallback_url=fallback_url,
-        )
+        url = await resolve_cms_download_url("cost-report-puf", "CostReport_")
         if not url:
             raise RuntimeError("Unable to resolve Hospital Provider Cost Report download URL")
         path = await cms_download_csv(url, cache_key="hospital_quality_cost_report")

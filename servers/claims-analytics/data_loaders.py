@@ -10,7 +10,7 @@ from pathlib import Path
 import duckdb
 
 import pandas as pd
-from shared.utils.cms_client import cms_discover_download_url
+from shared.utils.cms_url_resolver import resolve_cms_download_url
 from shared.utils.http_client import resilient_request
 
 import sys as _sys
@@ -88,11 +88,7 @@ async def ensure_inpatient_cached(year: str = LATEST_YEAR) -> bool:
     if _is_cache_valid(path):
         return True
 
-    url = await cms_discover_download_url(
-        title=_INPATIENT_DATASET_TITLE,
-        release_year=year,
-        fallback_url=INPATIENT_URLS.get(year),
-    )
+    url = await resolve_cms_download_url(f"inpatient-puf-{year}", "MUP_INP_")
     if not url:
         logger.warning("No inpatient PUF URL for year %s", year)
         return False
@@ -106,11 +102,7 @@ async def ensure_outpatient_cached(year: str = LATEST_YEAR) -> bool:
     if _is_cache_valid(path):
         return True
 
-    url = await cms_discover_download_url(
-        title=_OUTPATIENT_DATASET_TITLE,
-        release_year=year,
-        fallback_url=OUTPATIENT_URLS.get(year),
-    )
+    url = await resolve_cms_download_url(f"outpatient-puf-{year}", "MUP_OUT_")
     if not url:
         logger.warning("No outpatient PUF URL for year %s", year)
         return False

@@ -5,7 +5,8 @@ import logging
 from pathlib import Path
 
 import pandas as pd
-from shared.utils.cms_client import cms_discover_download_url, load_hospital_general_info
+from shared.utils.cms_client import load_hospital_general_info
+from shared.utils.cms_url_resolver import resolve_cms_download_url
 from shared.utils.http_client import resilient_request
 
 logger = logging.getLogger(__name__)
@@ -62,16 +63,9 @@ async def load_cost_report() -> pd.DataFrame:
         if _cost_report_df is not None:
             return _cost_report_df
 
-        # CMS Cost Report PUF — direct CSV download (2023 Final, published Jan 2026)
-        fallback_url = (
-            "https://data.cms.gov/sites/default/files/2026-01/"
-            "3c39f483-c7e0-4025-8396-4df76942e10f/CostReport_2023_Final.csv"
-        )
+        # CMS Cost Report PUF — resolved via URL discovery layer
         try:
-            cost_report_url = await cms_discover_download_url(
-                title=_COST_REPORT_DATASET_TITLE,
-                fallback_url=fallback_url,
-            )
+            cost_report_url = await resolve_cms_download_url("cost-report-puf", "CostReport_")
             if not cost_report_url:
                 raise RuntimeError("Unable to resolve Hospital Provider Cost Report download URL")
             path = await _download_csv(cost_report_url, "hospital_cost_report.csv")

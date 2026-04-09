@@ -15,7 +15,8 @@ if str(_project_root) not in _sys.path:
     _sys.path.insert(0, str(_project_root))
 
 from shared.utils.cache import is_cache_valid  # noqa: E402
-from shared.utils.cms_client import cms_discover_download_url, load_hospital_names  # noqa: E402
+from shared.utils.cms_client import load_hospital_names  # noqa: E402
+from shared.utils.cms_url_resolver import resolve_cms_download_url  # noqa: E402
 from shared.utils.column_detection import find_df_column  # noqa: E402
 
 logger = logging.getLogger(__name__)
@@ -101,10 +102,7 @@ async def download_hsaf(force: bool = False) -> pd.DataFrame:
         df = pd.read_csv(HSAF_CACHE_PATH, dtype=str)
         return _normalize_hsaf(df)
 
-    hsaf_url = await cms_discover_download_url(
-        title=_HSAF_DATASET_TITLE,
-        fallback_url=HSAF_CSV_URL,
-    )
+    hsaf_url = await resolve_cms_download_url("hsaf", "Hospital_Service_Area_")
     if not hsaf_url:
         raise RuntimeError("Unable to resolve Hospital Service Area download URL")
 
