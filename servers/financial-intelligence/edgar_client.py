@@ -64,8 +64,8 @@ async def search_filings(
             params["enddt"] = date_to
 
     try:
-                    resp = await _sec_rate_limited_get(EFTS_BASE, params=params, timeout=30.0)
-            return resp.json()
+        resp = await _sec_rate_limited_get(EFTS_BASE, params=params, timeout=30.0)
+        return resp.json()
     except Exception as e:
         logger.warning("EDGAR EFTS search failed: %s", e)
         return {"hits": {"hits": [], "total": {"value": 0}}}
@@ -87,10 +87,10 @@ async def get_company_submissions(cik: str) -> dict:
             return json.loads(cached.read_text())
 
     try:
-                    resp = await _sec_rate_limited_get(f"{SUBMISSIONS_BASE}/CIK{padded_cik}.json", timeout=30.0)
-            data = resp.json()
-            cached.write_text(json.dumps(data))
-            return data
+        resp = await _sec_rate_limited_get(f"{SUBMISSIONS_BASE}/CIK{padded_cik}.json", timeout=30.0)
+        data = resp.json()
+        cached.write_text(json.dumps(data))
+        return data
     except Exception as e:
         logger.warning("EDGAR submissions lookup failed for CIK %s: %s", cik, e)
         return {}
@@ -112,10 +112,10 @@ async def get_company_facts(cik: str) -> dict:
             return json.loads(cached.read_text())
 
     try:
-                    resp = await _sec_rate_limited_get(f"{XBRL_BASE}/CIK{padded_cik}.json", timeout=60.0)
-            data = resp.json()
-            cached.write_text(json.dumps(data))
-            return data
+        resp = await _sec_rate_limited_get(f"{XBRL_BASE}/CIK{padded_cik}.json", timeout=60.0)
+        data = resp.json()
+        cached.write_text(json.dumps(data))
+        return data
     except Exception as e:
         logger.warning("EDGAR company facts failed for CIK %s: %s", cik, e)
         return {}
@@ -200,25 +200,24 @@ async def download_filing_html(cik: str, accession_number: str) -> str | None:
     index_url = f"{ARCHIVES_BASE}/{padded_cik}/{acc_no_hyphens}/{accession_number}-index.htm"
 
     try:
-                    resp = await _sec_rate_limited_get(index_url, timeout=30.0)
-            index_html = resp.text
+        resp = await _sec_rate_limited_get(index_url, timeout=30.0)
+        index_html = resp.text
 
-            doc_match = re.search(r'href="([^"]+\.htm)"', index_html)
-            if not doc_match:
-                logger.warning("No primary HTML doc found in filing index for %s", accession_number)
-                return None
+        doc_match = re.search(r'href="([^"]+\.htm)"', index_html)
+        if not doc_match:
+            logger.warning("No primary HTML doc found in filing index for %s", accession_number)
+            return None
 
-            doc_path = doc_match.group(1)
-            if not doc_path.startswith("http"):
-                doc_url = f"{ARCHIVES_BASE}/{padded_cik}/{acc_no_hyphens}/{doc_path}"
-            else:
-                doc_url = doc_path
+        doc_path = doc_match.group(1)
+        if not doc_path.startswith("http"):
+            doc_url = f"{ARCHIVES_BASE}/{padded_cik}/{acc_no_hyphens}/{doc_path}"
+        else:
+            doc_url = doc_path
 
-            resp = await _sec_rate_limited_get(doc_url)
-            resp.raise_for_status()
-            html = resp.text
-            cached.write_text(html)
-            return html
+        resp = await _sec_rate_limited_get(doc_url, timeout=30.0)
+        html = resp.text
+        cached.write_text(html)
+        return html
     except Exception as e:
         logger.warning("Failed to download filing HTML for %s: %s", accession_number, e)
         return None
@@ -278,30 +277,30 @@ async def get_filing_index(cik: str, accession_number: str) -> dict:
     index_url = f"{ARCHIVES_BASE}/{padded_cik}/{acc_no_hyphens}/{accession_number}-index.htm"
 
     try:
-                    resp = await _sec_rate_limited_get(index_url, timeout=30.0)
-            html = resp.text
+        resp = await _sec_rate_limited_get(index_url, timeout=30.0)
+        html = resp.text
 
-            documents = []
-            for match in re.finditer(
+        documents = []
+        for match in re.finditer(
                 r'<tr[^>]*>.*?href="([^"]+)"[^>]*>([^<]*)</a>.*?<td[^>]*>([^<]*)</td>',
-                html,
-                re.DOTALL,
-            ):
-                href, name, doc_type = match.groups()
-                if not href.startswith("http"):
-                    href = f"{ARCHIVES_BASE}/{padded_cik}/{acc_no_hyphens}/{href}"
-                documents.append({
-                    "name": name.strip(),
-                    "url": href,
-                    "type": doc_type.strip(),
-                })
+            html,
+            re.DOTALL,
+        ):
+            href, name, doc_type = match.groups()
+            if not href.startswith("http"):
+                href = f"{ARCHIVES_BASE}/{padded_cik}/{acc_no_hyphens}/{href}"
+            documents.append({
+                "name": name.strip(),
+                "url": href,
+                "type": doc_type.strip(),
+            })
 
-            desc_match = re.search(r"<div[^>]*>.*?Filing Type.*?</div>\s*<div[^>]*>(.*?)</div>", html, re.DOTALL)
-            description = ""
-            if desc_match:
-                description = re.sub(r"<[^>]+>", "", desc_match.group(1)).strip()
+        desc_match = re.search(r"<div[^>]*>.*?Filing Type.*?</div>\s*<div[^>]*>(.*?)</div>", html, re.DOTALL)
+        description = ""
+        if desc_match:
+            description = re.sub(r"<[^>]+>", "", desc_match.group(1)).strip()
 
-            return {"documents": documents, "description": description}
+        return {"documents": documents, "description": description}
     except Exception as e:
         logger.warning("Failed to get filing index for %s: %s", accession_number, e)
         return {"documents": [], "description": ""}
