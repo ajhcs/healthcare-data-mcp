@@ -42,9 +42,8 @@ mcp = FastMCP(**_mcp_kwargs)
 @mcp.tool()
 async def get_bls_employment(
     occupation: str, area_code: str = "", state: str = "",
-    include_projections: bool = True,  # noqa: ARG001 — exposed in MCP schema
 ) -> str:
-    """Get occupation-level employment counts, wages, and projections by MSA or state.
+    """Get occupation-level employment counts and wages by MSA or state.
 
     Uses BLS OES (Occupational Employment and Wage Statistics) API v2.
 
@@ -52,7 +51,6 @@ async def get_bls_employment(
         occupation: Occupation name (e.g. "Registered Nurses") or SOC code (e.g. "29-1141").
         area_code: BLS area code (MSA FIPS). Leave empty for state or national.
         state: Two-letter state code (e.g. "PA"). Leave empty for national.
-        include_projections: Include 10-year employment projections.
     """
     try:
         result = await bls_client.get_oes_data(occupation, area_code, state)
