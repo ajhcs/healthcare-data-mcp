@@ -162,6 +162,7 @@ async def search_physicians(
             "specialty": primary_tax.get("desc", ""),
             "city": practice_addr.get("city", ""),
             "state": practice_addr.get("state", ""),
+            "zip_code": (practice_addr.get("postal_code") or "")[:5],
             "org_name": basic.get("organization_name", ""),
             "gender": basic.get("gender", ""),
             "enumeration_date": basic.get("enumeration_date", ""),

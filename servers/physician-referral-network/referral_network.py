@@ -322,6 +322,31 @@ def get_top_referral_pairs(npi: str, direction: str = "both", limit: int = 25) -
     return results
 
 
+def _get_outbound_referrals(system_npis: set[str], min_shared: int = 11) -> pd.DataFrame | None:
+    """Return outbound referral volume aggregated by destination NPI."""
+    if not is_docgraph_cached():
+        return None
+
+    npi_list = list(system_npis)
+    if not npi_list:
+        return pd.DataFrame(columns=["npi_to", "total_shared"])
+
+    con = duckdb.connect(":memory:")
+    con.execute(f"CREATE VIEW dg AS SELECT * FROM {safe_parquet_sql(_SHARED_PATIENTS_CACHE)}")
+
+    placeholders = ", ".join(["?" for _ in npi_list])
+    outbound = con.execute(f"""
+        SELECT npi_to, SUM(shared_count) as total_shared
+        FROM dg
+        WHERE npi_from IN ({placeholders})
+          AND shared_count >= ?
+        GROUP BY npi_to
+        ORDER BY total_shared DESC
+    """, npi_list + [min_shared]).fetchdf()
+    con.close()
+    return outbound
+
+
 # ---------------------------------------------------------------------------
 # Leakage Detection
 # ---------------------------------------------------------------------------
@@ -329,6 +354,7 @@ def get_top_referral_pairs(npi: str, direction: str = "both", limit: int = 25) -
 def detect_leakage(
     system_npis: set[str],
     system_zips: set[str],
+    destination_zip_by_npi: dict[str, str] | None = None,
     min_shared: int = 11,
     limit: int = 50,
 ) -> dict:
@@ -343,28 +369,11 @@ def detect_leakage(
     Returns:
         Dict with leakage statistics and top destinations.
     """
-    if not is_docgraph_cached():
+    outbound = _get_outbound_referrals(system_npis, min_shared=min_shared)
+    if outbound is None:
         return {"error": "DocGraph data not cached."}
-
-    con = duckdb.connect(":memory:")
-    con.execute(f"CREATE VIEW dg AS SELECT * FROM {safe_parquet_sql(_SHARED_PATIENTS_CACHE)}")
-
-    # Get all outbound referrals from system NPIs
-    npi_list = list(system_npis)
-    if not npi_list:
-        con.close()
+    if not system_npis:
         return {"error": "No system NPIs provided."}
-
-    placeholders = ", ".join(["?" for _ in npi_list])
-    outbound = con.execute(f"""
-        SELECT npi_to, SUM(shared_count) as total_shared
-        FROM dg
-        WHERE npi_from IN ({placeholders})
-          AND shared_count >= ?
-        GROUP BY npi_to
-        ORDER BY total_shared DESC
-    """, npi_list + [min_shared]).fetchdf()
-    con.close()
 
     if outbound.empty:
         return {
@@ -379,8 +388,10 @@ def detect_leakage(
     # Classify each destination
     total_shared = int(outbound["total_shared"].sum())
     in_network_shared = 0
+    out_of_network_in_area = 0
     out_of_area = 0
     leakage_destinations = []
+    destination_zip_by_npi = destination_zip_by_npi or {}
 
     for _, row in outbound.iterrows():
         dest_npi = row["npi_to"]
@@ -389,9 +400,13 @@ def detect_leakage(
         if dest_npi in system_npis:
             in_network_shared += shared
         else:
-            # Check if destination is in service area (would need NPPES lookup for ZIP)
-            # For now, classify all out-of-network as potential leakage
-            out_of_area += shared
+            dest_zip = destination_zip_by_npi.get(dest_npi, "")
+            if dest_zip and dest_zip in system_zips:
+                classification = "out_of_network_in_area"
+                out_of_network_in_area += shared
+            else:
+                classification = "out_of_area"
+                out_of_area += shared
             leakage_destinations.append({
                 "npi": dest_npi,
                 "name": "",
@@ -399,16 +414,17 @@ def detect_leakage(
                 "shared_count": shared,
                 "city": "",
                 "state": "",
-                "classification": "out_of_network",
+                "classification": classification,
             })
 
     in_network_pct = (in_network_shared / total_shared * 100) if total_shared > 0 else 0
-    out_pct = ((total_shared - in_network_shared) / total_shared * 100) if total_shared > 0 else 0
+    in_area_pct = (out_of_network_in_area / total_shared * 100) if total_shared > 0 else 0
+    out_pct = (out_of_area / total_shared * 100) if total_shared > 0 else 0
 
     return {
         "total_referrals": total_shared,
         "in_network_pct": round(in_network_pct, 1),
-        "out_of_network_in_area_pct": 0.0,  # Requires NPPES ZIP lookup enrichment
+        "out_of_network_in_area_pct": round(in_area_pct, 1),
         "out_of_area_pct": round(out_pct, 1),
         "top_leakage_destinations": leakage_destinations[:limit],
         "specialty_breakdown": [],  # Requires NPPES taxonomy enrichment

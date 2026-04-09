@@ -274,6 +274,7 @@ async def analyze_system_mix(
         "employed_pct": round(employed / total * 100, 1) if total else 0,
         "affiliated_pct": round(affiliated / total * 100, 1) if total else 0,
         "independent_pct": round(independent / total * 100, 1) if total else 0,
+        "facility_zips": sorted(facility_zips),
         "by_specialty": by_specialty,
         "sample_physicians": classifications[:10],
     }
