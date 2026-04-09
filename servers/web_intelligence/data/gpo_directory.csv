@@ -1,11 +1,25 @@
 gpo_name,aliases,gpo_type
-Vizient,"University HealthSystem Consortium,UHC,Novation,VHA Inc",national
-Premier,"Premier Inc,Premier Healthcare Alliance",national
-HealthTrust,"HealthTrust Performance Group,HealthTrust Purchasing Group,HPG",national
-Intalere,"Amerinet,Intalere LLC",national
-ROi,"Resource Optimization & Innovation,Mercy ROi",regional
-Yankee Alliance,"Yankee Alliance Inc",regional
-GNYHA Services,"Greater New York Hospital Association",regional
-Provista,"Provista LLC",national
-Conductiv,"Conductiv Inc",specialty
+Vizient,"University HealthSystem Consortium,UHC,Novation,VHA Inc,vizient.com",national
+Premier,"Premier Inc,Premier Healthcare Alliance,premierinc.com",national
+HealthTrust,"HealthTrust Performance Group,HealthTrust Purchasing Group,healthtrustpg.com",national
+Intalere,"Amerinet,Intalere LLC,Concordance Healthcare Solutions,concordancehealthcare.com,intalere.com",national
+HPG,"Managed Health Care Associates,MHA,hpgconnect.com,mhainc.com",national
+ROi,"Resource Optimization & Innovation,Mercy ROi,roisolutions.net",regional
+Provista,"Provista LLC,provista.com",national
+Yankee Alliance,"Yankee Alliance Inc,yankeealliance.com",regional
+GNYHA Services,"Greater New York Hospital Association,GNYHA,gnyha.org,gnyhaservices.org",regional
+Advantus Health Partners,"Advantus Health,advantushealthpartners.com",regional
+AllHealth Network,"All Health Network,allhealthnetwork.org",regional
+Capstone Health Alliance,"Capstone Health,capstonehealthalliance.com",regional
+Children's Hospital Association,"CHA,childrenshospitals.org",specialty
+National Purchasing Partners,"NPP,nppgov.com,nationalpurchasingpartners.com",specialty
+Conductiv,"Conductiv Inc,conductiv.com",specialty
 Med Assets,"MedAssets,Vizient (MedAssets)",legacy
+Amerinet,"Amerinet Inc,amerinet.com",legacy
+Broadlane,"Broadlane Group,broadlane.com",legacy
+Innovatix,"Innovatix LLC,innovatix.com",specialty
+HealthTrust Europe,"HealthTrust Europe LLP,healthtrusteurope.com",international
+Ascension Seton Contracts,"Seton GPO,ascension.org",regional
+Intalere Government,"Intalere Government Solutions",specialty
+MAGNET,"Medical Association GPO Network",regional
+Surgo,"Surgo Health,surgohealth.org",specialty
