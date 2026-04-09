@@ -23,7 +23,8 @@ RUN pip install --no-cache-dir \
     beautifulsoup4 \
     lxml \
     rapidfuzz \
-    pyarrow
+    pyarrow \
+    polars
 
 # Copy source code
 COPY shared/ shared/

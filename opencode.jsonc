@@ -1,131 +1,129 @@
+// OpenCode MCP configuration for Healthcare Data MCP servers.
+// Place this file in the project root, or merge the "mcp" block into
+// your global ~/.opencode/opencode.jsonc.
+//
+// Two transport modes:
+//   stdio  -- servers run as local child processes (default, zero setup)
+//   remote -- connect to Docker Compose HTTP endpoints on ports 8002-8014
+//
+// To use HTTP mode instead, run `docker compose up -d` first, then switch
+// each entry to:   { "type": "remote", "url": "http://localhost:PORT/mcp" }
 {
-  "mcpServers": {
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
     "hc-service-area": {
-      "type": "stdio",
+      "type": "local",
       "command": "python",
       "args": ["-m", "servers.service_area.server"],
-      "cwd": ".",
       "env": {
         "PYTHONPATH": "."
       }
     },
     "hc-geo-demographics": {
-      "type": "stdio",
+      "type": "local",
       "command": "python",
       "args": ["-m", "servers.geo_demographics.server"],
-      "cwd": ".",
       "env": {
         "PYTHONPATH": ".",
-        "CENSUS_API_KEY": "${CENSUS_API_KEY}",
-        "HUD_API_TOKEN": "${HUD_API_TOKEN}"
+        "CENSUS_API_KEY": "{env:CENSUS_API_KEY}",
+        "HUD_API_TOKEN": "{env:HUD_API_TOKEN}"
       }
     },
     "hc-drive-time": {
-      "type": "stdio",
+      "type": "local",
       "command": "python",
       "args": ["-m", "servers.drive_time.server"],
-      "cwd": ".",
       "env": {
         "PYTHONPATH": ".",
-        "ORS_API_KEY": "${ORS_API_KEY}",
-        "OSRM_BASE_URL": "${OSRM_BASE_URL:-http://router.project-osrm.org}"
+        "ORS_API_KEY": "{env:ORS_API_KEY}",
+        "OSRM_BASE_URL": "http://router.project-osrm.org"
       }
     },
     "hc-hospital-quality": {
-      "type": "stdio",
+      "type": "local",
       "command": "python",
       "args": ["-m", "servers.hospital_quality.server"],
-      "cwd": ".",
       "env": {
         "PYTHONPATH": "."
       }
     },
     "hc-cms-facility": {
-      "type": "stdio",
+      "type": "local",
       "command": "python",
       "args": ["-m", "servers.cms_facility.server"],
-      "cwd": ".",
       "env": {
         "PYTHONPATH": "."
       }
     },
     "hc-health-system-profiler": {
-      "type": "stdio",
+      "type": "local",
       "command": "python",
       "args": ["-m", "servers.health_system_profiler.server"],
-      "cwd": ".",
       "env": {
         "PYTHONPATH": "."
       }
     },
     "hc-financial-intelligence": {
-      "type": "stdio",
+      "type": "local",
       "command": "python",
       "args": ["-m", "servers.financial_intelligence.server"],
-      "cwd": ".",
       "env": {
         "PYTHONPATH": ".",
-        "SEC_USER_AGENT": "${SEC_USER_AGENT:-healthcare-data-mcp support@example.com}"
+        "SEC_USER_AGENT": "healthcare-data-mcp support@example.com"
       }
     },
     "hc-price-transparency": {
-      "type": "stdio",
+      "type": "local",
       "command": "python",
       "args": ["-m", "servers.price_transparency.server"],
-      "cwd": ".",
       "env": {
         "PYTHONPATH": "."
       }
     },
     "hc-physician-referral-network": {
-      "type": "stdio",
+      "type": "local",
       "command": "python",
       "args": ["-m", "servers.physician_referral_network.server"],
-      "cwd": ".",
       "env": {
         "PYTHONPATH": "."
       }
     },
     "hc-workforce-analytics": {
-      "type": "stdio",
+      "type": "local",
       "command": "python",
       "args": ["-m", "servers.workforce_analytics.server"],
-      "cwd": ".",
       "env": {
         "PYTHONPATH": ".",
-        "BLS_API_KEY": "${BLS_API_KEY}"
+        "BLS_API_KEY": "{env:BLS_API_KEY}"
       }
     },
     "hc-claims-analytics": {
-      "type": "stdio",
+      "type": "local",
       "command": "python",
       "args": ["-m", "servers.claims_analytics.server"],
-      "cwd": ".",
       "env": {
         "PYTHONPATH": "."
       }
     },
     "hc-public-records": {
-      "type": "stdio",
+      "type": "local",
       "command": "python",
       "args": ["-m", "servers.public_records.server"],
-      "cwd": ".",
       "env": {
         "PYTHONPATH": ".",
-        "SAM_GOV_API_KEY": "${SAM_GOV_API_KEY}",
-        "CHPL_API_KEY": "${CHPL_API_KEY}"
+        "SAM_GOV_API_KEY": "{env:SAM_GOV_API_KEY}",
+        "CHPL_API_KEY": "{env:CHPL_API_KEY}"
       }
     },
     "hc-web-intelligence": {
-      "type": "stdio",
+      "type": "local",
       "command": "python",
       "args": ["-m", "servers.web_intelligence.server"],
-      "cwd": ".",
       "env": {
         "PYTHONPATH": ".",
-        "GOOGLE_CSE_API_KEY": "${GOOGLE_CSE_API_KEY}",
-        "GOOGLE_CSE_ID": "${GOOGLE_CSE_ID}",
-        "PROXYCURL_API_KEY": "${PROXYCURL_API_KEY}"
+        "GOOGLE_CSE_API_KEY": "{env:GOOGLE_CSE_API_KEY}",
+        "GOOGLE_CSE_ID": "{env:GOOGLE_CSE_ID}",
+        "PROXYCURL_API_KEY": "{env:PROXYCURL_API_KEY}"
       }
     }
   }

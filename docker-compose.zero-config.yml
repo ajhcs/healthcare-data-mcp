@@ -1,0 +1,158 @@
+# Healthcare Data MCP — Zero-Config Docker Compose
+# Runs the 8 servers that need NO API keys. Just works.
+#
+# Usage:
+#   docker compose -f docker-compose.zero-config.yml up -d
+#
+# All servers expose streamable-http on their assigned ports.
+# Point your MCP client at http://localhost:PORT/mcp
+
+services:
+  cms-facility:
+    build: .
+    command: python -m servers.cms_facility.server
+    ports:
+      - "8006:8006"
+    environment:
+      - MCP_TRANSPORT=streamable-http
+      - MCP_PORT=8006
+    volumes:
+      - healthcare-cache:/root/.healthcare-data-mcp/cache
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost',8006),5); s.close()"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  service-area:
+    build: .
+    command: python -m servers.service_area.server
+    ports:
+      - "8002:8002"
+    environment:
+      - MCP_TRANSPORT=streamable-http
+      - MCP_PORT=8002
+    volumes:
+      - healthcare-cache:/root/.healthcare-data-mcp/cache
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost',8002),5); s.close()"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  hospital-quality:
+    build: .
+    command: python -m servers.hospital_quality.server
+    ports:
+      - "8005:8005"
+    environment:
+      - MCP_TRANSPORT=streamable-http
+      - MCP_PORT=8005
+    volumes:
+      - healthcare-cache:/root/.healthcare-data-mcp/cache
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost',8005),5); s.close()"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  health-system-profiler:
+    build: .
+    command: python -m servers.health_system_profiler.server
+    ports:
+      - "8007:8007"
+    environment:
+      - MCP_TRANSPORT=streamable-http
+      - MCP_PORT=8007
+    volumes:
+      - healthcare-cache:/root/.healthcare-data-mcp/cache
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost',8007),5); s.close()"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  price-transparency:
+    build: .
+    command: python -m servers.price_transparency.server
+    ports:
+      - "8009:8009"
+    environment:
+      - MCP_TRANSPORT=streamable-http
+      - MCP_PORT=8009
+    volumes:
+      - healthcare-cache:/root/.healthcare-data-mcp/cache
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost',8009),5); s.close()"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  physician-referral-network:
+    build: .
+    command: python -m servers.physician_referral_network.server
+    ports:
+      - "8010:8010"
+    environment:
+      - MCP_TRANSPORT=streamable-http
+      - MCP_PORT=8010
+    volumes:
+      - healthcare-cache:/root/.healthcare-data-mcp/cache
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost',8010),5); s.close()"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  claims-analytics:
+    build: .
+    command: python -m servers.claims_analytics.server
+    ports:
+      - "8012:8012"
+    environment:
+      - MCP_TRANSPORT=streamable-http
+      - MCP_PORT=8012
+    volumes:
+      - healthcare-cache:/root/.healthcare-data-mcp/cache
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost',8012),5); s.close()"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  financial-intelligence:
+    build: .
+    command: python -m servers.financial_intelligence.server
+    ports:
+      - "8008:8008"
+    environment:
+      - MCP_TRANSPORT=streamable-http
+      - MCP_PORT=8008
+      - SEC_USER_AGENT=healthcare-data-mcp support@example.com
+    volumes:
+      - healthcare-cache:/root/.healthcare-data-mcp/cache
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost',8008),5); s.close()"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  healthcare-cache:
+    driver: local

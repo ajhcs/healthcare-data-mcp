@@ -913,19 +913,20 @@ def _query_parquet(hospital_id: str, sql: str, params: list | None = None) -> li
 
     con = duckdb.connect(":memory:")
     try:
-        con.execute(f"CREATE VIEW charges AS SELECT * FROM read_parquet('{charges_path}')")
+        from shared.utils.duckdb_safe import safe_parquet_sql
+        con.execute(f"CREATE VIEW charges AS SELECT * FROM {safe_parquet_sql(charges_path)}")
 
         desc_path = cache_dir / "descriptions.parquet"
         if desc_path.exists():
-            con.execute(f"CREATE VIEW descriptions AS SELECT * FROM read_parquet('{desc_path}')")
+            con.execute(f"CREATE VIEW descriptions AS SELECT * FROM {safe_parquet_sql(desc_path)}")
 
         payer_path = cache_dir / "payers.parquet"
         if payer_path.exists():
-            con.execute(f"CREATE VIEW payers AS SELECT * FROM read_parquet('{payer_path}')")
+            con.execute(f"CREATE VIEW payers AS SELECT * FROM {safe_parquet_sql(payer_path)}")
 
         plan_path = cache_dir / "plans.parquet"
         if plan_path.exists():
-            con.execute(f"CREATE VIEW plans AS SELECT * FROM read_parquet('{plan_path}')")
+            con.execute(f"CREATE VIEW plans AS SELECT * FROM {safe_parquet_sql(plan_path)}")
 
         if params:
             result = con.execute(sql, params)
