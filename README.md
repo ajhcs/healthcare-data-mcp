@@ -8,6 +8,8 @@
 ![Tools](https://img.shields.io/badge/tools-69-orange)
 ![License: MIT](https://img.shields.io/badge/license-MIT-yellow)
 
+> **Disclaimer:** This software is for research and informational purposes only. It is not a medical device, is not intended for clinical decision-making, and must not be used as a substitute for professional medical judgment. All data is sourced from public government datasets -- accuracy is not guaranteed and may lag behind real-time conditions.
+
 ## What is this
 
 The [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) lets AI assistants call structured tools the same way a developer calls an API. This project packages 13 MCP servers that pull live data from CMS, Census, BLS, SEC, HRSA, and other public sources so an AI can answer questions like:
