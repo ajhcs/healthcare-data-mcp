@@ -4,6 +4,7 @@ Provides tools for IRS Form 990 nonprofit financials, SEC EDGAR corporate
 filings, and municipal bond data from public APIs.
 """
 
+import asyncio
 import json
 import logging
 import os as _os
@@ -41,6 +42,59 @@ def _safe_float(val) -> float | None:
         return None
 
 
+def _first_present(*values):
+    for value in values:
+        if value not in (None, ""):
+            return value
+    return None
+
+
+def _build_form990_summary(search_org: dict, org_data: dict | None) -> dict:
+    details = org_data or {}
+    organization = details.get("organization", {})
+    filings = details.get("filings_with_data", [])
+    latest_filing = filings[0] if filings else {}
+
+    return Form990Summary(
+        ein=str(_first_present(search_org.get("ein"), organization.get("ein"), "")),
+        name=_first_present(search_org.get("name"), organization.get("name"), "") or "",
+        city=_first_present(search_org.get("city"), organization.get("city"), "") or "",
+        state=_first_present(search_org.get("state"), organization.get("state"), "") or "",
+        ntee_code=_first_present(search_org.get("ntee_code"), organization.get("ntee_code"), "") or "",
+        total_revenue=_safe_float(
+            _first_present(
+                latest_filing.get("totrevenue"),
+                organization.get("revenue_amount"),
+                search_org.get("revenue_amount"),
+            )
+        ),
+        total_expenses=_safe_float(
+            _first_present(
+                latest_filing.get("totfuncexpns"),
+                organization.get("expenses_amount"),
+                search_org.get("expenses_amount"),
+            )
+        ),
+        net_assets=_safe_float(
+            _first_present(
+                latest_filing.get("totnetassetend"),
+                latest_filing.get("totassetsend"),
+                organization.get("asset_amount"),
+                search_org.get("asset_amount"),
+            )
+        ),
+        tax_period=str(
+            _first_present(
+                latest_filing.get("tax_prd"),
+                latest_filing.get("tax_prd_yr"),
+                search_org.get("tax_period"),
+                organization.get("tax_period"),
+            )
+            or ""
+        ),
+    ).model_dump()
+
+
 # ---------------------------------------------------------------------------
 # Tool 1: search_form990
 # ---------------------------------------------------------------------------
@@ -60,19 +114,14 @@ async def search_form990(query: str, state: str = "", ntee_code: str = "") -> st
         data = await propublica_client.search_organizations(query, state=state, ntee_code=ntee_code)
         orgs = data.get("organizations", [])
 
-        results = []
-        for org in orgs[:25]:
-            results.append(Form990Summary(
-                ein=str(org.get("ein", "")),
-                name=org.get("name") or "",
-                city=org.get("city") or "",
-                state=org.get("state") or "",
-                ntee_code=org.get("ntee_code") or "",
-                total_revenue=_safe_float(org.get("income_amount")),
-                total_expenses=_safe_float(org.get("revenue_amount")),
-                net_assets=_safe_float(org.get("asset_amount")),
-                tax_period=str(org.get("tax_period") or ""),
-            ).model_dump())
+        limited_orgs = orgs[:25]
+        org_details = await asyncio.gather(
+            *(propublica_client.get_organization(str(org.get("ein", ""))) for org in limited_orgs)
+        )
+        results = [
+            _build_form990_summary(org, detail)
+            for org, detail in zip(limited_orgs, org_details, strict=False)
+        ]
 
         return json.dumps({"total_results": data.get("total_results", 0), "organizations": results})
     except Exception as e:
