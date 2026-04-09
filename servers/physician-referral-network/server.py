@@ -30,6 +30,7 @@ from .models import (
 )
 
 logger = logging.getLogger(__name__)
+_DOCGRAPH_DOWNLOAD_URL = "https://careset.com/datasets/"
 
 _transport = _os.environ.get("MCP_TRANSPORT", "stdio")
 _mcp_kwargs: dict = {"name": "physician-referral-network"}
@@ -75,6 +76,16 @@ async def _lookup_destination_details(npis: set[str]) -> dict[str, dict]:
 
     pairs = await asyncio.gather(*(_lookup(npi) for npi in sorted(npis)))
     return {npi: details for npi, details in pairs if details}
+
+
+def _docgraph_setup_message() -> str:
+    """Return a user-facing setup message for DocGraph-backed tools."""
+    return (
+        "DocGraph shared patient data is not cached. Download the CareSet "
+        f"DocGraph CSV from {_DOCGRAPH_DOWNLOAD_URL} and run "
+        "load_docgraph_cache(csv_path='/path/to/docgraph.csv'), or set "
+        "DOCGRAPH_CSV_PATH and call load_docgraph_cache()."
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -160,7 +171,40 @@ async def get_physician_profile(npi: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Tool 3: map_referral_network
+# Tool 3: load_docgraph_cache
+# ---------------------------------------------------------------------------
+@mcp.tool()
+async def load_docgraph_cache(csv_path: str = "") -> str:
+    """Import a local DocGraph CSV into the shared Parquet cache used by
+    referral network and leakage tools.
+
+    Args:
+        csv_path: Absolute or relative path to a downloaded CareSet DocGraph CSV.
+            If omitted, the server will use DOCGRAPH_CSV_PATH from the environment.
+    """
+    try:
+        resolved_path = csv_path.strip() or _os.environ.get("DOCGRAPH_CSV_PATH", "").strip()
+        if not resolved_path:
+            return json.dumps({
+                "error": _docgraph_setup_message(),
+                "download_url": _DOCGRAPH_DOWNLOAD_URL,
+                "cache_path": referral_network.get_docgraph_cache_path(),
+            })
+
+        rows_loaded = await asyncio.to_thread(referral_network.load_docgraph_csv, resolved_path)
+        return json.dumps({
+            "status": "loaded",
+            "csv_path": resolved_path,
+            "cache_path": referral_network.get_docgraph_cache_path(),
+            "rows_loaded": rows_loaded,
+        })
+    except Exception as e:
+        logger.exception("load_docgraph_cache failed")
+        return json.dumps({"error": f"load_docgraph_cache failed: {e}"})
+
+
+# ---------------------------------------------------------------------------
+# Tool 4: map_referral_network
 # ---------------------------------------------------------------------------
 @mcp.tool()
 async def map_referral_network(
@@ -179,11 +223,7 @@ async def map_referral_network(
     """
     try:
         if not referral_network.is_docgraph_cached():
-            return json.dumps({
-                "error": "DocGraph shared patient data not cached. "
-                         "Download from https://careset.com/datasets/ and load with "
-                         "the load_docgraph_csv() function."
-            })
+            return json.dumps({"error": _docgraph_setup_message()})
 
         result = referral_network.get_referral_network(npi, depth=depth, min_shared=min_shared)
 
@@ -229,7 +269,7 @@ async def map_referral_network(
 
 
 # ---------------------------------------------------------------------------
-# Tool 4: analyze_physician_mix
+# Tool 5: analyze_physician_mix
 # ---------------------------------------------------------------------------
 @mcp.tool()
 async def analyze_physician_mix(system_name: str, state: str = "") -> str:
@@ -270,7 +310,7 @@ async def analyze_physician_mix(system_name: str, state: str = "") -> str:
 
 
 # ---------------------------------------------------------------------------
-# Tool 5: detect_leakage
+# Tool 6: detect_leakage
 # ---------------------------------------------------------------------------
 @mcp.tool()
 async def detect_leakage(
@@ -289,10 +329,7 @@ async def detect_leakage(
     """
     try:
         if not referral_network.is_docgraph_cached():
-            return json.dumps({
-                "error": "DocGraph shared patient data not cached. "
-                         "Download from https://careset.com/datasets/ and load first."
-            })
+            return json.dumps({"error": _docgraph_setup_message()})
 
         # Get system's physician NPIs
         mix_result = await physician_mix.analyze_system_mix(system_name, state)

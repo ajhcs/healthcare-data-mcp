@@ -19,7 +19,7 @@ SERVER_SPECS = [
     ("health-system-profiler", "servers.health_system_profiler.server", 3),
     ("financial-intelligence", "servers.financial_intelligence.server", 6),
     ("price-transparency", "servers.price_transparency.server", 5),
-    ("physician-referral-network", "servers.physician_referral_network.server", 5),
+    ("physician-referral-network", "servers.physician_referral_network.server", 6),
     ("workforce-analytics", "servers.workforce_analytics.server", 7),
     ("claims-analytics", "servers.claims_analytics.server", 5),
     ("public-records", "servers.public_records.server", 6),

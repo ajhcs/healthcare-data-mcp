@@ -1,6 +1,6 @@
 # Healthcare Data MCP
 
-> 13 MCP servers exposing 68 tools for healthcare facility analytics, quality metrics, financial intelligence, and market research -- all backed by public government data.
+> 13 MCP servers exposing 69 tools for healthcare facility analytics, quality metrics, financial intelligence, and market research -- all backed by public government data.
 
 ![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)
 ![MCP 1.0](https://img.shields.io/badge/MCP-1.0-green)
@@ -67,7 +67,7 @@ MCP Client (Claude Code, VS Code, Cursor, etc.)
 | 6 | **health-system-profiler** | `search_health_systems`, `get_system_profile`, `get_system_facilities` (3) | AHRQ Compendium, CMS Provider of Services, NPPES | None |
 | 7 | **financial-intelligence** | `search_form990`, `get_form990_details`, `search_sec_filings`, `get_sec_filing`, `search_muni_bonds`, `get_muni_bond_details` (6) | IRS Form 990 via ProPublica, SEC EDGAR XBRL, Municipal Bond Official Statements | `SEC_USER_AGENT` |
 | 8 | **price-transparency** | `search_mrf_index`, `get_negotiated_rates`, `compute_rate_dispersion`, `compare_rates_system`, `benchmark_rates` (5) | Hospital MRF files, CMS Physician Fee Schedule, Medicare Utilization | None |
-| 9 | **physician-referral-network** | `search_physicians`, `get_physician_profile`, `map_referral_network`, `analyze_physician_mix`, `detect_leakage` (5) | NPPES, CMS Physician Compare, Medicare Utilization, DocGraph | None |
+| 9 | **physician-referral-network** | `search_physicians`, `get_physician_profile`, `load_docgraph_cache`, `map_referral_network`, `analyze_physician_mix`, `detect_leakage` (6) | NPPES, CMS Physician Compare, Medicare Utilization, DocGraph | None |
 | 10 | **workforce-analytics** | `get_bls_employment`, `get_hrsa_workforce`, `get_gme_profile`, `get_residency_programs`, `search_union_activity`, `get_staffing_benchmarks`, `get_cost_report_staffing` (7) | BLS OES, HRSA HPSA, CMS HCRIS, ACGME, NLRB Elections, CMS PBJ | `BLS_API_KEY`, optional `ACGME_PROGRAMS_CSV` |
 | 11 | **claims-analytics** | `get_inpatient_volumes`, `get_outpatient_volumes`, `trend_service_lines`, `compute_case_mix`, `analyze_market_volumes` (5) | CMS Medicare Inpatient/Outpatient PUF | None |
 | 12 | **public-records** | `search_usaspending`, `search_sam_gov`, `get_340b_status`, `get_breach_history`, `get_accreditation`, `get_interop_status` (6) | USAspending.gov, SAM.gov, HRSA 340B OPAIS, HHS OCR Breach Portal, CMS POS, CMS Promoting Interoperability | `SAM_GOV_API_KEY`, `CHPL_API_KEY` |
@@ -119,7 +119,7 @@ The setup script checks prerequisites, configures API keys interactively, and re
 
 ## Configuration
 
-Copy `.env.example` to `.env` and fill in the keys you have. Most keys are optional. `SEC_USER_AGENT` is required only if you want to run the `financial-intelligence` server, and the remaining keyed servers degrade gracefully when their credentials are missing. `get_residency_programs` also supports an optional local `ACGME_PROGRAMS_CSV` path if you want to point the workforce server at a normalized ACGME Program Search export.
+Copy `.env.example` to `.env` and fill in the keys you have. Most keys are optional. `SEC_USER_AGENT` is required only if you want to run the `financial-intelligence` server, and the remaining keyed servers degrade gracefully when their credentials are missing. `get_residency_programs` also supports an optional local `ACGME_PROGRAMS_CSV` path if you want to point the workforce server at a normalized ACGME Program Search export, and `load_docgraph_cache` can use an optional `DOCGRAPH_CSV_PATH` if you want the physician referral server to import a downloaded CareSet DocGraph file without passing a path argument each time.
 
 ```bash
 cp .env.example .env
@@ -148,6 +148,7 @@ cp .env.example .env
 | `MCP_TRANSPORT` | `stdio` | Transport mode: `stdio`, `sse`, or `streamable-http` |
 | `MCP_PORT` | per-server | HTTP port when using non-stdio transport |
 | `OSRM_BASE_URL` | `http://router.project-osrm.org` | OSRM routing backend (self-host for production) |
+| `DOCGRAPH_CSV_PATH` | unset | Optional local path used by `load_docgraph_cache()` for CareSet DocGraph imports |
 
 ## MCP Client Setup
 

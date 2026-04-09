@@ -45,6 +45,11 @@ def is_docgraph_cached() -> bool:
     return _SHARED_PATIENTS_CACHE.exists()
 
 
+def get_docgraph_cache_path() -> str:
+    """Return the local Parquet cache path for DocGraph data."""
+    return str(_SHARED_PATIENTS_CACHE)
+
+
 def load_docgraph_csv(csv_path: str | Path) -> int:
     """Load a DocGraph CSV file and convert to Parquet cache.
 
