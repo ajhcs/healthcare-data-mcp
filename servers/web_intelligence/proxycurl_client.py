@@ -10,7 +10,7 @@ import os
 
 import httpx
 
-from shared.utils.http_client import resilient_request, get_client
+from shared.utils.http_client import resilient_request
 
 logger = logging.getLogger(__name__)
 
@@ -41,10 +41,12 @@ async def lookup_profile(linkedin_url: str) -> dict:
         return {}
 
     try:
-        resp = await client.get(
+        resp = await resilient_request(
+            "GET",
             _BASE_URL,
             params={"linkedin_profile_url": linkedin_url, "use_cache": "if-recent"},
             headers={"Authorization": f"Bearer {api_key}"},
+            timeout=_TIMEOUT,
         )
         data = resp.json()
 

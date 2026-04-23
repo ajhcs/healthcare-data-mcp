@@ -5,9 +5,8 @@ import logging
 import zipfile
 from pathlib import Path
 
-import httpx
 
-from shared.utils.http_client import resilient_request, get_client
+from shared.utils.http_client import resilient_request
 import pandas as pd
 
 logger = logging.getLogger(__name__)

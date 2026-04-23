@@ -12,9 +12,8 @@ from pathlib import Path
 
 import duckdb
 from shared.utils.duckdb_safe import safe_parquet_sql
-import httpx
 
-from shared.utils.http_client import resilient_request, get_client
+from shared.utils.http_client import resilient_request
 import pandas as pd
 
 logger = logging.getLogger(__name__)
@@ -379,7 +378,6 @@ def detect_leakage(
     # Classify each destination
     total_shared = int(outbound["total_shared"].sum())
     in_network_shared = 0
-    out_network_in_area = 0
     out_of_area = 0
     leakage_destinations = []
 

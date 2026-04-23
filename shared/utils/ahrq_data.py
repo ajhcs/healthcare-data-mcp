@@ -11,8 +11,9 @@ HDM-5w3: cross-server import breaks physician-referral-network.
 import logging
 from pathlib import Path
 
-import httpx
 import pandas as pd
+
+from shared.utils.http_client import resilient_request
 
 logger = logging.getLogger(__name__)
 

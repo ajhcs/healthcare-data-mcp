@@ -6,6 +6,7 @@ build-backend = "hatchling.build"
 name = "healthcare-data-mcp"
 version = "0.1.0"
 description = "MCP servers for public healthcare facility data, service areas, demographics, and quality metrics"
+readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
 
@@ -19,6 +20,8 @@ dependencies = [
     "pydantic>=2.0.0",
     "rapidfuzz>=3.0.0",
     "duckdb>=1.0.0",
+    "pyarrow>=15.0.0",
+    "polars>=0.20.0",
     "beautifulsoup4>=4.12.0",
     "lxml>=5.0.0",
 ]
@@ -28,6 +31,29 @@ census = ["censusdis>=0.15.0"]
 routing = ["osmnx>=2.0.0", "aceso>=0.1.0"]
 dev = ["pytest>=8.0", "pytest-asyncio>=0.23", "ruff>=0.5.0"]
 
+[project.scripts]
+hc-mcp = "servers._launcher:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["servers", "shared"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"servers/claims-analytics" = "servers/claims_analytics"
+"servers/cms-facility" = "servers/cms_facility"
+"servers/drive-time" = "servers/drive_time"
+"servers/financial-intelligence" = "servers/financial_intelligence"
+"servers/geo-demographics" = "servers/geo_demographics"
+"servers/health-system-profiler" = "servers/health_system_profiler"
+"servers/hospital-quality" = "servers/hospital_quality"
+"servers/physician-referral-network" = "servers/physician_referral_network"
+"servers/price-transparency" = "servers/price_transparency"
+"servers/service-area" = "servers/service_area"
+"servers/workforce-analytics" = "servers/workforce_analytics"
+
 [tool.ruff]
 target-version = "py311"
 line-length = 120
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"

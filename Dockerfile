@@ -9,25 +9,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libproj-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
-COPY pyproject.toml .
-RUN pip install --no-cache-dir \
-    "mcp[cli]>=1.0.0" \
-    httpx \
-    pandas \
-    pydantic \
-    geopandas \
-    networkx \
-    shapely \
-    duckdb \
-    beautifulsoup4 \
-    lxml \
-    rapidfuzz \
-    pyarrow
-
-# Copy source code
+# Copy source code and install the package so Docker uses the same dependency
+# metadata and package selection as local installs.
+COPY pyproject.toml README.md ./
 COPY shared/ shared/
 COPY servers/ servers/
+RUN pip install --no-cache-dir .
 
 # Default environment
 ENV MCP_TRANSPORT=streamable-http

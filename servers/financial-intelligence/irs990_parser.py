@@ -12,9 +12,8 @@ import logging
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-import httpx
 
-from shared.utils.http_client import resilient_request, get_client
+from shared.utils.http_client import resilient_request
 import pandas as pd
 
 from shared.utils.cms_client import get_cache_path

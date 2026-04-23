@@ -9,9 +9,7 @@ import logging
 import os as _os
 import re
 
-import httpx
-
-from shared.utils.http_client import resilient_request, get_client
+from shared.utils.http_client import resilient_request
 from bs4 import BeautifulSoup
 from mcp.server.fastmcp import FastMCP
 
@@ -34,7 +32,7 @@ logger = logging.getLogger(__name__)
 _transport = _os.environ.get("MCP_TRANSPORT", "stdio")
 _mcp_kwargs: dict = {"name": "web-intelligence"}
 if _transport in ("sse", "streamable-http"):
-    _mcp_kwargs["host"] = "0.0.0.0"
+    _mcp_kwargs["host"] = _os.environ.get("MCP_HOST", "127.0.0.1")
     _mcp_kwargs["port"] = int(_os.environ.get("MCP_PORT", "8014"))
 mcp = FastMCP(**_mcp_kwargs)
 
@@ -49,9 +47,12 @@ async def _fetch_and_parse(url: str) -> tuple[str, BeautifulSoup | None]:
     Returns ("", None) on failure. Timeout 15s.
     """
     try:
-        resp = await client.get(url, headers={
-            "User-Agent": "Mozilla/5.0 (compatible; HealthcareDataMCP/1.0)",
-        })
+        resp = await resilient_request(
+            "GET",
+            url,
+            headers={"User-Agent": "Mozilla/5.0 (compatible; HealthcareDataMCP/1.0)"},
+            timeout=15.0,
+        )
         html = resp.text
         soup = BeautifulSoup(html, "lxml")
         return html, soup
@@ -187,7 +188,7 @@ async def scrape_system_profile(
         locations: list[LocationEntry] = []
         if system_domain:
             loc_raw = await search_client.search(
-                f"locations facilities",
+                "locations facilities",
                 num=5,
                 site_search=system_domain,
             )

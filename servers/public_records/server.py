@@ -10,9 +10,8 @@ import logging
 import os as _os
 from pathlib import Path
 
-import httpx
 
-from shared.utils.http_client import resilient_request, get_client
+from shared.utils.http_client import resilient_request
 from mcp.server.fastmcp import FastMCP
 
 from . import data_loaders, usaspending_client, sam_client  # pyright: ignore[reportAttributeAccessIssue]
@@ -36,7 +35,7 @@ logger = logging.getLogger(__name__)
 _transport = _os.environ.get("MCP_TRANSPORT", "stdio")
 _mcp_kwargs: dict = {"name": "public-records"}
 if _transport in ("sse", "streamable-http"):
-    _mcp_kwargs["host"] = "0.0.0.0"
+    _mcp_kwargs["host"] = _os.environ.get("MCP_HOST", "127.0.0.1")
     _mcp_kwargs["port"] = int(_os.environ.get("MCP_PORT", "8013"))
 mcp = FastMCP(**_mcp_kwargs)
 

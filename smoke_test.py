@@ -75,7 +75,6 @@ async def test_service_area():
     print("=" * 60)
 
     from servers.service_area import data_loaders, service_area_engine
-    import pandas as pd
 
     results = {}
 
@@ -159,7 +158,7 @@ async def test_geo_demographics():
             results["zcta_population"] = None
     except Exception as e:
         print(f"  -> Census API error: {e}")
-        print(f"     (This is expected if CENSUS_API_KEY is not set)")
+        print("     (This is expected if CENSUS_API_KEY is not set)")
         results["zcta_population"] = "error"
 
     # Test: HUD crosswalk (needs HUD_API_TOKEN)

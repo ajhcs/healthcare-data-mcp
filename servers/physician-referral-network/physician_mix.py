@@ -6,9 +6,8 @@ a health system by cross-referencing NPPES, AHRQ Compendium, and CMS POS data.
 
 import logging
 
-import httpx
 
-from shared.utils.http_client import resilient_request, get_client
+from shared.utils.http_client import resilient_request
 from rapidfuzz import fuzz
 
 logger = logging.getLogger(__name__)

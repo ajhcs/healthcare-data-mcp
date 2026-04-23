@@ -9,9 +9,8 @@ Provides three benchmark sources for comparing hospital negotiated rates:
 import logging
 import statistics
 
-import httpx
 
-from shared.utils.http_client import resilient_request, get_client
+from shared.utils.http_client import resilient_request
 
 logger = logging.getLogger(__name__)
 
