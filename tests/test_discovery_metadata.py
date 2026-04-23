@@ -17,6 +17,18 @@ def test_catalog_lists_expected_dataset_groups() -> None:
     assert "cms_hospital_general_info" in dataset_ids
     assert "cms_medicare_claims_pufs" in dataset_ids
     assert "public_records" in dataset_ids
+    assert "cms_pecos_public_provider_enrollment" in dataset_ids
+    assert "cms_pecos_hospital_enrollments" in dataset_ids
+    assert "cms_pecos_hospital_owners" in dataset_ids
+    assert "cms_pecos_hospital_chow" in dataset_ids
+    assert "cms_pecos_snf_enrollments" in dataset_ids
+    assert "cms_pecos_snf_owners" in dataset_ids
+    assert "cms_pecos_snf_chow" in dataset_ids
+    assert "cdc_places" in dataset_ids
+    assert "nih_reporter_projects" in dataset_ids
+    assert "clinicaltrials_gov" in dataset_ids
+    assert "hhs_oig_leie" in dataset_ids
+    assert "sam_gov_exclusions" in dataset_ids
     assert "healthcare-data://datasets/{dataset_id}/schema" in payload["resource_templates"]
 
 
@@ -33,6 +45,23 @@ def test_dataset_schema_and_source_are_json_serializable() -> None:
 
     json.dumps(schema)
     json.dumps(source)
+
+
+def test_april_2026_expansion_dataset_metadata() -> None:
+    leie_schema = server.dataset_schema_payload("hhs_oig_leie")
+    leie_source = server.dataset_source_payload("hhs_oig_leie")
+    sam_source = server.dataset_source_payload("sam_gov_exclusions")
+    places_schema = server.dataset_schema_payload("cdc_places")
+    pecos_source = server.dataset_source_payload("cms_pecos_hospital_owners")
+    snf_chow_source = server.dataset_source_payload("cms_pecos_snf_chow")
+
+    assert "NPI" in leie_schema["schema"]["identity_fields"]
+    assert "public-records/leie_current.parquet" in leie_source["cache_files"]
+    assert any("UPDATED.csv" in url for url in leie_source["source_urls"])
+    assert any("open.gsa.gov/api/exclusions-api" in url for url in sam_source["source_urls"])
+    assert places_schema["schema"]["join_keys"] == ["location_id", "state", "county_fips", "zcta"]
+    assert "provider-enrollment/hospital_all_owners.parquet" in pecos_source["cache_files"]
+    assert "provider-enrollment/snf_chow_owner_information.parquet" in snf_chow_source["cache_files"]
 
 
 def test_unknown_dataset_returns_available_ids() -> None:
@@ -58,6 +87,19 @@ def test_cache_status_uses_supplied_cache_root(tmp_path) -> None:
     assert matching[0]["status"] == "ready"
     assert matching[0]["size_bytes"] > 0
     assert payload["summary"]["missing"] > 0
+
+
+def test_cache_status_includes_leie_cache_ttl(tmp_path) -> None:
+    payload = server.cache_status_payload(cache_root=tmp_path)
+    entries = {
+        entry["relative_path"]: entry
+        for entry in payload["entries"]
+        if entry["dataset_id"] == "hhs_oig_leie"
+    }
+
+    assert entries["public-records/leie_current.csv"]["ttl_days"] == 31
+    assert entries["public-records/leie_current.parquet"]["status"] == "missing"
+    assert entries["public-records/leie_current.meta.json"]["ttl_days"] == 31
 
 
 @pytest.mark.asyncio

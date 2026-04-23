@@ -27,6 +27,8 @@ The gateway presents two retrievable-knowledge tools:
 
 These names and response fields are shaped for OpenAI remote MCP search/fetch expectations while staying useful for Claude and other MCP clients.
 
+April 2026 metadata can include provider enrollment/ownership, CDC PLACES, NIH RePORTER, ClinicalTrials.gov, HHS OIG LEIE, and SAM.gov Exclusions dataset descriptions. The gateway must remain metadata-only for these domains: do not expose live exclusion screening, full provider-enrollment queries, or other source API proxies through the remote gateway unless a separate authenticated design is approved.
+
 ## Security Configuration
 
 Use environment variables to move from local development to a locked-down remote service:

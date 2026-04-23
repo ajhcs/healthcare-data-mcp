@@ -59,6 +59,18 @@
     "gateway": {
       "type": "http",
       "url": "http://localhost:8016/mcp"
+    },
+    "provider-enrollment": {
+      "type": "http",
+      "url": "http://localhost:8017/mcp"
+    },
+    "community-health": {
+      "type": "http",
+      "url": "http://localhost:8018/mcp"
+    },
+    "research-trials": {
+      "type": "http",
+      "url": "http://localhost:8019/mcp"
     }
   }
 }

@@ -28,6 +28,16 @@ OpenAI API and ChatGPT connectors require remote MCP servers reachable over HTTP
 
 Claude Code project config can use this repo's `.mcp.json` after Docker Compose starts the HTTP servers.
 
+April 2026 local HTTP additions in `.mcp.json`:
+
+| Server | URL |
+| --- | --- |
+| `provider-enrollment` | `http://localhost:8017/mcp` |
+| `community-health` | `http://localhost:8018/mcp` |
+| `research-trials` | `http://localhost:8019/mcp` |
+
+`public-records` remains on `http://localhost:8013/mcp` for HHS OIG LEIE and SAM.gov Exclusions. Set `SAM_GOV_API_KEY` in the server environment for SAM.gov API-backed exclusion checks.
+
 Claude Desktop stdio entry:
 
 ```json
@@ -53,6 +63,8 @@ Codex/OpenAI remote HTTP config should point at the deployed HTTPS gateway endpo
 [mcp_servers.healthcareData]
 url = "https://your-domain.example/mcp"
 ```
+
+The remote gateway is metadata-only. It should advertise dataset availability and source metadata, not proxy live provider-enrollment, LEIE, SAM exclusion, PLACES, RePORTER, or ClinicalTrials.gov queries without a separate authenticated gateway design.
 
 Codex local stdio config in `~/.codex/config.toml`:
 

@@ -43,6 +43,18 @@ cms_hospital_quality
 cms_hsaf
 cms_medicare_claims_pufs
 cms_price_transparency_mrf
+cms_pecos_public_provider_enrollment
+cms_pecos_hospital_enrollments
+cms_pecos_hospital_owners
+cms_pecos_hospital_chow
+cms_pecos_snf_enrollments
+cms_pecos_snf_owners
+cms_pecos_snf_chow
+cdc_places
+nih_reporter_projects
+clinicaltrials_gov
+hhs_oig_leie
+sam_gov_exclusions
 docgraph_referrals
 public_records
 web_intelligence
@@ -66,6 +78,17 @@ age for known cache paths. It does not create directories or validate file
 contents. Paths with globs or templates, such as MRF directories and API
 response cache files, are reported as `pattern` so clients know to inspect the
 owning cache directory.
+
+April 2026 expansion cache conventions:
+
+| Dataset | Expected cache paths |
+| --- | --- |
+| CMS PECOS enrollment/ownership | Hospital/SNF `provider-enrollment/*.parquet` files plus matching `*.meta.json` manifests |
+| CDC PLACES | optional `community-health/places_*.parquet` and `places_*.meta.json` files for fixture/bulk workflows |
+| HHS OIG LEIE | `public-records/leie_current.csv`, `leie_current.parquet`, `leie_current.meta.json`; 31-day freshness target |
+| SAM.gov Exclusions | `public-records/api_sam_exclusions_*.json` per-query API cache patterns when implemented |
+
+LEIE and SAM.gov Exclusions metadata is for screening workflows. A zero-result response should be phrased as no current match found, not as a legal clearance. SAM.gov exclusion lookups require `SAM_GOV_API_KEY` in the public-records server environment.
 
 Status values:
 

@@ -10,6 +10,7 @@ import pytest
 STRUCTURED_SERVER_MODULES = [
     "servers.claims-analytics.server",
     "servers.cms-facility.server",
+    "servers.community_health.server",
     "servers.drive-time.server",
     "servers.financial-intelligence.server",
     "servers.geo-demographics.server",
@@ -17,7 +18,9 @@ STRUCTURED_SERVER_MODULES = [
     "servers.hospital-quality.server",
     "servers.physician-referral-network.server",
     "servers.price-transparency.server",
+    "servers.provider_enrollment.server",
     "servers.public_records.server",
+    "servers.research_trials.server",
     "servers.service-area.server",
     "servers.web_intelligence.server",
     "servers.workforce-analytics.server",
@@ -32,8 +35,8 @@ async def test_structured_server_tools_import_with_output_schemas(monkeypatch: p
     try:
         module = importlib.import_module(module_name)
     except ModuleNotFoundError as exc:
-        if exc.name == "geopandas":
-            pytest.skip("geopandas is not installed in this test environment")
+        if exc.name in {"geopandas", "networkx"}:
+            pytest.skip(f"{exc.name} is not installed in this test environment")
         raise
 
     tools = await module.mcp.list_tools()

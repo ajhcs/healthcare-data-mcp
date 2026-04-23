@@ -39,10 +39,29 @@ SERVERS: dict[str, ServerSpec] = {
     ),
     "workforce-analytics": ServerSpec("servers.workforce_analytics.server", 8011, "BLS and ACGME workforce analytics"),
     "claims-analytics": ServerSpec("servers.claims_analytics.server", 8012, "DRG, service-line, and claims analytics"),
-    "public-records": ServerSpec("servers.public_records.server", 8013, "SAM.gov, USAspending, CHPL, and accreditation"),
+    "public-records": ServerSpec(
+        "servers.public_records.server",
+        8013,
+        "SAM.gov, USAspending, CHPL, accreditation, and exclusion screening",
+    ),
     "web-intelligence": ServerSpec("servers.web_intelligence.server", 8014, "Web search and health system OSINT"),
     "discovery": ServerSpec("servers.discovery.server", 8015, "Dataset catalog resources, cache status, and prompts"),
     "gateway": ServerSpec("servers.gateway.server", 8016, "Remote-safe metadata gateway with search/fetch"),
+    "provider-enrollment": ServerSpec(
+        "servers.provider_enrollment.server",
+        8017,
+        "CMS PECOS-derived provider enrollment, ownership, and CHOW",
+    ),
+    "community-health": ServerSpec(
+        "servers.community_health.server",
+        8018,
+        "CDC PLACES community-health estimates for counties, places, tracts, and ZCTAs",
+    ),
+    "research-trials": ServerSpec(
+        "servers.research_trials.server",
+        8019,
+        "NIH RePORTER funding and ClinicalTrials.gov study activity",
+    ),
 }
 
 

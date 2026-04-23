@@ -6,17 +6,21 @@ accreditation, and interoperability data. Port 8013.
 
 from typing import Any
 import csv
+from datetime import UTC, datetime
 import logging
 import os as _os
 from pathlib import Path
+import re
 
 
 from shared.utils.http_client import resilient_request
 from mcp.server.fastmcp import FastMCP
 from shared.utils.mcp_response import error_response, to_structured
 
-from . import data_loaders, usaspending_client, sam_client  # pyright: ignore[reportAttributeAccessIssue]
+from . import data_loaders, usaspending_client, sam_client, sam_exclusions_client  # pyright: ignore[reportAttributeAccessIssue]
 from .models import (
+    OIG_LEIE_CAVEAT,
+    SAM_EXCLUSIONS_CAVEAT,
     USAspendingAward,
     USAspendingResponse,
     SAMOpportunity,
@@ -29,9 +33,40 @@ from .models import (
     AccreditationResponse,
     InteropRecord,
     InteropResponse,
+    LEIEBatchResponse,
+    LEIEBatchResult,
+    LEIEBatchCandidate,
+    LEIEExclusionRecord,
+    LEIESearchResponse,
+    LEIESourceMetadata,
+    SAMExclusionBatchCandidate,
+    SAMExclusionBatchResponse,
+    SAMExclusionBatchResult,
+    SAMExclusionRecord,
+    SAMExclusionSearchResponse,
+    SAMExclusionsSourceMetadata,
 )
+from shared.utils.identity import normalize_npi
 
 logger = logging.getLogger(__name__)
+
+_SENSITIVE_IDENTIFIER_KEYS = {
+    "ssn",
+    "social_security_number",
+    "social_security_num",
+    "social_security",
+    "ein",
+    "fein",
+    "tin",
+    "tax_id",
+    "tax_identifier",
+    "taxpayer_id",
+    "taxpayer_identifier",
+    "taxpayer_identification_number",
+    "employer_identification_number",
+    "federal_tax_id",
+    "federal_tax_identifier",
+}
 
 _transport = _os.environ.get("MCP_TRANSPORT", "stdio")
 _mcp_kwargs: dict = {"name": "public-records"}
@@ -73,6 +108,182 @@ async def _lookup_chpl(cehrt_id: str, api_key: str) -> dict:
     except Exception as e:
         logger.debug("CHPL lookup failed for %s: %s", cehrt_id, e)
         return {}
+
+
+# ---------------------------------------------------------------------------
+# LEIE response helpers
+# ---------------------------------------------------------------------------
+
+def _leie_source_metadata(data: dict) -> LEIESourceMetadata:
+    return LEIESourceMetadata(
+        **{k: v for k, v in data.items() if k in LEIESourceMetadata.model_fields}
+    )
+
+
+def _leie_records(rows: list[dict]) -> list[LEIEExclusionRecord]:
+    return [
+        LEIEExclusionRecord(**{k: v for k, v in row.items() if k in LEIEExclusionRecord.model_fields})
+        for row in rows
+    ]
+
+
+def _leie_status(records: list[LEIEExclusionRecord]) -> str:
+    if not records:
+        return "no_current_leie_match_found"
+    if any(record.verification_status == "strong_potential_match" for record in records):
+        return "strong_potential_match"
+    return "potential_match"
+
+
+def _normalized_key(value: object) -> str:
+    return re.sub(r"[^a-z0-9]+", "_", str(value).strip().lower()).strip("_")
+
+
+def _contains_sensitive_identifier_keys(payload: dict[str, Any]) -> bool:
+    return bool(_SENSITIVE_IDENTIFIER_KEYS & {_normalized_key(key) for key in payload})
+
+
+# ---------------------------------------------------------------------------
+# SAM.gov Exclusions response helpers
+# ---------------------------------------------------------------------------
+
+def _sam_source_metadata(data: dict[str, Any]) -> SAMExclusionsSourceMetadata:
+    return SAMExclusionsSourceMetadata(
+        **{k: v for k, v in data.items() if k in SAMExclusionsSourceMetadata.model_fields}
+    )
+
+
+def _text(value: Any) -> str:
+    return "" if value is None else str(value)
+
+
+def _first_sam_action(raw: dict[str, Any]) -> dict[str, Any]:
+    actions = raw.get("exclusionActions", {}).get("listOfActions", [])
+    if isinstance(actions, list) and actions:
+        first = actions[0]
+        if isinstance(first, dict):
+            return first
+    return {}
+
+
+def _sam_references(raw: dict[str, Any]) -> list[dict[str, str]]:
+    refs = (
+        raw.get("exclusionOtherInformation", {})
+        .get("references", {})
+        .get("referencesList", [])
+    )
+    if not isinstance(refs, list):
+        return []
+    normalized: list[dict[str, str]] = []
+    for ref in refs:
+        if not isinstance(ref, dict):
+            continue
+        exclusion_name = _text(ref.get("exclusionName") or ref.get("name"))
+        ref_type = _text(ref.get("type"))
+        if exclusion_name or ref_type:
+            normalized.append({"exclusion_name": exclusion_name, "type": ref_type})
+    return normalized
+
+
+def _sam_display_name(identification: dict[str, Any]) -> str:
+    entity_name = _text(identification.get("entityName") or identification.get("name")).strip()
+    if entity_name:
+        return entity_name
+    name_parts = [
+        _text(identification.get("prefix")).strip(),
+        _text(identification.get("firstName")).strip(),
+        _text(identification.get("middleName")).strip(),
+        _text(identification.get("lastName")).strip(),
+        _text(identification.get("suffix")).strip(),
+    ]
+    return " ".join(part for part in name_parts if part)
+
+
+def _sam_match_basis(record: SAMExclusionRecord, query: dict[str, Any]) -> tuple[str, int, str]:
+    if query.get("ueiSAM") and record.uei.upper() == _text(query.get("ueiSAM")).upper():
+        return "uei_exact", 100, "strong_potential_match"
+    if query.get("cageCode") and record.cage_code.upper() == _text(query.get("cageCode")).upper():
+        return "cage_code_exact", 100, "strong_potential_match"
+    query_npi = normalize_npi(query.get("npi"))
+    record_npi = normalize_npi(record.npi)
+    if query_npi and record_npi == query_npi:
+        return "npi_exact", 100, "strong_potential_match"
+    if query.get("exclusionName"):
+        return "name_search", 70, "potential_match"
+    return "filtered_search", 50, "potential_match"
+
+
+def _sam_records(rows: list[dict[str, Any]], query: dict[str, Any] | None = None) -> list[SAMExclusionRecord]:
+    records: list[SAMExclusionRecord] = []
+    query = query or {}
+    for row in rows:
+        details = row.get("exclusionDetails", {})
+        identification = row.get("exclusionIdentification", {})
+        address = row.get("exclusionPrimaryAddress") or row.get("exclusionAddress") or {}
+        action = _first_sam_action(row)
+        other = row.get("exclusionOtherInformation", {})
+        record = SAMExclusionRecord(
+            classification=_text(details.get("classificationType")),
+            exclusion_type=_text(details.get("exclusionType")),
+            exclusion_program=_text(details.get("exclusionProgram")),
+            excluding_agency_code=_text(details.get("excludingAgencyCode")),
+            excluding_agency_name=_text(details.get("excludingAgencyName")),
+            uei=_text(identification.get("ueiSAM")),
+            cage_code=_text(identification.get("cageCode")),
+            npi=_text(identification.get("npi")),
+            prefix=_text(identification.get("prefix")),
+            first_name=_text(identification.get("firstName")),
+            middle_name=_text(identification.get("middleName")),
+            last_name=_text(identification.get("lastName")),
+            suffix=_text(identification.get("suffix")),
+            entity_name=_text(identification.get("entityName") or identification.get("name")),
+            display_name=_sam_display_name(identification),
+            address_line_1=_text(address.get("addressLine1")),
+            address_line_2=_text(address.get("addressLine2")),
+            city=_text(address.get("city")),
+            state=_text(address.get("stateOrProvinceCode")),
+            zip_code=_text(address.get("zipCode")),
+            zip_code_plus_4=_text(address.get("zipCodePlus4")),
+            country=_text(address.get("countryCode")),
+            create_date=_text(action.get("createDate")),
+            update_date=_text(action.get("updateDate")),
+            activation_date=_text(action.get("activateDate")),
+            termination_date=_text(action.get("terminationDate")),
+            termination_type=_text(action.get("terminationType")),
+            record_status=_text(action.get("recordStatus")),
+            ct_code=_text(other.get("ctCode")),
+            fascsa_order=_text(other.get("isFASCSAOrder")),
+            additional_comments=_text(other.get("additionalComments")),
+            references=_sam_references(row),
+        )
+        match_basis, match_score, verification_status = _sam_match_basis(record, query)
+        record.match_basis = match_basis
+        record.match_score = match_score
+        record.verification_status = verification_status
+        records.append(record)
+    return records
+
+
+def _sam_status(records: list[SAMExclusionRecord]) -> str:
+    if not records:
+        return "no_current_sam_exclusion_found"
+    if any(record.verification_status == "strong_potential_match" for record in records):
+        return "strong_potential_match"
+    return "potential_match"
+
+
+def _sam_query_payload(**kwargs: str) -> dict[str, str]:
+    return {key: value for key, value in kwargs.items() if value}
+
+
+def _sam_error_response(raw: dict[str, Any], tool_name: str) -> dict[str, Any]:
+    return error_response(
+        raw.get("error", f"{tool_name} failed."),
+        code=raw.get("code", "source_unavailable"),
+        detail=raw.get("detail") or raw.get("instructions"),
+        retryable=bool(raw.get("retryable", False)),
+        source_metadata=raw.get("source_metadata"),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -462,6 +673,473 @@ async def get_interop_status(
     except Exception as e:
         logger.exception("get_interop_status failed")
         return error_response(f"get_interop_status failed: {e}")
+
+
+# ---------------------------------------------------------------------------
+# Tool 7: HHS OIG LEIE screening
+# ---------------------------------------------------------------------------
+@mcp.tool(structured_output=True)
+async def check_leie_npi(
+    npi: str,
+    limit: int = 25,
+    force_refresh: bool = False,
+) -> dict[str, Any]:
+    """Check a provider NPI against the current HHS OIG LEIE exclusion file.
+
+    Exact NPI matches are strong potential matches. The downloadable LEIE file
+    does not include SSNs/EINs, so this tool does not provide final identity
+    verification.
+    """
+    try:
+        normalized_npi = normalize_npi(npi)
+        if not normalized_npi:
+            return error_response(
+                "A valid non-placeholder 10-digit NPI is required.",
+                code="invalid_params",
+            )
+
+        metadata = await data_loaders.ensure_leie_cached(force_refresh=force_refresh)
+        if metadata.get("cache_status") == "unavailable":
+            return error_response(
+                "LEIE cache is unavailable.",
+                code="source_unavailable",
+                detail=metadata.get("last_error", ""),
+                retryable=True,
+                source_metadata=metadata,
+            )
+
+        rows = data_loaders.query_leie_by_npi(normalized_npi)[:max(1, min(limit, 100))]
+        records = _leie_records(rows)
+        response = LEIESearchResponse(
+            search_type="npi",
+            query={"npi": normalized_npi},
+            status=_leie_status(records),
+            total_results=len(records),
+            records=records,
+            source_metadata=_leie_source_metadata(metadata),
+            oig_verification_caveat=OIG_LEIE_CAVEAT,
+        )
+        return to_structured(response.model_dump())
+    except Exception as e:
+        logger.exception("check_leie_npi failed")
+        return error_response(f"check_leie_npi failed: {e}")
+
+
+@mcp.tool(structured_output=True)
+async def search_leie_individual(
+    last_name: str,
+    first_name: str = "",
+    state: str = "",
+    dob: str = "",
+    limit: int = 25,
+    force_refresh: bool = False,
+) -> dict[str, Any]:
+    """Search the current HHS OIG LEIE file for an excluded individual name."""
+    try:
+        if not last_name.strip():
+            return error_response("last_name is required.", code="invalid_params")
+
+        metadata = await data_loaders.ensure_leie_cached(force_refresh=force_refresh)
+        if metadata.get("cache_status") == "unavailable":
+            return error_response(
+                "LEIE cache is unavailable.",
+                code="source_unavailable",
+                detail=metadata.get("last_error", ""),
+                retryable=True,
+                source_metadata=metadata,
+            )
+
+        rows = data_loaders.query_leie_by_individual(
+            last_name=last_name,
+            first_name=first_name,
+            state=state,
+            dob=dob,
+            limit=limit,
+        )
+        records = _leie_records(rows)
+        response = LEIESearchResponse(
+            search_type="individual",
+            query={
+                "last_name": last_name,
+                "first_name": first_name,
+                "state": state,
+                "dob": dob,
+            },
+            status=_leie_status(records),
+            total_results=len(records),
+            records=records,
+            source_metadata=_leie_source_metadata(metadata),
+            oig_verification_caveat=OIG_LEIE_CAVEAT,
+        )
+        return to_structured(response.model_dump())
+    except Exception as e:
+        logger.exception("search_leie_individual failed")
+        return error_response(f"search_leie_individual failed: {e}")
+
+
+@mcp.tool(structured_output=True)
+async def search_leie_entity(
+    entity_name: str = "",
+    state: str = "",
+    npi: str = "",
+    limit: int = 25,
+    force_refresh: bool = False,
+) -> dict[str, Any]:
+    """Search the current HHS OIG LEIE file for an excluded business/entity."""
+    try:
+        if not entity_name.strip() and not npi.strip():
+            return error_response("entity_name or npi is required.", code="invalid_params")
+        normalized_npi = normalize_npi(npi) if npi.strip() else None
+        if npi.strip() and not normalized_npi:
+            return error_response(
+                "When provided, npi must be a valid non-placeholder 10-digit NPI.",
+                code="invalid_params",
+            )
+
+        metadata = await data_loaders.ensure_leie_cached(force_refresh=force_refresh)
+        if metadata.get("cache_status") == "unavailable":
+            return error_response(
+                "LEIE cache is unavailable.",
+                code="source_unavailable",
+                detail=metadata.get("last_error", ""),
+                retryable=True,
+                source_metadata=metadata,
+            )
+
+        rows = data_loaders.query_leie_by_entity(
+            entity_name=entity_name,
+            state=state,
+            npi=normalized_npi or "",
+            limit=limit,
+        )
+        records = _leie_records(rows)
+        response = LEIESearchResponse(
+            search_type="entity",
+            query={"entity_name": entity_name, "state": state, "npi": normalized_npi or ""},
+            status=_leie_status(records),
+            total_results=len(records),
+            records=records,
+            source_metadata=_leie_source_metadata(metadata),
+            oig_verification_caveat=OIG_LEIE_CAVEAT,
+        )
+        return to_structured(response.model_dump())
+    except Exception as e:
+        logger.exception("search_leie_entity failed")
+        return error_response(f"search_leie_entity failed: {e}")
+
+
+@mcp.tool(structured_output=True)
+async def screen_leie_batch(
+    candidates: list[dict[str, str]],
+    limit_per_candidate: int = 5,
+    force_refresh: bool = False,
+) -> dict[str, Any]:
+    """Screen up to 100 people/entities against the current HHS OIG LEIE file."""
+    try:
+        if len(candidates) > 100:
+            return error_response(
+                "screen_leie_batch accepts at most 100 candidates per call.",
+                code="invalid_params",
+            )
+        if any(_contains_sensitive_identifier_keys(dict(candidate)) for candidate in candidates):
+            return error_response(
+                "LEIE screening does not accept SSN, EIN, TIN, or tax identifier fields.",
+                code="invalid_params",
+            )
+
+        metadata = await data_loaders.ensure_leie_cached(force_refresh=force_refresh)
+        if metadata.get("cache_status") == "unavailable":
+            return error_response(
+                "LEIE cache is unavailable.",
+                code="source_unavailable",
+                detail=metadata.get("last_error", ""),
+                retryable=True,
+                source_metadata=metadata,
+            )
+
+        raw_results = data_loaders.screen_leie_candidates(
+            [dict(candidate) for candidate in candidates],
+            limit_per_candidate=limit_per_candidate,
+        )
+        results: list[LEIEBatchResult] = []
+        for raw in raw_results:
+            result_metadata = raw.get("source_metadata") or metadata
+            results.append(LEIEBatchResult(
+                candidate=LEIEBatchCandidate(
+                    **{
+                        k: v
+                        for k, v in raw.get("candidate", {}).items()
+                        if k in LEIEBatchCandidate.model_fields
+                    }
+                ),
+                status=raw.get("status", "no_current_leie_match_found"),
+                match_count=int(raw.get("match_count", 0) or 0),
+                best_match_score=int(raw.get("best_match_score", 0) or 0),
+                matches=_leie_records(raw.get("matches", [])),
+                screened_at=str(raw.get("screened_at", "")),
+                source_metadata=_leie_source_metadata(result_metadata),
+                oig_verification_caveat=OIG_LEIE_CAVEAT,
+            ))
+
+        response = LEIEBatchResponse(
+            total_candidates=len(candidates),
+            results=results,
+            source_metadata=_leie_source_metadata(metadata),
+            oig_verification_caveat=OIG_LEIE_CAVEAT,
+        )
+        return to_structured(response.model_dump())
+    except ValueError as e:
+        return error_response(str(e), code="invalid_params")
+    except Exception as e:
+        logger.exception("screen_leie_batch failed")
+        return error_response(f"screen_leie_batch failed: {e}")
+
+
+@mcp.tool(structured_output=True)
+async def get_leie_metadata(force_refresh: bool = False) -> dict[str, Any]:
+    """Return HHS OIG LEIE source/cache metadata without screening a person."""
+    try:
+        metadata = (
+            await data_loaders.ensure_leie_cached(force_refresh=True)
+            if force_refresh
+            else data_loaders.get_leie_source_metadata()
+        )
+        return to_structured(_leie_source_metadata(metadata).model_dump())
+    except Exception as e:
+        logger.exception("get_leie_metadata failed")
+        return error_response(f"get_leie_metadata failed: {e}")
+
+
+# ---------------------------------------------------------------------------
+# Tool 8: SAM.gov Exclusions screening
+# ---------------------------------------------------------------------------
+@mcp.tool(structured_output=True)
+async def search_sam_exclusions(
+    entity_name: str = "",
+    first_name: str = "",
+    last_name: str = "",
+    uei: str = "",
+    cage_code: str = "",
+    npi: str = "",
+    state: str = "",
+    country: str = "",
+    classification: str = "",
+    exclusion_type: str = "",
+    excluding_agency: str = "",
+    limit: int = 10,
+) -> dict[str, Any]:
+    """Search active SAM.gov Exclusions records through the v4 JSON API."""
+    try:
+        query = _sam_query_payload(
+            entity_name=entity_name,
+            first_name=first_name,
+            last_name=last_name,
+            uei=uei,
+            cage_code=cage_code,
+            npi=npi,
+            state=state,
+            country=country,
+            classification=classification,
+            exclusion_type=exclusion_type,
+            excluding_agency=excluding_agency,
+        )
+        if not query:
+            return error_response(
+                "At least one SAM.gov Exclusions search parameter is required.",
+                code="invalid_params",
+            )
+
+        normalized_npi = normalize_npi(npi) if npi.strip() else ""
+        if npi.strip() and not normalized_npi:
+            return error_response(
+                "When provided, npi must be a valid non-placeholder 10-digit NPI.",
+                code="invalid_params",
+            )
+
+        raw = await sam_exclusions_client.search_exclusions(
+            entity_name=entity_name,
+            first_name=first_name,
+            last_name=last_name,
+            uei=uei,
+            cage_code=cage_code,
+            npi=normalized_npi or npi,
+            state=state,
+            country=country,
+            classification=classification,
+            exclusion_type=exclusion_type,
+            excluding_agency=excluding_agency,
+            limit=limit,
+        )
+        if "error" in raw:
+            return _sam_error_response(raw, "search_sam_exclusions")
+
+        metadata = _sam_source_metadata(raw.get("source_metadata", {}))
+        records = _sam_records(raw.get("excludedEntity", []), metadata.query)
+        response = SAMExclusionSearchResponse(
+            search_type="search",
+            query=query,
+            status=_sam_status(records),
+            total_results=int(raw.get("totalRecords", len(records)) or 0),
+            records=records,
+            source_metadata=metadata,
+            sam_verification_caveat=SAM_EXCLUSIONS_CAVEAT,
+        )
+        return to_structured(response.model_dump())
+    except Exception as e:
+        logger.exception("search_sam_exclusions failed")
+        return error_response(f"search_sam_exclusions failed: {e}")
+
+
+@mcp.tool(structured_output=True)
+async def check_sam_exclusion_identifier(
+    uei: str = "",
+    cage_code: str = "",
+    npi: str = "",
+    limit: int = 10,
+) -> dict[str, Any]:
+    """Check public identifiers against active SAM.gov Exclusions records."""
+    try:
+        if not uei.strip() and not cage_code.strip() and not npi.strip():
+            return error_response(
+                "At least one of uei, cage_code, or npi is required.",
+                code="invalid_params",
+            )
+        normalized_npi = normalize_npi(npi) if npi.strip() else ""
+        if npi.strip() and not normalized_npi:
+            return error_response(
+                "When provided, npi must be a valid non-placeholder 10-digit NPI.",
+                code="invalid_params",
+            )
+
+        raw = await sam_exclusions_client.check_identifier(
+            uei=uei,
+            cage_code=cage_code,
+            npi=normalized_npi or npi,
+            limit=limit,
+        )
+        if "error" in raw:
+            return _sam_error_response(raw, "check_sam_exclusion_identifier")
+
+        metadata = _sam_source_metadata(raw.get("source_metadata", {}))
+        records = _sam_records(raw.get("excludedEntity", []), metadata.query)
+        response = SAMExclusionSearchResponse(
+            search_type="identifier",
+            query=_sam_query_payload(uei=uei, cage_code=cage_code, npi=normalized_npi or npi),
+            status=_sam_status(records),
+            total_results=int(raw.get("totalRecords", len(records)) or 0),
+            records=records,
+            source_metadata=metadata,
+            sam_verification_caveat=SAM_EXCLUSIONS_CAVEAT,
+        )
+        return to_structured(response.model_dump())
+    except Exception as e:
+        logger.exception("check_sam_exclusion_identifier failed")
+        return error_response(f"check_sam_exclusion_identifier failed: {e}")
+
+
+@mcp.tool(structured_output=True)
+async def screen_sam_exclusions_batch(
+    candidates: list[dict[str, str]],
+    limit_per_candidate: int = 5,
+) -> dict[str, Any]:
+    """Screen up to 100 candidates against active SAM.gov Exclusions records."""
+    try:
+        if len(candidates) > sam_exclusions_client.MAX_BATCH_SIZE:
+            return error_response(
+                f"screen_sam_exclusions_batch accepts at most {sam_exclusions_client.MAX_BATCH_SIZE} "
+                "candidates per call.",
+                code="invalid_params",
+            )
+        if any(_contains_sensitive_identifier_keys(dict(candidate)) for candidate in candidates):
+            return error_response(
+                "SAM.gov Exclusions screening does not accept SSN, EIN, TIN, or tax identifier fields.",
+                code="invalid_params",
+            )
+
+        safe_limit = max(1, min(int(limit_per_candidate), 10))
+        results: list[SAMExclusionBatchResult] = []
+        response_metadata = sam_exclusions_client.source_metadata(limit=safe_limit)
+        for candidate_payload in candidates:
+            candidate_data = {
+                key: value
+                for key, value in dict(candidate_payload).items()
+                if key in SAMExclusionBatchCandidate.model_fields
+            }
+            candidate = SAMExclusionBatchCandidate(**candidate_data)
+            if candidate.npi.strip():
+                normalized_npi = normalize_npi(candidate.npi)
+                if not normalized_npi:
+                    return error_response(
+                        "When provided in a SAM.gov Exclusions batch candidate, "
+                        "npi must be a valid non-placeholder 10-digit NPI.",
+                        code="invalid_params",
+                    )
+                candidate.npi = normalized_npi
+            raw = await sam_exclusions_client.search_exclusions(
+                entity_name=candidate.entity_name,
+                first_name=candidate.first_name,
+                last_name=candidate.last_name,
+                uei=candidate.uei,
+                cage_code=candidate.cage_code,
+                npi=candidate.npi,
+                state=candidate.state,
+                country=candidate.country,
+                classification=candidate.classification,
+                limit=safe_limit,
+            )
+            if "error" in raw:
+                metadata = _sam_source_metadata(raw.get("source_metadata", {}))
+                results.append(SAMExclusionBatchResult(
+                    candidate=candidate,
+                    status="source_error",
+                    match_count=0,
+                    matches=[],
+                    match_basis="source_error",
+                    best_match_score=0,
+                    screened_at=datetime.now(UTC).isoformat(),
+                    source_metadata=metadata,
+                    sam_verification_caveat=SAM_EXCLUSIONS_CAVEAT,
+                ))
+                response_metadata = metadata.model_dump()
+                continue
+
+            metadata = _sam_source_metadata(raw.get("source_metadata", {}))
+            records = _sam_records(raw.get("excludedEntity", []), metadata.query)
+            status = _sam_status(records)
+            results.append(SAMExclusionBatchResult(
+                candidate=candidate,
+                status=status,
+                match_count=len(records),
+                matches=records,
+                match_basis=records[0].match_basis if records else "",
+                best_match_score=max((record.match_score for record in records), default=0),
+                screened_at=datetime.now(UTC).isoformat(),
+                source_metadata=metadata,
+                sam_verification_caveat=SAM_EXCLUSIONS_CAVEAT,
+            ))
+            response_metadata = metadata.model_dump()
+
+        response = SAMExclusionBatchResponse(
+            total_candidates=len(candidates),
+            results=results,
+            source_metadata=_sam_source_metadata(response_metadata),
+            sam_verification_caveat=SAM_EXCLUSIONS_CAVEAT,
+        )
+        return to_structured(response.model_dump())
+    except Exception as e:
+        logger.exception("screen_sam_exclusions_batch failed")
+        return error_response(f"screen_sam_exclusions_batch failed: {e}")
+
+
+@mcp.tool(structured_output=True)
+async def get_sam_exclusions_metadata() -> dict[str, Any]:
+    """Return SAM.gov Exclusions API metadata without running a search."""
+    try:
+        metadata = sam_exclusions_client.source_metadata()
+        return to_structured(_sam_source_metadata(metadata).model_dump())
+    except Exception as e:
+        logger.exception("get_sam_exclusions_metadata failed")
+        return error_response(f"get_sam_exclusions_metadata failed: {e}")
 
 
 if __name__ == "__main__":
