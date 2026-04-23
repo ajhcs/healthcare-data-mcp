@@ -34,20 +34,32 @@ Exclusion results are screening support, not final identity verification. Respon
 - The gateway remains metadata-only for these datasets; it does not proxy full live screening/query workflows.
 - `smoke_test.py` includes optional live checks gated by `HC_MCP_LIVE_EXPANSION`, `HC_MCP_LIVE_LEIE`, and `SAM_GOV_API_KEY`.
 
+## Client Setup and API Keys
+
+Follow-up packaging work added:
+
+- `hc-mcp-setup`, an interactive and non-interactive setup wizard for `.env` creation, API key prompts, validation, and client snippets.
+- Automatic `.env` loading in `hc-mcp`, with `--env-file` and `HC_MCP_ENV_FILE` support for GUI clients launched outside the repo root.
+- Updated Codex CLI/IDE/App, Claude Code, Claude Desktop, Claude Desktop cowork/shared-machine, Desktop Extension/MCPB, generic MCP, local HTTP, and remote gateway docs.
+- Updated `examples/codex-config.toml` and `examples/claude-desktop-stdio.json` for `provider-enrollment`, `community-health`, `research-trials`, and env-file handling.
+- Claude Desktop MCPB manifest GUI fields for `SAM_GOV_API_KEY`, `CHPL_API_KEY`, `SEC_USER_AGENT`, Census/HUD/routing/workforce/search keys, and selected `server_name`.
+
 ## Verification
 
 Verified locally after implementation and review fixes:
 
 ```bash
 .venv/bin/python -m pytest -q
-# 176 passed
+# 185 passed
 
 .venv/bin/python -m ruff check .
-.venv/bin/python -m compileall -q servers shared tests smoke_test.py
+.venv/bin/python -m compileall -q servers shared scripts tests smoke_test.py
 docker compose config --quiet
 python3 -m json.tool .mcp.json
 .venv/bin/python -m servers._launcher --list
 ```
+
+Client/setup validation also covered the Desktop Extension manifest, Codex TOML example, Claude Desktop JSON example, MCPB builder server list, dotenv parser/writer, env-file launcher loading, and the installed `hc-mcp-setup` console script.
 
 ## Known Limits
 
