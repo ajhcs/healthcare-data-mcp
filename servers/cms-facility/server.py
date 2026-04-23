@@ -4,13 +4,14 @@ Provides tools for looking up healthcare facility data from public CMS sources
 including Hospital General Info, NPPES NPI Registry, and Cost Report PUF.
 """
 
-import json
+from typing import Any
 import logging
 import os
 import sys
 from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
+from shared.utils.mcp_response import error_response, to_structured
 
 # Support running both as a package and as a standalone script
 try:
@@ -81,14 +82,14 @@ def _row_to_facility(row) -> Facility:
     )
 
 
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def search_facilities(
     name: str | None = None,
     state: str | None = None,
     facility_type: str | None = None,
     city: str | None = None,
     limit: int = 50,
-) -> str:
+) -> dict[str, Any]:
     """Search CMS Hospital General Info for healthcare facilities.
 
     Args:
@@ -100,7 +101,7 @@ async def search_facilities(
     """
     df = await data_loaders.load_hospital_info()
     if df.empty:
-        return json.dumps({"error": "Hospital data not available", "results": []})
+        return error_response("Hospital data not available", results=[])
 
     mask = df.index >= 0  # start with all True
 
@@ -120,11 +121,11 @@ async def search_facilities(
 
     results = df[mask].head(limit)
     facilities = [_row_to_facility(row).model_dump() for _, row in results.iterrows()]
-    return json.dumps({"count": len(facilities), "results": facilities})
+    return to_structured({"count": len(facilities), "results": facilities})
 
 
-@mcp.tool()
-async def get_facility(ccn: str) -> str:
+@mcp.tool(structured_output=True)
+async def get_facility(ccn: str) -> dict[str, Any]:
     """Get full facility details by CMS Certification Number (CCN).
 
     Args:
@@ -132,21 +133,21 @@ async def get_facility(ccn: str) -> str:
     """
     df = await data_loaders.load_hospital_info()
     if df.empty:
-        return json.dumps({"error": "Hospital data not available"})
+        return error_response("Hospital data not available")
 
     ccn_col = _col(df, "facility_id", "ccn", "provider_id", "cms_certification_number", "provider_number")
     if not ccn_col:
-        return json.dumps({"error": "Cannot identify CCN column in dataset"})
+        return error_response("Cannot identify CCN column in dataset")
 
     matches = df[df[ccn_col].str.strip() == ccn.strip()]
     if matches.empty:
-        return json.dumps({"error": f"No facility found with CCN: {ccn}"})
+        return error_response(f"No facility found with CCN: {ccn}")
 
     facility = _row_to_facility(matches.iloc[0])
-    return json.dumps(facility.model_dump())
+    return to_structured(facility.model_dump())
 
 
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def search_npi(
     npi: str | None = None,
     organization_name: str | None = None,
@@ -154,7 +155,7 @@ async def search_npi(
     taxonomy_description: str | None = None,
     enumeration_type: str = "NPI-2",
     limit: int = 50,
-) -> str:
+) -> dict[str, Any]:
     """Search the NPPES NPI Registry for provider/organization records.
 
     Args:
@@ -175,7 +176,7 @@ async def search_npi(
             limit=limit,
         )
     except Exception as e:
-        return json.dumps({"error": f"NPPES API error: {e}", "results": []})
+        return error_response(f"NPPES API error: {e}", results=[])
 
     parsed = []
     for r in raw_results:
@@ -202,11 +203,11 @@ async def search_npi(
         )
         parsed.append(npi_result.model_dump())
 
-    return json.dumps({"count": len(parsed), "results": parsed})
+    return to_structured({"count": len(parsed), "results": parsed})
 
 
-@mcp.tool()
-async def get_facility_financials(ccn: str) -> str:
+@mcp.tool(structured_output=True)
+async def get_facility_financials(ccn: str) -> dict[str, Any]:
     """Get financial data for a facility from the CMS Hospital Cost Report PUF.
 
     Args:
@@ -214,16 +215,16 @@ async def get_facility_financials(ccn: str) -> str:
     """
     df = await data_loaders.load_cost_report()
     if df.empty:
-        return json.dumps({"error": "Cost report data not available"})
+        return error_response("Cost report data not available")
 
     # Identify CCN column
     ccn_col = _col(df, "provider_ccn", "provider_number", "ccn", "provider_id", "prvdr_num")
     if not ccn_col:
-        return json.dumps({"error": "Cannot identify CCN column in cost report dataset"})
+        return error_response("Cannot identify CCN column in cost report dataset")
 
     matches = df[df[ccn_col].str.strip() == ccn.strip()]
     if matches.empty:
-        return json.dumps({"error": f"No cost report data found for CCN: {ccn}"})
+        return error_response(f"No cost report data found for CCN: {ccn}")
 
     # Take the most recent row if multiple years exist
     fy_col = _col(df, "fiscal_year_end", "fy_end", "fiscal_year_end_date", "fy_end_dt")
@@ -255,11 +256,11 @@ async def get_facility_financials(ccn: str) -> str:
         total_costs=num("total_costs", "tot_costs", "total_operating_costs"),
         fte_employees=num("fte_employees", "fte", "total_fte"),
     )
-    return json.dumps(profile.model_dump())
+    return to_structured(profile.model_dump())
 
 
-@mcp.tool()
-async def get_hospital_info(ccn: str) -> str:
+@mcp.tool(structured_output=True)
+async def get_hospital_info(ccn: str) -> dict[str, Any]:
     """Get Hospital General Information including quality ratings for a facility.
 
     Args:
@@ -267,18 +268,18 @@ async def get_hospital_info(ccn: str) -> str:
     """
     df = await data_loaders.load_hospital_info()
     if df.empty:
-        return json.dumps({"error": "Hospital data not available"})
+        return error_response("Hospital data not available")
 
     ccn_col = _col(df, "facility_id", "ccn", "provider_id", "cms_certification_number", "provider_number")
     if not ccn_col:
-        return json.dumps({"error": "Cannot identify CCN column in dataset"})
+        return error_response("Cannot identify CCN column in dataset")
 
     matches = df[df[ccn_col].str.strip() == ccn.strip()]
     if matches.empty:
-        return json.dumps({"error": f"No hospital found with CCN: {ccn}"})
+        return error_response(f"No hospital found with CCN: {ccn}")
 
     facility = _row_to_facility(matches.iloc[0])
-    return json.dumps(facility.model_dump())
+    return to_structured(facility.model_dump())
 
 
 if __name__ == "__main__":

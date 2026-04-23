@@ -51,6 +51,14 @@
     "web-intelligence": {
       "type": "http",
       "url": "http://localhost:8014/mcp"
+    },
+    "discovery": {
+      "type": "http",
+      "url": "http://localhost:8015/mcp"
+    },
+    "gateway": {
+      "type": "http",
+      "url": "http://localhost:8016/mcp"
     }
   }
 }

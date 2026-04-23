@@ -5,11 +5,12 @@ referral network mapping, health system employment mix analysis,
 and referral leakage detection.
 """
 
-import json
+from typing import Any
 import logging
 import os as _os
 
 from mcp.server.fastmcp import FastMCP
+from shared.utils.mcp_response import error_response, to_structured
 
 from . import nppes_client, referral_network, physician_mix
 from .models import (
@@ -41,10 +42,10 @@ mcp = FastMCP(**_mcp_kwargs)
 # ---------------------------------------------------------------------------
 # Tool 1: search_physicians
 # ---------------------------------------------------------------------------
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def search_physicians(
     query: str, specialty: str = "", state: str = "", limit: int = 25
-) -> str:
+) -> dict[str, Any]:
     """Search for physicians by name, NPI, or specialty in the NPPES registry.
 
     Returns matching physicians with NPI, specialty, practice location,
@@ -63,17 +64,17 @@ async def search_physicians(
             total_results=len(physicians),
             physicians=[PhysicianSummary(**p) for p in physicians],
         )
-        return json.dumps(response.model_dump())
+        return to_structured(response.model_dump())
     except Exception as e:
         logger.exception("search_physicians failed")
-        return json.dumps({"error": f"search_physicians failed: {e}"})
+        return error_response(f"search_physicians failed: {e}")
 
 
 # ---------------------------------------------------------------------------
 # Tool 2: get_physician_profile
 # ---------------------------------------------------------------------------
-@mcp.tool()
-async def get_physician_profile(npi: str) -> str:
+@mcp.tool(structured_output=True)
+async def get_physician_profile(npi: str) -> dict[str, Any]:
     """Get a full physician profile including specialties, affiliations,
     Medicare utilization, and quality scores.
 
@@ -90,7 +91,7 @@ async def get_physician_profile(npi: str) -> str:
 
         profile_data = await nppes_client.get_physician_detail(npi)
         if not profile_data:
-            return json.dumps({"error": f"No physician found for NPI: {npi}"})
+            return error_response(f"No physician found for NPI: {npi}")
 
         # Build response model
         utilization = None
@@ -114,19 +115,19 @@ async def get_physician_profile(npi: str) -> str:
             utilization=utilization,
             quality=quality,
         )
-        return json.dumps(response.model_dump())
+        return to_structured(response.model_dump())
     except Exception as e:
         logger.exception("get_physician_profile failed")
-        return json.dumps({"error": f"get_physician_profile failed: {e}"})
+        return error_response(f"get_physician_profile failed: {e}")
 
 
 # ---------------------------------------------------------------------------
 # Tool 3: map_referral_network
 # ---------------------------------------------------------------------------
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def map_referral_network(
     npi: str, depth: int = 1, min_shared: int = 11
-) -> str:
+) -> dict[str, Any]:
     """Build a referral network graph centered on a physician using
     DocGraph shared patient data (2014-2020 Medicare claims).
 
@@ -140,16 +141,16 @@ async def map_referral_network(
     """
     try:
         if not referral_network.is_docgraph_cached():
-            return json.dumps({
-                "error": "DocGraph shared patient data not cached. "
-                         "Download from https://careset.com/datasets/ and load with "
-                         "the load_docgraph_csv() function."
-            })
+            return error_response(
+                "DocGraph shared patient data not cached. "
+                "Download from https://careset.com/datasets/ and load with "
+                "the load_docgraph_csv() function."
+            )
 
         result = referral_network.get_referral_network(npi, depth=depth, min_shared=min_shared)
 
         if "error" in result:
-            return json.dumps(result)
+            return error_response(str(result["error"]))
 
         # Enrich nodes with NPPES data (batch lookup)
         enriched_nodes = []
@@ -183,17 +184,17 @@ async def map_referral_network(
             edges=[ReferralEdge(**e) for e in result.get("edges", [])],
             total_connections=result.get("total_connections", 0),
         )
-        return json.dumps(response.model_dump())
+        return to_structured(response.model_dump())
     except Exception as e:
         logger.exception("map_referral_network failed")
-        return json.dumps({"error": f"map_referral_network failed: {e}"})
+        return error_response(f"map_referral_network failed: {e}")
 
 
 # ---------------------------------------------------------------------------
 # Tool 4: analyze_physician_mix
 # ---------------------------------------------------------------------------
-@mcp.tool()
-async def analyze_physician_mix(system_name: str, state: str = "") -> str:
+@mcp.tool(structured_output=True)
+async def analyze_physician_mix(system_name: str, state: str = "") -> dict[str, Any]:
     """Analyze the employed vs. affiliated vs. independent physician mix
     for a health system.
 
@@ -208,7 +209,7 @@ async def analyze_physician_mix(system_name: str, state: str = "") -> str:
         result = await physician_mix.analyze_system_mix(system_name, state)
 
         if "error" in result:
-            return json.dumps(result)
+            return to_structured(result)
 
         response = PhysicianMixResponse(
             system_name=result.get("system_name", system_name),
@@ -224,19 +225,19 @@ async def analyze_physician_mix(system_name: str, state: str = "") -> str:
                 PhysicianClassification(**c) for c in result.get("sample_physicians", [])
             ],
         )
-        return json.dumps(response.model_dump())
+        return to_structured(response.model_dump())
     except Exception as e:
         logger.exception("analyze_physician_mix failed")
-        return json.dumps({"error": f"analyze_physician_mix failed: {e}"})
+        return error_response(f"analyze_physician_mix failed: {e}")
 
 
 # ---------------------------------------------------------------------------
 # Tool 5: detect_leakage
 # ---------------------------------------------------------------------------
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def detect_leakage(
     system_name: str, state: str = "", specialty: str = ""
-) -> str:
+) -> dict[str, Any]:
     """Detect out-of-network referral leakage for a health system using
     DocGraph shared patient data (2014-2020).
 
@@ -250,15 +251,15 @@ async def detect_leakage(
     """
     try:
         if not referral_network.is_docgraph_cached():
-            return json.dumps({
-                "error": "DocGraph shared patient data not cached. "
-                         "Download from https://careset.com/datasets/ and load first."
-            })
+            return error_response(
+                "DocGraph shared patient data not cached. "
+                "Download from https://careset.com/datasets/ and load first."
+            )
 
         # Get system's physician NPIs
         mix_result = await physician_mix.analyze_system_mix(system_name, state)
         if "error" in mix_result:
-            return json.dumps(mix_result)
+            return error_response(str(mix_result["error"]))
 
         system_npis = set()
         for p in mix_result.get("sample_physicians", []):
@@ -276,7 +277,7 @@ async def detect_leakage(
         )
 
         if "error" in leakage:
-            return json.dumps(leakage)
+            return error_response(str(leakage["error"]))
 
         # Enrich top destinations with NPPES data, filter by specialty if requested
         enriched_destinations = []
@@ -314,10 +315,10 @@ async def detect_leakage(
                 SpecialtyLeakage(**s) for s in leakage.get("specialty_breakdown", [])
             ],
         )
-        return json.dumps(response.model_dump())
+        return to_structured(response.model_dump())
     except Exception as e:
         logger.exception("detect_leakage failed")
-        return json.dumps({"error": f"detect_leakage failed: {e}"})
+        return error_response(f"detect_leakage failed: {e}")
 
 
 if __name__ == "__main__":

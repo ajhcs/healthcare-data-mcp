@@ -4,11 +4,12 @@ Provides tools for hospital quality metrics, readmission data, safety scores,
 patient experience, and financial profiling from public CMS data.
 """
 
-import json
+from typing import Any
 import logging
 import os
 
 from mcp.server.fastmcp import FastMCP
+from shared.utils.mcp_response import error_response, to_structured
 
 from . import data_loaders
 from .models import (
@@ -70,11 +71,21 @@ def _filter_by_ccn(df, ccn: str):
     return df[df[ccn_col].str.strip() == ccn.strip()]
 
 
+def _error_message(response: dict[str, Any]) -> str | None:
+    """Extract a user-facing message from structured helper error responses."""
+    error = response.get("error")
+    if isinstance(error, dict):
+        return str(error.get("message") or "")
+    if isinstance(error, str):
+        return error
+    return None
+
+
 # ---------------------------------------------------------------------------
 # Tool: get_quality_scores
 # ---------------------------------------------------------------------------
-@mcp.tool()
-async def get_quality_scores(ccn: str) -> str:
+@mcp.tool(structured_output=True)
+async def get_quality_scores(ccn: str) -> dict[str, Any]:
     """Get overall quality ratings for a hospital from CMS Hospital General Info.
 
     Returns star ratings (1-5) and national comparison ratings for mortality,
@@ -85,11 +96,11 @@ async def get_quality_scores(ccn: str) -> str:
     """
     df = await data_loaders.load_hospital_info()
     if df.empty:
-        return json.dumps({"error": "Hospital General Info data not available"})
+        return error_response("Hospital General Info data not available")
 
     matches = _filter_by_ccn(df, ccn)
     if matches.empty:
-        return json.dumps({"error": f"No hospital found with CCN: {ccn}"})
+        return error_response(f"No hospital found with CCN: {ccn}")
 
     row = matches.iloc[0]
 
@@ -109,7 +120,7 @@ async def get_quality_scores(ccn: str) -> str:
         patient_experience_national_comparison=val("patient_experience_national_comparison", "patient_experience_rating"),
         timeliness_national_comparison=val("timeliness_of_care_national_comparison", "timeliness_rating"),
     )
-    return json.dumps(result.model_dump())
+    return to_structured(result.model_dump())
 
 
 # ---------------------------------------------------------------------------
@@ -127,8 +138,8 @@ _HRRP_MEASURES = {
 }
 
 
-@mcp.tool()
-async def get_readmission_data(ccn: str) -> str:
+@mcp.tool(structured_output=True)
+async def get_readmission_data(ccn: str) -> dict[str, Any]:
     """Get Hospital Readmissions Reduction Program (HRRP) data for a hospital.
 
     Returns excess readmission ratios, predicted/expected readmission rates,
@@ -140,11 +151,11 @@ async def get_readmission_data(ccn: str) -> str:
     """
     df = await data_loaders.load_hrrp()
     if df.empty:
-        return json.dumps({"error": "HRRP data not available"})
+        return error_response("HRRP data not available")
 
     matches = _filter_by_ccn(df, ccn)
     if matches.empty:
-        return json.dumps({"error": f"No HRRP data found for CCN: {ccn}"})
+        return error_response(f"No HRRP data found for CCN: {ccn}")
 
     facility_name = ""
     name_col = _col(matches, "facility_name", "hospital_name", "provider_name")
@@ -211,7 +222,7 @@ async def get_readmission_data(ccn: str) -> str:
         conditions=conditions,
         payment_reduction_percentage=payment_reduction,
     )
-    return json.dumps(result.model_dump())
+    return to_structured(result.model_dump())
 
 
 # ---------------------------------------------------------------------------
@@ -230,8 +241,8 @@ _HAC_DOMAINS = {
 }
 
 
-@mcp.tool()
-async def get_safety_scores(ccn: str) -> str:
+@mcp.tool(structured_output=True)
+async def get_safety_scores(ccn: str) -> dict[str, Any]:
     """Get Hospital-Acquired Condition (HAC) Reduction Program safety scores.
 
     Returns total HAC score, payment reduction status, and domain scores
@@ -242,11 +253,11 @@ async def get_safety_scores(ccn: str) -> str:
     """
     df = await data_loaders.load_hac()
     if df.empty:
-        return json.dumps({"error": "HAC Reduction Program data not available"})
+        return error_response("HAC Reduction Program data not available")
 
     matches = _filter_by_ccn(df, ccn)
     if matches.empty:
-        return json.dumps({"error": f"No HAC data found for CCN: {ccn}"})
+        return error_response(f"No HAC data found for CCN: {ccn}")
 
     row = matches.iloc[0]
 
@@ -281,7 +292,7 @@ async def get_safety_scores(ccn: str) -> str:
         payment_reduction=str(row.get(reduction_col, "")).strip() if reduction_col else "",
         domain_scores=DomainScores(**domain_kwargs),
     )
-    return json.dumps(result.model_dump())
+    return to_structured(result.model_dump())
 
 
 # ---------------------------------------------------------------------------
@@ -309,8 +320,8 @@ _STAR_SUFFIX = "_STAR_RATING"
 _LINEAR_SCORE = "_LINEAR_SCORE"
 
 
-@mcp.tool()
-async def get_patient_experience(ccn: str) -> str:
+@mcp.tool(structured_output=True)
+async def get_patient_experience(ccn: str) -> dict[str, Any]:
     """Get HCAHPS patient experience survey scores for a hospital.
 
     Returns star ratings and response percentages for domains: nurse/doctor
@@ -323,11 +334,11 @@ async def get_patient_experience(ccn: str) -> str:
     """
     df = await data_loaders.load_hcahps()
     if df.empty:
-        return json.dumps({"error": "HCAHPS data not available"})
+        return error_response("HCAHPS data not available")
 
     matches = _filter_by_ccn(df, ccn)
     if matches.empty:
-        return json.dumps({"error": f"No HCAHPS data found for CCN: {ccn}"})
+        return error_response(f"No HCAHPS data found for CCN: {ccn}")
 
     facility_name = ""
     name_col = _col(matches, "facility_name", "hospital_name", "provider_name")
@@ -405,14 +416,14 @@ async def get_patient_experience(ccn: str) -> str:
         num_completed_surveys=num_completed_surveys,
         domains=list(domain_data.values()),
     )
-    return json.dumps(result.model_dump())
+    return to_structured(result.model_dump())
 
 
 # ---------------------------------------------------------------------------
 # Tool: get_financial_profile
 # ---------------------------------------------------------------------------
-@mcp.tool()
-async def get_financial_profile(ccn: str) -> str:
+@mcp.tool(structured_output=True)
+async def get_financial_profile(ccn: str) -> dict[str, Any]:
     """Get financial profile for a hospital from CMS Cost Report data.
 
     Returns case mix index, discharge/bed counts, teaching status,
@@ -423,11 +434,11 @@ async def get_financial_profile(ccn: str) -> str:
     """
     df = await data_loaders.load_cost_report()
     if df.empty:
-        return json.dumps({"error": "Cost report data not available"})
+        return error_response("Cost report data not available")
 
     matches = _filter_by_ccn(df, ccn)
     if matches.empty:
-        return json.dumps({"error": f"No cost report data found for CCN: {ccn}"})
+        return error_response(f"No cost report data found for CCN: {ccn}")
 
     # Take the most recent row if multiple years exist
     fy_col = _col(matches, "fiscal_year_end", "fy_end", "fiscal_year_end_date", "fy_end_dt",
@@ -495,14 +506,14 @@ async def get_financial_profile(ccn: str) -> str:
         wage_index=wage,
         geographic_location=geo,
     )
-    return json.dumps(result.model_dump())
+    return to_structured(result.model_dump())
 
 
 # ---------------------------------------------------------------------------
 # Tool: compare_hospitals
 # ---------------------------------------------------------------------------
-@mcp.tool()
-async def compare_hospitals(ccns: list[str]) -> str:
+@mcp.tool(structured_output=True)
+async def compare_hospitals(ccns: list[str]) -> dict[str, Any]:
     """Compare quality, safety, readmission, and experience data across hospitals.
 
     Pulls all available metrics for each hospital and returns a side-by-side
@@ -512,49 +523,41 @@ async def compare_hospitals(ccns: list[str]) -> str:
         ccns: List of CMS Certification Numbers to compare (e.g. ["050454", "050755"]).
     """
     if not ccns or len(ccns) < 2:
-        return json.dumps({"error": "Provide at least 2 CCNs to compare"})
+        return error_response("Provide at least 2 CCNs to compare")
     if len(ccns) > 10:
-        return json.dumps({"error": "Maximum 10 hospitals for comparison"})
+        return error_response("Maximum 10 hospitals for comparison")
 
     comparisons = []
     for ccn in ccns:
         hospital = {"ccn": ccn}
 
-        # Quality scores
-        quality_json = await get_quality_scores(ccn)
-        quality = json.loads(quality_json)
-        if "error" not in quality:
+        quality = await get_quality_scores(ccn)
+        if not (message := _error_message(quality)):
             hospital["quality"] = quality
         else:
-            hospital["quality"] = {"error": quality["error"]}
+            hospital["quality"] = {"error": message}
 
-        # Safety scores
-        safety_json = await get_safety_scores(ccn)
-        safety = json.loads(safety_json)
-        if "error" not in safety:
+        safety = await get_safety_scores(ccn)
+        if not (message := _error_message(safety)):
             hospital["safety"] = safety
         else:
-            hospital["safety"] = {"error": safety["error"]}
+            hospital["safety"] = {"error": message}
 
-        # Readmission data
-        readmission_json = await get_readmission_data(ccn)
-        readmission = json.loads(readmission_json)
-        if "error" not in readmission:
+        readmission = await get_readmission_data(ccn)
+        if not (message := _error_message(readmission)):
             hospital["readmission"] = readmission
         else:
-            hospital["readmission"] = {"error": readmission["error"]}
+            hospital["readmission"] = {"error": message}
 
-        # Patient experience
-        experience_json = await get_patient_experience(ccn)
-        experience = json.loads(experience_json)
-        if "error" not in experience:
+        experience = await get_patient_experience(ccn)
+        if not (message := _error_message(experience)):
             hospital["patient_experience"] = experience
         else:
-            hospital["patient_experience"] = {"error": experience["error"]}
+            hospital["patient_experience"] = {"error": message}
 
         comparisons.append(hospital)
 
-    return json.dumps({"hospital_count": len(comparisons), "hospitals": comparisons})
+    return to_structured({"hospital_count": len(comparisons), "hospitals": comparisons})
 
 
 if __name__ == "__main__":

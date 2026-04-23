@@ -4,7 +4,7 @@ Returns complete health system profiles in 1-3 tool calls by combining
 AHRQ Compendium, CMS Provider of Services, NPPES, and HSAF data.
 """
 
-import json
+from typing import Any
 import logging
 import os as _os
 import sys
@@ -12,6 +12,7 @@ from pathlib import Path
 
 import pandas as pd
 from mcp.server.fastmcp import FastMCP
+from shared.utils.mcp_response import error_response, to_structured
 
 # Support running both as a package and as a standalone script
 try:
@@ -77,8 +78,8 @@ async def _search_nppes(**kwargs) -> list[dict]:
 
 # ---- MCP Tools ----
 
-@mcp.tool()
-async def search_health_systems(query: str, limit: int = 10) -> str:
+@mcp.tool(structured_output=True)
+async def search_health_systems(query: str, limit: int = 10) -> dict[str, Any]:
     """Search for health systems by name using AHRQ Compendium.
 
     Performs fuzzy matching against ~700 US health system names.
@@ -89,15 +90,15 @@ async def search_health_systems(query: str, limit: int = 10) -> str:
     """
     systems_df = await _load_ahrq_systems()
     results = fuzzy_search_systems(query, systems_df, limit=limit)
-    return json.dumps({"count": len(results), "results": results})
+    return to_structured({"count": len(results), "results": results})
 
 
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def get_system_profile(
     system_id: str | None = None,
     system_name: str | None = None,
     include_outpatient: bool = True,
-) -> str:
+) -> dict[str, Any]:
     """Get a complete health system profile in one call.
 
     Combines AHRQ Compendium (system to hospitals), CMS POS (beds, services,
@@ -119,16 +120,16 @@ async def get_system_profile(
     if not system_id and system_name:
         matches = fuzzy_search_systems(system_name, systems_df, limit=1)
         if not matches:
-            return json.dumps({"error": f"No health system found matching '{system_name}'"})
+            return error_response(f"No health system found matching '{system_name}'")
         system_id = matches[0]["system_id"]
 
     if not system_id:
-        return json.dumps({"error": "Provide either system_id or system_name"})
+        return error_response("Provide either system_id or system_name")
 
     # Get system info
     sys_row = systems_df[systems_df["health_sys_id"] == system_id]
     if sys_row.empty:
-        return json.dumps({"error": f"System ID '{system_id}' not found in AHRQ Compendium"})
+        return error_response(f"System ID '{system_id}' not found in AHRQ Compendium")
 
     sys_info = sys_row.iloc[0]
     sys_name = str(sys_info.get("health_sys_name", ""))
@@ -209,14 +210,14 @@ async def get_system_profile(
         outpatient_sites=[o.model_dump() for o in outpatient_sites],
         off_site_summary=off_site.model_dump(),
     )
-    return json.dumps(profile.model_dump(), indent=2)
+    return to_structured(profile.model_dump())
 
 
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def get_system_facilities(
     system_id: str,
     facility_type: str = "all",
-) -> str:
+) -> dict[str, Any]:
     """Get detailed facility data for a health system with full POS enrichment.
 
     Args:
@@ -228,7 +229,7 @@ async def get_system_facilities(
 
     ccns = resolve_system_ccns(system_id, hospitals_df)
     if not ccns:
-        return json.dumps({"error": f"No hospitals found for system ID '{system_id}'"})
+        return error_response(f"No hospitals found for system ID '{system_id}'")
 
     facilities = []
     for ccn in ccns:
@@ -249,7 +250,7 @@ async def get_system_facilities(
     if sub_entities:
         result["sub_entities"] = [s.model_dump() for s in sub_entities]
 
-    return json.dumps(result, indent=2)
+    return to_structured(result)
 
 
 if __name__ == "__main__":

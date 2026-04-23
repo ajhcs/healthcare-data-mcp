@@ -7,7 +7,7 @@ This repo supports two practical modes:
 - Local stdio: `hc-mcp <server-name>` for Claude Desktop, Claude Code, Codex, and other local MCP clients.
 - Local Streamable HTTP: `docker compose up --build`, then use `.mcp.json` with the localhost ports.
 
-OpenAI API and ChatGPT connectors require remote MCP servers reachable over HTTP/SSE or Streamable HTTP. This repo is not yet a production remote connector because it does not include auth, TLS, multi-tenant isolation, or public deployment manifests.
+OpenAI API and ChatGPT connectors require remote MCP servers reachable over HTTP/SSE or Streamable HTTP. This repo includes a local-safe metadata gateway with bearer-token hooks, Host/Origin validation, and `search`/`fetch` tools, but production deployment still needs HTTPS termination and edge identity policy.
 
 ## Best-Practice Checklist
 
@@ -47,7 +47,7 @@ Codex local stdio:
 codex mcp add cms-facility -- hc-mcp cms-facility
 ```
 
-Codex/OpenAI remote HTTP config should point at a deployed HTTPS MCP endpoint, not localhost:
+Codex/OpenAI remote HTTP config should point at the deployed HTTPS gateway endpoint, not localhost:
 
 ```toml
 [mcp_servers.healthcareData]
@@ -64,8 +64,7 @@ args = ["cms-facility"]
 
 ## Gaps To Close Before Public Remote Use
 
-- Add an authenticated remote gateway or deploy each server behind a trusted auth layer.
-- Add OpenAI-compatible `search` and `fetch` tools for any dataset intended for ChatGPT connectors or deep research.
+- Deploy `hc-mcp gateway` behind HTTPS with OAuth/OIDC or a trusted identity-aware proxy.
 - Add integration tests with MCP Inspector against stdio and Streamable HTTP.
 - Replace date-specific CMS download URLs with catalog discovery where possible.
 - Expand unit tests beyond `health-system-profiler`.

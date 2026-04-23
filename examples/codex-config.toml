@@ -1,0 +1,73 @@
+# Example ~/.codex/config.toml entries for healthcare-data-mcp.
+# Keep only the servers you actually want Codex to start.
+
+[mcp_servers.cmsFacility]
+command = "hc-mcp"
+args = ["cms-facility"]
+
+[mcp_servers.serviceArea]
+command = "hc-mcp"
+args = ["service-area"]
+
+[mcp_servers.geoDemographics]
+command = "hc-mcp"
+args = ["geo-demographics"]
+
+[mcp_servers.driveTime]
+command = "hc-mcp"
+args = ["drive-time"]
+
+[mcp_servers.hospitalQuality]
+command = "hc-mcp"
+args = ["hospital-quality"]
+
+[mcp_servers.healthSystemProfiler]
+command = "hc-mcp"
+args = ["health-system-profiler"]
+
+[mcp_servers.financialIntelligence]
+command = "hc-mcp"
+args = ["financial-intelligence"]
+
+[mcp_servers.priceTransparency]
+command = "hc-mcp"
+args = ["price-transparency"]
+
+[mcp_servers.physicianReferralNetwork]
+command = "hc-mcp"
+args = ["physician-referral-network"]
+
+[mcp_servers.workforceAnalytics]
+command = "hc-mcp"
+args = ["workforce-analytics"]
+
+[mcp_servers.claimsAnalytics]
+command = "hc-mcp"
+args = ["claims-analytics"]
+
+[mcp_servers.publicRecords]
+command = "hc-mcp"
+args = ["public-records"]
+
+[mcp_servers.webIntelligence]
+command = "hc-mcp"
+args = ["web-intelligence"]
+
+[mcp_servers.discovery]
+command = "hc-mcp"
+args = ["discovery"]
+
+[mcp_servers.gateway]
+command = "hc-mcp"
+args = ["gateway"]
+
+# If the Docker Compose Streamable HTTP servers are already running, Codex can
+# connect to localhost instead of spawning stdio processes.
+[mcp_servers.cmsFacilityHttp]
+url = "http://127.0.0.1:8006/mcp"
+
+[mcp_servers.discoveryHttp]
+url = "http://127.0.0.1:8015/mcp"
+
+[mcp_servers.gatewayHttp]
+url = "http://127.0.0.1:8016/mcp"

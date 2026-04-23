@@ -4,8 +4,8 @@ Provides tools for federal spending, 340B status, HIPAA breaches,
 accreditation, and interoperability data. Port 8013.
 """
 
+from typing import Any
 import csv
-import json
 import logging
 import os as _os
 from pathlib import Path
@@ -13,6 +13,7 @@ from pathlib import Path
 
 from shared.utils.http_client import resilient_request
 from mcp.server.fastmcp import FastMCP
+from shared.utils.mcp_response import error_response, to_structured
 
 from . import data_loaders, usaspending_client, sam_client  # pyright: ignore[reportAttributeAccessIssue]
 from .models import (
@@ -77,10 +78,10 @@ async def _lookup_chpl(cehrt_id: str, api_key: str) -> dict:
 # ---------------------------------------------------------------------------
 # Tool 1: search_usaspending
 # ---------------------------------------------------------------------------
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def search_usaspending(
     recipient_name: str, award_type: str = "", fiscal_year: str = "", limit: int = 25,
-) -> str:
+) -> dict[str, Any]:
     """Search federal spending awarded to a health system or hospital.
 
     Uses USAspending.gov (fully open, no auth needed).
@@ -106,7 +107,7 @@ async def search_usaspending(
                 recipient_name, award_type, fiscal_year, limit,
             )
             if "error" in raw:
-                return json.dumps(raw)
+                return to_structured(raw)
             data_loaders.cache_api_response("usaspending", cache_params, raw)
 
         results = raw.get("results", [])
@@ -138,19 +139,19 @@ async def search_usaspending(
             total_obligation=total_obligation,
             awards=awards,
         )
-        return json.dumps(response.model_dump())
+        return to_structured(response.model_dump())
     except Exception as e:
         logger.exception("search_usaspending failed")
-        return json.dumps({"error": f"search_usaspending failed: {e}"})
+        return error_response(f"search_usaspending failed: {e}")
 
 
 # ---------------------------------------------------------------------------
 # Tool 2: search_sam_gov
 # ---------------------------------------------------------------------------
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def search_sam_gov(
     keyword: str, posted_from: str = "", posted_to: str = "", ptype: str = "", limit: int = 25,
-) -> str:
+) -> dict[str, Any]:
     """Search federal contract opportunities and solicitations.
 
     Uses SAM.gov Opportunities API. Requires SAM_GOV_API_KEY env var.
@@ -178,7 +179,7 @@ async def search_sam_gov(
                 keyword, posted_from, posted_to, ptype, limit,
             )
             if "error" in raw:
-                return json.dumps(raw)
+                return to_structured(raw)
             data_loaders.cache_api_response("sam_gov", cache_params, raw)
 
         opp_data = raw.get("opportunitiesData", [])
@@ -205,19 +206,19 @@ async def search_sam_gov(
             total_results=total_results,
             opportunities=opportunities,
         )
-        return json.dumps(response.model_dump())
+        return to_structured(response.model_dump())
     except Exception as e:
         logger.exception("search_sam_gov failed")
-        return json.dumps({"error": f"search_sam_gov failed: {e}"})
+        return error_response(f"search_sam_gov failed: {e}")
 
 
 # ---------------------------------------------------------------------------
 # Tool 3: get_340b_status
 # ---------------------------------------------------------------------------
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def get_340b_status(
     entity_name: str = "", entity_id: str = "", state: str = "",
-) -> str:
+) -> dict[str, Any]:
     """Look up 340B Drug Pricing Program enrollment and contract pharmacy data.
 
     Requires manual download of the HRSA 340B OPAIS daily JSON export.
@@ -229,16 +230,16 @@ async def get_340b_status(
     """
     try:
         if not entity_name and not entity_id:
-            return json.dumps({"error": "At least one of entity_name or entity_id is required."})
+            return error_response("At least one of entity_name or entity_id is required.")
 
         if not data_loaders.ensure_340b_loaded():
-            return json.dumps({
-                "error": "340B data not available",
-                "instructions": (
+            return error_response(
+                "340B data not available",
+                instructions=(
                     "Download the HRSA 340B OPAIS daily JSON export and place it at: "
                     f"{data_loaders._340B_JSON}"
                 ),
-            })
+            )
 
         rows = data_loaders.query_340b(
             entity_name=entity_name, entity_id=entity_id, state=state,
@@ -256,19 +257,19 @@ async def get_340b_status(
             total_results=len(entities),
             entities=entities,
         )
-        return json.dumps(response.model_dump())
+        return to_structured(response.model_dump())
     except Exception as e:
         logger.exception("get_340b_status failed")
-        return json.dumps({"error": f"get_340b_status failed: {e}"})
+        return error_response(f"get_340b_status failed: {e}")
 
 
 # ---------------------------------------------------------------------------
 # Tool 4: get_breach_history
 # ---------------------------------------------------------------------------
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def get_breach_history(
     entity_name: str, state: str = "", min_individuals: int = 0,
-) -> str:
+) -> dict[str, Any]:
     """Look up HIPAA breach reports for an organization.
 
     Requires manual download of breach data CSV from HHS OCR portal.
@@ -280,14 +281,14 @@ async def get_breach_history(
     """
     try:
         if not data_loaders.ensure_breach_loaded():
-            return json.dumps({
-                "error": "HIPAA breach data not available",
-                "instructions": (
+            return error_response(
+                "HIPAA breach data not available",
+                instructions=(
                     "Download the breach report CSV from "
                     "https://ocrportal.hhs.gov/ocr/breach/breach_report.jsf "
                     f"and place it at: {data_loaders._BREACH_CSV}"
                 ),
-            })
+            )
 
         rows = data_loaders.query_breaches(
             entity_name=entity_name, state=state, min_individuals=min_individuals,
@@ -321,19 +322,19 @@ async def get_breach_history(
             total_individuals_affected=total_individuals,
             breaches=breaches,
         )
-        return json.dumps(response.model_dump())
+        return to_structured(response.model_dump())
     except Exception as e:
         logger.exception("get_breach_history failed")
-        return json.dumps({"error": f"get_breach_history failed: {e}"})
+        return error_response(f"get_breach_history failed: {e}")
 
 
 # ---------------------------------------------------------------------------
 # Tool 5: get_accreditation
 # ---------------------------------------------------------------------------
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def get_accreditation(
     ccn: str = "", provider_name: str = "", state: str = "",
-) -> str:
+) -> dict[str, Any]:
     """Look up hospital accreditation and certification status.
 
     Uses CMS Provider of Services (POS) file. Includes Joint Commission,
@@ -346,7 +347,7 @@ async def get_accreditation(
     """
     try:
         if not ccn and not provider_name:
-            return json.dumps({"error": "At least one of ccn or provider_name is required."})
+            return error_response("At least one of ccn or provider_name is required.")
 
         await data_loaders.ensure_pos_cached()
 
@@ -382,19 +383,19 @@ async def get_accreditation(
             total_results=len(providers),
             providers=providers,
         )
-        return json.dumps(response.model_dump())
+        return to_structured(response.model_dump())
     except Exception as e:
         logger.exception("get_accreditation failed")
-        return json.dumps({"error": f"get_accreditation failed: {e}"})
+        return error_response(f"get_accreditation failed: {e}")
 
 
 # ---------------------------------------------------------------------------
 # Tool 6: get_interop_status
 # ---------------------------------------------------------------------------
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def get_interop_status(
     ccn: str = "", facility_name: str = "", state: str = "",
-) -> str:
+) -> dict[str, Any]:
     """Check Promoting Interoperability attestation and EHR certification.
 
     Uses CMS Promoting Interoperability dataset. Optionally enriches with
@@ -407,7 +408,7 @@ async def get_interop_status(
     """
     try:
         if not ccn and not facility_name:
-            return json.dumps({"error": "At least one of ccn or facility_name is required."})
+            return error_response("At least one of ccn or facility_name is required.")
 
         await data_loaders.ensure_pi_cached()
 
@@ -457,10 +458,10 @@ async def get_interop_status(
             total_results=len(records),
             records=records,
         )
-        return json.dumps(response.model_dump())
+        return to_structured(response.model_dump())
     except Exception as e:
         logger.exception("get_interop_status failed")
-        return json.dumps({"error": f"get_interop_status failed: {e}"})
+        return error_response(f"get_interop_status failed: {e}")
 
 
 if __name__ == "__main__":

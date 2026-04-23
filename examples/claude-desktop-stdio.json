@@ -1,0 +1,64 @@
+{
+  "mcpServers": {
+    "cms-facility": {
+      "command": "hc-mcp",
+      "args": ["cms-facility"]
+    },
+    "service-area": {
+      "command": "hc-mcp",
+      "args": ["service-area"]
+    },
+    "geo-demographics": {
+      "command": "hc-mcp",
+      "args": ["geo-demographics"]
+    },
+    "drive-time": {
+      "command": "hc-mcp",
+      "args": ["drive-time"]
+    },
+    "hospital-quality": {
+      "command": "hc-mcp",
+      "args": ["hospital-quality"]
+    },
+    "health-system-profiler": {
+      "command": "hc-mcp",
+      "args": ["health-system-profiler"]
+    },
+    "financial-intelligence": {
+      "command": "hc-mcp",
+      "args": ["financial-intelligence"]
+    },
+    "price-transparency": {
+      "command": "hc-mcp",
+      "args": ["price-transparency"]
+    },
+    "physician-referral-network": {
+      "command": "hc-mcp",
+      "args": ["physician-referral-network"]
+    },
+    "workforce-analytics": {
+      "command": "hc-mcp",
+      "args": ["workforce-analytics"]
+    },
+    "claims-analytics": {
+      "command": "hc-mcp",
+      "args": ["claims-analytics"]
+    },
+    "public-records": {
+      "command": "hc-mcp",
+      "args": ["public-records"]
+    },
+    "web-intelligence": {
+      "command": "hc-mcp",
+      "args": ["web-intelligence"]
+    },
+    "discovery": {
+      "command": "hc-mcp",
+      "args": ["discovery"]
+    },
+    "gateway": {
+      "command": "hc-mcp",
+      "args": ["gateway"]
+    }
+  }
+}

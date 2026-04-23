@@ -1,0 +1,72 @@
+{
+  "manifest_version": "0.3",
+  "name": "healthcare-data-mcp",
+  "display_name": "Healthcare Data MCP",
+  "version": "0.1.0",
+  "description": "Local MCP access to public healthcare facility, quality, market, finance, workforce, and claims data.",
+  "long_description": "Runs one selected healthcare-data-mcp server over stdio for Claude Desktop. The packaged launcher delegates to the repo's hc-mcp entry point and defaults to the CMS facility server.",
+  "author": {
+    "name": "Healthcare Data MCP Contributors"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ajhcs/healthcare-data-mcp.git"
+  },
+  "documentation": "https://github.com/ajhcs/healthcare-data-mcp#readme",
+  "license": "MIT",
+  "keywords": [
+    "healthcare",
+    "cms",
+    "hospital",
+    "mcp",
+    "data"
+  ],
+  "server": {
+    "type": "python",
+    "entry_point": "server/launcher.py",
+    "mcp_config": {
+      "command": "python3",
+      "args": [
+        "${__dirname}/server/launcher.py",
+        "${user_config.server_name}"
+      ],
+      "env": {
+        "PYTHONPATH": "${__dirname}/server/lib"
+      },
+      "platform_overrides": {
+        "win32": {
+          "command": "py",
+          "args": [
+            "-3",
+            "${__dirname}/server/launcher.py",
+            "${user_config.server_name}"
+          ],
+          "env": {
+            "PYTHONPATH": "${__dirname}/server/lib"
+          }
+        }
+      }
+    }
+  },
+  "tools_generated": true,
+  "compatibility": {
+    "claude_desktop": ">=0.10.0",
+    "platforms": [
+      "darwin",
+      "win32",
+      "linux"
+    ],
+    "runtimes": {
+      "python": ">=3.11,<4.0"
+    }
+  },
+  "user_config": {
+    "server_name": {
+      "type": "string",
+      "title": "Healthcare Data MCP server",
+      "description": "Server to run: cms-facility, service-area, geo-demographics, drive-time, hospital-quality, health-system-profiler, financial-intelligence, price-transparency, physician-referral-network, workforce-analytics, claims-analytics, public-records, web-intelligence, discovery, or gateway.",
+      "required": true,
+      "default": "cms-facility"
+    }
+  }
+}

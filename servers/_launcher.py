@@ -41,6 +41,8 @@ SERVERS: dict[str, ServerSpec] = {
     "claims-analytics": ServerSpec("servers.claims_analytics.server", 8012, "DRG, service-line, and claims analytics"),
     "public-records": ServerSpec("servers.public_records.server", 8013, "SAM.gov, USAspending, CHPL, and accreditation"),
     "web-intelligence": ServerSpec("servers.web_intelligence.server", 8014, "Web search and health system OSINT"),
+    "discovery": ServerSpec("servers.discovery.server", 8015, "Dataset catalog resources, cache status, and prompts"),
+    "gateway": ServerSpec("servers.gateway.server", 8016, "Remote-safe metadata gateway with search/fetch"),
 }
 
 

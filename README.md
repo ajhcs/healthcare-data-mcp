@@ -1,6 +1,6 @@
 # healthcare-data-mcp
 
-MCP servers for public healthcare data: CMS facility files, hospital service areas, demographics, drive times, hospital quality, financial intelligence, price transparency, physician referral networks, workforce analytics, claims analytics, public records, and web intelligence.
+MCP servers for public healthcare data: CMS facility files, hospital service areas, demographics, drive times, hospital quality, financial intelligence, price transparency, physician referral networks, workforce analytics, claims analytics, public records, web intelligence, dataset discovery, and remote-safe metadata gateway access.
 
 ## Install
 
@@ -13,6 +13,13 @@ Run one server over stdio for local agent clients:
 
 ```bash
 hc-mcp cms-facility
+```
+
+Run the discovery resources/prompts server or remote-safe metadata gateway:
+
+```bash
+hc-mcp discovery
+hc-mcp gateway --transport streamable-http --port 8016
 ```
 
 Run one server over Streamable HTTP:
