@@ -24,6 +24,7 @@ LAUNCHER_SOURCE = REPO_ROOT / "desktop-extension" / "server" / "launcher.py"
 SERVER_NAMES = {
     "claims-analytics",
     "cms-facility",
+    "community-health",
     "discovery",
     "drive-time",
     "financial-intelligence",
@@ -33,7 +34,9 @@ SERVER_NAMES = {
     "hospital-quality",
     "physician-referral-network",
     "price-transparency",
+    "provider-enrollment",
     "public-records",
+    "research-trials",
     "service-area",
     "web-intelligence",
     "workforce-analytics",

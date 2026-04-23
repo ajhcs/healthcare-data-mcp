@@ -8,10 +8,12 @@ Install the package in the Python environment Claude Desktop or Codex can reach:
 
 ```bash
 python3 -m pip install -e .
+hc-mcp-setup --interactive
 hc-mcp --list
 ```
 
 If a GUI client cannot find `hc-mcp`, replace `command = "hc-mcp"` or `"command": "hc-mcp"` with the absolute path from `which hc-mcp`.
+If the GUI client launches outside this repository, set `HC_MCP_ENV_FILE=/absolute/path/to/.env` in that server's MCP config.
 
 ## Claude Desktop Stdio
 
@@ -30,14 +32,19 @@ Use `examples/claude-desktop-stdio.json` as a concrete `claude_desktop_config.js
 
 This mode does not require Docker or HTTP ports.
 
-## Codex
+## Codex CLI / Codex IDE / Codex App
 
-Use `examples/codex-config.toml` for `~/.codex/config.toml` entries. Local stdio is the default recommendation:
+Use `examples/codex-config.toml` for `~/.codex/config.toml` entries. Codex CLI and the IDE/App share `config.toml`, so one setup works across both local clients. Local stdio is the default recommendation:
 
 ```toml
 [mcp_servers.cmsFacility]
 command = "hc-mcp"
 args = ["cms-facility"]
+
+[mcp_servers.publicRecords]
+command = "hc-mcp"
+args = ["public-records"]
+env = { HC_MCP_ENV_FILE = "/absolute/path/to/healthcare-data-mcp/.env" }
 ```
 
 When Docker Compose Streamable HTTP servers are already running, Codex can use localhost URLs instead:
@@ -63,6 +70,8 @@ python3 scripts/build_mcpb.py \
   --output dist/healthcare-data-mcp-cms-facility.mcpb
 ```
 
+The Desktop Extension manifest exposes optional GUI fields for `SAM_GOV_API_KEY`, `CHPL_API_KEY`, `SEC_USER_AGENT`, Census/HUD/routing/workforce/search keys, and the selected `server_name`. This is the easiest path for non-technical Claude Desktop users who should not edit JSON by hand.
+
 For a fast manifest and launcher smoke test that does not install dependencies:
 
 ```bash
@@ -76,3 +85,9 @@ The generated `.mcpb` is a zip archive with `manifest.json`, `server/launcher.py
 - The MCPB manifest packages one selected server name at a time. Build separate artifacts for different default servers.
 - The classic Python MCPB path expects Python 3.11+ to be available to Claude Desktop.
 - The skeleton has not been submitted to a connector directory and should be validated in Claude Desktop before distribution.
+
+## References
+
+- OpenAI Codex MCP configuration: https://developers.openai.com/codex/mcp
+- Claude Code MCP configuration: https://docs.anthropic.com/en/docs/claude-code/mcp
+- Anthropic remote MCP connector: https://docs.anthropic.com/en/docs/agents-and-tools/mcp-connector

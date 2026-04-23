@@ -24,6 +24,26 @@ OpenAI API and ChatGPT connectors require remote MCP servers reachable over HTTP
 - Validate with MCP Inspector plus the target clients, not only unit tests.
 - Bind local HTTP servers to `127.0.0.1` by default. Use `MCP_HOST=0.0.0.0` only for containers or trusted reverse-proxy deployments.
 
+## One-Time Setup
+
+Install and create `.env`:
+
+```bash
+python3 -m pip install -e ".[dev]"
+hc-mcp-setup --interactive
+hc-mcp --list
+```
+
+The setup wizard prompts for known keys, preserves existing values, avoids echoing secret inputs, validates important settings, and can print client snippets:
+
+```bash
+hc-mcp-setup --validate-only
+hc-mcp-setup --print-client-snippets
+hc-mcp-setup --set SAM_GOV_API_KEY=... --set 'SEC_USER_AGENT=HealthcareData clyons@ajhcs.org'
+```
+
+`hc-mcp` automatically loads `.env` from the current working directory. For GUI clients that launch from a different directory, set `HC_MCP_ENV_FILE=/absolute/path/to/.env` in the client configuration or pass `--env-file /absolute/path/to/.env`.
+
 ## Client Examples
 
 Claude Code project config can use this repo's `.mcp.json` after Docker Compose starts the HTTP servers.
@@ -51,10 +71,27 @@ Claude Desktop stdio entry:
 }
 ```
 
+For servers that need keys, add the env-file pointer:
+
+```json
+{
+  "mcpServers": {
+    "public-records": {
+      "command": "hc-mcp",
+      "args": ["public-records"],
+      "env": {
+        "HC_MCP_ENV_FILE": "/absolute/path/to/healthcare-data-mcp/.env"
+      }
+    }
+  }
+}
+```
+
 Codex local stdio:
 
 ```bash
 codex mcp add cms-facility -- hc-mcp cms-facility
+codex mcp add publicRecords --env HC_MCP_ENV_FILE=/absolute/path/to/.env -- hc-mcp public-records
 ```
 
 Codex/OpenAI remote HTTP config should point at the deployed HTTPS gateway endpoint, not localhost:
@@ -72,7 +109,25 @@ Codex local stdio config in `~/.codex/config.toml`:
 [mcp_servers.cmsFacility]
 command = "hc-mcp"
 args = ["cms-facility"]
+
+[mcp_servers.publicRecords]
+command = "hc-mcp"
+args = ["public-records"]
+env = { HC_MCP_ENV_FILE = "/absolute/path/to/healthcare-data-mcp/.env" }
 ```
+
+Claude Code can import Claude Desktop server config and also supports local/project/user MCP scopes. For team use, keep the checked-in `.mcp.json` HTTP-only and put secrets in `.env` or in each user's local MCP config.
+
+## Compatibility Matrix
+
+| Client/system | Recommended mode | Config source |
+| --- | --- | --- |
+| Codex CLI / Codex IDE/App | Stdio for local work; Streamable HTTP when Docker is already running | `~/.codex/config.toml`, `codex mcp add`, or `examples/codex-config.toml` |
+| Claude Code | Project HTTP via `.mcp.json` or stdio via `claude mcp add` | `.mcp.json`, local/user/project MCP scope |
+| Claude Desktop | Stdio JSON or MCPB Desktop Extension | `examples/claude-desktop-stdio.json` or generated `.mcpb` |
+| Claude Desktop cowork/shared machine | Docker Compose HTTP on localhost plus per-user client config | `.mcp.json` plus `.env` on the host |
+| Generic MCP clients | Stdio command or Streamable HTTP URL | `hc-mcp <server>` or `http://localhost:<port>/mcp` |
+| OpenAI API / ChatGPT remote MCP style integrations | HTTPS remote gateway only | `hc-mcp gateway --transport streamable-http` behind HTTPS/auth |
 
 ## Gaps To Close Before Public Remote Use
 

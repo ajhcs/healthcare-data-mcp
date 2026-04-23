@@ -7,6 +7,8 @@ import os
 import runpy
 from dataclasses import dataclass
 
+from shared.utils.env_file import load_env_file
+
 
 @dataclass(frozen=True)
 class ServerSpec:
@@ -75,8 +77,15 @@ def main() -> None:
         help="MCP transport. Defaults to MCP_TRANSPORT or stdio.",
     )
     parser.add_argument("--port", type=int, default=None, help="HTTP/SSE port. Defaults to the server's standard port.")
+    parser.add_argument(
+        "--env-file",
+        default=None,
+        help="Optional dotenv file to load before starting the server. Defaults to HC_MCP_ENV_FILE or ./.env.",
+    )
     parser.add_argument("--list", action="store_true", help="List available servers and ports.")
     args = parser.parse_args()
+
+    load_env_file(args.env_file)
 
     if args.list:
         for name, spec in sorted(SERVERS.items(), key=lambda item: item[1].port):

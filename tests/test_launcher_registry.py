@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import os
+
+from shared.utils.env_file import load_env_file
 from servers._launcher import SERVERS
 
 
@@ -22,3 +25,13 @@ def test_launcher_ports_are_unique() -> None:
     ports = [spec.port for spec in SERVERS.values()]
 
     assert len(ports) == len(set(ports))
+
+
+def test_env_loader_supports_launcher_env_file(tmp_path, monkeypatch) -> None:
+    env_file = tmp_path / ".env"
+    env_file.write_text("SAM_GOV_API_KEY=from_file\n", encoding="utf-8")
+    monkeypatch.delenv("SAM_GOV_API_KEY", raising=False)
+
+    load_env_file(env_file)
+
+    assert os.environ["SAM_GOV_API_KEY"] == "from_file"

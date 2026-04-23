@@ -46,7 +46,10 @@
     },
     "public-records": {
       "command": "hc-mcp",
-      "args": ["public-records"]
+      "args": ["public-records"],
+      "env": {
+        "HC_MCP_ENV_FILE": "/absolute/path/to/healthcare-data-mcp/.env"
+      }
     },
     "web-intelligence": {
       "command": "hc-mcp",
@@ -59,6 +62,18 @@
     "gateway": {
       "command": "hc-mcp",
       "args": ["gateway"]
+    },
+    "provider-enrollment": {
+      "command": "hc-mcp",
+      "args": ["provider-enrollment"]
+    },
+    "community-health": {
+      "command": "hc-mcp",
+      "args": ["community-health"]
+    },
+    "research-trials": {
+      "command": "hc-mcp",
+      "args": ["research-trials"]
     }
   }
 }

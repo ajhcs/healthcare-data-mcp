@@ -1,5 +1,7 @@
 # Example ~/.codex/config.toml entries for healthcare-data-mcp.
 # Keep only the servers you actually want Codex to start.
+# Run `hc-mcp-setup --interactive` first to create .env, then either start
+# Codex from the repo root or set HC_MCP_ENV_FILE below.
 
 [mcp_servers.cmsFacility]
 command = "hc-mcp"
@@ -48,6 +50,8 @@ args = ["claims-analytics"]
 [mcp_servers.publicRecords]
 command = "hc-mcp"
 args = ["public-records"]
+# Optional when Codex is not launched from the repo root:
+# env = { HC_MCP_ENV_FILE = "/absolute/path/to/healthcare-data-mcp/.env" }
 
 [mcp_servers.webIntelligence]
 command = "hc-mcp"
@@ -61,6 +65,18 @@ args = ["discovery"]
 command = "hc-mcp"
 args = ["gateway"]
 
+[mcp_servers.providerEnrollment]
+command = "hc-mcp"
+args = ["provider-enrollment"]
+
+[mcp_servers.communityHealth]
+command = "hc-mcp"
+args = ["community-health"]
+
+[mcp_servers.researchTrials]
+command = "hc-mcp"
+args = ["research-trials"]
+
 # If the Docker Compose Streamable HTTP servers are already running, Codex can
 # connect to localhost instead of spawning stdio processes.
 [mcp_servers.cmsFacilityHttp]
@@ -71,3 +87,12 @@ url = "http://127.0.0.1:8015/mcp"
 
 [mcp_servers.gatewayHttp]
 url = "http://127.0.0.1:8016/mcp"
+
+[mcp_servers.providerEnrollmentHttp]
+url = "http://127.0.0.1:8017/mcp"
+
+[mcp_servers.communityHealthHttp]
+url = "http://127.0.0.1:8018/mcp"
+
+[mcp_servers.researchTrialsHttp]
+url = "http://127.0.0.1:8019/mcp"

@@ -6,6 +6,7 @@ MCP servers for public healthcare data: CMS facility files, hospital service are
 
 ```bash
 python3 -m pip install -e ".[dev]"
+hc-mcp-setup --interactive
 hc-mcp --list
 ```
 
@@ -59,6 +60,18 @@ codex mcp add cms-facility -- hc-mcp cms-facility
 ```
 
 See [docs/MCP_CLIENTS.md](docs/MCP_CLIENTS.md) for Claude Desktop, Claude Code, Codex, OpenAI remote MCP, and packaging guidance.
+
+## API Key Setup
+
+Run the setup wizard to create or update `.env` without hand-editing secrets:
+
+```bash
+hc-mcp-setup --interactive
+hc-mcp-setup --validate-only
+hc-mcp-setup --print-client-snippets
+```
+
+`hc-mcp` loads `.env` from the current working directory before starting a server. If a GUI or agent launches the command from another directory, pass `--env-file /path/to/.env` or set `HC_MCP_ENV_FILE=/path/to/.env` in that client's MCP config.
 
 ## Cache and API Notes
 
