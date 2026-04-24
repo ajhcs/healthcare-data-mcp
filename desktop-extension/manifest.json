@@ -3,8 +3,8 @@
   "name": "healthcare-data-mcp",
   "display_name": "Healthcare Data MCP",
   "version": "0.1.0",
-  "description": "Local MCP access to public healthcare facility, quality, market, finance, workforce, claims, provider-enrollment, community-health, research, and compliance data.",
-  "long_description": "Runs one selected healthcare-data-mcp server over stdio for Claude Desktop. The packaged launcher delegates to the repo's hc-mcp entry point and defaults to the CMS facility server. Optional API keys can be entered through the desktop extension configuration UI.",
+  "description": "Local MCP access to public healthcare market intelligence: facilities, ownership, quality, claims, workforce, research, and compliance screening.",
+  "long_description": "Runs one selected healthcare-data-mcp server over stdio for Claude Desktop. Choose from focused servers for CMS facilities, service areas, demographics, drive times, quality, health systems, finance, price transparency, referrals, workforce, claims, public records, web intelligence, provider enrollment, community health, and research trials. Optional API keys can be entered through the desktop extension configuration UI.",
   "author": {
     "name": "Healthcare Data MCP Contributors"
   },

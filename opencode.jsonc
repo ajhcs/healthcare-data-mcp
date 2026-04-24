@@ -4,7 +4,7 @@
 //
 // Two transport modes:
 //   stdio  -- servers run as local child processes (default, zero setup)
-//   remote -- connect to Docker Compose HTTP endpoints on ports 8002-8014
+//   remote -- connect to Docker Compose HTTP endpoints on ports 8002-8019
 //
 // To use HTTP mode instead, run `docker compose up -d` first, then switch
 // each entry to:   { "type": "remote", "url": "http://localhost:PORT/mcp" }
@@ -124,6 +124,46 @@
         "GOOGLE_CSE_API_KEY": "{env:GOOGLE_CSE_API_KEY}",
         "GOOGLE_CSE_ID": "{env:GOOGLE_CSE_ID}",
         "PROXYCURL_API_KEY": "{env:PROXYCURL_API_KEY}"
+      }
+    },
+    "hc-discovery": {
+      "type": "local",
+      "command": "python",
+      "args": ["-m", "servers.discovery.server"],
+      "env": {
+        "PYTHONPATH": "."
+      }
+    },
+    "hc-gateway": {
+      "type": "local",
+      "command": "python",
+      "args": ["-m", "servers.gateway.server"],
+      "env": {
+        "PYTHONPATH": "."
+      }
+    },
+    "hc-provider-enrollment": {
+      "type": "local",
+      "command": "python",
+      "args": ["-m", "servers.provider_enrollment.server"],
+      "env": {
+        "PYTHONPATH": "."
+      }
+    },
+    "hc-community-health": {
+      "type": "local",
+      "command": "python",
+      "args": ["-m", "servers.community_health.server"],
+      "env": {
+        "PYTHONPATH": "."
+      }
+    },
+    "hc-research-trials": {
+      "type": "local",
+      "command": "python",
+      "args": ["-m", "servers.research_trials.server"],
+      "env": {
+        "PYTHONPATH": "."
       }
     }
   }

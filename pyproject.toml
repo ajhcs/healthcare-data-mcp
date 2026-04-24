@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "healthcare-data-mcp"
 version = "0.1.0"
-description = "MCP servers for public healthcare facility data, service areas, demographics, and quality metrics"
+description = "Local MCP servers for public healthcare market intelligence, facility data, ownership, quality, claims, workforce, research, and compliance screening"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
