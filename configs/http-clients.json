@@ -52,6 +52,26 @@
     "hc-web-intelligence": {
       "type": "http",
       "url": "http://localhost:8014/mcp"
+    },
+    "hc-discovery": {
+      "type": "http",
+      "url": "http://localhost:8015/mcp"
+    },
+    "hc-gateway": {
+      "type": "http",
+      "url": "http://localhost:8016/mcp"
+    },
+    "hc-provider-enrollment": {
+      "type": "http",
+      "url": "http://localhost:8017/mcp"
+    },
+    "hc-community-health": {
+      "type": "http",
+      "url": "http://localhost:8018/mcp"
+    },
+    "hc-research-trials": {
+      "type": "http",
+      "url": "http://localhost:8019/mcp"
     }
   }
 }

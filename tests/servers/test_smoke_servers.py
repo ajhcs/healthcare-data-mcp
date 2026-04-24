@@ -1,4 +1,4 @@
-"""Fast smoke coverage for all 13 MCP server modules.
+"""Fast smoke coverage for the original MCP server modules.
 
 This is intentionally lightweight enough for CI:
 - import each server module

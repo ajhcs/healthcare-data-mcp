@@ -36,6 +36,11 @@ declare -A SERVER_MODULES=(
   [hc-claims-analytics]="servers.claims_analytics.server"
   [hc-public-records]="servers.public_records.server"
   [hc-web-intelligence]="servers.web_intelligence.server"
+  [hc-discovery]="servers.discovery.server"
+  [hc-gateway]="servers.gateway.server"
+  [hc-provider-enrollment]="servers.provider_enrollment.server"
+  [hc-community-health]="servers.community_health.server"
+  [hc-research-trials]="servers.research_trials.server"
 )
 
 declare -A SERVER_PORTS=(
@@ -52,6 +57,11 @@ declare -A SERVER_PORTS=(
   [hc-claims-analytics]=8012
   [hc-public-records]=8013
   [hc-web-intelligence]=8014
+  [hc-discovery]=8015
+  [hc-gateway]=8016
+  [hc-provider-enrollment]=8017
+  [hc-community-health]=8018
+  [hc-research-trials]=8019
 )
 
 # Servers that work with zero API keys
@@ -63,6 +73,11 @@ NO_KEY_SERVERS=(
   hc-price-transparency
   hc-physician-referral-network
   hc-claims-analytics
+  hc-discovery
+  hc-gateway
+  hc-provider-enrollment
+  hc-community-health
+  hc-research-trials
 )
 
 # ── Colors ───────────────────────────────────────────────────────────────────
@@ -452,8 +467,8 @@ if [ "$MODE" = "pip" ]; then
   echo "  # Claude Code picks up .mcp.json automatically"
   echo "  # For Docker: docker compose up -d"
 elif [ "$MODE" = "docker" ]; then
-  echo "  # 7 zero-config servers are already running!"
-  echo "  # For all 13 servers: cd $INSTALL_DIR && cp .env.example .env"
+  echo "  # Zero-config servers are already running!"
+  echo "  # For all 18 servers: cd $INSTALL_DIR && cp .env.example .env"
   echo "  # Edit .env, then: docker compose up -d"
 fi
 
@@ -465,7 +480,7 @@ for name in "${NO_KEY_SERVERS[@]}"; do
 done
 
 echo ""
-echo -e "${BOLD}Servers needing API keys:${NC}"
+echo -e "${BOLD}Servers with key-enhanced tools:${NC}"
 echo -e "  ${YELLOW}hc-geo-demographics${NC}  — Census + HUD keys"
 echo -e "  ${YELLOW}hc-drive-time${NC}        — OpenRouteService key"
 echo -e "  ${YELLOW}hc-financial-intelligence${NC} — SEC_USER_AGENT header"

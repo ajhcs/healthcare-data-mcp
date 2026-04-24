@@ -35,7 +35,7 @@ ENV_EXAMPLE="$PROJECT_ROOT/.env.example"
 
 echo ""
 echo -e "${BOLD}Healthcare Data MCP -- Setup${NC}"
-echo "13 servers, 68 tools, public healthcare data analytics"
+echo "18 servers for public healthcare market intelligence"
 echo ""
 
 # ---------------------------------------------------------------------------
@@ -347,6 +347,11 @@ report_server "health-system-profiler" "READY" "3 tools, no keys required"
 report_server "claims-analytics" "READY" "5 tools, no keys required"
 report_server "price-transparency" "READY" "5 tools, no keys required"
 report_server "physician-referral-network" "READY" "5 tools, no keys required"
+report_server "discovery" "READY" "catalog and cache metadata, no keys required"
+report_server "gateway" "READY" "metadata search/fetch, no keys required for local use"
+report_server "provider-enrollment" "READY" "PECOS enrollment and ownership, no keys required"
+report_server "community-health" "READY" "CDC PLACES estimates, no keys required"
+report_server "research-trials" "READY" "NIH RePORTER and ClinicalTrials.gov, no keys required"
 
 # Servers with optional keys
 if [ -n "${CENSUS_API_KEY:-}" ] || [ -n "${HUD_API_TOKEN:-}" ]; then
@@ -431,7 +436,7 @@ if [[ "${run_smoke:-N}" =~ ^[Yy] ]]; then
     info "Import results: $IMPORT_PASS passed, $IMPORT_FAIL failed"
 
     if [ "$IMPORT_FAIL" -eq 0 ]; then
-        ok "All 13 servers import successfully"
+        ok "All servers import successfully"
     else
         warn "Some servers failed to import. Check the errors above."
     fi
@@ -449,12 +454,13 @@ READY_COUNT=$(grep -c "READY" <<< "$(
     [ -n "${ORS_API_KEY:-}" ] && echo "READY" || echo "DEGRADED"
     [ -n "${BLS_API_KEY:-}" ] && echo "READY" || echo "DEGRADED"
     echo "READY"; echo "READY"; echo "READY"; echo "READY"; echo "READY"; echo "READY"; echo "READY"
+    echo "READY"; echo "READY"; echo "READY"; echo "READY"; echo "READY"
     [ -n "${GOOGLE_CSE_API_KEY:-}" ] && [ -n "${GOOGLE_CSE_ID:-}" ] && echo "READY" || echo "DEGRADED"
     [ -n "${SAM_GOV_API_KEY:-}" ] && [ -n "${CHPL_API_KEY:-}" ] && echo "READY" || echo "DEGRADED"
     [ -n "${SEC_USER_AGENT:-}" ] && echo "READY" || echo "DEGRADED"
 )" 2>/dev/null || echo "7")
 
-echo "  $READY_COUNT/13 servers at full capacity"
+echo "  $READY_COUNT/18 servers at full capacity"
 echo ""
 echo "  Next steps:"
 echo "    1. Activate the venv:  source .venv/bin/activate"
