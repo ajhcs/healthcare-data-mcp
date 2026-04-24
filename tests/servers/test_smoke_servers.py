@@ -22,7 +22,7 @@ SERVER_SPECS = [
     ("physician-referral-network", "servers.physician_referral_network.server", 6),
     ("workforce-analytics", "servers.workforce_analytics.server", 7),
     ("claims-analytics", "servers.claims_analytics.server", 5),
-    ("public-records", "servers.public_records.server", 6),
+    ("public-records", "servers.public_records.server", 15),
     ("web-intelligence", "servers.web_intelligence.server", 5),
 ]
 

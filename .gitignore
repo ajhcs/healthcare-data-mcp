@@ -3,17 +3,17 @@ __pycache__/
 *.pyo
 .pytest_cache/
 .ruff_cache/
+test-results/
 *.egg-info/
 dist/
 build/
 .venv/
 .env
-test-results/
 cookies.txt
+cookies*.txt
+*.cookies
 
 # Beads / Dolt files (added by bd init)
 .dolt/
 *.db
 .beads-credential-key
-.beads/
-AGENTS.md

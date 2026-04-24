@@ -3,7 +3,7 @@
 Uses monkeypatching to avoid real HTTP calls or file downloads.
 """
 
-import json
+from tests.helpers import parse_tool_result
 from unittest.mock import AsyncMock, patch
 
 import pandas as pd
@@ -106,7 +106,7 @@ def mock_hcahps_df():
 @pytest.mark.asyncio
 async def test_get_quality_scores_found(mock_hospital_info_df):
     with patch.object(server.data_loaders, "load_hospital_info", new_callable=AsyncMock, return_value=mock_hospital_info_df):
-        result = json.loads(await server.get_quality_scores("390223"))
+        result = parse_tool_result(await server.get_quality_scores("390223"))
     assert result["ccn"] == "390223"
     assert result["overall_rating"] == "4"
     assert result["mortality_national_comparison"] == "Above the national average"
@@ -116,7 +116,7 @@ async def test_get_quality_scores_found(mock_hospital_info_df):
 @pytest.mark.asyncio
 async def test_get_quality_scores_not_found(mock_hospital_info_df):
     with patch.object(server.data_loaders, "load_hospital_info", new_callable=AsyncMock, return_value=mock_hospital_info_df):
-        result = json.loads(await server.get_quality_scores("999999"))
+        result = parse_tool_result(await server.get_quality_scores("999999"))
     assert "error" in result
     assert "999999" in result["error"]
 
@@ -124,7 +124,7 @@ async def test_get_quality_scores_not_found(mock_hospital_info_df):
 @pytest.mark.asyncio
 async def test_get_quality_scores_empty_df():
     with patch.object(server.data_loaders, "load_hospital_info", new_callable=AsyncMock, return_value=pd.DataFrame()):
-        result = json.loads(await server.get_quality_scores("390223"))
+        result = parse_tool_result(await server.get_quality_scores("390223"))
     assert "error" in result
 
 
@@ -135,7 +135,7 @@ async def test_get_quality_scores_empty_df():
 @pytest.mark.asyncio
 async def test_get_readmission_data_found(mock_hrrp_df):
     with patch.object(server.data_loaders, "load_hrrp", new_callable=AsyncMock, return_value=mock_hrrp_df):
-        result = json.loads(await server.get_readmission_data("390223"))
+        result = parse_tool_result(await server.get_readmission_data("390223"))
     assert result["ccn"] == "390223"
     assert len(result["conditions"]) == 3
     condition_measures = {c["measure"] for c in result["conditions"]}
@@ -148,14 +148,14 @@ async def test_get_readmission_data_found(mock_hrrp_df):
 @pytest.mark.asyncio
 async def test_get_readmission_data_not_found(mock_hrrp_df):
     with patch.object(server.data_loaders, "load_hrrp", new_callable=AsyncMock, return_value=mock_hrrp_df):
-        result = json.loads(await server.get_readmission_data("000000"))
+        result = parse_tool_result(await server.get_readmission_data("000000"))
     assert "error" in result
 
 
 @pytest.mark.asyncio
 async def test_get_readmission_data_empty_df():
     with patch.object(server.data_loaders, "load_hrrp", new_callable=AsyncMock, return_value=pd.DataFrame()):
-        result = json.loads(await server.get_readmission_data("390223"))
+        result = parse_tool_result(await server.get_readmission_data("390223"))
     assert "error" in result
 
 
@@ -166,7 +166,7 @@ async def test_get_readmission_data_empty_df():
 @pytest.mark.asyncio
 async def test_get_safety_scores_found(mock_hac_df):
     with patch.object(server.data_loaders, "load_hac", new_callable=AsyncMock, return_value=mock_hac_df):
-        result = json.loads(await server.get_safety_scores("390223"))
+        result = parse_tool_result(await server.get_safety_scores("390223"))
     assert result["ccn"] == "390223"
     assert result["total_hac_score"] == pytest.approx(6.25)
     assert result["payment_reduction"] == "No"
@@ -175,7 +175,7 @@ async def test_get_safety_scores_found(mock_hac_df):
 @pytest.mark.asyncio
 async def test_get_safety_scores_not_found(mock_hac_df):
     with patch.object(server.data_loaders, "load_hac", new_callable=AsyncMock, return_value=mock_hac_df):
-        result = json.loads(await server.get_safety_scores("000000"))
+        result = parse_tool_result(await server.get_safety_scores("000000"))
     assert "error" in result
 
 
@@ -186,7 +186,7 @@ async def test_get_safety_scores_not_found(mock_hac_df):
 @pytest.mark.asyncio
 async def test_get_patient_experience_found(mock_hcahps_df):
     with patch.object(server.data_loaders, "load_hcahps", new_callable=AsyncMock, return_value=mock_hcahps_df):
-        result = json.loads(await server.get_patient_experience("390223"))
+        result = parse_tool_result(await server.get_patient_experience("390223"))
     assert result["ccn"] == "390223"
     assert result["survey_response_rate"] == "28"
     assert result["num_completed_surveys"] == "620"
@@ -198,5 +198,5 @@ async def test_get_patient_experience_found(mock_hcahps_df):
 @pytest.mark.asyncio
 async def test_get_patient_experience_not_found(mock_hcahps_df):
     with patch.object(server.data_loaders, "load_hcahps", new_callable=AsyncMock, return_value=mock_hcahps_df):
-        result = json.loads(await server.get_patient_experience("000000"))
+        result = parse_tool_result(await server.get_patient_experience("000000"))
     assert "error" in result

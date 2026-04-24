@@ -3,7 +3,6 @@
 Uses monkeypatching to avoid real data downloads.
 """
 
-import json
 from unittest.mock import AsyncMock, patch
 
 import pandas as pd
@@ -73,7 +72,7 @@ def mock_pos():
 @pytest.mark.asyncio
 async def test_search_health_systems(mock_ahrq_systems):
     with patch.object(server, "_load_ahrq_systems", new_callable=AsyncMock, return_value=mock_ahrq_systems):
-        result = json.loads(await server.search_health_systems("Jefferson"))
+        result = await server.search_health_systems("Jefferson")
     assert "results" in result
     assert len(result["results"]) >= 1
     assert result["results"][0]["name"] == "Jefferson Health"
@@ -87,7 +86,7 @@ async def test_get_system_profile(mock_ahrq_systems, mock_ahrq_hospitals, mock_p
         patch.object(server, "_load_pos", new_callable=AsyncMock, return_value=mock_pos),
         patch.object(server, "_search_nppes", new_callable=AsyncMock, return_value=[]),
     ):
-        result = json.loads(await server.get_system_profile(system_name="Jefferson Health"))
+        result = await server.get_system_profile(system_name="Jefferson Health")
     assert result["system"]["name"] == "Jefferson Health"
     assert result["system"]["hospital_count"] == 2
     assert len(result["inpatient_facilities"]) == 2
@@ -104,7 +103,7 @@ async def test_get_system_profile_not_found(mock_ahrq_systems, mock_ahrq_hospita
         patch.object(server, "_load_ahrq_hospitals", new_callable=AsyncMock, return_value=mock_ahrq_hospitals),
         patch.object(server, "_load_pos", new_callable=AsyncMock, return_value=mock_pos),
     ):
-        result = json.loads(await server.get_system_profile(system_name="Mayo Clinic"))
+        result = await server.get_system_profile(system_name="Mayo Clinic")
     assert "error" in result
 
 
@@ -114,6 +113,6 @@ async def test_get_system_facilities(mock_ahrq_hospitals, mock_pos):
         patch.object(server, "_load_ahrq_hospitals", new_callable=AsyncMock, return_value=mock_ahrq_hospitals),
         patch.object(server, "_load_pos", new_callable=AsyncMock, return_value=mock_pos),
     ):
-        result = json.loads(await server.get_system_facilities(system_id="SYS_001"))
+        result = await server.get_system_facilities(system_id="SYS_001")
     assert result["system_id"] == "SYS_001"
     assert len(result["inpatient_facilities"]) == 2

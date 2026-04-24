@@ -3,7 +3,6 @@
 Uses the shared cms_client for HTTP downloads and caching.
 """
 
-import asyncio
 import logging
 import sys
 from pathlib import Path
@@ -15,8 +14,7 @@ _project_root = Path(__file__).resolve().parent.parent.parent
 if str(_project_root) not in sys.path:
     sys.path.insert(0, str(_project_root))
 
-from shared.utils.cms_client import cms_download_csv  # noqa: E402
-from shared.utils.cms_url_resolver import resolve_cms_download_url  # noqa: E402
+from shared.utils.cms_client import CMS_API_BASE, cms_download_csv  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -28,26 +26,24 @@ DATASETS = {
     "hcahps": "dgck-syfz",
     "complications": "ynj2-r877",
 }
-_COST_REPORT_DATASET_TITLE = "Hospital Provider Cost Report"
 
 # In-memory DataFrame cache to avoid re-reading CSV on every call
-_BULK_TTL_DAYS = 90  # CMS bulk data refresh cadence
-
 _df_cache: dict[str, pd.DataFrame] = {}
-_df_lock = asyncio.Lock()
+
+
+def _csv_url(dataset_id: str) -> str:
+    """Build the CSV download URL for a CMS Provider Data Catalog dataset."""
+    return f"{CMS_API_BASE}/provider-data/api/1/datastore/query/{dataset_id}/0/download?format=csv"
 
 
 async def _load_dataset(key: str) -> pd.DataFrame:
     """Load a CMS dataset by key, downloading and caching as needed."""
-    async with _df_lock:
-        if key in _df_cache:
-            return _df_cache[key]
+    if key in _df_cache:
+        return _df_cache[key]
 
     dataset_id = DATASETS[key]
     cache_key = f"hospital_quality_{key}"
-    url = await resolve_cms_download_url(dataset_id)
-    if not url:
-        raise RuntimeError(f"Unable to resolve download URL for dataset {dataset_id!r}")
+    url = _csv_url(dataset_id)
 
     try:
         path = await cms_download_csv(url, cache_key=cache_key)
@@ -96,10 +92,11 @@ async def load_cost_report() -> pd.DataFrame:
     if key in _df_cache:
         return _df_cache[key]
 
+    url = (
+        "https://data.cms.gov/sites/default/files/2026-01/"
+        "3c39f483-c7e0-4025-8396-4df76942e10f/CostReport_2023_Final.csv"
+    )
     try:
-        url = await resolve_cms_download_url("cost-report-puf", "CostReport_")
-        if not url:
-            raise RuntimeError("Unable to resolve Hospital Provider Cost Report download URL")
         path = await cms_download_csv(url, cache_key="hospital_quality_cost_report")
         df = pd.read_csv(path, dtype=str, keep_default_na=False)
         df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]

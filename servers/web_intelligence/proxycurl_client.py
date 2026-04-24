@@ -42,10 +42,11 @@ async def lookup_profile(linkedin_url: str) -> dict:
 
     try:
         resp = await resilient_request(
-        "GET", _BASE_URL,
-        params={"linkedin_profile_url": linkedin_url, "use_cache": "if-recent"},
-        headers={"Authorization": f"Bearer {api_key}"},
-        timeout=_TIMEOUT,
+            "GET",
+            _BASE_URL,
+            params={"linkedin_profile_url": linkedin_url, "use_cache": "if-recent"},
+            headers={"Authorization": f"Bearer {api_key}"},
+            timeout=_TIMEOUT,
         )
         data = resp.json()
 

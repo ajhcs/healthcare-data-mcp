@@ -5,13 +5,14 @@ from public CMS Hospital Service Area File data, and provides Dartmouth
 Atlas HSA/HRR crosswalk lookups.
 """
 
-import json
+from typing import Any
 import logging
 import os
 import sys
 from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
+from shared.utils.mcp_response import error_response, to_structured
 
 # Support running both as a package and as a standalone script
 try:
@@ -29,18 +30,18 @@ logger = logging.getLogger(__name__)
 _transport = os.environ.get("MCP_TRANSPORT", "stdio")
 _mcp_kwargs = {"name": "service-area"}
 if _transport in ("sse", "streamable-http"):
-    _mcp_kwargs["host"] = "0.0.0.0"
+    _mcp_kwargs["host"] = os.environ.get("MCP_HOST", "127.0.0.1")
     _mcp_kwargs["port"] = int(os.environ.get("MCP_PORT", "8002"))
 mcp = FastMCP(**_mcp_kwargs)
 
 
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def compute_service_area(
     ccn: str,
     psa_threshold: float = 0.75,
     ssa_threshold: float = 0.95,
     use_contiguity: bool = False,
-) -> str:
+) -> dict[str, Any]:
     """Compute Primary and Secondary Service Areas for a hospital.
 
     Downloads the CMS Hospital Service Area File if not cached, filters to the
@@ -62,7 +63,7 @@ async def compute_service_area(
     facility_df = hsaf[hsaf["ccn"] == ccn]
 
     if facility_df.empty:
-        return json.dumps({"error": f"No data found for CCN {ccn} in HSAF"})
+        return error_response(f"No data found for CCN {ccn} in HSAF")
 
     facility_name = facility_df["facility_name"].iloc[0]
 
@@ -96,11 +97,11 @@ async def compute_service_area(
         ssa_pct=result["ssa_pct"],
         remaining_zips_count=result["remaining_zips_count"],
     )
-    return json.dumps(output.model_dump(), indent=2)
+    return to_structured(output.model_dump())
 
 
-@mcp.tool()
-async def get_market_share(zip_code: str, limit: int = 20) -> str:
+@mcp.tool(structured_output=True)
+async def get_market_share(zip_code: str, limit: int = 20) -> dict[str, Any]:
     """Get hospital market share for a ZIP code.
 
     Finds all hospitals serving patients from this ZIP and computes each
@@ -120,11 +121,11 @@ async def get_market_share(zip_code: str, limit: int = 20) -> str:
     result = compute_market_share(hsaf, zip_code, limit=limit, name_lookup=name_lookup)
 
     output = MarketShareResult(**result)
-    return json.dumps(output.model_dump(), indent=2)
+    return to_structured(output.model_dump())
 
 
-@mcp.tool()
-async def get_hsa_hrr_mapping(zip_code: str) -> str:
+@mcp.tool(structured_output=True)
+async def get_hsa_hrr_mapping(zip_code: str) -> dict[str, Any]:
     """Look up Dartmouth Atlas HSA and HRR assignment for a ZIP code.
 
     Downloads the Dartmouth crosswalk file on first use, then returns the
@@ -142,7 +143,7 @@ async def get_hsa_hrr_mapping(zip_code: str) -> str:
     row = crosswalk[crosswalk["zip_code"] == zip_code]
 
     if row.empty:
-        return json.dumps({"error": f"ZIP {zip_code} not found in Dartmouth crosswalk"})
+        return error_response(f"ZIP {zip_code} not found in Dartmouth crosswalk")
 
     r = row.iloc[0]
     output = HsaHrrMapping(
@@ -154,11 +155,11 @@ async def get_hsa_hrr_mapping(zip_code: str) -> str:
         hrr_city=str(r.get("hrrcity", "")),
         hrr_state=str(r.get("hrrstate", "")),
     )
-    return json.dumps(output.model_dump(), indent=2)
+    return to_structured(output.model_dump())
 
 
-@mcp.tool()
-async def compare_to_dartmouth(ccn: str) -> str:
+@mcp.tool(structured_output=True)
+async def compare_to_dartmouth(ccn: str) -> dict[str, Any]:
     """Compare a hospital's computed PSA to its Dartmouth Atlas HSA.
 
     Computes the PSA for the hospital, looks up which HSA the hospital's
@@ -178,7 +179,7 @@ async def compare_to_dartmouth(ccn: str) -> str:
 
     facility_df = hsaf[hsaf["ccn"] == ccn]
     if facility_df.empty:
-        return json.dumps({"error": f"No data found for CCN {ccn} in HSAF"})
+        return error_response(f"No data found for CCN {ccn} in HSAF")
 
     facility_name = facility_df["facility_name"].iloc[0]
 
@@ -193,11 +194,11 @@ async def compare_to_dartmouth(ccn: str) -> str:
     # Look up HSA for this ZIP
     hosp_hsa_row = crosswalk[crosswalk["zip_code"] == top_zip]
     if hosp_hsa_row.empty:
-        return json.dumps({
-            "error": f"Hospital top ZIP {top_zip} not found in Dartmouth crosswalk",
-            "facility_ccn": ccn,
-            "facility_name": facility_name,
-        })
+        return error_response(
+            f"Hospital top ZIP {top_zip} not found in Dartmouth crosswalk",
+            facility_ccn=ccn,
+            facility_name=facility_name,
+        )
 
     hsa_num = int(hosp_hsa_row.iloc[0].get("hsanum", 0) or 0)
     hsa_city = str(hosp_hsa_row.iloc[0].get("hsacity", ""))
@@ -227,7 +228,7 @@ async def compare_to_dartmouth(ccn: str) -> str:
         zips_only_in_psa=sorted(only_psa),
         zips_only_in_hsa=sorted(only_hsa),
     )
-    return json.dumps(output.model_dump(), indent=2)
+    return to_structured(output.model_dump())
 
 
 if __name__ == "__main__":

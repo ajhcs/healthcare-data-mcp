@@ -4,16 +4,15 @@ Provides tools for health system competitive intelligence via web search,
 executive profiling, EHR detection, and news monitoring. Port 8014.
 """
 
-import json
+from typing import Any
 import logging
 import os as _os
 import re
-from urllib.parse import urlparse
-
 
 from shared.utils.http_client import resilient_request
 from bs4 import BeautifulSoup
 from mcp.server.fastmcp import FastMCP
+from shared.utils.mcp_response import error_response, to_structured
 
 from . import data_loaders, search_client, proxycurl_client  # pyright: ignore[reportAttributeAccessIssue]
 from .models import (  # pyright: ignore[reportAttributeAccessIssue]
@@ -34,7 +33,7 @@ logger = logging.getLogger(__name__)
 _transport = _os.environ.get("MCP_TRANSPORT", "stdio")
 _mcp_kwargs: dict = {"name": "web-intelligence"}
 if _transport in ("sse", "streamable-http"):
-    _mcp_kwargs["host"] = "0.0.0.0"
+    _mcp_kwargs["host"] = _os.environ.get("MCP_HOST", "127.0.0.1")
     _mcp_kwargs["port"] = int(_os.environ.get("MCP_PORT", "8014"))
 mcp = FastMCP(**_mcp_kwargs)
 
@@ -50,7 +49,8 @@ async def _fetch_and_parse(url: str) -> tuple[str, BeautifulSoup | None]:
     """
     try:
         resp = await resilient_request(
-            "GET", url,
+            "GET",
+            url,
             headers={"User-Agent": "Mozilla/5.0 (compatible; HealthcareDataMCP/1.0)"},
             timeout=15.0,
         )
@@ -60,39 +60,6 @@ async def _fetch_and_parse(url: str) -> tuple[str, BeautifulSoup | None]:
     except Exception as e:
         logger.debug("Fetch failed for %s: %s", url, e)
         return "", None
-
-
-def _build_domain_candidate_results(
-    system_domain: str,
-    paths: list[str],
-    *,
-    title_prefix: str,
-) -> list[dict]:
-    """Build synthetic search results from common paths on a known domain."""
-    domain = system_domain.strip()
-    if not domain:
-        return []
-
-    if "://" not in domain:
-        domain = f"https://{domain}"
-    parsed = urlparse(domain)
-    base = f"{parsed.scheme or 'https'}://{parsed.netloc or parsed.path}".rstrip("/")
-    display_link = parsed.netloc or parsed.path
-
-    results = []
-    seen: set[str] = set()
-    for path in paths:
-        url = f"{base}/{path.lstrip('/')}"
-        if url in seen:
-            continue
-        seen.add(url)
-        results.append({
-            "title": f"{title_prefix} - {display_link}",
-            "link": url,
-            "snippet": "",
-            "display_link": display_link,
-        })
-    return results
 
 
 def _extract_meta(html: str) -> dict[str, str]:
@@ -135,11 +102,11 @@ def _extract_text_content(soup: BeautifulSoup) -> str:
 # ---------------------------------------------------------------------------
 # Tool 1: scrape_system_profile
 # ---------------------------------------------------------------------------
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def scrape_system_profile(
     system_name: str,
     system_domain: str = "",
-) -> str:
+) -> dict[str, Any]:
     """Extract mission, vision, leadership summary, and locations from a health system website.
 
     Uses Google Custom Search to find relevant pages, then targeted HTML fetch
@@ -154,39 +121,30 @@ async def scrape_system_profile(
         cache_params = {"system_name": system_name, "system_domain": system_domain}
         cached = data_loaders.load_cached_response("profile", cache_params, data_loaders._PAGE_TTL_DAYS)
         if cached is not None:
-            return json.dumps(cached)
+            return to_structured(cached)
 
         # Step 1: Search for About/Mission pages
-        data_quality = "snippets_only"
         about_query = f'"{system_name}" about us mission vision'
         about_raw = await search_client.search(
             about_query,
             num=5,
             site_search=system_domain if system_domain else "",
         )
-        about_results = []
-        if "error" not in about_raw:
-            about_results = search_client.extract_results(about_raw)
+        if "error" in about_raw:
+            return to_structured(about_raw)
+
+        about_results = search_client.extract_results(about_raw)
 
         # If no domain was provided, detect it from results
         if not system_domain and about_results:
             system_domain = about_results[0].get("display_link", "")
-        if not about_results and system_domain:
-            about_results = _build_domain_candidate_results(
-                system_domain,
-                ["/about", "/about-us", "/our-story", "/mission-vision-values", "/locations"],
-                title_prefix=f"{system_name} about",
-            )
-            if about_results:
-                data_quality = "direct_domain_guess"
-        elif "error" in about_raw:
-            return json.dumps(about_raw)
 
         # Step 2: Fetch and parse the top About page
         mission = ""
         vision = ""
         values = ""
         tagline = ""
+        data_quality = "snippets_only"
         source_urls: list[str] = []
 
         for result in about_results[:2]:
@@ -235,24 +193,17 @@ async def scrape_system_profile(
                 num=5,
                 site_search=system_domain,
             )
-            loc_results = []
             if "error" not in loc_raw:
                 loc_results = search_client.extract_results(loc_raw)
-            if not loc_results:
-                loc_results = _build_domain_candidate_results(
-                    system_domain,
-                    ["/locations", "/find-a-location", "/our-locations", "/facilities"],
-                    title_prefix=f"{system_name} locations",
-                )
-            for r in loc_results:
-                # Extract location hints from snippet
-                snippet = r.get("snippet", "")
-                title = r.get("title", "")
-                if snippet or r.get("link"):
-                    locations.append(LocationEntry(
-                        name=title[:100],
-                        address=(snippet or r.get("link", ""))[:200],
-                    ))
+                for r in loc_results:
+                    # Extract location hints from snippet
+                    snippet = r.get("snippet", "")
+                    title = r.get("title", "")
+                    if snippet:
+                        locations.append(LocationEntry(
+                            name=title[:100],
+                            address=snippet[:200],
+                        ))
 
         response = SystemProfileResponse(
             system_name=system_name,
@@ -268,21 +219,21 @@ async def scrape_system_profile(
         )
         result = response.model_dump()
         data_loaders.cache_response("profile", cache_params, result)
-        return json.dumps(result)
+        return to_structured(result)
     except Exception as e:
         logger.exception("scrape_system_profile failed")
-        return json.dumps({"error": f"scrape_system_profile failed: {e}"})
+        return error_response(f"scrape_system_profile failed: {e}")
 
 
 # ---------------------------------------------------------------------------
 # Tool 2: detect_ehr_vendor
 # ---------------------------------------------------------------------------
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def detect_ehr_vendor(
     system_name: str,
     ccn: str = "",
     state: str = "",
-) -> str:
+) -> dict[str, Any]:
     """Identify the EHR vendor for a health system or facility.
 
     Uses a waterfall strategy:
@@ -302,7 +253,7 @@ async def detect_ehr_vendor(
         cache_params = {"system_name": system_name, "ccn": ccn, "state": state}
         cached = data_loaders.load_cached_response("ehr", cache_params, data_loaders._SEARCH_TTL_DAYS)
         if cached is not None:
-            return json.dumps(cached)
+            return to_structured(cached)
 
         # Strategy 1: CMS Promoting Interoperability (authoritative)
         await data_loaders.ensure_pi_cached()
@@ -335,7 +286,7 @@ async def detect_ehr_vendor(
                 )
                 result = response.model_dump()
                 data_loaders.cache_response("ehr", cache_params, result)
-                return json.dumps(result)
+                return to_structured(result)
 
         # Strategy 2: Career page keyword search (inferred)
         vendor_terms = " OR ".join(f'"{v}"' for v in [
@@ -360,7 +311,7 @@ async def detect_ehr_vendor(
                         )
                         result = response.model_dump()
                         data_loaders.cache_response("ehr", cache_params, result)
-                        return json.dumps(result)
+                        return to_structured(result)
 
         # Strategy 3: News mention (weak signal)
         news_query = f'"{system_name}" EHR "electronic health record"'
@@ -381,7 +332,7 @@ async def detect_ehr_vendor(
                         )
                         result = response.model_dump()
                         data_loaders.cache_response("ehr", cache_params, result)
-                        return json.dumps(result)
+                        return to_structured(result)
 
         # No match found
         response = EhrDetectionResponse(
@@ -389,22 +340,22 @@ async def detect_ehr_vendor(
             confidence="NOT_FOUND",
             evidence_summary="No EHR vendor identified from PI data, career pages, or news.",
         )
-        return json.dumps(response.model_dump())
+        return to_structured(response.model_dump())
     except Exception as e:
         logger.exception("detect_ehr_vendor failed")
-        return json.dumps({"error": f"detect_ehr_vendor failed: {e}"})
+        return error_response(f"detect_ehr_vendor failed: {e}")
 
 
 # ---------------------------------------------------------------------------
 # Tool 3: get_executive_profiles
 # ---------------------------------------------------------------------------
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def get_executive_profiles(
     system_name: str,
     system_domain: str = "",
     include_linkedin: bool = True,
     max_results: int = 20,
-) -> str:
+) -> dict[str, Any]:
     """Pull executive bios, titles, and tenure from official sites and LinkedIn.
 
     Searches for the health system's leadership page, parses executive entries,
@@ -423,7 +374,7 @@ async def get_executive_profiles(
         }
         cached = data_loaders.load_cached_response("exec", cache_params, data_loaders._EXEC_TTL_DAYS)
         if cached is not None:
-            return json.dumps(cached)
+            return to_structured(cached)
 
         # Step 1: Find the leadership page
         lead_query = f'"{system_name}" leadership "executive team" OR "senior leadership" OR "board of"'
@@ -431,20 +382,13 @@ async def get_executive_profiles(
             lead_query, num=5,
             site_search=system_domain if system_domain else "",
         )
-        lead_results = []
-        if "error" not in lead_raw:
-            lead_results = search_client.extract_results(lead_raw)
+        if "error" in lead_raw:
+            return to_structured(lead_raw)
+
+        lead_results = search_client.extract_results(lead_raw)
 
         if not system_domain and lead_results:
             system_domain = lead_results[0].get("display_link", "")
-        if not lead_results and system_domain:
-            lead_results = _build_domain_candidate_results(
-                system_domain,
-                ["/leadership", "/about/leadership", "/about-us/leadership", "/our-leaders", "/executive-team"],
-                title_prefix=f"{system_name} leadership",
-            )
-        elif "error" in lead_raw:
-            return json.dumps(lead_raw)
 
         # Step 2: Fetch and parse leadership page
         executives: list[ExecutiveProfile] = []
@@ -549,10 +493,10 @@ async def get_executive_profiles(
         )
         result = response.model_dump()
         data_loaders.cache_response("exec", cache_params, result)
-        return json.dumps(result)
+        return to_structured(result)
     except Exception as e:
         logger.exception("get_executive_profiles failed")
-        return json.dumps({"error": f"get_executive_profiles failed: {e}"})
+        return error_response(f"get_executive_profiles failed: {e}")
 
 
 # ---------------------------------------------------------------------------
@@ -595,12 +539,12 @@ async def _fetch_google_news_rss(query: str, days_back: int = 90) -> list[dict]:
 # ---------------------------------------------------------------------------
 # Tool 4: monitor_newsroom
 # ---------------------------------------------------------------------------
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def monitor_newsroom(
     system_name: str,
     days_back: int = 90,
     max_results: int = 25,
-) -> str:
+) -> dict[str, Any]:
     """Retrieve recent press releases and news mentions for a health system.
 
     Primary: Google Custom Search with date restriction.
@@ -618,7 +562,7 @@ async def monitor_newsroom(
         cache_params = {"system_name": system_name, "days_back": days_back}
         cached = data_loaders.load_cached_response("news", cache_params, data_loaders._NEWS_TTL_DAYS)
         if cached is not None:
-            return json.dumps(cached)
+            return to_structured(cached)
 
         items: list[NewsItem] = []
 
@@ -665,19 +609,19 @@ async def monitor_newsroom(
         )
         result = response.model_dump()
         data_loaders.cache_response("news", cache_params, result)
-        return json.dumps(result)
+        return to_structured(result)
     except Exception as e:
         logger.exception("monitor_newsroom failed")
-        return json.dumps({"error": f"monitor_newsroom failed: {e}"})
+        return error_response(f"monitor_newsroom failed: {e}")
 
 
 # ---------------------------------------------------------------------------
 # Tool 5: detect_gpo_affiliation
 # ---------------------------------------------------------------------------
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def detect_gpo_affiliation(
     system_name: str,
-) -> str:
+) -> dict[str, Any]:
     """Match a health system to known Group Purchasing Organization partners.
 
     Searches for the system name alongside GPO-related keywords and matches
@@ -690,11 +634,11 @@ async def detect_gpo_affiliation(
         cache_params = {"system_name": system_name}
         cached = data_loaders.load_cached_response("gpo", cache_params, data_loaders._SEARCH_TTL_DAYS)
         if cached is not None:
-            return json.dumps(cached)
+            return to_structured(cached)
 
         gpo_list = data_loaders.load_gpo_directory()
         if not gpo_list:
-            return json.dumps({"error": "GPO directory not found"})
+            return error_response("GPO directory not found")
 
         # Build search query with top GPO names
         top_gpos = "OR".join(f' "{g["gpo_name"]}"' for g in gpo_list[:6])
@@ -702,7 +646,7 @@ async def detect_gpo_affiliation(
 
         raw = await search_client.search(search_query, num=10)
         if "error" in raw:
-            return json.dumps(raw)
+            return to_structured(raw)
 
         results = search_client.extract_results(raw)
 
@@ -734,10 +678,10 @@ async def detect_gpo_affiliation(
         )
         result = response.model_dump()
         data_loaders.cache_response("gpo", cache_params, result)
-        return json.dumps(result)
+        return to_structured(result)
     except Exception as e:
         logger.exception("detect_gpo_affiliation failed")
-        return json.dumps({"error": f"detect_gpo_affiliation failed: {e}"})
+        return error_response(f"detect_gpo_affiliation failed: {e}")
 
 
 if __name__ == "__main__":

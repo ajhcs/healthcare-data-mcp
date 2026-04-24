@@ -4,13 +4,15 @@ Provides Census ACS demographics, ZCTA geography/adjacency,
 Medicare enrollment data, and ZIP-to-geography crosswalks.
 """
 
-import json
+from typing import Any
 import logging
 import os
 
 import httpx
-from mcp.server.fastmcp import FastMCP
+
 from shared.utils.http_client import resilient_request
+from mcp.server.fastmcp import FastMCP
+from shared.utils.mcp_response import error_response, to_structured
 
 from . import data_loaders as gv_loaders
 from .census_client import get_demographics_batch, get_demographics_for_zcta
@@ -29,7 +31,7 @@ logger = logging.getLogger(__name__)
 _transport = os.environ.get("MCP_TRANSPORT", "stdio")
 _mcp_kwargs = {"name": "geo-demographics"}
 if _transport in ("sse", "streamable-http"):
-    _mcp_kwargs["host"] = "0.0.0.0"
+    _mcp_kwargs["host"] = os.environ.get("MCP_HOST", "127.0.0.1")
     _mcp_kwargs["port"] = int(os.environ.get("MCP_PORT", "8003"))
 mcp = FastMCP(**_mcp_kwargs)
 
@@ -38,8 +40,8 @@ HUD_CROSSWALK_BASE = "https://www.huduser.gov/hudapi/public/usps"
 HUD_CROSSWALK_TYPES = {"tract": 1, "county": 2, "cbsa": 3, "cd": 4}
 
 
-@mcp.tool()
-async def get_zcta_demographics(zcta: str, year: int = 2023) -> str:
+@mcp.tool(structured_output=True)
+async def get_zcta_demographics(zcta: str, year: int = 2023) -> dict[str, Any]:
     """Get Census ACS demographics for a single ZCTA (ZIP Code Tabulation Area).
 
     Returns population, age distribution, median income, and health insurance coverage.
@@ -52,15 +54,15 @@ async def get_zcta_demographics(zcta: str, year: int = 2023) -> str:
     try:
         data = await get_demographics_for_zcta(zcta, year)
         result = ZctaDemographics(**data)
-        return result.model_dump_json(indent=2)
+        return result.model_dump()
     except httpx.HTTPStatusError as e:
-        return json.dumps({"error": f"Census API error: {e.response.status_code}", "detail": str(e)})
+        return error_response(f"Census API error: {e.response.status_code}", detail=str(e))
     except Exception as e:
-        return json.dumps({"error": str(e)})
+        return error_response(str(e))
 
 
-@mcp.tool()
-async def get_zcta_demographics_batch(zctas: list[str], year: int = 2023) -> str:
+@mcp.tool(structured_output=True)
+async def get_zcta_demographics_batch(zctas: list[str], year: int = 2023) -> dict[str, Any] | list[dict[str, Any]]:
     """Get Census ACS demographics for multiple ZCTAs in a single efficient query.
 
     Args:
@@ -71,15 +73,15 @@ async def get_zcta_demographics_batch(zctas: list[str], year: int = 2023) -> str
     try:
         data_list = await get_demographics_batch(zctas, year)
         results = [ZctaDemographics(**d) for d in data_list]
-        return json.dumps([r.model_dump() for r in results], indent=2)
+        return to_structured([r.model_dump() for r in results])
     except httpx.HTTPStatusError as e:
-        return json.dumps({"error": f"Census API error: {e.response.status_code}", "detail": str(e)})
+        return error_response(f"Census API error: {e.response.status_code}", detail=str(e))
     except Exception as e:
-        return json.dumps({"error": str(e)})
+        return error_response(str(e))
 
 
-@mcp.tool()
-async def get_zcta_adjacency(zcta: str) -> str:
+@mcp.tool(structured_output=True)
+async def get_zcta_adjacency(zcta: str) -> dict[str, Any]:
     """Find all ZCTAs geographically adjacent to the given ZCTA.
 
     Uses TIGER/Line ZCTA shapefiles. The adjacency graph is computed once
@@ -95,15 +97,15 @@ async def get_zcta_adjacency(zcta: str) -> str:
     try:
         neighbors = await get_adjacent_zctas(zcta)
         result = ZctaAdjacency(zcta=zcta, adjacent_zctas=neighbors, count=len(neighbors))
-        return result.model_dump_json(indent=2)
+        return result.model_dump()
     except FileNotFoundError as e:
-        return json.dumps({"error": f"Shapefile not available: {e}"})
+        return error_response(f"Shapefile not available: {e}")
     except Exception as e:
-        return json.dumps({"error": str(e)})
+        return error_response(str(e))
 
 
-@mcp.tool()
-async def get_medicare_enrollment(state: str | None = None, county_fips: str | None = None) -> str:
+@mcp.tool(structured_output=True)
+async def get_medicare_enrollment(state: str | None = None, county_fips: str | None = None) -> dict[str, Any]:
     """Get Medicare enrollment and spending data from the CMS Geographic Variation PUF.
 
     Provide either a state abbreviation or county FIPS code.
@@ -113,7 +115,7 @@ async def get_medicare_enrollment(state: str | None = None, county_fips: str | N
         county_fips: 5-digit county FIPS code (e.g., "17031" for Cook County, IL). Returns county-level data.
     """
     if not state and not county_fips:
-        return json.dumps({"error": "Provide either 'state' or 'county_fips'"})
+        return error_response("Provide either 'state' or 'county_fips'")
 
     try:
         await gv_loaders.ensure_gv_cached()
@@ -126,7 +128,7 @@ async def get_medicare_enrollment(state: str | None = None, county_fips: str | N
             geo_type, geo_code = "state", state.upper()
 
         if not data:
-            return json.dumps({"error": f"No Medicare data found for {geo_type} {geo_code}"})
+            return error_response(f"No Medicare data found for {geo_type} {geo_code}")
 
         result = MedicareEnrollment(
             geography_type=geo_type,
@@ -140,14 +142,14 @@ async def get_medicare_enrollment(state: str | None = None, county_fips: str | N
             pct_a_b_coverage=None,
             per_capita_spending=data.get("per_capita_spending"),
         )
-        return result.model_dump_json(indent=2)
+        return result.model_dump()
 
     except Exception as e:
-        return json.dumps({"error": str(e)})
+        return error_response(str(e))
 
 
-@mcp.tool()
-async def get_geographic_variation(geography_type: str = "county", geography_code: str | None = None) -> str:
+@mcp.tool(structured_output=True)
+async def get_geographic_variation(geography_type: str = "county", geography_code: str | None = None) -> dict[str, Any]:
     """Get CMS Geographic Variation PUF data including spending and utilization.
 
     Returns demographics, per-capita spending breakdown (IP, OP, physician, SNF),
@@ -158,7 +160,7 @@ async def get_geographic_variation(geography_type: str = "county", geography_cod
         geography_code: County FIPS (e.g., "17031") or state abbreviation (e.g., "IL")
     """
     if not geography_code:
-        return json.dumps({"error": "geography_code is required"})
+        return error_response("geography_code is required")
 
     try:
         await gv_loaders.ensure_gv_cached()
@@ -168,7 +170,7 @@ async def get_geographic_variation(geography_type: str = "county", geography_cod
         data = gv_loaders.query_gv(geo_level, code)
 
         if not data:
-            return json.dumps({"error": f"No data found for {geography_type} {geography_code}"})
+            return error_response(f"No data found for {geography_type} {geography_code}")
 
         result = GeographicVariation(
             geography_type=geography_type,
@@ -187,14 +189,14 @@ async def get_geographic_variation(geography_type: str = "county", geography_cod
             er_visits_per_1000=data.get("er_visits_per_1000"),
             readmission_rate=data.get("readmission_rate"),
         )
-        return result.model_dump_json(indent=2)
+        return result.model_dump()
 
     except Exception as e:
-        return json.dumps({"error": str(e)})
+        return error_response(str(e))
 
 
-@mcp.tool()
-async def crosswalk_zip(zip_code: str, target: str = "county") -> str:
+@mcp.tool(structured_output=True)
+async def crosswalk_zip(zip_code: str, target: str = "county") -> dict[str, Any]:
     """Crosswalk a ZIP code to another geography using the HUD USPS Crosswalk API.
 
     Maps ZIP codes to Census tracts, counties, or CBSAs with allocation ratios.
@@ -207,14 +209,12 @@ async def crosswalk_zip(zip_code: str, target: str = "county") -> str:
     """
     hud_token = os.environ.get("HUD_API_TOKEN")
     if not hud_token:
-        return json.dumps({"error": "HUD_API_TOKEN environment variable not set"})
+        return error_response("HUD_API_TOKEN environment variable not set")
 
     target_lower = target.lower()
     type_code = HUD_CROSSWALK_TYPES.get(target_lower)
     if type_code is None:
-        return json.dumps({
-            "error": f"Invalid target '{target}'. Must be one of: {', '.join(HUD_CROSSWALK_TYPES.keys())}"
-        })
+        return error_response(f"Invalid target '{target}'. Must be one of: {', '.join(HUD_CROSSWALK_TYPES.keys())}")
 
     zip_code = zip_code.strip().zfill(5)
 
@@ -259,12 +259,12 @@ async def crosswalk_zip(zip_code: str, target: str = "county") -> str:
             target_type=target_lower,
             results=crosswalk_results,
         )
-        return response.model_dump_json(indent=2)
+        return response.model_dump()
 
     except httpx.HTTPStatusError as e:
-        return json.dumps({"error": f"HUD API error: {e.response.status_code}", "detail": str(e)})
+        return error_response(f"HUD API error: {e.response.status_code}", detail=str(e))
     except Exception as e:
-        return json.dumps({"error": str(e)})
+        return error_response(str(e))
 
 
 # --- Utility functions ---

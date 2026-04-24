@@ -5,20 +5,13 @@ converts to Parquet with zstd compression, and queries with DuckDB.
 """
 
 import logging
+from datetime import datetime, timezone
 from pathlib import Path
 
 import duckdb
 
-import pandas as pd
-from shared.utils.cms_url_resolver import resolve_cms_download_url
 from shared.utils.http_client import resilient_request
-
-import sys as _sys
-_project_root = __import__("pathlib").Path(__file__).resolve().parent.parent.parent
-if str(_project_root) not in _sys.path:
-    _sys.path.insert(0, str(_project_root))
-
-from shared.utils.cache import is_cache_valid  # noqa: E402
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -27,18 +20,14 @@ _CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 _CACHE_TTL_DAYS = 90
 
-# CMS catalog title for the rotating inpatient bulk release.
-_INPATIENT_DATASET_TITLE = "Medicare Inpatient Hospitals - by Provider and Service"
-_OUTPATIENT_DATASET_TITLE = "Medicare Outpatient Hospitals - by Provider and Service"
-
-# Fallback CMS data.cms.gov download URLs for Inpatient PUF (by Provider and Service)
+# CMS data.cms.gov download URLs for Inpatient PUF (by Provider and Service)
 INPATIENT_URLS: dict[str, str] = {
     "2023": "https://data.cms.gov/sites/default/files/2025-05/ca1c9013-8c7c-4560-a4a1-28cf7e43ccc8/MUP_INP_RY25_P03_V10_DY23_PrvSvc.CSV",
     "2022": "https://data.cms.gov/sites/default/files/2024-05/7d1f4bcd-7dd9-4fd1-aa7f-91cd69e452d3/MUP_INP_RY24_P03_V10_DY22_PrvSvc.CSV",
     "2021": "https://data.cms.gov/sites/default/files/2023-05/a754bf0b-0c51-4daf-876e-272f90a11c05/MUP_IHP_RY23_P03_V10_DY21_PRVSVC.CSV",
 }
 
-# Fallback CMS data.cms.gov download URLs for Outpatient PUF (by Provider and Service)
+# CMS data.cms.gov download URLs for Outpatient PUF (by Provider and Service)
 OUTPATIENT_URLS: dict[str, str] = {
     "2023": "https://data.cms.gov/sites/default/files/2025-08/bceaa5e1-e58c-4109-9f05-832fc5e6bbc8/MUP_OUT_RY25_P04_V10_DY23_Prov_Svc.csv",
     "2022": "https://data.cms.gov/sites/default/files/2024-06/860428c0-6102-4fff-812d-57c7860613e5/MUP_OUT_RY24_P04_V10_DY22_Prov_Svc.csv",
@@ -57,7 +46,10 @@ def _cache_path(dataset: str, year: str) -> Path:
 
 def _is_cache_valid(path: Path, ttl_days: int = _CACHE_TTL_DAYS) -> bool:
     """Check if a cached file exists and is within TTL."""
-    return is_cache_valid(path, max_age_days=ttl_days)
+    if not path.exists():
+        return False
+    age_days = (datetime.now(timezone.utc).timestamp() - path.stat().st_mtime) / 86400
+    return age_days < ttl_days
 
 
 async def _download_and_cache_csv(url: str, cache_path: Path, dataset_name: str) -> bool:
@@ -88,7 +80,7 @@ async def ensure_inpatient_cached(year: str = LATEST_YEAR) -> bool:
     if _is_cache_valid(path):
         return True
 
-    url = await resolve_cms_download_url(f"inpatient-puf-{year}", "MUP_INP_")
+    url = INPATIENT_URLS.get(year)
     if not url:
         logger.warning("No inpatient PUF URL for year %s", year)
         return False
@@ -102,7 +94,7 @@ async def ensure_outpatient_cached(year: str = LATEST_YEAR) -> bool:
     if _is_cache_valid(path):
         return True
 
-    url = await resolve_cms_download_url(f"outpatient-puf-{year}", "MUP_OUT_")
+    url = OUTPATIENT_URLS.get(year)
     if not url:
         logger.warning("No outpatient PUF URL for year %s", year)
         return False

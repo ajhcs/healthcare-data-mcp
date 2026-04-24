@@ -5,10 +5,11 @@ multi-year service line trends, case mix computation, and market volume analysis
 All data sourced from CMS Medicare Provider Utilization PUFs.
 """
 
-import json
+from typing import Any
 import logging
 import os as _os
 from mcp.server.fastmcp import FastMCP
+from shared.utils.mcp_response import error_response, to_structured
 
 from . import data_loaders, service_lines  # pyright: ignore[reportAttributeAccessIssue]
 from .models import (
@@ -34,27 +35,25 @@ logger = logging.getLogger(__name__)
 _transport = _os.environ.get("MCP_TRANSPORT", "stdio")
 _mcp_kwargs: dict = {"name": "claims-analytics"}
 if _transport in ("sse", "streamable-http"):
-    _mcp_kwargs["host"] = "0.0.0.0"
+    _mcp_kwargs["host"] = _os.environ.get("MCP_HOST", "127.0.0.1")
     _mcp_kwargs["port"] = int(_os.environ.get("MCP_PORT", "8012"))
 mcp = FastMCP(**_mcp_kwargs)
 
 
-def _validate_year(year: str) -> str | None:
-    """Validate year parameter. Returns error JSON string or None if valid."""
+def _validate_year(year: str) -> dict[str, Any] | None:
+    """Validate year parameter. Returns an error response or None if valid."""
     if year and year not in data_loaders.AVAILABLE_YEARS:
-        return json.dumps({
-            "error": f"Invalid year: {year}. Available: {data_loaders.AVAILABLE_YEARS}"
-        })
+        return error_response(f"Invalid year: {year}. Available: {data_loaders.AVAILABLE_YEARS}")
     return None
 
 
 # ---------------------------------------------------------------------------
 # Tool 1: get_inpatient_volumes
 # ---------------------------------------------------------------------------
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def get_inpatient_volumes(
     ccn: str, drg_code: str = "", service_line: str = "", year: str = "",
-) -> str:
+) -> dict[str, Any]:
     """Get inpatient discharge volumes by DRG and service line for a hospital.
 
     Uses CMS Medicare Inpatient Hospitals PUF (by Provider and Service).
@@ -73,7 +72,7 @@ async def get_inpatient_volumes(
 
         rows = data_loaders.query_inpatient(year=yr, ccn=ccn, drg_code=drg_code)
         if not rows:
-            return json.dumps({"error": f"No inpatient data found for CCN: {ccn}"})
+            return error_response(f"No inpatient data found for CCN: {ccn}")
 
         # Map DRGs to service lines
         for r in rows:
@@ -83,7 +82,7 @@ async def get_inpatient_volumes(
         if service_line:
             rows = [r for r in rows if r["service_line"].lower() == service_line.lower()]
             if not rows:
-                return json.dumps({"error": f"No data for service line '{service_line}' at CCN: {ccn}"})
+                return error_response(f"No data for service line '{service_line}' at CCN: {ccn}")
 
         # Build DRG details
         drg_details = [
@@ -132,20 +131,20 @@ async def get_inpatient_volumes(
             service_line_summary=sl_summary,
             drg_details=sorted(drg_details, key=lambda d: d.discharges, reverse=True),
         )
-        return json.dumps(response.model_dump())
+        return to_structured(response.model_dump())
 
     except Exception as e:
         logger.exception("get_inpatient_volumes failed")
-        return json.dumps({"error": f"get_inpatient_volumes failed: {e}"})
+        return error_response(f"get_inpatient_volumes failed: {e}")
 
 
 # ---------------------------------------------------------------------------
 # Tool 2: get_outpatient_volumes
 # ---------------------------------------------------------------------------
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def get_outpatient_volumes(
     ccn: str, apc_code: str = "", year: str = "",
-) -> str:
+) -> dict[str, Any]:
     """Get outpatient procedure volumes by APC for a hospital.
 
     Uses CMS Medicare Outpatient Hospitals PUF (by Provider and Service).
@@ -163,7 +162,7 @@ async def get_outpatient_volumes(
 
         rows = data_loaders.query_outpatient(year=yr, ccn=ccn, apc_code=apc_code)
         if not rows:
-            return json.dumps({"error": f"No outpatient data found for CCN: {ccn}"})
+            return error_response(f"No outpatient data found for CCN: {ccn}")
 
         total_services = sum(r["services"] for r in rows)
 
@@ -188,20 +187,20 @@ async def get_outpatient_volumes(
             total_apcs=len(apc_details),
             apc_details=sorted(apc_details, key=lambda a: a.services, reverse=True),
         )
-        return json.dumps(response.model_dump())
+        return to_structured(response.model_dump())
 
     except Exception as e:
         logger.exception("get_outpatient_volumes failed")
-        return json.dumps({"error": f"get_outpatient_volumes failed: {e}"})
+        return error_response(f"get_outpatient_volumes failed: {e}")
 
 
 # ---------------------------------------------------------------------------
 # Tool 3: trend_service_lines
 # ---------------------------------------------------------------------------
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def trend_service_lines(
     ccn: str, service_line: str = "", include_outpatient: bool = True,
-) -> str:
+) -> dict[str, Any]:
     """Get multi-year volume trends by service line for a hospital (3-year).
 
     Shows year-over-year volume changes and compound annual growth rates.
@@ -214,7 +213,7 @@ async def trend_service_lines(
     try:
         cached_years = await data_loaders.ensure_all_years_cached(include_outpatient)
         if not cached_years:
-            return json.dumps({"error": "Failed to download PUF data for trend analysis"})
+            return error_response("Failed to download PUF data for trend analysis")
 
         years_sorted = sorted(cached_years)
         provider_name = ""
@@ -310,18 +309,18 @@ async def trend_service_lines(
                 if outpatient_trends else None
             ),
         )
-        return json.dumps(response.model_dump())
+        return to_structured(response.model_dump())
 
     except Exception as e:
         logger.exception("trend_service_lines failed")
-        return json.dumps({"error": f"trend_service_lines failed: {e}"})
+        return error_response(f"trend_service_lines failed: {e}")
 
 
 # ---------------------------------------------------------------------------
 # Tool 4: compute_case_mix
 # ---------------------------------------------------------------------------
-@mcp.tool()
-async def compute_case_mix(ccn: str, year: str = "") -> str:
+@mcp.tool(structured_output=True)
+async def compute_case_mix(ccn: str, year: str = "") -> dict[str, Any]:
     """Compute case mix index and acuity analysis by service line for a hospital.
 
     Uses inpatient discharge data with CMS IPPS DRG relative weights.
@@ -338,7 +337,7 @@ async def compute_case_mix(ccn: str, year: str = "") -> str:
 
         rows = data_loaders.query_inpatient(year=yr, ccn=ccn)
         if not rows:
-            return json.dumps({"error": f"No inpatient data found for CCN: {ccn}"})
+            return error_response(f"No inpatient data found for CCN: {ccn}")
 
         # Compute overall CMI
         drg_discharges = [(r["drg_code"], r["discharges"]) for r in rows]
@@ -393,20 +392,20 @@ async def compute_case_mix(ccn: str, year: str = "") -> str:
             service_line_acuity=sl_acuity,
             top_drgs_by_weight=sorted(drg_contribs, key=lambda d: d.total_weight_contribution, reverse=True)[:25],
         )
-        return json.dumps(response.model_dump())
+        return to_structured(response.model_dump())
 
     except Exception as e:
         logger.exception("compute_case_mix failed")
-        return json.dumps({"error": f"compute_case_mix failed: {e}"})
+        return error_response(f"compute_case_mix failed: {e}")
 
 
 # ---------------------------------------------------------------------------
 # Tool 5: analyze_market_volumes
 # ---------------------------------------------------------------------------
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def analyze_market_volumes(
     provider_ccns: list[str], service_line: str = "", year: str = "",
-) -> str:
+) -> dict[str, Any]:
     """Analyze service-line market share among a set of providers.
 
     Compare inpatient volumes across providers within a defined market area.
@@ -425,7 +424,7 @@ async def analyze_market_volumes(
 
         rows = data_loaders.query_inpatient(year=yr, ccns=provider_ccns)
         if not rows:
-            return json.dumps({"error": "No inpatient data found for the provided CCNs"})
+            return error_response("No inpatient data found for the provided CCNs")
 
         # Map service lines
         for r in rows:
@@ -505,11 +504,11 @@ async def analyze_market_volumes(
             provider_shares=provider_shares,
             service_line_totals=sl_totals,
         )
-        return json.dumps(response.model_dump())
+        return to_structured(response.model_dump())
 
     except Exception as e:
         logger.exception("analyze_market_volumes failed")
-        return json.dumps({"error": f"analyze_market_volumes failed: {e}"})
+        return error_response(f"analyze_market_volumes failed: {e}")
 
 
 if __name__ == "__main__":

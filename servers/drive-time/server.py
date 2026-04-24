@@ -12,16 +12,18 @@ NOTE: The OSRM public demo server (router.project-osrm.org) is rate-limited.
 For production use, deploy a self-hosted OSRM instance and set OSRM_BASE_URL.
 """
 
+from typing import Any
 import io
 import json
 import logging
 import os
 import zipfile
 
+
+from shared.utils.http_client import resilient_request
 import pandas as pd
 from mcp.server.fastmcp import FastMCP
-from shared.utils.cms_client import load_hospital_general_info
-from shared.utils.http_client import resilient_request
+from shared.utils.mcp_response import error_response, to_structured
 
 from .accessibility import compute_e2sfca, summarize_scores
 from .models import (
@@ -46,6 +48,10 @@ METERS_PER_MILE = 1609.344
 # Facility data cache
 CACHE_DIR = os.path.join(os.path.expanduser("~"), ".healthcare-data-mcp", "cache")
 os.makedirs(CACHE_DIR, exist_ok=True)
+HOSPITAL_INFO_URL = "https://data.cms.gov/provider-data/api/1/datastore/query/xubh-q36u/0/download?format=csv"
+
+# In-memory cache of facility DataFrame
+_facility_df: pd.DataFrame | None = None
 
 # ---------------------------------------------------------------------------
 # MCP Server
@@ -53,7 +59,7 @@ os.makedirs(CACHE_DIR, exist_ok=True)
 _transport = os.environ.get("MCP_TRANSPORT", "stdio")
 _mcp_kwargs = {"name": "drive-time"}
 if _transport in ("sse", "streamable-http"):
-    _mcp_kwargs["host"] = "0.0.0.0"
+    _mcp_kwargs["host"] = os.environ.get("MCP_HOST", "127.0.0.1")
     _mcp_kwargs["port"] = int(os.environ.get("MCP_PORT", "8004"))
 mcp = FastMCP(**_mcp_kwargs)
 
@@ -72,12 +78,24 @@ def _get_ors() -> ORSRouter:
 
 
 async def _load_facilities() -> pd.DataFrame:
-    """Load CMS Hospital General Info via the shared loader.
+    """Load CMS Hospital General Info, downloading and caching if needed."""
+    global _facility_df
+    if _facility_df is not None:
+        return _facility_df
 
-    Delegates to :func:`shared.utils.cms_client.load_hospital_general_info`
-    so the file is downloaded and cached once across all servers.
-    """
-    return await load_hospital_general_info(normalize_columns=True)
+
+    cache_path = os.path.join(CACHE_DIR, "hospital_general_info.csv")
+    if not os.path.exists(cache_path):
+        logger.info("Downloading Hospital General Info from CMS...")
+        resp = await resilient_request("GET", HOSPITAL_INFO_URL, timeout=300.0)
+        with open(cache_path, "wb") as f:
+            f.write(resp.content)
+        logger.info("Saved to %s", cache_path)
+
+    df = pd.read_csv(cache_path, dtype=str, keep_default_na=False)
+    df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
+    _facility_df = df
+    return df
 
 
 # Census Gazetteer ZIP centroid file (~1MB ZIP archive, pipe-delimited inside)
@@ -167,13 +185,13 @@ async def _parse_lat_lon(df: pd.DataFrame) -> pd.DataFrame:
 # Tools
 # ---------------------------------------------------------------------------
 
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def compute_drive_time(
     origin_lat: float,
     origin_lon: float,
     dest_lat: float,
     dest_lon: float,
-) -> str:
+) -> dict[str, Any]:
     """Compute driving time and distance between two geographic points.
 
     Uses the OSRM routing engine. Returns duration in seconds/minutes
@@ -190,14 +208,14 @@ async def compute_drive_time(
         distance_meters=result["distance_meters"],
         distance_miles=round(result["distance_meters"] / METERS_PER_MILE, 2),
     )
-    return route.model_dump_json(indent=2)
+    return route.model_dump()
 
 
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def compute_drive_time_matrix(
     origins: list[dict],
     destinations: list[dict],
-) -> str:
+) -> dict[str, Any]:
     """Compute an NxM driving time matrix between origins and destinations.
 
     Each origin/destination should be a dict with keys: lat, lon, id.
@@ -206,7 +224,7 @@ async def compute_drive_time_matrix(
     """
     # Validate inputs
     if not origins or not destinations:
-        return json.dumps({"error": "origins and destinations must be non-empty"})
+        return error_response("origins and destinations must be non-empty")
 
     origin_ids = [o.get("id", f"origin_{i}") for i, o in enumerate(origins)]
     dest_ids = [d.get("id", f"dest_{i}") for i, d in enumerate(destinations)]
@@ -246,15 +264,15 @@ async def compute_drive_time_matrix(
         "destination_ids": dest_ids,
         "matrix": entries,
     }
-    return json.dumps(result, indent=2)
+    return to_structured(result)
 
 
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def generate_isochrone(
     lat: float,
     lon: float,
     minutes: list[int] | None = None,
-) -> str:
+) -> dict[str, Any]:
     """Generate drive-time isochrone polygons around a point.
 
     Creates GeoJSON polygons showing areas reachable within the specified
@@ -271,16 +289,16 @@ async def generate_isochrone(
     ranges_seconds = [m * 60 for m in minutes]
     ors = _get_ors()
     geojson = await ors.isochrone(lon=lon, lat=lat, ranges=ranges_seconds)
-    return json.dumps(geojson, indent=2)
+    return to_structured(geojson)
 
 
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def find_competing_facilities(
     lat: float,
     lon: float,
     radius_minutes: int = 30,
     facility_type: str = "hospital",
-) -> str:
+) -> dict[str, Any]:
     """Find healthcare facilities within a drive-time radius of a point.
 
     Loads CMS Hospital General Info data, geocodes facilities, and computes
@@ -298,7 +316,7 @@ async def find_competing_facilities(
     df = df.dropna(subset=["_lat", "_lon"])
 
     if df.empty:
-        return json.dumps({"error": "No geocoded facilities found in dataset"})
+        return error_response("No geocoded facilities found in dataset")
 
     # Pre-filter by rough bounding box (~1 degree ≈ 60 miles ≈ ~60 min drive)
     # to avoid sending thousands of points to OSRM
@@ -309,7 +327,7 @@ async def find_competing_facilities(
     ]
 
     if nearby.empty:
-        return json.dumps({"facilities": [], "count": 0, "message": "No facilities found within bounding box"})
+        return to_structured({"facilities": [], "count": 0, "message": "No facilities found within bounding box"})
 
     # Cap at 100 facilities per OSRM table request to avoid overloading
     if len(nearby) > 100:
@@ -351,15 +369,15 @@ async def find_competing_facilities(
 
     facilities.sort(key=lambda f: f["drive_time_minutes"])
 
-    return json.dumps({"facilities": facilities, "count": len(facilities)}, indent=2)
+    return to_structured({"facilities": facilities, "count": len(facilities)})
 
 
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def compute_accessibility_score(
     demand_points: list[dict],
     supply_points: list[dict],
     catchment_minutes: int = 30,
-) -> str:
+) -> dict[str, Any]:
     """Compute spatial accessibility scores using Enhanced Two-Step Floating Catchment Area (E2SFCA).
 
     Measures how accessible healthcare supply is from each demand location,
@@ -373,7 +391,7 @@ async def compute_accessibility_score(
         catchment_minutes: Max travel time for the catchment area (default 30).
     """
     if not demand_points or not supply_points:
-        return json.dumps({"error": "demand_points and supply_points must be non-empty"})
+        return error_response("demand_points and supply_points must be non-empty")
 
     # Build coordinate list: demand points first, then supply points
     coords: list[tuple[float, float]] = []
@@ -429,7 +447,7 @@ async def compute_accessibility_score(
         points_with_zero_access=stats["points_with_zero_access"],
         results=results,
     )
-    return summary.model_dump_json(indent=2)
+    return summary.model_dump()
 
 
 # ---------------------------------------------------------------------------

@@ -3,7 +3,7 @@
 Uses monkeypatching to avoid downloading real CMS PUF data (hundreds of MBs).
 """
 
-import json
+from tests.helpers import parse_tool_result
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -88,7 +88,7 @@ async def test_get_inpatient_volumes_success():
         patch.object(data_loaders, "ensure_inpatient_cached", new_callable=AsyncMock, return_value=True),
         patch.object(data_loaders, "query_inpatient", return_value=INPATIENT_ROWS),
     ):
-        result = json.loads(await server.get_inpatient_volumes(ccn="390223"))
+        result = parse_tool_result(await server.get_inpatient_volumes(ccn="390223"))
 
     assert result["ccn"] == "390223"
     assert result["provider_name"] == "Thomas Jefferson University Hospital"
@@ -106,14 +106,14 @@ async def test_get_inpatient_volumes_no_data():
         patch.object(data_loaders, "ensure_inpatient_cached", new_callable=AsyncMock, return_value=True),
         patch.object(data_loaders, "query_inpatient", return_value=[]),
     ):
-        result = json.loads(await server.get_inpatient_volumes(ccn="999999"))
+        result = parse_tool_result(await server.get_inpatient_volumes(ccn="999999"))
     assert "error" in result
     assert "999999" in result["error"]
 
 
 @pytest.mark.asyncio
 async def test_get_inpatient_volumes_invalid_year():
-    result = json.loads(await server.get_inpatient_volumes(ccn="390223", year="1999"))
+    result = parse_tool_result(await server.get_inpatient_volumes(ccn="390223", year="1999"))
     assert "error" in result
     assert "1999" in result["error"]
 
@@ -124,7 +124,7 @@ async def test_get_inpatient_volumes_service_line_filter():
         patch.object(data_loaders, "ensure_inpatient_cached", new_callable=AsyncMock, return_value=True),
         patch.object(data_loaders, "query_inpatient", return_value=INPATIENT_ROWS),
     ):
-        result = json.loads(await server.get_inpatient_volumes(ccn="390223", service_line="Orthopedics"))
+        result = parse_tool_result(await server.get_inpatient_volumes(ccn="390223", service_line="Orthopedics"))
 
     # DRG 470 maps to Orthopedics — only that row should survive
     if "error" not in result:
@@ -144,7 +144,7 @@ async def test_get_outpatient_volumes_success():
         patch.object(data_loaders, "ensure_outpatient_cached", new_callable=AsyncMock, return_value=True),
         patch.object(data_loaders, "query_outpatient", return_value=OUTPATIENT_ROWS),
     ):
-        result = json.loads(await server.get_outpatient_volumes(ccn="390223"))
+        result = parse_tool_result(await server.get_outpatient_volumes(ccn="390223"))
 
     assert result["ccn"] == "390223"
     assert result["total_services"] == 1420 + 880
@@ -159,7 +159,7 @@ async def test_get_outpatient_volumes_no_data():
         patch.object(data_loaders, "ensure_outpatient_cached", new_callable=AsyncMock, return_value=True),
         patch.object(data_loaders, "query_outpatient", return_value=[]),
     ):
-        result = json.loads(await server.get_outpatient_volumes(ccn="000000"))
+        result = parse_tool_result(await server.get_outpatient_volumes(ccn="000000"))
     assert "error" in result
 
 
@@ -173,7 +173,7 @@ async def test_compute_case_mix_success():
         patch.object(data_loaders, "ensure_inpatient_cached", new_callable=AsyncMock, return_value=True),
         patch.object(data_loaders, "query_inpatient", return_value=INPATIENT_ROWS),
     ):
-        result = json.loads(await server.compute_case_mix(ccn="390223"))
+        result = parse_tool_result(await server.compute_case_mix(ccn="390223"))
 
     assert result["ccn"] == "390223"
     assert "case_mix_index" in result
@@ -194,5 +194,5 @@ async def test_compute_case_mix_no_data():
         patch.object(data_loaders, "ensure_inpatient_cached", new_callable=AsyncMock, return_value=True),
         patch.object(data_loaders, "query_inpatient", return_value=[]),
     ):
-        result = json.loads(await server.compute_case_mix(ccn="000000"))
+        result = parse_tool_result(await server.compute_case_mix(ccn="000000"))
     assert "error" in result

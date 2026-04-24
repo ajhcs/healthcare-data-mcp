@@ -3,7 +3,7 @@
 Uses monkeypatching to avoid real HTTP calls or file downloads.
 """
 
-import json
+from tests.helpers import parse_tool_result
 from unittest.mock import AsyncMock, patch
 
 import pandas as pd
@@ -84,7 +84,7 @@ def mock_nppes_results():
 @pytest.mark.asyncio
 async def test_search_facilities_by_name(mock_hospital_df):
     with patch.object(server.data_loaders, "load_hospital_info", new_callable=AsyncMock, return_value=mock_hospital_df):
-        result = json.loads(await server.search_facilities(name="Jefferson"))
+        result = parse_tool_result(await server.search_facilities(name="Jefferson"))
     assert "results" in result
     assert result["count"] == 1
     assert "Jefferson" in result["results"][0]["facility_name"]
@@ -93,14 +93,14 @@ async def test_search_facilities_by_name(mock_hospital_df):
 @pytest.mark.asyncio
 async def test_search_facilities_by_state(mock_hospital_df):
     with patch.object(server.data_loaders, "load_hospital_info", new_callable=AsyncMock, return_value=mock_hospital_df):
-        result = json.loads(await server.search_facilities(state="PA"))
+        result = parse_tool_result(await server.search_facilities(state="PA"))
     assert result["count"] == 2
 
 
 @pytest.mark.asyncio
 async def test_search_facilities_empty_df():
     with patch.object(server.data_loaders, "load_hospital_info", new_callable=AsyncMock, return_value=pd.DataFrame()):
-        result = json.loads(await server.search_facilities(name="anything"))
+        result = parse_tool_result(await server.search_facilities(name="anything"))
     assert "error" in result
     assert result["results"] == []
 
@@ -108,7 +108,7 @@ async def test_search_facilities_empty_df():
 @pytest.mark.asyncio
 async def test_search_facilities_no_match(mock_hospital_df):
     with patch.object(server.data_loaders, "load_hospital_info", new_callable=AsyncMock, return_value=mock_hospital_df):
-        result = json.loads(await server.search_facilities(name="Mayo Clinic"))
+        result = parse_tool_result(await server.search_facilities(name="Mayo Clinic"))
     assert result["count"] == 0
     assert result["results"] == []
 
@@ -120,7 +120,7 @@ async def test_search_facilities_no_match(mock_hospital_df):
 @pytest.mark.asyncio
 async def test_get_facility_found(mock_hospital_df):
     with patch.object(server.data_loaders, "load_hospital_info", new_callable=AsyncMock, return_value=mock_hospital_df):
-        result = json.loads(await server.get_facility("390223"))
+        result = parse_tool_result(await server.get_facility("390223"))
     assert result["ccn"] == "390223"
     assert "Jefferson" in result["facility_name"]
     assert result["beds"] == 757
@@ -130,7 +130,7 @@ async def test_get_facility_found(mock_hospital_df):
 @pytest.mark.asyncio
 async def test_get_facility_not_found(mock_hospital_df):
     with patch.object(server.data_loaders, "load_hospital_info", new_callable=AsyncMock, return_value=mock_hospital_df):
-        result = json.loads(await server.get_facility("999999"))
+        result = parse_tool_result(await server.get_facility("999999"))
     assert "error" in result
     assert "999999" in result["error"]
 
@@ -138,7 +138,7 @@ async def test_get_facility_not_found(mock_hospital_df):
 @pytest.mark.asyncio
 async def test_get_facility_empty_df():
     with patch.object(server.data_loaders, "load_hospital_info", new_callable=AsyncMock, return_value=pd.DataFrame()):
-        result = json.loads(await server.get_facility("390223"))
+        result = parse_tool_result(await server.get_facility("390223"))
     assert "error" in result
 
 
@@ -149,7 +149,7 @@ async def test_get_facility_empty_df():
 @pytest.mark.asyncio
 async def test_search_npi_returns_results(mock_nppes_results):
     with patch.object(server.data_loaders, "search_nppes", new_callable=AsyncMock, return_value=mock_nppes_results):
-        result = json.loads(await server.search_npi(organization_name="Jefferson"))
+        result = parse_tool_result(await server.search_npi(organization_name="Jefferson"))
     assert result["count"] == 1
     assert result["results"][0]["npi"] == "1234567890"
     assert result["results"][0]["enumeration_type"] == "NPI-2"
@@ -158,7 +158,7 @@ async def test_search_npi_returns_results(mock_nppes_results):
 @pytest.mark.asyncio
 async def test_search_npi_api_error():
     with patch.object(server.data_loaders, "search_nppes", new_callable=AsyncMock, side_effect=Exception("Network timeout")):
-        result = json.loads(await server.search_npi(organization_name="Jefferson"))
+        result = parse_tool_result(await server.search_npi(organization_name="Jefferson"))
     assert "error" in result
     assert result["results"] == []
 
@@ -166,6 +166,6 @@ async def test_search_npi_api_error():
 @pytest.mark.asyncio
 async def test_search_npi_empty_results():
     with patch.object(server.data_loaders, "search_nppes", new_callable=AsyncMock, return_value=[]):
-        result = json.loads(await server.search_npi(organization_name="NonExistentHospital"))
+        result = parse_tool_result(await server.search_npi(organization_name="NonExistentHospital"))
     assert result["count"] == 0
     assert result["results"] == []

@@ -5,12 +5,13 @@ querying negotiated rates from cached Parquet, computing rate dispersion
 statistics, cross-hospital comparisons, and Medicare benchmark analysis.
 """
 
-import json
+from typing import Any
 import logging
 import os as _os
 import statistics as _stats
 
 from mcp.server.fastmcp import FastMCP
+from shared.utils.mcp_response import error_response, to_structured
 
 from . import benchmark_client, mrf_processor, mrf_registry
 from .models import (
@@ -30,7 +31,7 @@ logger = logging.getLogger(__name__)
 _transport = _os.environ.get("MCP_TRANSPORT", "stdio")
 _mcp_kwargs: dict = {"name": "price-transparency"}
 if _transport in ("sse", "streamable-http"):
-    _mcp_kwargs["host"] = "0.0.0.0"
+    _mcp_kwargs["host"] = _os.environ.get("MCP_HOST", "127.0.0.1")
     _mcp_kwargs["port"] = int(_os.environ.get("MCP_PORT", "8009"))
 mcp = FastMCP(**_mcp_kwargs)
 
@@ -38,8 +39,8 @@ mcp = FastMCP(**_mcp_kwargs)
 # ---------------------------------------------------------------------------
 # Tool 1: search_mrf_index
 # ---------------------------------------------------------------------------
-@mcp.tool()
-async def search_mrf_index(query: str, state: str = "") -> str:
+@mcp.tool(structured_output=True)
+async def search_mrf_index(query: str, state: str = "") -> dict[str, Any]:
     """Search for hospital MRF (machine-readable file) URLs by name, CCN, or EIN.
 
     Discovers hospitals via the CMS Provider Data Catalog and curated registry,
@@ -80,22 +81,22 @@ async def search_mrf_index(query: str, state: str = "") -> str:
                 row_count=row_count,
             ).model_dump())
 
-        return json.dumps({"total_results": len(results), "hospitals": results})
+        return to_structured({"total_results": len(results), "hospitals": results})
     except Exception as e:
         logger.exception("search_mrf_index failed")
-        return json.dumps({"error": f"search_mrf_index failed: {e}"})
+        return error_response(f"search_mrf_index failed: {e}")
 
 
 # ---------------------------------------------------------------------------
 # Tool 2: get_negotiated_rates
 # ---------------------------------------------------------------------------
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def get_negotiated_rates(
     hospital_id: str,
     cpt_codes: list[str],
     payer: str = "",
     mrf_url: str = "",
-) -> str:
+) -> dict[str, Any]:
     """Get negotiated rates for CPT codes at a hospital from cached Parquet data.
 
     If the hospital is not yet cached and an mrf_url is provided, triggers
@@ -119,13 +120,11 @@ async def get_negotiated_rates(
                 )
                 await mrf_processor.process_mrf(mrf_url, hospital_id)
             else:
-                return json.dumps({
-                    "error": (
-                        f"No cached data for hospital '{hospital_id}'. "
-                        "Use search_mrf_index to find the MRF URL, then pass it "
-                        "as mrf_url to trigger automatic download and processing."
-                    )
-                })
+                return error_response(
+                    f"No cached data for hospital '{hospital_id}'. "
+                    "Use search_mrf_index to find the MRF URL, then pass it "
+                    "as mrf_url to trigger automatic download and processing."
+                )
 
         # Query rates from Parquet cache
         raw_rates = mrf_processor.get_rates(hospital_id, cpt_codes, payer=payer)
@@ -144,17 +143,17 @@ async def get_negotiated_rates(
             total_rates=len(rates),
             source=source,
         )
-        return json.dumps(response.model_dump())
+        return to_structured(response.model_dump())
     except Exception as e:
         logger.exception("get_negotiated_rates failed")
-        return json.dumps({"error": f"get_negotiated_rates failed: {e}"})
+        return error_response(f"get_negotiated_rates failed: {e}")
 
 
 # ---------------------------------------------------------------------------
 # Tool 3: compute_rate_dispersion
 # ---------------------------------------------------------------------------
-@mcp.tool()
-async def compute_rate_dispersion(hospital_id: str, cpt_codes: list[str]) -> str:
+@mcp.tool(structured_output=True)
+async def compute_rate_dispersion(hospital_id: str, cpt_codes: list[str]) -> dict[str, Any]:
     """Compute rate dispersion statistics for CPT codes across payers at a hospital.
 
     Shows min, max, median, mean, IQR, coefficient of variation, and standard
@@ -166,27 +165,25 @@ async def compute_rate_dispersion(hospital_id: str, cpt_codes: list[str]) -> str
     """
     try:
         if not mrf_processor.is_cached(hospital_id):
-            return json.dumps({
-                "error": (
-                    f"No cached data for hospital '{hospital_id}'. "
-                    "Use get_negotiated_rates with an mrf_url first."
-                )
-            })
+            return error_response(
+                f"No cached data for hospital '{hospital_id}'. "
+                "Use get_negotiated_rates with an mrf_url first."
+            )
 
         raw_stats = mrf_processor.get_rate_stats(hospital_id, cpt_codes)
 
         results = [RateDispersion(**s).model_dump() for s in raw_stats]
-        return json.dumps({"hospital_id": hospital_id, "dispersion": results})
+        return to_structured({"hospital_id": hospital_id, "dispersion": results})
     except Exception as e:
         logger.exception("compute_rate_dispersion failed")
-        return json.dumps({"error": f"compute_rate_dispersion failed: {e}"})
+        return error_response(f"compute_rate_dispersion failed: {e}")
 
 
 # ---------------------------------------------------------------------------
 # Tool 4: compare_rates_system
 # ---------------------------------------------------------------------------
-@mcp.tool()
-async def compare_rates_system(system_name: str, cpt_codes: list[str]) -> str:
+@mcp.tool(structured_output=True)
+async def compare_rates_system(system_name: str, cpt_codes: list[str]) -> dict[str, Any]:
     """Compare negotiated rates across hospitals in a health system.
 
     Queries all cached hospitals whose names match the system name, then
@@ -207,12 +204,10 @@ async def compare_rates_system(system_name: str, cpt_codes: list[str]) -> str:
         ]
 
         if not matching:
-            return json.dumps({
-                "error": (
-                    f"No cached hospitals match system name '{system_name}'. "
-                    f"Found {len(all_hospitals)} cached hospitals total."
-                )
-            })
+            return error_response(
+                f"No cached hospitals match system name '{system_name}'. "
+                f"Found {len(all_hospitals)} cached hospitals total."
+            )
 
         hospitals = []
         for hosp_meta in matching:
@@ -236,21 +231,21 @@ async def compare_rates_system(system_name: str, cpt_codes: list[str]) -> str:
             cpt_codes=cpt_codes,
             hospitals=hospitals,
         )
-        return json.dumps(response.model_dump())
+        return to_structured(response.model_dump())
     except Exception as e:
         logger.exception("compare_rates_system failed")
-        return json.dumps({"error": f"compare_rates_system failed: {e}"})
+        return error_response(f"compare_rates_system failed: {e}")
 
 
 # ---------------------------------------------------------------------------
 # Tool 5: benchmark_rates
 # ---------------------------------------------------------------------------
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def benchmark_rates(
     hospital_id: str,
     cpt_codes: list[str],
     locality: str = "",
-) -> str:
+) -> dict[str, Any]:
     """Benchmark a hospital's negotiated rates against Medicare and peer hospitals.
 
     For each CPT code, computes:
@@ -266,12 +261,10 @@ async def benchmark_rates(
     """
     try:
         if not mrf_processor.is_cached(hospital_id):
-            return json.dumps({
-                "error": (
-                    f"No cached data for hospital '{hospital_id}'. "
-                    "Use get_negotiated_rates with an mrf_url first."
-                )
-            })
+            return error_response(
+                f"No cached data for hospital '{hospital_id}'. "
+                "Use get_negotiated_rates with an mrf_url first."
+            )
 
         meta = mrf_processor.get_cache_metadata(hospital_id)
         hospital_name = meta.get("hospital_name", hospital_id)
@@ -366,10 +359,10 @@ async def benchmark_rates(
             locality=locality_used,
             benchmarks=benchmarks,
         )
-        return json.dumps(response.model_dump())
+        return to_structured(response.model_dump())
     except Exception as e:
         logger.exception("benchmark_rates failed")
-        return json.dumps({"error": f"benchmark_rates failed: {e}"})
+        return error_response(f"benchmark_rates failed: {e}")
 
 
 if __name__ == "__main__":

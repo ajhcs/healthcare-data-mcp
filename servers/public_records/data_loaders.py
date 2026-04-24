@@ -8,27 +8,21 @@ Also handles manually-seeded 340B covered-entity JSON and HIPAA breach CSV.
 import hashlib
 import json
 import logging
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 
+import duckdb
+from shared.utils.identity import (
+    conservative_fuzzy_score,
+    normalize_name,
+    normalize_npi,
+    normalize_state,
+)
+from shared.utils.duckdb_safe import safe_parquet_sql
 
 from shared.utils.http_client import resilient_request
 import pandas as pd
-
-# Ensure shared utils are importable
-import sys as _sys
-_project_root = __import__("pathlib").Path(__file__).resolve().parent.parent.parent
-if str(_project_root) not in _sys.path:
-    _sys.path.insert(0, str(_project_root))
-
-from shared.utils.cache import is_cache_valid as _is_cache_valid  # noqa: E402
-from shared.utils.cms_url_resolver import resolve_cms_download_url  # noqa: E402
-from shared.utils.duckdb_helpers import (  # noqa: E402
-    detect_columns as _detect_columns,
-    find_column as _find_col,
-    get_connection as _get_con,
-)
-from shared.utils.extraction import safe_int as _i, safe_str as _s  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +35,8 @@ _CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 _BULK_TTL_DAYS = 90       # TTL for bulk CMS CSV-to-Parquet files
 _API_TTL_DAYS = 7          # TTL for API response cache
+_LEIE_TTL_DAYS = 31
+_LEIE_STALE_MAX_DAYS = 45
 
 # ---------------------------------------------------------------------------
 # CMS bulk download URLs
@@ -54,19 +50,310 @@ PI_URL = (
     "https://data.cms.gov/provider-data/sites/default/files/resources/"
     "5462b19a756c53c1becccf13787d9157_1770163678/Promoting_Interoperability-Hospital.csv"
 )
-_POS_DATASET_TITLE = "Provider of Services File - Quality Improvement and Evaluation System"
 
 # Parquet cache paths
 _POS_PARQUET = _CACHE_DIR / "pos_q4_2025.parquet"
 _PI_PARQUET = _CACHE_DIR / "pi_hospital.parquet"
 _340B_PARQUET = _CACHE_DIR / "340b_covered_entities.parquet"
 _BREACH_PARQUET = _CACHE_DIR / "hipaa_breaches.parquet"
+_LEIE_PARQUET = _CACHE_DIR / "leie_current.parquet"
+_LEIE_META = _CACHE_DIR / "leie_current.meta.json"
+_LEIE_CSV = _CACHE_DIR / "leie_current.csv"
 
 # Manual-seed source files (user drops these into the cache dir)
 _340B_JSON = _CACHE_DIR / "340b_covered_entities.json"
 _BREACH_CSV = _CACHE_DIR / "hipaa_breaches.csv"
 
+# ---------------------------------------------------------------------------
+# HHS OIG LEIE source configuration
+# ---------------------------------------------------------------------------
 
+LEIE_URL = "https://oig.hhs.gov/exclusions/downloadables/UPDATED.csv"
+LEIE_LANDING_PAGE_URL = "https://oig.hhs.gov/exclusions/exclusions_list.asp"
+LEIE_RECORD_LAYOUT_URL = "https://www.oig.hhs.gov/exclusions/files/leie_record_layout.pdf"
+LEIE_LAYOUT_COLUMNS = [
+    "LASTNAME",
+    "FIRSTNAME",
+    "MIDNAME",
+    "BUSNAME",
+    "GENERAL",
+    "SPECIALTY",
+    "UPIN",
+    "NPI",
+    "DOB",
+    "ADDRESS",
+    "CITY",
+    "STATE",
+    "ZIP",
+    "EXCLTYPE",
+    "EXCLDATE",
+    "REINDATE",
+    "WAIVERDATE",
+    "WVRSTATE",
+]
+_LEIE_COLUMN_MAP = {
+    "LASTNAME": "last_name",
+    "FIRSTNAME": "first_name",
+    "MIDNAME": "middle_name",
+    "BUSNAME": "business_name",
+    "GENERAL": "general_category",
+    "SPECIALTY": "specialty",
+    "UPIN": "upin",
+    "NPI": "npi",
+    "DOB": "dob",
+    "ADDRESS": "address",
+    "CITY": "city",
+    "STATE": "state",
+    "ZIP": "zip_code",
+    "EXCLTYPE": "exclusion_type",
+    "EXCLDATE": "exclusion_date",
+    "REINDATE": "reinstatement_date",
+    "WAIVERDATE": "waiver_date",
+    "WVRSTATE": "waiver_state",
+}
+
+_SENSITIVE_IDENTIFIER_KEYS = {
+    "ssn",
+    "social_security_number",
+    "social_security_num",
+    "social_security",
+    "ein",
+    "fein",
+    "tin",
+    "tax_id",
+    "tax_identifier",
+    "taxpayer_id",
+    "taxpayer_identifier",
+    "taxpayer_identification_number",
+    "employer_identification_number",
+    "federal_tax_id",
+    "federal_tax_identifier",
+}
+
+
+# ---------------------------------------------------------------------------
+# TTL helpers
+# ---------------------------------------------------------------------------
+
+def _is_cache_valid(path: Path, ttl_days: int) -> bool:
+    """Check if a cached file exists and is within TTL."""
+    if not path.exists():
+        return False
+    age_days = (datetime.now(timezone.utc).timestamp() - path.stat().st_mtime) / 86400
+    return age_days < ttl_days
+
+
+def _cache_age_days(path: Path) -> float | None:
+    """Return a cached file's age in days, or None if it does not exist."""
+    if not path.exists():
+        return None
+    age_seconds = datetime.now(timezone.utc).timestamp() - path.stat().st_mtime
+    return round(age_seconds / 86400, 3)
+
+
+def _parse_iso_datetime(value: str) -> datetime | None:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def _read_json(path: Path) -> dict:
+    if not path.exists():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        return payload if isinstance(payload, dict) else {}
+    except Exception as e:
+        logger.warning("Failed to read JSON cache metadata %s: %s", path.name, e)
+        return {}
+
+
+def _write_dataframe_parquet(
+    df: pd.DataFrame,
+    path: Path,
+    *,
+    compression: str = "zstd",
+) -> None:
+    """Write Parquet with pandas, falling back to DuckDB when no pandas engine is installed."""
+    try:
+        df.to_parquet(path, compression=compression, index=False)
+        return
+    except ImportError:
+        logger.info("pandas Parquet engine unavailable; writing %s with DuckDB", path.name)
+
+    con = duckdb.connect(":memory:")
+    try:
+        con.register("df_to_write", df)
+        con.execute(
+            "COPY df_to_write TO ? (FORMAT PARQUET, COMPRESSION ZSTD)",
+            [str(path)],
+        )
+    finally:
+        con.close()
+
+
+def _read_parquet_dataframe(path: Path) -> pd.DataFrame:
+    """Read Parquet with pandas, falling back to DuckDB when no pandas engine is installed."""
+    try:
+        return pd.read_parquet(path)
+    except ImportError:
+        logger.info("pandas Parquet engine unavailable; reading %s with DuckDB", path.name)
+
+    con = duckdb.connect(":memory:")
+    try:
+        return con.execute("SELECT * FROM read_parquet(?)", [str(path)]).fetchdf()
+    finally:
+        con.close()
+
+
+def _normalized_key(value: object) -> str:
+    return re.sub(r"[^a-z0-9]+", "_", str(value).strip().lower()).strip("_")
+
+
+def _has_sensitive_identifier_key(payload: dict) -> bool:
+    return bool(_SENSITIVE_IDENTIFIER_KEYS & {_normalized_key(key) for key in payload})
+
+
+def _normalize_leie_date(value: object) -> str:
+    """Normalize LEIE eight-digit dates to ISO strings, preserving blanks."""
+    digits = re.sub(r"\D+", "", "" if value is None else str(value).strip())
+    if not digits or digits in {"00000000", "99999999"}:
+        return ""
+    if len(digits) != 8:
+        return str(value).strip()
+
+    for fmt in ("%Y%m%d", "%m%d%Y"):
+        try:
+            return datetime.strptime(digits, fmt).date().isoformat()
+        except ValueError:
+            continue
+    return digits
+
+
+def _source_metadata_base() -> dict:
+    return {
+        "source_name": "HHS OIG LEIE",
+        "source_url": LEIE_URL,
+        "landing_page_url": LEIE_LANDING_PAGE_URL,
+        "record_layout_url": LEIE_RECORD_LAYOUT_URL,
+        "downloaded_at": "",
+        "source_last_modified": "",
+        "source_etag": "",
+        "record_count": 0,
+        "cache_path": str(_LEIE_PARQUET),
+        "csv_path": str(_LEIE_CSV),
+        "cache_status": "missing",
+        "cache_age_days": _cache_age_days(_LEIE_PARQUET),
+        "layout_columns": LEIE_LAYOUT_COLUMNS,
+        "last_error": "",
+    }
+
+
+def _leie_metadata(cache_status: str | None = None, **updates: object) -> dict:
+    meta = _source_metadata_base()
+    meta.update(_read_json(_LEIE_META))
+    meta["cache_path"] = str(_LEIE_PARQUET)
+    meta["csv_path"] = str(_LEIE_CSV)
+    meta["layout_columns"] = LEIE_LAYOUT_COLUMNS
+    meta["cache_age_days"] = _cache_age_days(_LEIE_PARQUET)
+    if cache_status is not None:
+        meta["cache_status"] = cache_status
+    meta.update({k: v for k, v in updates.items() if v is not None})
+    return meta
+
+
+def _write_leie_metadata(meta: dict) -> dict:
+    payload = _leie_metadata(**meta)
+    _LEIE_META.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+    return payload
+
+
+def _leie_cache_is_younger_than(days: int) -> bool:
+    age = _cache_age_days(_LEIE_PARQUET)
+    return age is not None and age < days
+
+
+def _leie_download_is_older_than(days: int) -> bool:
+    meta = _read_json(_LEIE_META)
+    downloaded_at = _parse_iso_datetime(str(meta.get("downloaded_at", "")))
+    if downloaded_at is None:
+        return True
+    if downloaded_at.tzinfo is None:
+        downloaded_at = downloaded_at.replace(tzinfo=timezone.utc)
+    return (datetime.now(timezone.utc) - downloaded_at).days >= days
+
+
+# ---------------------------------------------------------------------------
+# DuckDB connection helper
+# ---------------------------------------------------------------------------
+
+def _get_con(parquet_path: Path, view_name: str = "data") -> duckdb.DuckDBPyConnection | None:
+    """Create DuckDB in-memory connection with a view over the Parquet file.
+
+    If the Parquet file is corrupted, deletes it and returns None so the
+    caller can trigger a re-download on the next request.
+    """
+    if not parquet_path.exists():
+        return None
+    con = duckdb.connect(":memory:")
+    try:
+        con.execute(
+            f"CREATE VIEW {view_name} AS SELECT * FROM {safe_parquet_sql(parquet_path)}"
+        )
+        return con
+    except Exception:
+        logger.warning("Corrupt Parquet cache, deleting: %s", parquet_path)
+        con.close()
+        parquet_path.unlink(missing_ok=True)
+        return None
+
+
+# ---------------------------------------------------------------------------
+# Safe row extraction helpers
+# ---------------------------------------------------------------------------
+
+def _s(row: dict, col: str | None) -> str:
+    """Safe string extraction from a dict row."""
+    if not col or col not in row:
+        return ""
+    v = row.get(col)
+    return str(v).strip() if v is not None else ""
+
+
+def _i(row: dict, col: str | None) -> int:
+    """Safe int extraction from a dict row."""
+    v = _s(row, col)
+    try:
+        return int(float(v)) if v else 0
+    except (ValueError, TypeError):
+        return 0
+
+
+# ---------------------------------------------------------------------------
+# Dynamic column detection
+# ---------------------------------------------------------------------------
+
+def _detect_columns(con: duckdb.DuckDBPyConnection, view_name: str = "data") -> list[str]:
+    """Return list of column names in the view."""
+    return [
+        r[0]
+        for r in con.execute(
+            f"SELECT column_name FROM information_schema.columns "
+            f"WHERE table_name='{view_name}'"
+        ).fetchall()
+    ]
+
+
+def _find_col(cols: list[str], candidates: list[str]) -> str | None:
+    """Find the first matching column name from a list of candidates."""
+    col_set = set(cols)
+    for c in candidates:
+        if c in col_set:
+            return c
+    return None
 
 
 # ============================================================
@@ -81,13 +368,9 @@ async def ensure_pos_cached() -> bool:
     if _is_cache_valid(_POS_PARQUET, _BULK_TTL_DAYS):
         return True
 
-    pos_url = await resolve_cms_download_url("pos-file", "Hospital_and_other.DATA")
-    if not pos_url:
-        raise RuntimeError("Unable to resolve Provider of Services download URL")
-
-    logger.info("Downloading CMS POS file from %s ...", pos_url[:80])
+    logger.info("Downloading CMS POS file from %s ...", POS_URL[:80])
     try:
-        resp = await resilient_request("GET", pos_url, timeout=300.0)
+        resp = await resilient_request("GET", POS_URL, timeout=300.0)
 
         csv_path = _CACHE_DIR / "pos_raw.csv"
         csv_path.write_bytes(resp.content)
@@ -97,7 +380,7 @@ async def ensure_pos_cached() -> bool:
             low_memory=False, encoding_errors="replace",
         )
         df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
-        df.to_parquet(_POS_PARQUET, compression="zstd", index=False)
+        _write_dataframe_parquet(df, _POS_PARQUET, compression="zstd")
 
         csv_path.unlink(missing_ok=True)
         logger.info("POS cached: %d records -> %s", len(df), _POS_PARQUET.name)
@@ -116,13 +399,9 @@ async def ensure_pi_cached() -> bool:
     if _is_cache_valid(_PI_PARQUET, _BULK_TTL_DAYS):
         return True
 
-    pi_url = await resolve_cms_download_url("pi-hospital", "Promoting_Interoperability-Hospital")
-    if not pi_url:
-        raise RuntimeError("Unable to resolve Promoting Interoperability download URL")
-
-    logger.info("Downloading CMS PI file from %s ...", pi_url[:80])
+    logger.info("Downloading CMS PI file from %s ...", PI_URL[:80])
     try:
-        resp = await resilient_request("GET", pi_url, timeout=300.0)
+        resp = await resilient_request("GET", PI_URL, timeout=300.0)
 
         csv_path = _CACHE_DIR / "pi_raw.csv"
         csv_path.write_bytes(resp.content)
@@ -132,7 +411,7 @@ async def ensure_pi_cached() -> bool:
             low_memory=False, encoding_errors="replace",
         )
         df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
-        df.to_parquet(_PI_PARQUET, compression="zstd", index=False)
+        _write_dataframe_parquet(df, _PI_PARQUET, compression="zstd")
 
         csv_path.unlink(missing_ok=True)
         logger.info("PI cached: %d records -> %s", len(df), _PI_PARQUET.name)
@@ -200,7 +479,7 @@ def ensure_340b_loaded() -> bool:
 
         df = pd.DataFrame(records).astype(str)
         df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
-        df.to_parquet(_340B_PARQUET, compression="zstd", index=False)
+        _write_dataframe_parquet(df, _340B_PARQUET, compression="zstd")
 
         logger.info("340B cached: %d records -> %s", len(df), _340B_PARQUET.name)
         return True
@@ -248,7 +527,7 @@ def ensure_breach_loaded() -> bool:
             low_memory=False, encoding_errors="replace",
         )
         df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
-        df.to_parquet(_BREACH_PARQUET, compression="zstd", index=False)
+        _write_dataframe_parquet(df, _BREACH_PARQUET, compression="zstd")
 
         logger.info("Breach data cached: %d records -> %s", len(df), _BREACH_PARQUET.name)
         return True
@@ -256,6 +535,345 @@ def ensure_breach_loaded() -> bool:
     except Exception as e:
         logger.warning("Failed to process HIPAA breach CSV: %s", e)
         return False
+
+
+# ============================================================
+# HHS OIG LEIE cache, parsing, and query helpers
+# ============================================================
+
+async def ensure_leie_cached(force_refresh: bool = False) -> dict:
+    """Ensure the current HHS OIG LEIE file is cached as CSV and Parquet.
+
+    The source is refreshed when forced, when Last-Modified/ETag changes, or
+    when the local download is at least 31 days old. If upstream checks or
+    downloads fail, an existing Parquet cache may be served as stale for up to
+    45 days.
+    """
+    existing_meta = _read_json(_LEIE_META)
+    has_cache = _LEIE_PARQUET.exists()
+    should_refresh = force_refresh or not has_cache or _leie_download_is_older_than(_LEIE_TTL_DAYS)
+    source_last_modified = str(existing_meta.get("source_last_modified", ""))
+    source_etag = str(existing_meta.get("source_etag", ""))
+    head_error = ""
+
+    try:
+        head = await resilient_request("HEAD", LEIE_URL, timeout=30.0)
+        remote_last_modified = head.headers.get("last-modified", "")
+        remote_etag = head.headers.get("etag", "")
+        if remote_last_modified and remote_last_modified != source_last_modified:
+            should_refresh = True
+        if remote_etag and remote_etag != source_etag:
+            should_refresh = True
+        source_last_modified = remote_last_modified or source_last_modified
+        source_etag = remote_etag or source_etag
+    except Exception as e:
+        head_error = f"HEAD failed: {e}"
+        if has_cache and not should_refresh and _leie_cache_is_younger_than(_LEIE_STALE_MAX_DAYS):
+            return _leie_metadata("stale", last_error=head_error)
+        should_refresh = True
+
+    if not should_refresh and has_cache:
+        return _leie_metadata("fresh", last_error=head_error)
+
+    try:
+        logger.info("Downloading HHS OIG LEIE file from %s", LEIE_URL)
+        resp = await resilient_request("GET", LEIE_URL, timeout=300.0)
+        source_last_modified = resp.headers.get("last-modified", source_last_modified)
+        source_etag = resp.headers.get("etag", source_etag)
+        _LEIE_CSV.write_bytes(resp.content)
+
+        df = parse_leie_csv(_LEIE_CSV)
+        _write_dataframe_parquet(df, _LEIE_PARQUET, compression="zstd")
+
+        meta = {
+            "downloaded_at": datetime.now(timezone.utc).isoformat(),
+            "source_last_modified": source_last_modified,
+            "source_etag": source_etag,
+            "record_count": int(len(df)),
+            "cache_status": "refreshed",
+            "last_error": head_error,
+        }
+        written = _write_leie_metadata(meta)
+        logger.info("LEIE cached: %d records -> %s", len(df), _LEIE_PARQUET.name)
+        return written
+    except Exception as e:
+        message = f"{head_error}; download failed: {e}" if head_error else f"download failed: {e}"
+        logger.warning("Failed to refresh HHS OIG LEIE file: %s", message)
+        if has_cache and _leie_cache_is_younger_than(_LEIE_STALE_MAX_DAYS):
+            return _leie_metadata("stale", last_error=message)
+        return _leie_metadata("unavailable", last_error=message)
+
+
+def parse_leie_csv(csv_path: Path) -> pd.DataFrame:
+    """Parse and normalize an HHS OIG LEIE CSV using the documented layout."""
+    df = pd.read_csv(
+        csv_path,
+        dtype=str,
+        keep_default_na=False,
+        low_memory=False,
+        encoding_errors="replace",
+    )
+    raw_columns = [str(c).strip().upper() for c in df.columns]
+    missing = [col for col in LEIE_LAYOUT_COLUMNS if col not in raw_columns]
+    if missing:
+        raise ValueError(f"LEIE CSV missing required columns: {', '.join(missing)}")
+
+    df.columns = raw_columns
+    df = df[LEIE_LAYOUT_COLUMNS].copy()
+    df.rename(columns=_LEIE_COLUMN_MAP, inplace=True)
+    df = df.map(lambda value: str(value).strip() if value is not None else "")
+
+    for date_col in ("dob", "exclusion_date", "reinstatement_date", "waiver_date"):
+        df[date_col] = df[date_col].map(_normalize_leie_date)
+
+    df["npi"] = df["npi"].map(lambda value: normalize_npi(value) or "")
+    df["upin"] = df["upin"].map(lambda value: "" if str(value).strip() in {"000000", "0000000"} else str(value).strip())
+    df["normalized_npi"] = df["npi"]
+    df["normalized_state"] = df["state"].map(lambda value: normalize_state(value) or "")
+    df["state"] = df["normalized_state"].where(df["normalized_state"] != "", df["state"].str.upper().str.strip())
+    df["waiver_state"] = df["waiver_state"].map(lambda value: normalize_state(value) or str(value).strip().upper())
+
+    individual_name = (
+        df["first_name"].fillna("") + " " + df["middle_name"].fillna("") + " " + df["last_name"].fillna("")
+    ).str.strip()
+    df["normalized_individual_name"] = individual_name.map(normalize_name)
+    df["normalized_business_name"] = df["business_name"].map(
+        lambda value: normalize_name(value, remove_legal_suffixes=True)
+    )
+    df["entity_type"] = df["normalized_business_name"].map(lambda value: "entity" if value else "individual")
+    df["display_name"] = df.apply(_leie_display_name, axis=1)
+
+    return df
+
+
+def query_leie_by_npi(npi: str) -> list[dict]:
+    """Return exact LEIE records for a valid 10-digit NPI."""
+    normalized = normalize_npi(npi)
+    if not normalized or not _LEIE_PARQUET.exists():
+        return []
+
+    df = _read_parquet_dataframe(_LEIE_PARQUET)
+    matches = df[df["normalized_npi"] == normalized].head(500)
+    return [
+        _leie_record_from_row(row, match_basis="npi_exact", match_score=100, verification_status="strong_potential_match")
+        for _, row in matches.iterrows()
+    ]
+
+
+def query_leie_by_individual(
+    last_name: str,
+    first_name: str = "",
+    state: str = "",
+    dob: str = "",
+    limit: int = 25,
+) -> list[dict]:
+    """Search LEIE individual records by name with optional state/DOB ranking."""
+    norm_last = normalize_name(last_name)
+    if not norm_last or not _LEIE_PARQUET.exists():
+        return []
+    norm_first = normalize_name(first_name)
+    norm_state = normalize_state(state) or ""
+    norm_dob = _normalize_leie_date(dob)
+
+    df = _read_parquet_dataframe(_LEIE_PARQUET)
+    candidates = df[df["entity_type"] == "individual"].copy()
+    last_col = candidates["last_name"].map(normalize_name)
+    candidates = candidates[last_col.str.startswith(norm_last) | (last_col == norm_last)]
+    if norm_state:
+        candidates = candidates[candidates["normalized_state"] == norm_state]
+
+    scored: list[dict] = []
+    for _, row in candidates.iterrows():
+        score = 80
+        basis = "last_name_prefix"
+        if normalize_name(row.get("last_name", "")) == norm_last:
+            score = 88
+            basis = "last_name_exact"
+        if norm_first:
+            first_score = conservative_fuzzy_score(norm_first, row.get("first_name", ""))
+            score = max(score, int(round((score + first_score) / 2)))
+            basis = "name_fuzzy" if first_score < 100 else "name_exact"
+        if norm_state:
+            score = min(100, score + 4)
+            basis = "name_state"
+        if norm_dob and row.get("dob", "") == norm_dob:
+            score = min(100, score + 6)
+            basis = "name_dob" if not norm_state else "name_state_dob"
+        scored.append(_leie_record_from_row(row, match_basis=basis, match_score=score))
+
+    scored.sort(key=lambda item: item["match_score"], reverse=True)
+    return scored[:max(1, min(limit, 100))]
+
+
+def query_leie_by_entity(
+    entity_name: str,
+    state: str = "",
+    npi: str = "",
+    limit: int = 25,
+) -> list[dict]:
+    """Search LEIE entity records by exact NPI or normalized business name."""
+    npi_matches = query_leie_by_npi(npi) if npi else []
+    if npi_matches:
+        return npi_matches[:max(1, min(limit, 100))]
+
+    norm_name = normalize_name(entity_name, remove_legal_suffixes=True)
+    if not norm_name or not _LEIE_PARQUET.exists():
+        return []
+    norm_state = normalize_state(state) or ""
+
+    df = _read_parquet_dataframe(_LEIE_PARQUET)
+    candidates = df[df["entity_type"] == "entity"].copy()
+    if norm_state:
+        candidates = candidates[candidates["normalized_state"] == norm_state]
+
+    tokens = norm_name.split()
+    prefix = tokens[0] if tokens else norm_name
+    business_col = candidates["normalized_business_name"].fillna("")
+    candidates = candidates[
+        business_col.str.startswith(prefix)
+        | business_col.str.contains(re.escape(norm_name), regex=True)
+        | business_col.map(lambda value: prefix in value.split())
+    ]
+
+    scored: list[dict] = []
+    for _, row in candidates.iterrows():
+        score = conservative_fuzzy_score(norm_name, row.get("normalized_business_name", ""))
+        if row.get("normalized_business_name", "").startswith(norm_name):
+            score = max(score, 94)
+        if norm_state:
+            score = min(100, score + 3)
+        basis = "entity_name_state" if norm_state else "entity_name"
+        scored.append(_leie_record_from_row(row, match_basis=basis, match_score=score))
+
+    scored = [item for item in scored if item["match_score"] >= 70]
+    scored.sort(key=lambda item: item["match_score"], reverse=True)
+    return scored[:max(1, min(limit, 100))]
+
+
+def screen_leie_candidates(candidates: list[dict], limit_per_candidate: int = 5) -> list[dict]:
+    """Screen up to 100 candidate dictionaries against the current LEIE cache."""
+    if len(candidates) > 100:
+        raise ValueError("screen_leie_candidates accepts at most 100 candidates per call")
+
+    limit = max(1, min(limit_per_candidate, 25))
+    results: list[dict] = []
+    screened_at = datetime.now(timezone.utc).isoformat()
+    source_metadata = get_leie_source_metadata()
+
+    for index, candidate in enumerate(candidates):
+        if _has_sensitive_identifier_key(candidate):
+            raise ValueError(
+                "LEIE batch screening does not accept SSN, EIN, TIN, or tax identifier fields"
+            )
+
+        normalized_candidate = {
+            "candidate_id": str(candidate.get("candidate_id") or f"candidate-{index + 1}"),
+            "entity_type": str(candidate.get("entity_type", "")).strip().lower(),
+            "npi": str(candidate.get("npi", "")).strip(),
+            "first_name": str(candidate.get("first_name", "")).strip(),
+            "last_name": str(candidate.get("last_name", "")).strip(),
+            "entity_name": str(candidate.get("entity_name", "")).strip(),
+            "state": str(candidate.get("state", "")).strip(),
+            "dob": str(candidate.get("dob", "")).strip(),
+        }
+
+        matches: list[dict] = []
+        if normalized_candidate["npi"]:
+            matches = query_leie_by_npi(normalized_candidate["npi"])
+        if not matches and normalized_candidate["entity_name"]:
+            matches = query_leie_by_entity(
+                entity_name=normalized_candidate["entity_name"],
+                state=normalized_candidate["state"],
+                limit=limit,
+            )
+        if not matches and normalized_candidate["last_name"]:
+            matches = query_leie_by_individual(
+                last_name=normalized_candidate["last_name"],
+                first_name=normalized_candidate["first_name"],
+                state=normalized_candidate["state"],
+                dob=normalized_candidate["dob"],
+                limit=limit,
+            )
+
+        matches = matches[:limit]
+        best_score = max((int(match.get("match_score", 0)) for match in matches), default=0)
+        results.append({
+            "candidate": normalized_candidate,
+            "status": _leie_status_for_matches(matches),
+            "match_count": len(matches),
+            "best_match_score": best_score,
+            "matches": matches,
+            "screened_at": screened_at,
+            "source_metadata": source_metadata,
+        })
+
+    return results
+
+
+def get_leie_source_metadata() -> dict:
+    """Return source/cache metadata for the LEIE cache without network access."""
+    status = "fresh" if _LEIE_PARQUET.exists() else "missing"
+    if _LEIE_PARQUET.exists() and not _leie_cache_is_younger_than(_LEIE_TTL_DAYS):
+        status = "stale"
+    return _leie_metadata(status)
+
+
+def _leie_display_name(row: pd.Series) -> str:
+    business_name = str(row.get("business_name", "")).strip()
+    if business_name:
+        return business_name
+    parts = [
+        str(row.get("first_name", "")).strip(),
+        str(row.get("middle_name", "")).strip(),
+        str(row.get("last_name", "")).strip(),
+    ]
+    return " ".join(part for part in parts if part)
+
+
+def _leie_record_from_row(
+    row: pd.Series | dict,
+    *,
+    match_basis: str,
+    match_score: int,
+    verification_status: str = "potential_match",
+) -> dict:
+    fields = [
+        "entity_type",
+        "display_name",
+        "last_name",
+        "first_name",
+        "middle_name",
+        "business_name",
+        "general_category",
+        "specialty",
+        "upin",
+        "npi",
+        "dob",
+        "address",
+        "city",
+        "state",
+        "zip_code",
+        "exclusion_type",
+        "exclusion_date",
+        "reinstatement_date",
+        "waiver_date",
+        "waiver_state",
+    ]
+    record = {field: str(row.get(field, "") or "") for field in fields}
+    record.update({
+        "match_basis": match_basis,
+        "match_score": int(match_score),
+        "verification_status": verification_status,
+    })
+    return record
+
+
+def _leie_status_for_matches(matches: list[dict]) -> str:
+    if not matches:
+        return "no_current_leie_match_found"
+    if any(match.get("verification_status") == "strong_potential_match" for match in matches):
+        return "strong_potential_match"
+    return "potential_match"
 
 
 # ============================================================

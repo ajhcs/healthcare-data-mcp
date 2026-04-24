@@ -1,101 +1,104 @@
-"""Launcher for healthcare-data-mcp servers.
+"""Console launcher for the healthcare-data-mcp server collection."""
 
-Usage:
-    hc-mcp-all                    # Start all servers via Docker Compose
-    hc-mcp-all --list             # List available servers
-    hc-mcp-all --server cms-facility  # Start a single server (stdio)
-    python -m servers._launcher   # Same as hc-mcp-all
-"""
+from __future__ import annotations
 
 import argparse
 import os
-import subprocess
-import sys
-from pathlib import Path
+import runpy
+from dataclasses import dataclass
 
-SERVERS = {
-    "service-area":              ("servers.service_area.server",              8002),
-    "geo-demographics":          ("servers.geo_demographics.server",          8003),
-    "drive-time":                ("servers.drive_time.server",                8004),
-    "hospital-quality":          ("servers.hospital_quality.server",          8005),
-    "cms-facility":              ("servers.cms_facility.server",              8006),
-    "health-system-profiler":    ("servers.health_system_profiler.server",    8007),
-    "financial-intelligence":    ("servers.financial_intelligence.server",    8008),
-    "price-transparency":        ("servers.price_transparency.server",        8009),
-    "physician-referral-network":("servers.physician_referral_network.server",8010),
-    "workforce-analytics":       ("servers.workforce_analytics.server",       8011),
-    "claims-analytics":          ("servers.claims_analytics.server",          8012),
-    "public-records":            ("servers.public_records.server",            8013),
-    "web-intelligence":          ("servers.web_intelligence.server",          8014),
+from shared.utils.env_file import load_env_file
+
+
+@dataclass(frozen=True)
+class ServerSpec:
+    module: str
+    port: int
+    description: str
+
+
+SERVERS: dict[str, ServerSpec] = {
+    "service-area": ServerSpec("servers.service_area.server", 8002, "CMS hospital service areas and market share"),
+    "geo-demographics": ServerSpec("servers.geo_demographics.server", 8003, "Census, ZCTA, Medicare, and HUD geography"),
+    "drive-time": ServerSpec("servers.drive_time.server", 8004, "Routing, drive-time matrices, and access scoring"),
+    "hospital-quality": ServerSpec("servers.hospital_quality.server", 8005, "CMS quality, readmission, and safety data"),
+    "cms-facility": ServerSpec("servers.cms_facility.server", 8006, "CMS facility master data and NPPES lookup"),
+    "health-system-profiler": ServerSpec(
+        "servers.health_system_profiler.server",
+        8007,
+        "Health system discovery and facility enrichment",
+    ),
+    "financial-intelligence": ServerSpec(
+        "servers.financial_intelligence.server",
+        8008,
+        "IRS 990, SEC EDGAR, and nonprofit finance intelligence",
+    ),
+    "price-transparency": ServerSpec("servers.price_transparency.server", 8009, "Hospital MRF and benchmark pricing"),
+    "physician-referral-network": ServerSpec(
+        "servers.physician_referral_network.server",
+        8010,
+        "NPPES, physician mix, referral network, and leakage analysis",
+    ),
+    "workforce-analytics": ServerSpec("servers.workforce_analytics.server", 8011, "BLS and ACGME workforce analytics"),
+    "claims-analytics": ServerSpec("servers.claims_analytics.server", 8012, "DRG, service-line, and claims analytics"),
+    "public-records": ServerSpec(
+        "servers.public_records.server",
+        8013,
+        "SAM.gov, USAspending, CHPL, accreditation, and exclusion screening",
+    ),
+    "web-intelligence": ServerSpec("servers.web_intelligence.server", 8014, "Web search and health system OSINT"),
+    "discovery": ServerSpec("servers.discovery.server", 8015, "Dataset catalog resources, cache status, and prompts"),
+    "gateway": ServerSpec("servers.gateway.server", 8016, "Remote-safe metadata gateway with search/fetch"),
+    "provider-enrollment": ServerSpec(
+        "servers.provider_enrollment.server",
+        8017,
+        "CMS PECOS-derived provider enrollment, ownership, and CHOW",
+    ),
+    "community-health": ServerSpec(
+        "servers.community_health.server",
+        8018,
+        "CDC PLACES community-health estimates for counties, places, tracts, and ZCTAs",
+    ),
+    "research-trials": ServerSpec(
+        "servers.research_trials.server",
+        8019,
+        "NIH RePORTER funding and ClinicalTrials.gov study activity",
+    ),
 }
 
 
-def find_project_root() -> Path:
-    """Walk up from this file to find docker-compose.yml."""
-    current = Path(__file__).resolve().parent
-    for _ in range(5):
-        if (current / "docker-compose.yml").exists():
-            return current
-        current = current.parent
-    return Path(__file__).resolve().parent.parent
-
-
-def main():
-    parser = argparse.ArgumentParser(
-        description="Healthcare Data MCP server launcher",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=__doc__,
+def main() -> None:
+    parser = argparse.ArgumentParser(prog="hc-mcp", description="Run one healthcare-data-mcp server.")
+    parser.add_argument("server", nargs="?", choices=sorted(SERVERS), help="Server to run")
+    parser.add_argument(
+        "--transport",
+        choices=("stdio", "sse", "streamable-http"),
+        default=None,
+        help="MCP transport. Defaults to MCP_TRANSPORT or stdio.",
     )
-    parser.add_argument("--list", action="store_true", help="List all servers")
-    parser.add_argument("--server", "-s", help="Start a single server by name (stdio)")
-    parser.add_argument("--http", action="store_true", help="Use HTTP transport instead of stdio")
-    parser.add_argument("--port", type=int, help="Override port (HTTP mode)")
+    parser.add_argument("--port", type=int, default=None, help="HTTP/SSE port. Defaults to the server's standard port.")
+    parser.add_argument(
+        "--env-file",
+        default=None,
+        help="Optional dotenv file to load before starting the server. Defaults to HC_MCP_ENV_FILE or ./.env.",
+    )
+    parser.add_argument("--list", action="store_true", help="List available servers and ports.")
     args = parser.parse_args()
 
+    load_env_file(args.env_file)
+
     if args.list:
-        print("Available servers:\n")
-        for name, (module, port) in sorted(SERVERS.items()):
-            print(f"  {name:30s}  module={module}  port={port}")
-        print(f"\nTotal: {len(SERVERS)} servers")
+        for name, spec in sorted(SERVERS.items(), key=lambda item: item[1].port):
+            print(f"{name:28} {spec.port}  {spec.description}")
         return
 
-    if args.server:
-        name = args.server
-        if name.startswith("hc-"):
-            name = name[3:]  # Strip prefix
-        if name not in SERVERS:
-            print(f"Unknown server: {name}")
-            print(f"Available: {', '.join(sorted(SERVERS))}")
-            sys.exit(1)
+    if not args.server:
+        parser.error("choose a server or pass --list")
 
-        module, default_port = SERVERS[name]
-        env = os.environ.copy()
-        env["PYTHONPATH"] = str(find_project_root())
-
-        if args.http:
-            port = args.port or default_port
-            env["MCP_TRANSPORT"] = "streamable-http"
-            env["MCP_PORT"] = str(port)
-            print(f"Starting {name} on http://0.0.0.0:{port}/mcp")
-
-        print(f"Starting {name} (module: {module})...")
-        sys.exit(subprocess.call([sys.executable, "-m", module], env=env))
-
-    # Default: try docker compose
-    root = find_project_root()
-    compose_file = root / "docker-compose.yml"
-    if compose_file.exists():
-        print("Starting all servers via Docker Compose...")
-        print(f"  compose file: {compose_file}")
-        sys.exit(subprocess.call(
-            ["docker", "compose", "-f", str(compose_file), "up", "-d"],
-            cwd=str(root),
-        ))
-    else:
-        print("No docker-compose.yml found.")
-        print("Start a single server: hc-mcp-all --server cms-facility")
-        print("List servers:          hc-mcp-all --list")
-        sys.exit(1)
+    spec = SERVERS[args.server]
+    os.environ["MCP_TRANSPORT"] = args.transport or os.environ.get("MCP_TRANSPORT", "stdio")
+    os.environ["MCP_PORT"] = str(args.port or int(os.environ.get("MCP_PORT", spec.port)))
+    runpy.run_module(spec.module, run_name="__main__")
 
 
 if __name__ == "__main__":

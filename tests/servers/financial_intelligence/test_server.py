@@ -3,7 +3,7 @@
 Uses monkeypatching to avoid live ProPublica/EDGAR API calls.
 """
 
-import json
+from tests.helpers import parse_tool_result
 import os
 from unittest.mock import AsyncMock, patch
 
@@ -107,7 +107,7 @@ async def test_search_form990_returns_results():
         patch.object(propublica_client, "get_organization", new_callable=AsyncMock,
                      return_value=PROPUBLICA_ORG_DETAIL),
     ):
-        result = json.loads(await server.search_form990("Jefferson"))
+        result = parse_tool_result(await server.search_form990("Jefferson"))
 
     assert result["total_results"] == 2
     assert len(result["organizations"]) == 2
@@ -124,7 +124,7 @@ async def test_search_form990_empty_results():
         patch.object(propublica_client, "search_organizations", new_callable=AsyncMock,
                      return_value={"total_results": 0, "organizations": []}),
     ):
-        result = json.loads(await server.search_form990("zzznonexistent"))
+        result = parse_tool_result(await server.search_form990("zzznonexistent"))
     assert result["total_results"] == 0
     assert result["organizations"] == []
 
@@ -133,7 +133,7 @@ async def test_search_form990_empty_results():
 async def test_search_form990_api_failure():
     with patch.object(propublica_client, "search_organizations", new_callable=AsyncMock,
                       side_effect=Exception("Connection refused")):
-        result = json.loads(await server.search_form990("Jefferson"))
+        result = parse_tool_result(await server.search_form990("Jefferson"))
     assert "error" in result
 
 
@@ -161,7 +161,7 @@ async def test_search_form990_state_filter():
 async def test_search_sec_filings_returns_results():
     with patch.object(edgar_client, "search_filings", new_callable=AsyncMock,
                       return_value=EDGAR_SEARCH_RESPONSE):
-        result = json.loads(await server.search_sec_filings("HCA Healthcare"))
+        result = parse_tool_result(await server.search_sec_filings("HCA Healthcare"))
 
     assert result["total_results"] == 2
     assert len(result["filings"]) == 2
@@ -204,7 +204,7 @@ async def test_search_sec_filings_deduplicates_accession_numbers():
     }
     with patch.object(edgar_client, "search_filings", new_callable=AsyncMock,
                       return_value=duplicate_response):
-        result = json.loads(await server.search_sec_filings("HCA"))
+        result = parse_tool_result(await server.search_sec_filings("HCA"))
 
     assert len(result["filings"]) == 1
 
@@ -213,7 +213,7 @@ async def test_search_sec_filings_deduplicates_accession_numbers():
 async def test_search_sec_filings_api_failure():
     with patch.object(edgar_client, "search_filings", new_callable=AsyncMock,
                       side_effect=Exception("EDGAR rate limit")):
-        result = json.loads(await server.search_sec_filings("SomeCo"))
+        result = parse_tool_result(await server.search_sec_filings("SomeCo"))
     assert "error" in result
 
 
@@ -222,6 +222,6 @@ async def test_search_sec_filings_empty_hits():
     empty_response = {"hits": {"total": {"value": 0}, "hits": []}}
     with patch.object(edgar_client, "search_filings", new_callable=AsyncMock,
                       return_value=empty_response):
-        result = json.loads(await server.search_sec_filings("NonexistentCorpXYZ"))
+        result = parse_tool_result(await server.search_sec_filings("NonexistentCorpXYZ"))
     assert result["total_results"] == 0
     assert result["filings"] == []

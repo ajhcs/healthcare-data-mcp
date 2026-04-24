@@ -6,6 +6,7 @@ services:
       - "8006:8006"
     environment:
       - MCP_TRANSPORT=streamable-http
+      - MCP_HOST=0.0.0.0
       - MCP_PORT=8006
     volumes:
       - healthcare-cache:/root/.healthcare-data-mcp/cache
@@ -24,6 +25,7 @@ services:
       - "8002:8002"
     environment:
       - MCP_TRANSPORT=streamable-http
+      - MCP_HOST=0.0.0.0
       - MCP_PORT=8002
     volumes:
       - healthcare-cache:/root/.healthcare-data-mcp/cache
@@ -42,6 +44,7 @@ services:
       - "8003:8003"
     environment:
       - MCP_TRANSPORT=streamable-http
+      - MCP_HOST=0.0.0.0
       - MCP_PORT=8003
       - CENSUS_API_KEY=${CENSUS_API_KEY:-}
       - HUD_API_TOKEN=${HUD_API_TOKEN:-}
@@ -62,6 +65,7 @@ services:
       - "8004:8004"
     environment:
       - MCP_TRANSPORT=streamable-http
+      - MCP_HOST=0.0.0.0
       - MCP_PORT=8004
       - ORS_API_KEY=${ORS_API_KEY:-}
       - OSRM_BASE_URL=${OSRM_BASE_URL:-http://router.project-osrm.org}
@@ -82,6 +86,7 @@ services:
       - "8005:8005"
     environment:
       - MCP_TRANSPORT=streamable-http
+      - MCP_HOST=0.0.0.0
       - MCP_PORT=8005
     volumes:
       - healthcare-cache:/root/.healthcare-data-mcp/cache
@@ -100,6 +105,7 @@ services:
       - "8007:8007"
     environment:
       - MCP_TRANSPORT=streamable-http
+      - MCP_HOST=0.0.0.0
       - MCP_PORT=8007
     volumes:
       - healthcare-cache:/root/.healthcare-data-mcp/cache
@@ -118,8 +124,9 @@ services:
       - "8008:8008"
     environment:
       - MCP_TRANSPORT=streamable-http
+      - MCP_HOST=0.0.0.0
       - MCP_PORT=8008
-      - SEC_USER_AGENT=${SEC_USER_AGENT:-healthcare-data-mcp support@example.com}
+      - SEC_USER_AGENT=${SEC_USER_AGENT:-}
     volumes:
       - healthcare-cache:/root/.healthcare-data-mcp/cache
     restart: unless-stopped
@@ -137,6 +144,7 @@ services:
       - "8009:8009"
     environment:
       - MCP_TRANSPORT=streamable-http
+      - MCP_HOST=0.0.0.0
       - MCP_PORT=8009
     volumes:
       - healthcare-cache:/root/.healthcare-data-mcp/cache
@@ -155,6 +163,7 @@ services:
       - "8010:8010"
     environment:
       - MCP_TRANSPORT=streamable-http
+      - MCP_HOST=0.0.0.0
       - MCP_PORT=8010
     volumes:
       - healthcare-cache:/root/.healthcare-data-mcp/cache
@@ -173,6 +182,7 @@ services:
       - "8011:8011"
     environment:
       - MCP_TRANSPORT=streamable-http
+      - MCP_HOST=0.0.0.0
       - MCP_PORT=8011
       - BLS_API_KEY=${BLS_API_KEY:-}
     volumes:
@@ -192,6 +202,7 @@ services:
       - "8012:8012"
     environment:
       - MCP_TRANSPORT=streamable-http
+      - MCP_HOST=0.0.0.0
       - MCP_PORT=8012
     volumes:
       - healthcare-cache:/root/.healthcare-data-mcp/cache
@@ -210,6 +221,7 @@ services:
       - "8013:8013"
     environment:
       - MCP_TRANSPORT=streamable-http
+      - MCP_HOST=0.0.0.0
       - MCP_PORT=8013
       - SAM_GOV_API_KEY=${SAM_GOV_API_KEY:-}
       - CHPL_API_KEY=${CHPL_API_KEY:-}
@@ -230,6 +242,7 @@ services:
       - "8014:8014"
     environment:
       - MCP_TRANSPORT=streamable-http
+      - MCP_HOST=0.0.0.0
       - MCP_PORT=8014
       - GOOGLE_CSE_API_KEY=${GOOGLE_CSE_API_KEY:-}
       - GOOGLE_CSE_ID=${GOOGLE_CSE_ID:-}
@@ -239,6 +252,109 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost',8014),5); s.close()"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  discovery:
+    build: .
+    command: python -m servers.discovery.server
+    ports:
+      - "8015:8015"
+    environment:
+      - MCP_TRANSPORT=streamable-http
+      - MCP_HOST=0.0.0.0
+      - MCP_PORT=8015
+    volumes:
+      - healthcare-cache:/root/.healthcare-data-mcp/cache
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost',8015),5); s.close()"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  gateway:
+    build: .
+    command: python -m servers.gateway.server
+    ports:
+      - "8016:8016"
+    environment:
+      - MCP_TRANSPORT=streamable-http
+      - MCP_HOST=0.0.0.0
+      - MCP_PORT=8016
+      - MCP_GATEWAY_AUTH_REQUIRED=${MCP_GATEWAY_AUTH_REQUIRED:-false}
+      - MCP_GATEWAY_BEARER_TOKEN_SHA256=${MCP_GATEWAY_BEARER_TOKEN_SHA256:-}
+      - MCP_GATEWAY_BEARER_TOKEN_SHA256_LIST=${MCP_GATEWAY_BEARER_TOKEN_SHA256_LIST:-}
+      - MCP_GATEWAY_REQUIRED_SCOPES=${MCP_GATEWAY_REQUIRED_SCOPES:-mcp:read}
+      - MCP_GATEWAY_ALLOWED_HOSTS=${MCP_GATEWAY_ALLOWED_HOSTS:-localhost:8016,127.0.0.1:8016}
+      - MCP_GATEWAY_ALLOWED_ORIGINS=${MCP_GATEWAY_ALLOWED_ORIGINS:-http://localhost:*,http://127.0.0.1:*}
+      - MCP_GATEWAY_PUBLIC_URL=${MCP_GATEWAY_PUBLIC_URL:-}
+      - MCP_GATEWAY_ISSUER_URL=${MCP_GATEWAY_ISSUER_URL:-}
+    volumes:
+      - healthcare-cache:/root/.healthcare-data-mcp/cache
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost',8016),5); s.close()"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  provider-enrollment:
+    build: .
+    command: python -m servers.provider_enrollment.server
+    ports:
+      - "8017:8017"
+    environment:
+      - MCP_TRANSPORT=streamable-http
+      - MCP_HOST=0.0.0.0
+      - MCP_PORT=8017
+    volumes:
+      - healthcare-cache:/root/.healthcare-data-mcp/cache
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost',8017),5); s.close()"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  community-health:
+    build: .
+    command: python -m servers.community_health.server
+    ports:
+      - "8018:8018"
+    environment:
+      - MCP_TRANSPORT=streamable-http
+      - MCP_HOST=0.0.0.0
+      - MCP_PORT=8018
+    volumes:
+      - healthcare-cache:/root/.healthcare-data-mcp/cache
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost',8018),5); s.close()"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  research-trials:
+    build: .
+    command: python -m servers.research_trials.server
+    ports:
+      - "8019:8019"
+    environment:
+      - MCP_TRANSPORT=streamable-http
+      - MCP_HOST=0.0.0.0
+      - MCP_PORT=8019
+    volumes:
+      - healthcare-cache:/root/.healthcare-data-mcp/cache
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost',8019),5); s.close()"]
       interval: 60s
       timeout: 10s
       retries: 3

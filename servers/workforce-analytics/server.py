@@ -5,10 +5,11 @@ ACGME residency programs, NLRB union activity, staffing benchmarks, and
 HCRIS cost report staffing analysis.
 """
 
-import json
+from typing import Any
 import logging
 import os as _os
 from mcp.server.fastmcp import FastMCP
+from shared.utils.mcp_response import error_response, to_structured
 
 from . import bls_client, labor_data, workforce_data  # pyright: ignore[reportAttributeAccessIssue]
 from .models import (
@@ -31,7 +32,7 @@ logger = logging.getLogger(__name__)
 _transport = _os.environ.get("MCP_TRANSPORT", "stdio")
 _mcp_kwargs: dict = {"name": "workforce-analytics"}
 if _transport in ("sse", "streamable-http"):
-    _mcp_kwargs["host"] = "0.0.0.0"
+    _mcp_kwargs["host"] = _os.environ.get("MCP_HOST", "127.0.0.1")
     _mcp_kwargs["port"] = int(_os.environ.get("MCP_PORT", "8011"))
 mcp = FastMCP(**_mcp_kwargs)
 
@@ -39,11 +40,12 @@ mcp = FastMCP(**_mcp_kwargs)
 # ---------------------------------------------------------------------------
 # Tool 1: get_bls_employment
 # ---------------------------------------------------------------------------
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def get_bls_employment(
     occupation: str, area_code: str = "", state: str = "",
-) -> str:
-    """Get occupation-level employment counts and wages by MSA or state.
+    include_projections: bool = True,  # noqa: ARG001 — exposed in MCP schema
+) -> dict[str, Any]:
+    """Get occupation-level employment counts, wages, and projections by MSA or state.
 
     Uses BLS OES (Occupational Employment and Wage Statistics) API v2.
 
@@ -51,13 +53,14 @@ async def get_bls_employment(
         occupation: Occupation name (e.g. "Registered Nurses") or SOC code (e.g. "29-1141").
         area_code: BLS area code (MSA FIPS). Leave empty for state or national.
         state: Two-letter state code (e.g. "PA"). Leave empty for national.
+        include_projections: Include 10-year employment projections.
     """
     try:
         result = await bls_client.get_oes_data(occupation, area_code, state)
         if not result:
-            return json.dumps({"error": "No data returned from BLS API"})
+            return error_response("No data returned from BLS API")
         if "error" in result:
-            return json.dumps(result)
+            return to_structured(result)
 
         response = BLSEmploymentResponse(
             occupation_title=result.get("occupation_title", ""),
@@ -70,19 +73,19 @@ async def get_bls_employment(
             pct_90_wage=result.get("pct_90_wage", 0),
             data_year=result.get("data_year", ""),
         )
-        return json.dumps(response.model_dump())
+        return to_structured(response.model_dump())
     except Exception as e:
         logger.exception("get_bls_employment failed")
-        return json.dumps({"error": f"get_bls_employment failed: {e}"})
+        return error_response(f"get_bls_employment failed: {e}")
 
 
 # ---------------------------------------------------------------------------
 # Tool 2: get_hrsa_workforce
 # ---------------------------------------------------------------------------
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def get_hrsa_workforce(
     state: str, county_fips: str = "", discipline: str = "",
-) -> str:
+) -> dict[str, Any]:
     """Get health workforce shortage areas (HPSAs) and supply data for a state.
 
     Uses HRSA Data Warehouse HPSA data and Area Health Resource File.
@@ -102,19 +105,19 @@ async def get_hrsa_workforce(
             total_hpsas=len(hpsas),
             hpsas=[HPSARecord(**h) for h in hpsas if "error" not in h],
         )
-        return json.dumps(response.model_dump())
+        return to_structured(response.model_dump())
     except Exception as e:
         logger.exception("get_hrsa_workforce failed")
-        return json.dumps({"error": f"get_hrsa_workforce failed: {e}"})
+        return error_response(f"get_hrsa_workforce failed: {e}")
 
 
 # ---------------------------------------------------------------------------
 # Tool 3: get_gme_profile
 # ---------------------------------------------------------------------------
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def get_gme_profile(
     hospital_name: str = "", ccn: str = "",
-) -> str:
+) -> dict[str, Any]:
     """Get graduate medical education profile for a teaching hospital.
 
     Uses CMS HCRIS Worksheet S-2 for resident FTEs, IME/DGME payments,
@@ -128,26 +131,26 @@ async def get_gme_profile(
         await workforce_data.ensure_hcris_cached()
 
         if not ccn and hospital_name:
-            return json.dumps({"error": "CCN required for HCRIS lookup. Use hospital_name with CMS facility search to find the CCN first."})
+            return error_response("CCN required for HCRIS lookup. Use hospital_name with CMS facility search to find the CCN first.")
 
         result = workforce_data.query_hcris_gme(ccn)
         if not result:
-            return json.dumps({"error": f"No GME data found for CCN: {ccn}"})
+            return error_response(f"No GME data found for CCN: {ccn}")
 
         response = GMEProfileResponse(**result)
-        return json.dumps(response.model_dump())
+        return to_structured(response.model_dump())
     except Exception as e:
         logger.exception("get_gme_profile failed")
-        return json.dumps({"error": f"get_gme_profile failed: {e}"})
+        return error_response(f"get_gme_profile failed: {e}")
 
 
 # ---------------------------------------------------------------------------
 # Tool 4: get_residency_programs
 # ---------------------------------------------------------------------------
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def get_residency_programs(
     institution: str = "", specialty: str = "", state: str = "",
-) -> str:
+) -> dict[str, Any]:
     """Search residency and fellowship programs from ACGME data.
 
     Uses a static extract of the ACGME Data Resource Book with program-level
@@ -162,26 +165,26 @@ async def get_residency_programs(
         programs = workforce_data.query_acgme_programs(institution, specialty, state)
 
         if programs and "error" in programs[0]:
-            return json.dumps(programs[0])
+            return to_structured(programs[0])
 
         response = ResidencyProgramsResponse(
             total_programs=len(programs),
             programs=[ResidencyProgram(**p) for p in programs],
         )
-        return json.dumps(response.model_dump())
+        return to_structured(response.model_dump())
     except Exception as e:
         logger.exception("get_residency_programs failed")
-        return json.dumps({"error": f"get_residency_programs failed: {e}"})
+        return error_response(f"get_residency_programs failed: {e}")
 
 
 # ---------------------------------------------------------------------------
 # Tool 5: search_union_activity
 # ---------------------------------------------------------------------------
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def search_union_activity(
     employer_name: str = "", state: str = "",
     year_start: int = 2015, year_end: int = 2026,
-) -> str:
+) -> dict[str, Any]:
     """Search NLRB union election records and BLS work stoppages for healthcare employers.
 
     Uses the labordata/nlrb-data database (daily refreshed from NLRB.gov)
@@ -208,19 +211,19 @@ async def search_union_activity(
             elections=[NLRBElection(**e) for e in elections],
             work_stoppages=[WorkStoppage(**s) for s in stoppages if isinstance(s, dict) and "employer" in s],
         )
-        return json.dumps(response.model_dump())
+        return to_structured(response.model_dump())
     except Exception as e:
         logger.exception("search_union_activity failed")
-        return json.dumps({"error": f"search_union_activity failed: {e}"})
+        return error_response(f"search_union_activity failed: {e}")
 
 
 # ---------------------------------------------------------------------------
 # Tool 6: get_staffing_benchmarks
 # ---------------------------------------------------------------------------
-@mcp.tool()
+@mcp.tool(structured_output=True)
 async def get_staffing_benchmarks(
     ccn: str = "", state: str = "", facility_type: str = "hospital",
-) -> str:
+) -> dict[str, Any]:
     """Get staffing benchmarks for a hospital or nursing home.
 
     Uses CMS PBJ (Payroll-Based Journal) for nursing homes and CMS HCRIS
@@ -235,7 +238,7 @@ async def get_staffing_benchmarks(
         if facility_type == "nursing_home":
             records = await workforce_data.query_pbj_staffing(ccn=ccn, state=state)
             if not records:
-                return json.dumps({"error": "No PBJ staffing data found"})
+                return error_response("No PBJ staffing data found")
 
             # Average across dates for the facility
             if ccn and len(records) > 1:
@@ -267,13 +270,13 @@ async def get_staffing_benchmarks(
                     data_source="CMS_PBJ",
                     data_period=r.get("date", ""),
                 )
-            return json.dumps(response.model_dump())
+            return to_structured(response.model_dump())
 
         else:  # hospital
             await workforce_data.ensure_hcris_cached()
             result = workforce_data.query_hcris_staffing(ccn)
             if not result:
-                return json.dumps({"error": f"No HCRIS staffing data found for CCN: {ccn}"})
+                return error_response(f"No HCRIS staffing data found for CCN: {ccn}")
 
             response = StaffingBenchmarksResponse(
                 facility_name="",
@@ -282,18 +285,18 @@ async def get_staffing_benchmarks(
                 data_source="CMS_HCRIS",
                 total_nurse_hprd=None,
             )
-            return json.dumps(response.model_dump())
+            return to_structured(response.model_dump())
 
     except Exception as e:
         logger.exception("get_staffing_benchmarks failed")
-        return json.dumps({"error": f"get_staffing_benchmarks failed: {e}"})
+        return error_response(f"get_staffing_benchmarks failed: {e}")
 
 
 # ---------------------------------------------------------------------------
 # Tool 7: get_cost_report_staffing
 # ---------------------------------------------------------------------------
-@mcp.tool()
-async def get_cost_report_staffing(ccn: str, year: int = 0) -> str:
+@mcp.tool(structured_output=True)
+async def get_cost_report_staffing(ccn: str, year: int = 0) -> dict[str, Any]:
     """Get FTE breakdowns by department from CMS Cost Reports (Worksheet S-3).
 
     Extracts staffing data from the Healthcare Cost Report Information System
@@ -308,7 +311,7 @@ async def get_cost_report_staffing(ccn: str, year: int = 0) -> str:
 
         result = workforce_data.query_hcris_staffing(ccn)
         if not result:
-            return json.dumps({"error": f"No cost report staffing data found for CCN: {ccn}"})
+            return error_response(f"No cost report staffing data found for CCN: {ccn}")
 
         response = CostReportStaffingResponse(
             hospital_name="",
@@ -317,10 +320,10 @@ async def get_cost_report_staffing(ccn: str, year: int = 0) -> str:
             departments=[DepartmentStaffing(**d) for d in result.get("departments", [])],
             total_ftes=result.get("total_ftes", 0),
         )
-        return json.dumps(response.model_dump())
+        return to_structured(response.model_dump())
     except Exception as e:
         logger.exception("get_cost_report_staffing failed")
-        return json.dumps({"error": f"get_cost_report_staffing failed: {e}"})
+        return error_response(f"get_cost_report_staffing failed: {e}")
 
 
 if __name__ == "__main__":

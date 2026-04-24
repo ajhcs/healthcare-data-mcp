@@ -1,85 +1,15 @@
-"""Smoke tests for all 13 healthcare MCP servers.
+"""Smoke tests for all 5 healthcare MCP servers.
 
-The original servers keep their live data-path smoke coverage here. Newer
-servers at minimum get a module-import plus MCP tool-registry smoke check so
-they are included in the same manual test surface.
-
+Tests each server's tools against live CMS APIs and data sources.
 Run with: python smoke_test.py
 """
 
 import asyncio
-import importlib
 import json
+import os
 import sys
 import time
 import traceback
-
-SERVER_TOOL_COUNTS = {
-    "cms-facility": 5,
-    "service-area": 4,
-    "geo-demographics": 6,
-    "drive-time": 5,
-    "hospital-quality": 6,
-    "health-system-profiler": 3,
-    "financial-intelligence": 6,
-    "price-transparency": 5,
-    "physician-referral-network": 5,
-    "workforce-analytics": 7,
-    "claims-analytics": 5,
-    "public-records": 6,
-    "web-intelligence": 5,
-}
-
-SERVER_MODULES = {
-    "cms-facility": "servers.cms_facility.server",
-    "service-area": "servers.service_area.server",
-    "geo-demographics": "servers.geo_demographics.server",
-    "drive-time": "servers.drive_time.server",
-    "hospital-quality": "servers.hospital_quality.server",
-    "health-system-profiler": "servers.health_system_profiler.server",
-    "financial-intelligence": "servers.financial_intelligence.server",
-    "price-transparency": "servers.price_transparency.server",
-    "physician-referral-network": "servers.physician_referral_network.server",
-    "workforce-analytics": "servers.workforce_analytics.server",
-    "claims-analytics": "servers.claims_analytics.server",
-    "public-records": "servers.public_records.server",
-    "web-intelligence": "servers.web_intelligence.server",
-}
-
-
-async def smoke_tool_registry(server_name: str) -> dict:
-    """Import a server module and verify its FastMCP tool registration."""
-    print("\n" + "=" * 60)
-    print(f"TEST: {server_name}-mcp")
-    print("=" * 60)
-
-    module_name = SERVER_MODULES[server_name]
-    expected_tool_count = SERVER_TOOL_COUNTS[server_name]
-
-    print(f"\n[1/2] Importing {module_name}...")
-    t0 = time.time()
-    module = importlib.import_module(module_name)
-    elapsed = time.time() - t0
-    print(f"  -> Imported in {elapsed:.2f}s")
-
-    print("\n[2/2] Listing registered MCP tools...")
-    t0 = time.time()
-    tools = await module.mcp.list_tools()
-    elapsed = time.time() - t0
-    tool_names = [tool.name for tool in tools]
-    print(f"  -> Found {len(tool_names)} tools in {elapsed:.2f}s")
-    print(f"  -> Tools: {', '.join(tool_names)}")
-
-    assert len(tool_names) == expected_tool_count, (
-        f"Expected {expected_tool_count} tools for {server_name}, got {len(tool_names)}"
-    )
-
-    print(f"\n  {server_name.upper()}: ALL PASSED")
-    return {
-        "module": module_name,
-        "tool_count": len(tool_names),
-        "tool_names": tool_names,
-    }
 
 # ============================================================
 # Test 1: CMS Facility Server
@@ -520,31 +450,111 @@ async def test_price_transparency():
     return results
 
 
+def _live_expansion_enabled() -> bool:
+    return os.environ.get("HC_MCP_LIVE_EXPANSION", "").lower() in {"1", "true", "yes"}
+
+
 # ============================================================
-# Test 8-13: Registry smoke for the six newer servers
+# Optional April 2026 expansion live checks
 # ============================================================
-async def test_health_system_profiler():
-    return await smoke_tool_registry("health-system-profiler")
+async def test_provider_enrollment_live_catalog():
+    print("\n" + "=" * 60)
+    print("TEST: provider-enrollment live catalog")
+    print("=" * 60)
+
+    if not _live_expansion_enabled():
+        print("  -> Skipped (set HC_MCP_LIVE_EXPANSION=1)")
+        return {"status": "skipped"}
+
+    from shared.utils.source_catalog import fetch_cms_catalog
+    from servers.provider_enrollment import data_loaders
+
+    print("\n[1/1] Resolving CMS Hospital Enrollments from data.cms.gov catalog...")
+    catalog = await fetch_cms_catalog()
+    manifest = data_loaders.resolve_dataset_manifest("hospital_enrollments", catalog_data=catalog)
+    print(f"  -> Dataset: {manifest.title} ({manifest.dataset_id})")
+    print(f"  -> Source URL: {manifest.source_url}")
+    assert manifest.source_url.startswith("https://"), "Expected HTTPS CMS source URL"
+    return {"dataset_id": manifest.dataset_id, "source_url": manifest.source_url}
 
 
-async def test_physician_referral_network():
-    return await smoke_tool_registry("physician-referral-network")
+async def test_community_health_live_places():
+    print("\n" + "=" * 60)
+    print("TEST: community-health CDC PLACES live one-row")
+    print("=" * 60)
+
+    if not _live_expansion_enabled():
+        print("  -> Skipped (set HC_MCP_LIVE_EXPANSION=1)")
+        return {"status": "skipped"}
+
+    from servers.community_health import socrata_client
+
+    print("\n[1/1] Resolving CDC PLACES county dataset and fetching one Minnesota row...")
+    manifest = await socrata_client.resolve_places_dataset_live("county")
+    rows = await socrata_client.fetch_places_rows(manifest, state="MN", limit=1)
+    print(f"  -> Dataset: {manifest.title} ({manifest.dataset_id})")
+    print(f"  -> Rows returned: {len(rows)}")
+    assert rows, "Expected at least one CDC PLACES row"
+    return {"dataset_id": manifest.dataset_id, "rows": len(rows)}
 
 
-async def test_workforce_analytics():
-    return await smoke_tool_registry("workforce-analytics")
+async def test_research_trials_live_versions():
+    print("\n" + "=" * 60)
+    print("TEST: research-trials live version/search")
+    print("=" * 60)
+
+    if not _live_expansion_enabled():
+        print("  -> Skipped (set HC_MCP_LIVE_EXPANSION=1)")
+        return {"status": "skipped"}
+
+    from servers.research_trials import clinical_trials_client, reporter_client
+
+    print("\n[1/2] Fetching ClinicalTrials.gov API version...")
+    version = await clinical_trials_client.get_version()
+    print(f"  -> Version payload keys: {list(version)[:5]}")
+    assert "error" not in version, f"ClinicalTrials.gov version failed: {version.get('error')}"
+
+    print("\n[2/2] Querying NIH RePORTER for one project mentioning Mayo Clinic...")
+    projects = await reporter_client.search_projects(org_name="Mayo Clinic", fiscal_years=[2026], limit=1)
+    if projects.get("error"):
+        print(f"  -> RePORTER returned error: {projects['error']}")
+    else:
+        print(f"  -> RePORTER keys: {list(projects)[:5]}")
+    return {"clinicaltrials_version": version, "nih_reporter_error": projects.get("error", "")}
 
 
-async def test_claims_analytics():
-    return await smoke_tool_registry("claims-analytics")
+async def test_public_records_exclusions_live_metadata():
+    print("\n" + "=" * 60)
+    print("TEST: public-records exclusions live metadata")
+    print("=" * 60)
 
+    results = {}
 
-async def test_public_records():
-    return await smoke_tool_registry("public-records")
+    if os.environ.get("HC_MCP_LIVE_LEIE", "").lower() in {"1", "true", "yes"}:
+        print("\n[1/2] Checking HHS OIG LEIE current CSV availability with HEAD...")
+        from shared.utils.http_client import resilient_request
+        from servers.public_records import data_loaders
 
+        response = await resilient_request("HEAD", data_loaders.LEIE_URL, timeout=30.0)
+        print(f"  -> LEIE HEAD status: {response.status_code}")
+        assert response.status_code < 400, "Expected LEIE CSV to be reachable"
+        results["leie_head_status"] = response.status_code
+    else:
+        print("\n[1/2] LEIE live HEAD skipped (set HC_MCP_LIVE_LEIE=1)")
+        results["leie_head_status"] = "skipped"
 
-async def test_web_intelligence():
-    return await smoke_tool_registry("web-intelligence")
+    if os.environ.get("SAM_GOV_API_KEY"):
+        print("\n[2/2] Querying SAM.gov Exclusions for one active record candidate...")
+        from servers.public_records import sam_exclusions_client
+
+        response = await sam_exclusions_client.search_exclusions(entity_name="Mayo", limit=1)
+        print(f"  -> SAM response keys: {list(response)[:5]}")
+        results["sam_error"] = response.get("error", "")
+    else:
+        print("\n[2/2] SAM.gov Exclusions skipped (SAM_GOV_API_KEY not set)")
+        results["sam_error"] = "skipped"
+
+    return results
 
 
 # ============================================================
@@ -564,14 +574,12 @@ async def main():
         ("geo-demographics", test_geo_demographics),
         ("drive-time", test_drive_time),
         ("hospital-quality", test_hospital_quality),
-        ("health-system-profiler", test_health_system_profiler),
         ("financial-intelligence", test_financial_intelligence),
         ("price-transparency", test_price_transparency),
-        ("physician-referral-network", test_physician_referral_network),
-        ("workforce-analytics", test_workforce_analytics),
-        ("claims-analytics", test_claims_analytics),
-        ("public-records", test_public_records),
-        ("web-intelligence", test_web_intelligence),
+        ("provider-enrollment-live-catalog", test_provider_enrollment_live_catalog),
+        ("community-health-live-places", test_community_health_live_places),
+        ("research-trials-live-versions", test_research_trials_live_versions),
+        ("public-records-exclusions-live-metadata", test_public_records_exclusions_live_metadata),
     ]
 
     for name, test_fn in tests:

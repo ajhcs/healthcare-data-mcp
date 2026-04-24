@@ -1,6 +1,6 @@
 """Tests for physician referral network MCP tool wrappers."""
 
-import json
+from tests.helpers import parse_tool_result
 
 import pytest
 
@@ -17,7 +17,7 @@ async def test_load_docgraph_cache_uses_explicit_csv_path(monkeypatch):
         lambda: "/tmp/shared_patients.parquet",
     )
 
-    result = json.loads(await server.load_docgraph_cache("/tmp/docgraph.csv"))
+    result = parse_tool_result(await server.load_docgraph_cache("/tmp/docgraph.csv"))
 
     assert result == {
         "status": "loaded",
@@ -43,7 +43,7 @@ async def test_load_docgraph_cache_uses_env_fallback(monkeypatch):
         lambda: "/tmp/shared_patients.parquet",
     )
 
-    result = json.loads(await server.load_docgraph_cache())
+    result = parse_tool_result(await server.load_docgraph_cache())
 
     assert seen["path"] == "/data/docgraph.csv"
     assert result["rows_loaded"] == 7
@@ -53,8 +53,8 @@ async def test_load_docgraph_cache_uses_env_fallback(monkeypatch):
 async def test_docgraph_backed_tools_return_loader_guidance_when_cache_missing(monkeypatch):
     monkeypatch.setattr(server.referral_network, "is_docgraph_cached", lambda: False)
 
-    network_result = json.loads(await server.map_referral_network("1234567890"))
-    leakage_result = json.loads(await server.detect_leakage("Example Health"))
+    network_result = parse_tool_result(await server.map_referral_network("1234567890"))
+    leakage_result = parse_tool_result(await server.detect_leakage("Example Health"))
 
     assert "load_docgraph_cache" in network_result["error"]
     assert "DOCGRAPH_CSV_PATH" in network_result["error"]

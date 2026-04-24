@@ -4,12 +4,13 @@ Provides tools for IRS Form 990 nonprofit financials, SEC EDGAR corporate
 filings, and municipal bond data from public APIs.
 """
 
+from typing import Any
 import asyncio
-import json
 import logging
 import os as _os
 
 from mcp.server.fastmcp import FastMCP
+from shared.utils.mcp_response import error_response, to_structured
 
 from . import edgar_client, propublica_client
 from .irs990_parser import download_990_xml, lookup_xml_url, parse_990_xml
@@ -28,7 +29,7 @@ logger = logging.getLogger(__name__)
 _transport = _os.environ.get("MCP_TRANSPORT", "stdio")
 _mcp_kwargs: dict = {"name": "financial-intelligence"}
 if _transport in ("sse", "streamable-http"):
-    _mcp_kwargs["host"] = "0.0.0.0"
+    _mcp_kwargs["host"] = _os.environ.get("MCP_HOST", "127.0.0.1")
     _mcp_kwargs["port"] = int(_os.environ.get("MCP_PORT", "8008"))
 mcp = FastMCP(**_mcp_kwargs)
 
@@ -98,8 +99,8 @@ def _build_form990_summary(search_org: dict, org_data: dict | None) -> dict:
 # ---------------------------------------------------------------------------
 # Tool 1: search_form990
 # ---------------------------------------------------------------------------
-@mcp.tool()
-async def search_form990(query: str, state: str = "", ntee_code: str = "") -> str:
+@mcp.tool(structured_output=True)
+async def search_form990(query: str, state: str = "", ntee_code: str = "") -> dict[str, Any]:
     """Search IRS Form 990 filings by organization name or EIN.
 
     Returns nonprofit organizations with revenue, expenses, and net assets
@@ -123,17 +124,17 @@ async def search_form990(query: str, state: str = "", ntee_code: str = "") -> st
             for org, detail in zip(limited_orgs, org_details, strict=False)
         ]
 
-        return json.dumps({"total_results": data.get("total_results", 0), "organizations": results})
+        return to_structured({"total_results": data.get("total_results", 0), "organizations": results})
     except Exception as e:
         logger.exception("search_form990 failed")
-        return json.dumps({"error": f"search_form990 failed: {e}"})
+        return error_response(f"search_form990 failed: {e}")
 
 
 # ---------------------------------------------------------------------------
 # Tool 2: get_form990_details
 # ---------------------------------------------------------------------------
-@mcp.tool()
-async def get_form990_details(ein: str) -> str:
+@mcp.tool(structured_output=True)
+async def get_form990_details(ein: str) -> dict[str, Any]:
     """Get detailed Form 990 data for a nonprofit by EIN.
 
     Returns revenue breakdown, functional expenses (Part IX), Schedule H
@@ -146,13 +147,13 @@ async def get_form990_details(ein: str) -> str:
     try:
         org_data = await propublica_client.get_organization(ein)
         if not org_data:
-            return json.dumps({"error": f"Organization not found for EIN: {ein}"})
+            return error_response(f"Organization not found for EIN: {ein}")
 
         org = org_data.get("organization", {})
         filings = org_data.get("filings_with_data", [])
 
         if not filings:
-            return json.dumps({"error": f"No filings with data found for EIN: {ein}"})
+            return error_response(f"No filings with data found for EIN: {ein}")
 
         latest = filings[0]
         tax_period = str(latest.get("tax_prd", latest.get("tax_prd_yr", "")))
@@ -187,7 +188,7 @@ async def get_form990_details(ein: str) -> str:
                     officers=[Officer(**o) for o in parsed.get("officers", [])],
                     program_descriptions=parsed.get("program_descriptions", []),
                 )
-                return json.dumps(result.model_dump())
+                return to_structured(result.model_dump())
 
         # Fallback: ProPublica summary data only
         result = Form990Details(
@@ -198,10 +199,10 @@ async def get_form990_details(ein: str) -> str:
             total_revenue=_safe_float(latest.get("totrevenue")),
             total_expenses=_safe_float(latest.get("totfuncexpns")),
         )
-        return json.dumps(result.model_dump())
+        return to_structured(result.model_dump())
     except Exception as e:
         logger.exception("get_form990_details failed")
-        return json.dumps({"error": f"get_form990_details failed: {e}"})
+        return error_response(f"get_form990_details failed: {e}")
 
 
 # ---------------------------------------------------------------------------
@@ -210,8 +211,8 @@ async def get_form990_details(ein: str) -> str:
 # adsh, display_names[], ciks[], form, file_date
 # Deduplicates by adsh (each file in a filing is a separate hit)
 # ---------------------------------------------------------------------------
-@mcp.tool()
-async def search_sec_filings(query: str, filing_type: str = "10-K", date_from: str = "", date_to: str = "") -> str:
+@mcp.tool(structured_output=True)
+async def search_sec_filings(query: str, filing_type: str = "10-K", date_from: str = "", date_to: str = "") -> dict[str, Any]:
     """Search SEC EDGAR filings by company name, CIK, or keyword.
 
     Returns a list of filings with accession numbers, filing dates, and links.
@@ -265,17 +266,17 @@ async def search_sec_filings(query: str, filing_type: str = "10-K", date_from: s
             if len(results) >= 25:
                 break
 
-        return json.dumps({"total_results": total_count, "filings": results})
+        return to_structured({"total_results": total_count, "filings": results})
     except Exception as e:
         logger.exception("search_sec_filings failed")
-        return json.dumps({"error": f"search_sec_filings failed: {e}"})
+        return error_response(f"search_sec_filings failed: {e}")
 
 
 # ---------------------------------------------------------------------------
 # Tool 4: get_sec_filing
 # ---------------------------------------------------------------------------
-@mcp.tool()
-async def get_sec_filing(accession_number: str, sections: list[str] | None = None) -> str:
+@mcp.tool(structured_output=True)
+async def get_sec_filing(accession_number: str, sections: list[str] | None = None) -> dict[str, Any]:
     """Get detailed data from a specific SEC filing.
 
     Retrieves structured XBRL financial data and/or narrative sections (MD&A,
@@ -291,7 +292,7 @@ async def get_sec_filing(accession_number: str, sections: list[str] | None = Non
     try:
         cik = await edgar_client.get_cik_from_accession(accession_number)
         if not cik:
-            return json.dumps({"error": f"Could not determine CIK from accession number: {accession_number}"})
+            return error_response(f"Could not determine CIK from accession number: {accession_number}")
 
         submissions = await edgar_client.get_company_submissions(cik)
         company_name = submissions.get("name", "")
@@ -329,18 +330,18 @@ async def get_sec_filing(accession_number: str, sections: list[str] | None = Non
                 if "risk_factors" in sections:
                     result.risk_factors_text = edgar_client.extract_section(html, "risk_factors")
 
-        return json.dumps(result.model_dump())
+        return to_structured(result.model_dump())
     except Exception as e:
         logger.exception("get_sec_filing failed")
-        return json.dumps({"error": f"get_sec_filing failed: {e}"})
+        return error_response(f"get_sec_filing failed: {e}")
 
 
 # ---------------------------------------------------------------------------
 # Tool 5: search_muni_bonds
 # Same EFTS structure, but with forms="OS"
 # ---------------------------------------------------------------------------
-@mcp.tool()
-async def search_muni_bonds(query: str, state: str = "", date_from: str = "", date_to: str = "") -> str:
+@mcp.tool(structured_output=True)
+async def search_muni_bonds(query: str, state: str = "", date_from: str = "", date_to: str = "") -> dict[str, Any]:
     """Search municipal bond offerings via SEC EDGAR Official Statements.
 
     Returns municipal bond filings with issuer name, filing date, and accession number.
@@ -396,17 +397,17 @@ async def search_muni_bonds(query: str, state: str = "", date_from: str = "", da
             if len(results) >= 25:
                 break
 
-        return json.dumps({"total_results": total_count, "bonds": results})
+        return to_structured({"total_results": total_count, "bonds": results})
     except Exception as e:
         logger.exception("search_muni_bonds failed")
-        return json.dumps({"error": f"search_muni_bonds failed: {e}"})
+        return error_response(f"search_muni_bonds failed: {e}")
 
 
 # ---------------------------------------------------------------------------
 # Tool 6: get_muni_bond_details
 # ---------------------------------------------------------------------------
-@mcp.tool()
-async def get_muni_bond_details(accession_number: str) -> str:
+@mcp.tool(structured_output=True)
+async def get_muni_bond_details(accession_number: str) -> dict[str, Any]:
     """Get details for a specific municipal bond filing from EDGAR.
 
     Returns the issuer information, filing documents list, and links to
@@ -418,7 +419,7 @@ async def get_muni_bond_details(accession_number: str) -> str:
     try:
         cik = await edgar_client.get_cik_from_accession(accession_number)
         if not cik:
-            return json.dumps({"error": f"Could not determine CIK from accession number: {accession_number}"})
+            return error_response(f"Could not determine CIK from accession number: {accession_number}")
 
         submissions = await edgar_client.get_company_submissions(cik)
         issuer_name = submissions.get("name", "")
@@ -439,10 +440,10 @@ async def get_muni_bond_details(accession_number: str) -> str:
             documents=index_data.get("documents", []),
             description=index_data.get("description", ""),
         )
-        return json.dumps(result.model_dump())
+        return to_structured(result.model_dump())
     except Exception as e:
         logger.exception("get_muni_bond_details failed")
-        return json.dumps({"error": f"get_muni_bond_details failed: {e}"})
+        return error_response(f"get_muni_bond_details failed: {e}")
 
 
 if __name__ == "__main__":

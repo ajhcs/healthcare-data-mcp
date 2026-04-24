@@ -6,6 +6,8 @@ import logging
 from pathlib import Path
 import re
 
+import pandas as pd
+
 from shared.utils.cache import is_cache_valid
 from shared.utils.http_client import resilient_request
 

@@ -359,7 +359,6 @@ async def ensure_utilization_cached() -> bool:
                 params={"size": 0},
                 timeout=30.0,
             )
-            resp.raise_for_status()
 
         # If we got CSV data, save it
         if resp.headers.get("content-type", "").startswith("text/csv") or len(resp.content) > 10000:

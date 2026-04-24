@@ -1,0 +1,60 @@
+from __future__ import annotations
+
+import os
+
+from shared.setup_wizard import validate_env
+from shared.utils.env_file import load_env_file, parse_env_text, read_env_file, write_env_file
+
+
+def test_parse_env_text_handles_comments_quotes_and_blanks() -> None:
+    lines = parse_env_text('FOO=bar\n# comment\nEMPTY=\nQUOTED="hello world"\n')
+
+    values = {line.key: line.value for line in lines if line.kind == "assignment"}
+
+    assert values == {"FOO": "bar", "EMPTY": "", "QUOTED": "hello world"}
+
+
+def test_write_env_file_preserves_template_and_quotes_spaces(tmp_path) -> None:
+    template = tmp_path / ".env.example"
+    target = tmp_path / ".env"
+    template.write_text("# Header\nSEC_USER_AGENT=\nSAM_GOV_API_KEY=\n", encoding="utf-8")
+
+    write_env_file(
+        target,
+        {"SEC_USER_AGENT": "HealthcareData contact@example.org", "SAM_GOV_API_KEY": "abc123"},
+        template_path=template,
+    )
+
+    assert read_env_file(target) == {
+        "SEC_USER_AGENT": "HealthcareData contact@example.org",
+        "SAM_GOV_API_KEY": "abc123",
+    }
+    assert "# Header" in target.read_text(encoding="utf-8")
+    assert 'SEC_USER_AGENT="HealthcareData contact@example.org"' in target.read_text(encoding="utf-8")
+
+
+def test_load_env_file_does_not_override_existing_values(tmp_path, monkeypatch) -> None:
+    env_file = tmp_path / ".env"
+    env_file.write_text("SAM_GOV_API_KEY=from_file\nCHPL_API_KEY=from_file\n", encoding="utf-8")
+    monkeypatch.setenv("SAM_GOV_API_KEY", "from_process")
+
+    loaded = load_env_file(env_file)
+
+    assert loaded == env_file
+    assert os.environ["SAM_GOV_API_KEY"] == "from_process"
+    assert os.environ["CHPL_API_KEY"] == "from_file"
+
+
+def test_validate_env_reports_important_configuration_gaps() -> None:
+    messages = validate_env(
+        {
+            "SEC_USER_AGENT": "Healthcare support@example.com",
+            "GOOGLE_CSE_API_KEY": "key",
+            "MCP_GATEWAY_BEARER_TOKEN_SHA256": "not-a-hash",
+        }
+    )
+
+    assert any("SEC_USER_AGENT" in message for message in messages)
+    assert any("SAM_GOV_API_KEY" in message for message in messages)
+    assert any("GOOGLE_CSE_API_KEY" in message for message in messages)
+    assert any("MCP_GATEWAY_BEARER_TOKEN_SHA256" in message for message in messages)

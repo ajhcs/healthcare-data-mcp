@@ -11,9 +11,10 @@ HDM-5w3: cross-server import breaks physician-referral-network.
 import logging
 from pathlib import Path
 
-import httpx
 import pandas as pd
 from shared.utils.cms_url_resolver import resolve_cms_download_url as _resolve_cms_url
+
+from shared.utils.http_client import resilient_request
 
 logger = logging.getLogger(__name__)
 
@@ -146,22 +147,20 @@ async def _download_if_missing(url: str, cache_path: Path) -> Path:
         return cache_path
 
     logger.info("Downloading %s ...", url)
-    async with httpx.AsyncClient(timeout=300.0, follow_redirects=True) as client:
-        resp = await client.get(url)
+    resp = await resilient_request("GET", url, timeout=300.0, follow_redirects=True)
 
-        # Detect WAF challenge (AHRQ returns 202 with empty body or HTML)
-        if resp.status_code == 202 or (
-            resp.status_code == 200
-            and b"<!DOCTYPE" in resp.content[:200]
-        ):
-            raise RuntimeError(
-                f"Download blocked by WAF for {url}. "
-                f"Run 'python scripts/download_ahrq.py' to download via browser, "
-                f"or manually download and place at {cache_path}"
-            )
+    # Detect WAF challenge (AHRQ returns 202 with empty body or HTML)
+    if resp.status_code == 202 or (
+        resp.status_code == 200
+        and b"<!DOCTYPE" in resp.content[:200]
+    ):
+        raise RuntimeError(
+            f"Download blocked by WAF for {url}. "
+            f"Run 'python scripts/download_ahrq.py' to download via browser, "
+            f"or manually download and place at {cache_path}"
+        )
 
-        resp.raise_for_status()
-        cache_path.write_bytes(resp.content)
+    cache_path.write_bytes(resp.content)
 
     logger.info("Saved to: %s (%d bytes)", cache_path, cache_path.stat().st_size)
     return cache_path

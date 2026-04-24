@@ -1,35 +1,29 @@
 """Data loading and caching for CMS facility datasets."""
 
-import asyncio
 import logging
 from pathlib import Path
 
-import pandas as pd
-from shared.utils.cms_client import load_hospital_general_info
-from shared.utils.cms_url_resolver import resolve_cms_download_url
+
 from shared.utils.http_client import resilient_request
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
 CACHE_DIR = Path.home() / ".healthcare-data-mcp" / "cache"
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
+HOSPITAL_INFO_URL = "https://data.cms.gov/provider-data/api/1/datastore/query/xubh-q36u/0/download?format=csv"
 NPPES_API_URL = "https://npiregistry.cms.hhs.gov/api/"
 
-_BULK_TTL_DAYS = 90  # CMS bulk data refresh cadence
-_COST_REPORT_DATASET_TITLE = "Hospital Provider Cost Report"
-
 # In-memory DataFrames to avoid re-reading CSV on every call
+_hospital_info_df: pd.DataFrame | None = None
 _cost_report_df: pd.DataFrame | None = None
-_df_lock = asyncio.Lock()
 
 
 async def _download_csv(url: str, cache_name: str) -> Path:
     """Download a CSV from CMS and cache it locally."""
-    from shared.utils.cache import is_cache_valid
-
     cached = CACHE_DIR / cache_name
-    if is_cache_valid(cached, max_age_days=_BULK_TTL_DAYS):
+    if cached.exists():
         logger.info("Using cached file: %s", cached)
         return cached
 
@@ -42,13 +36,17 @@ async def _download_csv(url: str, cache_name: str) -> Path:
 
 
 async def load_hospital_info() -> pd.DataFrame:
-    """Load the Hospital General Information dataset, downloading if needed.
+    """Load the Hospital General Information dataset, downloading if needed."""
+    global _hospital_info_df
+    if _hospital_info_df is not None:
+        return _hospital_info_df
 
-    Delegates to the shared loader so the file is downloaded and cached once
-    across all servers.  Columns are normalized to lowercase with underscores
-    to preserve the existing API of this function.
-    """
-    return await load_hospital_general_info(normalize_columns=True)
+    path = await _download_csv(HOSPITAL_INFO_URL, "hospital_general_info.csv")
+    df = pd.read_csv(path, dtype=str, keep_default_na=False)
+    # Normalize column names to lowercase with underscores
+    df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
+    _hospital_info_df = df
+    return df
 
 
 async def load_cost_report() -> pd.DataFrame:
@@ -59,24 +57,24 @@ async def load_cost_report() -> pd.DataFrame:
     we return an empty DataFrame so the server stays functional.
     """
     global _cost_report_df
-    async with _df_lock:
-        if _cost_report_df is not None:
-            return _cost_report_df
+    if _cost_report_df is not None:
+        return _cost_report_df
 
-        # CMS Cost Report PUF — resolved via URL discovery layer
-        try:
-            cost_report_url = await resolve_cms_download_url("cost-report-puf", "CostReport_")
-            if not cost_report_url:
-                raise RuntimeError("Unable to resolve Hospital Provider Cost Report download URL")
-            path = await _download_csv(cost_report_url, "hospital_cost_report.csv")
-            df = pd.read_csv(path, dtype=str, keep_default_na=False)
-            df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
-            _cost_report_df = df
-            return df
-        except Exception:
-            logger.warning("Could not load cost report data — returning empty DataFrame", exc_info=True)
-            _cost_report_df = pd.DataFrame()
-            return _cost_report_df
+    # CMS Cost Report PUF — direct CSV download (2023 Final, published Jan 2026)
+    cost_report_url = (
+        "https://data.cms.gov/sites/default/files/2026-01/"
+        "3c39f483-c7e0-4025-8396-4df76942e10f/CostReport_2023_Final.csv"
+    )
+    try:
+        path = await _download_csv(cost_report_url, "hospital_cost_report.csv")
+        df = pd.read_csv(path, dtype=str, keep_default_na=False)
+        df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
+        _cost_report_df = df
+        return df
+    except Exception:
+        logger.warning("Could not load cost report data — returning empty DataFrame", exc_info=True)
+        _cost_report_df = pd.DataFrame()
+        return _cost_report_df
 
 
 async def search_nppes(

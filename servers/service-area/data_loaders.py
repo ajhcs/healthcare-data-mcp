@@ -15,7 +15,7 @@ if str(_project_root) not in _sys.path:
     _sys.path.insert(0, str(_project_root))
 
 from shared.utils.cache import is_cache_valid  # noqa: E402
-from shared.utils.cms_client import load_hospital_names  # noqa: E402
+from shared.utils.cms_client import load_hospital_names as _load_hospital_names  # noqa: E402
 from shared.utils.cms_url_resolver import resolve_cms_download_url  # noqa: E402
 from shared.utils.column_detection import find_df_column  # noqa: E402
 
@@ -56,6 +56,11 @@ _CASES_COLS = [
 
 
 _BULK_TTL_DAYS = 90  # CMS bulk data refresh cadence
+
+
+async def load_hospital_names() -> dict[str, str]:
+    """Return CCN-to-hospital-name lookup from the shared CMS helper."""
+    return await _load_hospital_names()
 
 
 def _find_column(df: pd.DataFrame, candidates: list[str]) -> str | None:
@@ -145,7 +150,6 @@ async def download_dartmouth_crosswalk(force: bool = False) -> pd.DataFrame:
     return _normalize_dartmouth(df)
 
 
-# load_hospital_names is imported from shared.utils.cms_client
 
 
 def _normalize_dartmouth(df: pd.DataFrame) -> pd.DataFrame:
