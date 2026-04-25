@@ -2,7 +2,13 @@ from __future__ import annotations
 
 import os
 
-from shared.setup_wizard import import_manual_caches, print_cache_status, validate_env
+from shared.setup_wizard import (
+    import_manual_caches,
+    print_agent_cache_instructions,
+    print_cache_guide,
+    print_cache_status,
+    validate_env,
+)
 from shared.utils.env_file import load_env_file, parse_env_text, read_env_file, write_env_file
 
 
@@ -99,3 +105,26 @@ def test_cache_status_reports_missing_manual_data(tmp_path, capsys) -> None:
     output = capsys.readouterr().out
     assert "340B covered entities: MISSING" in output
     assert "public_records.get_340b_status" in output
+
+
+def test_cache_guide_prints_source_and_import_commands(tmp_path, capsys) -> None:
+    print_cache_guide(tmp_path / "cache")
+
+    output = capsys.readouterr().out
+    assert "Manual data acquisition guide" in output
+    assert "https://340bopais.hrsa.gov" in output
+    assert "hc-mcp-setup --import-340b-json" in output
+
+
+def test_agent_cache_instructions_skip_ready_cache(tmp_path, capsys) -> None:
+    cache_root = tmp_path / "cache"
+    ready = cache_root / "public-records" / "340b_covered_entities.json"
+    ready.parent.mkdir(parents=True)
+    ready.write_text("[]", encoding="utf-8")
+
+    print_agent_cache_instructions(cache_root)
+
+    output = capsys.readouterr().out
+    assert "340B covered entities" not in output
+    assert "HIPAA breach reports" in output
+    assert "After imports" in output

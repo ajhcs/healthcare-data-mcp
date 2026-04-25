@@ -39,6 +39,7 @@ class ManualCacheItem:
     import_flag: str
     instructions: str
     automation_note: str
+    agent_prompt: str
 
 
 CONFIG_KEYS: tuple[ConfigKey, ...] = (
@@ -76,6 +77,10 @@ MANUAL_CACHE_ITEMS: tuple[ManualCacheItem, ...] = (
         import_flag="--import-340b-json",
         instructions="Download the HRSA OPAIS Covered Entity Daily Export JSON.",
         automation_note="HRSA documents the JSON export for automated processing, but does not provide a separate public API.",
+        agent_prompt=(
+            "Open HRSA 340B OPAIS, download the Covered Entity Daily Export in JSON format, "
+            "then run hc-mcp-setup --import-340b-json with the downloaded file path."
+        ),
     ),
     ManualCacheItem(
         name="HIPAA breach reports",
@@ -86,6 +91,10 @@ MANUAL_CACHE_ITEMS: tuple[ManualCacheItem, ...] = (
         import_flag="--import-breach-csv",
         instructions="Export the HHS OCR breach portal report as CSV.",
         automation_note="The OCR portal is a browser workflow; CSV export is the stable handoff.",
+        agent_prompt=(
+            "Open the HHS OCR breach report portal, export the breach report results as CSV, "
+            "then run hc-mcp-setup --import-breach-csv with the downloaded file path."
+        ),
     ),
     ManualCacheItem(
         name="DocGraph shared patients",
@@ -99,6 +108,10 @@ MANUAL_CACHE_ITEMS: tuple[ManualCacheItem, ...] = (
         import_flag="--import-docgraph-csv",
         instructions="Provide a CareSet/DocGraph shared-patients CSV or an already-converted Parquet file.",
         automation_note="DocGraph/CareSet data is large and separately licensed/distributed, so it is not bundled.",
+        agent_prompt=(
+            "Locate the local CareSet/DocGraph shared-patients CSV or Parquet file. If it is CSV, "
+            "run hc-mcp-setup --import-docgraph-csv. If it is Parquet, run --import-docgraph-parquet."
+        ),
     ),
 )
 
@@ -133,6 +146,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--cache-root", type=Path, default=DEFAULT_CACHE_ROOT, help="Manual data cache root.")
     parser.add_argument(
         "--cache-status", action="store_true", help="Print manual-download cache status and affected tools."
+    )
+    parser.add_argument(
+        "--cache-guide",
+        action="store_true",
+        help="Print source-by-source acquisition and import guidance for manual datasets.",
+    )
+    parser.add_argument(
+        "--agent-cache-instructions",
+        action="store_true",
+        help="Print a concise prompt for Codex/Claude Code to acquire and import missing datasets.",
     )
     parser.add_argument(
         "--import-340b-json", type=Path, help="Copy a HRSA OPAIS 340B JSON export into the public-records cache."
@@ -192,6 +215,12 @@ def main() -> None:
 
     if args.cache_status or import_results:
         print_cache_status(args.cache_root)
+
+    if args.cache_guide:
+        print_cache_guide(args.cache_root)
+
+    if args.agent_cache_instructions:
+        print_agent_cache_instructions(args.cache_root)
 
 
 def prompt_for_values(current: dict[str, str], *, required_only: bool = False) -> dict[str, str]:
@@ -326,6 +355,41 @@ def print_cache_status(cache_root: Path) -> None:
             print(f"  source: {item.source_url}")
             print(f"  import: hc-mcp-setup {item.import_flag} <downloaded-file>")
             print(f"  note: {item.automation_note}")
+
+
+def print_cache_guide(cache_root: Path) -> None:
+    """Print human-oriented acquisition steps for manual cache files."""
+    root = cache_root.expanduser()
+    print(f"\nManual data acquisition guide for cache root: {root}")
+    for item in MANUAL_CACHE_ITEMS:
+        print(f"\n{item.name}")
+        print(f"  source: {item.source_url}")
+        print(f"  why not bundled: {item.automation_note}")
+        print(f"  acquire: {item.instructions}")
+        print(f"  import: hc-mcp-setup {item.import_flag} /path/to/downloaded-file")
+        print(f"  target seed: {root / item.seed_path}")
+        print(f"  target cache: {root / item.parquet_path}")
+
+
+def print_agent_cache_instructions(cache_root: Path) -> None:
+    """Print copy-paste instructions for a browser-capable coding agent."""
+    root = cache_root.expanduser()
+    print(
+        f"""
+Acquire healthcare-data-mcp manual datasets and import them into {root}.
+
+For each missing dataset:
+"""
+    )
+    for item in MANUAL_CACHE_ITEMS:
+        seed = root / item.seed_path
+        parquet = root / item.parquet_path
+        if seed.exists() or parquet.exists():
+            continue
+        print(f"- {item.name}: {item.agent_prompt}")
+        print(f"  Source: {item.source_url}")
+        print(f"  Import command: hc-mcp-setup {item.import_flag} <downloaded-file>")
+    print("\nAfter imports, run: hc-mcp-setup --cache-status")
 
 
 def _copy_seed_file(source: Path, target: Path) -> None:

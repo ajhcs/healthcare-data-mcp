@@ -164,6 +164,8 @@ hc-mcp-setup --interactive
 hc-mcp-setup --validate-only
 hc-mcp-setup --print-client-snippets
 hc-mcp-setup --cache-status
+hc-mcp-setup --cache-guide
+hc-mcp-setup --agent-cache-instructions
 ```
 
 `hc-mcp` loads `.env` from the current working directory before starting a server. For GUI clients launched from another directory, set `HC_MCP_ENV_FILE=/absolute/path/to/.env` or pass `--env-file /absolute/path/to/.env`.
@@ -186,6 +188,8 @@ Some tools also depend on manually downloaded public data files because the sour
 
 ```bash
 hc-mcp-setup --cache-status
+hc-mcp-setup --cache-guide
+hc-mcp-setup --agent-cache-instructions
 hc-mcp-setup --import-340b-json /path/to/340b_covered_entities.json
 hc-mcp-setup --import-breach-csv /path/to/hipaa_breaches.csv
 hc-mcp-setup --import-docgraph-csv /path/to/docgraph_shared_patients.csv
@@ -194,6 +198,8 @@ hc-mcp-setup --import-docgraph-parquet /path/to/shared_patients.parquet
 ```
 
 The default cache root is `~/.healthcare-data-mcp/cache`. The affected tools are `public_records.get_340b_status`, `public_records.get_breach_history`, `physician_referral_network.map_referral_network`, and `physician_referral_network.detect_leakage`.
+
+For browser-capable coding agents, `hc-mcp-setup --agent-cache-instructions` prints a concise acquisition prompt with the expected source URLs and import commands. This is the recommended handoff when a local agent can operate a browser but the source does not expose a stable packageable API.
 
 ## Command Reference
 
@@ -215,6 +221,8 @@ hc-mcp-setup --interactive
 hc-mcp-setup --validate-only
 hc-mcp-setup --print-client-snippets
 hc-mcp-setup --cache-status
+hc-mcp-setup --cache-guide
+hc-mcp-setup --agent-cache-instructions
 hc-mcp-setup --import-340b-json /path/to/340b_covered_entities.json
 hc-mcp-setup --import-breach-csv /path/to/hipaa_breaches.csv
 hc-mcp-setup --import-docgraph-csv /path/to/docgraph_shared_patients.csv
