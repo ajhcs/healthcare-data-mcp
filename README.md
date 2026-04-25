@@ -165,6 +165,7 @@ hc-mcp-setup --validate-only
 hc-mcp-setup --print-client-snippets
 hc-mcp-setup --cache-status
 hc-mcp-setup --cache-guide
+hc-mcp-setup --acquire-public-caches
 hc-mcp-setup --agent-cache-instructions
 ```
 
@@ -184,14 +185,14 @@ hc-mcp-setup --agent-cache-instructions
 
 No key is required for HHS OIG LEIE, CMS PECOS/provider enrollment, CDC PLACES, NIH RePORTER, or ClinicalTrials.gov.
 
-Some tools also depend on manually downloaded public data files because the source portals do not provide stable unauthenticated bulk-download APIs. Check and seed those caches with:
+Some tools also depend on local cache files. The setup CLI fetches sources that expose a stable unauthenticated acquisition path and leaves the rest as explicit imports:
 
 ```bash
 hc-mcp-setup --cache-status
+hc-mcp-setup --acquire-public-caches
+hc-mcp-setup --acquire-hipaa-breaches
 hc-mcp-setup --cache-guide
-hc-mcp-setup --agent-cache-instructions
 hc-mcp-setup --import-340b-json /path/to/340b_covered_entities.json
-hc-mcp-setup --import-breach-csv /path/to/hipaa_breaches.csv
 hc-mcp-setup --import-docgraph-csv /path/to/docgraph_shared_patients.csv
 # or, if already converted:
 hc-mcp-setup --import-docgraph-parquet /path/to/shared_patients.parquet
@@ -199,7 +200,7 @@ hc-mcp-setup --import-docgraph-parquet /path/to/shared_patients.parquet
 
 The default cache root is `~/.healthcare-data-mcp/cache`. The affected tools are `public_records.get_340b_status`, `public_records.get_breach_history`, `physician_referral_network.map_referral_network`, and `physician_referral_network.detect_leakage`.
 
-For browser-capable coding agents, `hc-mcp-setup --agent-cache-instructions` prints a concise acquisition prompt with the expected source URLs and import commands. This is the recommended handoff when a local agent can operate a browser but the source does not expose a stable packageable API.
+`hc-mcp-setup --acquire-public-caches` currently fetches the public HHS OCR HIPAA breach table. HRSA 340B still requires importing the OPAIS Covered Entity Daily Export JSON because the public reports page does not expose a stable unauthenticated file URL for the CLI. DocGraph/CareSet shared-patient data is separately licensed and is import-only.
 
 ## Command Reference
 
@@ -221,6 +222,8 @@ hc-mcp-setup --interactive
 hc-mcp-setup --validate-only
 hc-mcp-setup --print-client-snippets
 hc-mcp-setup --cache-status
+hc-mcp-setup --acquire-public-caches
+hc-mcp-setup --acquire-hipaa-breaches
 hc-mcp-setup --cache-guide
 hc-mcp-setup --agent-cache-instructions
 hc-mcp-setup --import-340b-json /path/to/340b_covered_entities.json

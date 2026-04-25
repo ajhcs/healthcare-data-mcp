@@ -40,6 +40,7 @@ class ManualCacheItem:
     instructions: str
     automation_note: str
     agent_prompt: str
+    acquire_flag: str = ""
 
 
 CONFIG_KEYS: tuple[ConfigKey, ...] = (
@@ -76,7 +77,10 @@ MANUAL_CACHE_ITEMS: tuple[ManualCacheItem, ...] = (
         source_url="https://340bopais.hrsa.gov",
         import_flag="--import-340b-json",
         instructions="Download the HRSA OPAIS Covered Entity Daily Export JSON.",
-        automation_note="HRSA documents the JSON export for automated processing, but does not provide a separate public API.",
+        automation_note=(
+            "HRSA exposes the JSON export through the OPAIS reports UI, but the public page does "
+            "not currently expose a stable unauthenticated file URL for this CLI to call."
+        ),
         agent_prompt=(
             "Open HRSA 340B OPAIS, download the Covered Entity Daily Export in JSON format, "
             "then run hc-mcp-setup --import-340b-json with the downloaded file path."
@@ -89,12 +93,12 @@ MANUAL_CACHE_ITEMS: tuple[ManualCacheItem, ...] = (
         tools=("public_records.get_breach_history",),
         source_url="https://ocrportal.hhs.gov/ocr/breach/breach_report.jsf",
         import_flag="--import-breach-csv",
-        instructions="Export the HHS OCR breach portal report as CSV.",
-        automation_note="The OCR portal is a browser workflow; CSV export is the stable handoff.",
+        instructions="Run hc-mcp-setup --acquire-hipaa-breaches to fetch the public OCR breach table.",
+        automation_note="The OCR breach report is published as a public HTML table and can be acquired by the CLI.",
         agent_prompt=(
-            "Open the HHS OCR breach report portal, export the breach report results as CSV, "
-            "then run hc-mcp-setup --import-breach-csv with the downloaded file path."
+            "Run hc-mcp-setup --acquire-hipaa-breaches to fetch the public OCR breach table."
         ),
+        acquire_flag="--acquire-hipaa-breaches",
     ),
     ManualCacheItem(
         name="DocGraph shared patients",
@@ -143,19 +147,34 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--print-client-snippets", action="store_true", help="Print install snippets for common MCP clients."
     )
-    parser.add_argument("--cache-root", type=Path, default=DEFAULT_CACHE_ROOT, help="Manual data cache root.")
+    parser.add_argument("--cache-root", type=Path, default=DEFAULT_CACHE_ROOT, help="Data cache root.")
     parser.add_argument(
-        "--cache-status", action="store_true", help="Print manual-download cache status and affected tools."
+        "--cache-status", action="store_true", help="Print cache status and affected tools."
     )
     parser.add_argument(
         "--cache-guide",
         action="store_true",
-        help="Print source-by-source acquisition and import guidance for manual datasets.",
+        help="Print source-by-source acquisition and import guidance for cache datasets.",
     )
     parser.add_argument(
         "--agent-cache-instructions",
         action="store_true",
-        help="Print a concise prompt for Codex/Claude Code to acquire and import missing datasets.",
+        help="Print concise agent instructions for supported cache acquisition/import tasks.",
+    )
+    parser.add_argument(
+        "--acquire-public-caches",
+        action="store_true",
+        help="Fetch public cache datasets that expose stable unauthenticated acquisition paths.",
+    )
+    parser.add_argument(
+        "--acquire-hipaa-breaches",
+        action="store_true",
+        help="Fetch the public HHS OCR HIPAA breach table and store it as the breach CSV seed.",
+    )
+    parser.add_argument(
+        "--force-cache-refresh",
+        action="store_true",
+        help="Overwrite existing acquired public cache files.",
     )
     parser.add_argument(
         "--import-340b-json", type=Path, help="Copy a HRSA OPAIS 340B JSON export into the public-records cache."
@@ -203,6 +222,14 @@ def main() -> None:
     if args.print_client_snippets:
         print_client_snippets(args.env_file)
 
+    acquisition_results = acquire_public_caches(
+        cache_root=args.cache_root,
+        hipaa_breaches=args.acquire_public_caches or args.acquire_hipaa_breaches,
+        force=args.force_cache_refresh,
+    )
+    for result in acquisition_results:
+        print(result)
+
     import_results = import_manual_caches(
         cache_root=args.cache_root,
         opais_340b_json=args.import_340b_json,
@@ -213,7 +240,7 @@ def main() -> None:
     for result in import_results:
         print(result)
 
-    if args.cache_status or import_results:
+    if args.cache_status or import_results or acquisition_results:
         print_cache_status(args.cache_root)
 
     if args.cache_guide:
@@ -309,7 +336,7 @@ def import_manual_caches(
     docgraph_csv: Path | None = None,
     docgraph_parquet: Path | None = None,
 ) -> list[str]:
-    """Import manually downloaded source files into the shared cache."""
+    """Import source files into the shared cache."""
     if docgraph_csv and docgraph_parquet:
         raise SystemExit("Use only one of --import-docgraph-csv or --import-docgraph-parquet.")
 
@@ -337,10 +364,28 @@ def import_manual_caches(
     return results
 
 
-def print_cache_status(cache_root: Path) -> None:
-    """Print manual-download cache status and setup instructions."""
+def acquire_public_caches(
+    *,
+    cache_root: Path,
+    hipaa_breaches: bool = False,
+    force: bool = False,
+) -> list[str]:
+    """Acquire public datasets that have stable unauthenticated access paths."""
     root = cache_root.expanduser()
-    print(f"\nManual data cache: {root}")
+    results: list[str] = []
+
+    if hipaa_breaches:
+        target = root / "public-records" / "hipaa_breaches.csv"
+        rows = _acquire_hipaa_breaches(target, force=force)
+        results.append(f"Acquired HIPAA breach CSV -> {target} ({rows} rows)")
+
+    return results
+
+
+def print_cache_status(cache_root: Path) -> None:
+    """Print cache status and setup instructions."""
+    root = cache_root.expanduser()
+    print(f"\nData cache: {root}")
     for item in MANUAL_CACHE_ITEMS:
         seed = root / item.seed_path
         parquet = root / item.parquet_path
@@ -353,19 +398,24 @@ def print_cache_status(cache_root: Path) -> None:
             print(f"  affected tools: {', '.join(item.tools)}")
             print(f"  next step: {item.instructions}")
             print(f"  source: {item.source_url}")
+            if item.acquire_flag:
+                print(f"  acquire: hc-mcp-setup {item.acquire_flag}")
             print(f"  import: hc-mcp-setup {item.import_flag} <downloaded-file>")
             print(f"  note: {item.automation_note}")
 
 
 def print_cache_guide(cache_root: Path) -> None:
-    """Print human-oriented acquisition steps for manual cache files."""
+    """Print human-oriented acquisition steps for cache files."""
     root = cache_root.expanduser()
-    print(f"\nManual data acquisition guide for cache root: {root}")
+    print(f"\nData acquisition guide for cache root: {root}")
     for item in MANUAL_CACHE_ITEMS:
         print(f"\n{item.name}")
         print(f"  source: {item.source_url}")
-        print(f"  why not bundled: {item.automation_note}")
-        print(f"  acquire: {item.instructions}")
+        print(f"  automation: {item.automation_note}")
+        if item.acquire_flag:
+            print(f"  acquire: hc-mcp-setup {item.acquire_flag}")
+        else:
+            print(f"  acquire: {item.instructions}")
         print(f"  import: hc-mcp-setup {item.import_flag} /path/to/downloaded-file")
         print(f"  target seed: {root / item.seed_path}")
         print(f"  target cache: {root / item.parquet_path}")
@@ -376,7 +426,7 @@ def print_agent_cache_instructions(cache_root: Path) -> None:
     root = cache_root.expanduser()
     print(
         f"""
-Acquire healthcare-data-mcp manual datasets and import them into {root}.
+Acquire healthcare-data-mcp cache datasets and import them into {root}.
 
 For each missing dataset:
 """
@@ -385,6 +435,9 @@ For each missing dataset:
         seed = root / item.seed_path
         parquet = root / item.parquet_path
         if seed.exists() or parquet.exists():
+            continue
+        if item.acquire_flag:
+            print(f"- {item.name}: run hc-mcp-setup {item.acquire_flag}")
             continue
         print(f"- {item.name}: {item.agent_prompt}")
         print(f"  Source: {item.source_url}")
@@ -442,6 +495,33 @@ def _convert_docgraph_csv(source: Path, target: Path) -> int:
     target.parent.mkdir(parents=True, exist_ok=True)
     df.to_parquet(target, compression="zstd", index=False)
     return len(df)
+
+
+def _acquire_hipaa_breaches(target: Path, *, force: bool = False) -> int:
+    if target.exists() and not force:
+        raise SystemExit(f"HIPAA breach CSV already exists: {target}. Use --force-cache-refresh to replace it.")
+
+    import pandas as pd
+
+    tables = pd.read_html("https://ocrportal.hhs.gov/ocr/breach/breach_report_hip.jsf")
+    breach_table = None
+    for table in tables:
+        columns = [str(col).strip() for col in table.columns]
+        if "Name of Covered Entity" in columns and "Breach Submission Date" in columns:
+            breach_table = table
+            break
+
+    if breach_table is None:
+        raise SystemExit("Could not find the HHS OCR HIPAA breach results table.")
+
+    breach_table = breach_table.dropna(axis="columns", how="all")
+    breach_table.columns = [str(col).strip() for col in breach_table.columns]
+    if breach_table.empty:
+        raise SystemExit("HHS OCR HIPAA breach results table was empty.")
+
+    target.parent.mkdir(parents=True, exist_ok=True)
+    breach_table.to_csv(target, index=False)
+    return len(breach_table)
 
 
 def _parse_set_values(items: list[str]) -> dict[str, str]:
