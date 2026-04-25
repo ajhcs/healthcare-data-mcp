@@ -163,6 +163,7 @@ Use the setup wizard instead of hand-editing secrets:
 hc-mcp-setup --interactive
 hc-mcp-setup --validate-only
 hc-mcp-setup --print-client-snippets
+hc-mcp-setup --cache-status
 ```
 
 `hc-mcp` loads `.env` from the current working directory before starting a server. For GUI clients launched from another directory, set `HC_MCP_ENV_FILE=/absolute/path/to/.env` or pass `--env-file /absolute/path/to/.env`.
@@ -180,6 +181,19 @@ hc-mcp-setup --print-client-snippets
 | `PROXYCURL_API_KEY` | Web intelligence enrichment | Optional |
 
 No key is required for HHS OIG LEIE, CMS PECOS/provider enrollment, CDC PLACES, NIH RePORTER, or ClinicalTrials.gov.
+
+Some tools also depend on manually downloaded public data files because the source portals do not provide stable unauthenticated bulk-download APIs. Check and seed those caches with:
+
+```bash
+hc-mcp-setup --cache-status
+hc-mcp-setup --import-340b-json /path/to/340b_covered_entities.json
+hc-mcp-setup --import-breach-csv /path/to/hipaa_breaches.csv
+hc-mcp-setup --import-docgraph-csv /path/to/docgraph_shared_patients.csv
+# or, if already converted:
+hc-mcp-setup --import-docgraph-parquet /path/to/shared_patients.parquet
+```
+
+The default cache root is `~/.healthcare-data-mcp/cache`. The affected tools are `public_records.get_340b_status`, `public_records.get_breach_history`, `physician_referral_network.map_referral_network`, and `physician_referral_network.detect_leakage`.
 
 ## Command Reference
 
@@ -200,6 +214,10 @@ hc-mcp public-records --env-file /absolute/path/to/.env
 hc-mcp-setup --interactive
 hc-mcp-setup --validate-only
 hc-mcp-setup --print-client-snippets
+hc-mcp-setup --cache-status
+hc-mcp-setup --import-340b-json /path/to/340b_covered_entities.json
+hc-mcp-setup --import-breach-csv /path/to/hipaa_breaches.csv
+hc-mcp-setup --import-docgraph-csv /path/to/docgraph_shared_patients.csv
 
 # Build the Claude Desktop extension package
 python3 scripts/build_mcpb.py

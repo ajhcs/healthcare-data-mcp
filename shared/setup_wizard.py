@@ -7,6 +7,7 @@ import getpass
 import hashlib
 import re
 import secrets
+import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -16,6 +17,7 @@ from shared.utils.env_file import read_env_file, write_env_file
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_ENV = Path.cwd() / ".env"
 DEFAULT_TEMPLATE = REPO_ROOT / ".env.example"
+DEFAULT_CACHE_ROOT = Path.home() / ".healthcare-data-mcp" / "cache"
 
 
 @dataclass(frozen=True)
@@ -27,17 +29,77 @@ class ConfigKey:
     help_text: str = ""
 
 
+@dataclass(frozen=True)
+class ManualCacheItem:
+    name: str
+    seed_path: Path
+    parquet_path: Path
+    tools: tuple[str, ...]
+    source_url: str
+    import_flag: str
+    instructions: str
+    automation_note: str
+
+
 CONFIG_KEYS: tuple[ConfigKey, ...] = (
-    ConfigKey("SAM_GOV_API_KEY", "SAM.gov API key for Exclusions and opportunities", help_text="Required for SAM.gov API-backed tools."),
+    ConfigKey(
+        "SAM_GOV_API_KEY",
+        "SAM.gov API key for Exclusions and opportunities",
+        help_text="Required for SAM.gov API-backed tools.",
+    ),
     ConfigKey("CHPL_API_KEY", "ONC CHPL API key for EHR enrichment", help_text="Optional public-records enrichment."),
-    ConfigKey("SEC_USER_AGENT", "SEC EDGAR User-Agent", required=True, secret=False, help_text='Required format: "AppName email@example.com".'),
+    ConfigKey(
+        "SEC_USER_AGENT",
+        "SEC EDGAR User-Agent",
+        required=True,
+        secret=False,
+        help_text='Required format: "AppName email@example.com".',
+    ),
     ConfigKey("CENSUS_API_KEY", "Census API key", help_text="Optional geo-demographics rate-limit improvement."),
     ConfigKey("HUD_API_TOKEN", "HUD USPS Crosswalk token", help_text="Optional ZIP crosswalk support."),
     ConfigKey("ORS_API_KEY", "OpenRouteService API key", help_text="Optional drive-time isochrones."),
     ConfigKey("BLS_API_KEY", "BLS API key", help_text="Optional workforce analytics rate-limit improvement."),
     ConfigKey("GOOGLE_CSE_API_KEY", "Google Custom Search API key", help_text="Optional web-intelligence search."),
-    ConfigKey("GOOGLE_CSE_ID", "Google Custom Search Engine ID", secret=False, help_text="Used with GOOGLE_CSE_API_KEY."),
+    ConfigKey(
+        "GOOGLE_CSE_ID", "Google Custom Search Engine ID", secret=False, help_text="Used with GOOGLE_CSE_API_KEY."
+    ),
     ConfigKey("PROXYCURL_API_KEY", "Proxycurl API key", help_text="Optional web-intelligence enrichment."),
+)
+
+MANUAL_CACHE_ITEMS: tuple[ManualCacheItem, ...] = (
+    ManualCacheItem(
+        name="340B covered entities",
+        seed_path=Path("public-records") / "340b_covered_entities.json",
+        parquet_path=Path("public-records") / "340b_covered_entities.parquet",
+        tools=("public_records.get_340b_status",),
+        source_url="https://340bopais.hrsa.gov",
+        import_flag="--import-340b-json",
+        instructions="Download the HRSA OPAIS Covered Entity Daily Export JSON.",
+        automation_note="HRSA documents the JSON export for automated processing, but does not provide a separate public API.",
+    ),
+    ManualCacheItem(
+        name="HIPAA breach reports",
+        seed_path=Path("public-records") / "hipaa_breaches.csv",
+        parquet_path=Path("public-records") / "hipaa_breaches.parquet",
+        tools=("public_records.get_breach_history",),
+        source_url="https://ocrportal.hhs.gov/ocr/breach/breach_report.jsf",
+        import_flag="--import-breach-csv",
+        instructions="Export the HHS OCR breach portal report as CSV.",
+        automation_note="The OCR portal is a browser workflow; CSV export is the stable handoff.",
+    ),
+    ManualCacheItem(
+        name="DocGraph shared patients",
+        seed_path=Path("docgraph") / "shared_patients.csv",
+        parquet_path=Path("docgraph") / "shared_patients.parquet",
+        tools=(
+            "physician_referral_network.map_referral_network",
+            "physician_referral_network.detect_leakage",
+        ),
+        source_url="https://careset.com/data-leadership/",
+        import_flag="--import-docgraph-csv",
+        instructions="Provide a CareSet/DocGraph shared-patients CSV or an already-converted Parquet file.",
+        automation_note="DocGraph/CareSet data is large and separately licensed/distributed, so it is not bundled.",
+    ),
 )
 
 
@@ -46,14 +108,46 @@ def parse_args() -> argparse.Namespace:
         prog="hc-mcp-setup",
         description="Create, update, and validate healthcare-data-mcp .env configuration.",
     )
-    parser.add_argument("--env-file", type=Path, default=DEFAULT_ENV, help="Path to write/read. Default: .env in the repo.")
+    parser.add_argument(
+        "--env-file", type=Path, default=DEFAULT_ENV, help="Path to write/read. Default: .env in the repo."
+    )
     parser.add_argument("--template", type=Path, default=DEFAULT_TEMPLATE, help="Template dotenv file.")
-    parser.add_argument("--set", action="append", default=[], metavar="KEY=VALUE", help="Set a value non-interactively.")
+    parser.add_argument(
+        "--set", action="append", default=[], metavar="KEY=VALUE", help="Set a value non-interactively."
+    )
     parser.add_argument("--interactive", action="store_true", help="Prompt for missing or changed values.")
-    parser.add_argument("--skip-optional", action="store_true", help="Only prompt for required values in interactive mode.")
-    parser.add_argument("--validate-only", action="store_true", help="Validate the selected env file without writing changes.")
-    parser.add_argument("--generate-gateway-token", action="store_true", help="Generate a gateway bearer token and store only its SHA-256 hash.")
-    parser.add_argument("--print-client-snippets", action="store_true", help="Print install snippets for common MCP clients.")
+    parser.add_argument(
+        "--skip-optional", action="store_true", help="Only prompt for required values in interactive mode."
+    )
+    parser.add_argument(
+        "--validate-only", action="store_true", help="Validate the selected env file without writing changes."
+    )
+    parser.add_argument(
+        "--generate-gateway-token",
+        action="store_true",
+        help="Generate a gateway bearer token and store only its SHA-256 hash.",
+    )
+    parser.add_argument(
+        "--print-client-snippets", action="store_true", help="Print install snippets for common MCP clients."
+    )
+    parser.add_argument("--cache-root", type=Path, default=DEFAULT_CACHE_ROOT, help="Manual data cache root.")
+    parser.add_argument(
+        "--cache-status", action="store_true", help="Print manual-download cache status and affected tools."
+    )
+    parser.add_argument(
+        "--import-340b-json", type=Path, help="Copy a HRSA OPAIS 340B JSON export into the public-records cache."
+    )
+    parser.add_argument(
+        "--import-breach-csv", type=Path, help="Copy a HHS OCR breach CSV export into the public-records cache."
+    )
+    parser.add_argument(
+        "--import-docgraph-csv",
+        type=Path,
+        help="Convert a DocGraph shared-patients CSV into the DocGraph Parquet cache.",
+    )
+    parser.add_argument(
+        "--import-docgraph-parquet", type=Path, help="Copy an existing DocGraph shared-patients Parquet cache."
+    )
     return parser.parse_args()
 
 
@@ -85,6 +179,19 @@ def main() -> None:
 
     if args.print_client_snippets:
         print_client_snippets(args.env_file)
+
+    import_results = import_manual_caches(
+        cache_root=args.cache_root,
+        opais_340b_json=args.import_340b_json,
+        breach_csv=args.import_breach_csv,
+        docgraph_csv=args.import_docgraph_csv,
+        docgraph_parquet=args.import_docgraph_parquet,
+    )
+    for result in import_results:
+        print(result)
+
+    if args.cache_status or import_results:
+        print_cache_status(args.cache_root)
 
 
 def prompt_for_values(current: dict[str, str], *, required_only: bool = False) -> dict[str, str]:
@@ -163,6 +270,114 @@ Claude Desktop stdio JSON:
   }}
 """
     )
+
+
+def import_manual_caches(
+    *,
+    cache_root: Path,
+    opais_340b_json: Path | None = None,
+    breach_csv: Path | None = None,
+    docgraph_csv: Path | None = None,
+    docgraph_parquet: Path | None = None,
+) -> list[str]:
+    """Import manually downloaded source files into the shared cache."""
+    if docgraph_csv and docgraph_parquet:
+        raise SystemExit("Use only one of --import-docgraph-csv or --import-docgraph-parquet.")
+
+    root = cache_root.expanduser()
+    results: list[str] = []
+    if opais_340b_json:
+        target = root / "public-records" / "340b_covered_entities.json"
+        _copy_seed_file(opais_340b_json, target)
+        results.append(f"Imported 340B JSON -> {target}")
+
+    if breach_csv:
+        target = root / "public-records" / "hipaa_breaches.csv"
+        _copy_seed_file(breach_csv, target)
+        results.append(f"Imported HIPAA breach CSV -> {target}")
+
+    if docgraph_parquet:
+        target = root / "docgraph" / "shared_patients.parquet"
+        _copy_seed_file(docgraph_parquet, target)
+        results.append(f"Imported DocGraph Parquet -> {target}")
+
+    if docgraph_csv:
+        rows = _convert_docgraph_csv(docgraph_csv, root / "docgraph" / "shared_patients.parquet")
+        results.append(f"Imported DocGraph CSV -> {root / 'docgraph' / 'shared_patients.parquet'} ({rows} rows)")
+
+    return results
+
+
+def print_cache_status(cache_root: Path) -> None:
+    """Print manual-download cache status and setup instructions."""
+    root = cache_root.expanduser()
+    print(f"\nManual data cache: {root}")
+    for item in MANUAL_CACHE_ITEMS:
+        seed = root / item.seed_path
+        parquet = root / item.parquet_path
+        ready = seed.exists() or parquet.exists()
+        status = "READY" if ready else "MISSING"
+        print(f"- {item.name}: {status}")
+        print(f"  seed: {seed}")
+        print(f"  cache: {parquet}")
+        if not ready:
+            print(f"  affected tools: {', '.join(item.tools)}")
+            print(f"  next step: {item.instructions}")
+            print(f"  source: {item.source_url}")
+            print(f"  import: hc-mcp-setup {item.import_flag} <downloaded-file>")
+            print(f"  note: {item.automation_note}")
+
+
+def _copy_seed_file(source: Path, target: Path) -> None:
+    source_path = source.expanduser()
+    if not source_path.exists() or not source_path.is_file():
+        raise SystemExit(f"Manual cache source file not found: {source_path}")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(source_path, target)
+
+
+def _convert_docgraph_csv(source: Path, target: Path) -> int:
+    source_path = source.expanduser()
+    if not source_path.exists() or not source_path.is_file():
+        raise SystemExit(f"DocGraph CSV not found: {source_path}")
+
+    import pandas as pd
+
+    df = pd.read_csv(source_path, dtype=str, keep_default_na=False, low_memory=False)
+    df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
+
+    col_map = {}
+    for col in df.columns:
+        if "from" in col or col in ("npi1", "npi_1", "referring_npi"):
+            col_map[col] = "npi_from"
+        elif "to" in col or col in ("npi2", "npi_2", "referred_npi"):
+            col_map[col] = "npi_to"
+        elif "shared" in col or "patient" in col:
+            col_map[col] = "shared_count"
+        elif "transaction" in col or "claim" in col:
+            col_map[col] = "transaction_count"
+        elif "same_day" in col or "sameday" in col:
+            col_map[col] = "same_day_count"
+
+    df = df.rename(columns=col_map)
+    for req_col in ["npi_from", "npi_to"]:
+        if req_col not in df.columns:
+            if len(df.columns) < 2:
+                raise SystemExit(f"Cannot identify required column '{req_col}' in DocGraph CSV.")
+            original = list(df.columns)
+            df = df.rename(columns={original[0]: "npi_from", original[1]: "npi_to"})
+            if len(original) >= 3:
+                df = df.rename(columns={original[2]: "shared_count"})
+
+    for col in ["shared_count", "transaction_count", "same_day_count"]:
+        if col not in df.columns:
+            df[col] = "0"
+        df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0).astype(int)  # type: ignore[union-attr]
+
+    df = df[["npi_from", "npi_to", "shared_count", "transaction_count", "same_day_count"]]
+    target.parent.mkdir(parents=True, exist_ok=True)
+    df.to_parquet(target, compression="zstd", index=False)
+    return len(df)
 
 
 def _parse_set_values(items: list[str]) -> dict[str, str]:
