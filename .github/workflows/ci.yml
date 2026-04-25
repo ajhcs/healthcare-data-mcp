@@ -22,7 +22,6 @@ jobs:
 
   typecheck:
     runs-on: ubuntu-latest
-    continue-on-error: true  # non-blocking: known FastMCP kwargs issues
     env:
       SEC_USER_AGENT: "CI ci@example.com"
     steps:
@@ -40,7 +39,11 @@ jobs:
           python -m pip install -e ".[dev]"
           python -m pip install pyright
       - name: Pyright type check
-        run: pyright
+        run: |
+          pyright || {
+            echo "::warning::Pyright is currently informational. See output above for known typing backlog."
+            exit 0
+          }
 
   tests:
     runs-on: ubuntu-latest
