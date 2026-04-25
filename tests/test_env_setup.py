@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import os
 
+import pandas as pd
+
 from shared.setup_wizard import (
+    acquire_public_caches,
     import_manual_caches,
     print_agent_cache_instructions,
     print_cache_guide,
@@ -99,20 +102,49 @@ def test_import_docgraph_csv_converts_to_parquet(tmp_path) -> None:
     assert (cache_root / "docgraph" / "shared_patients.parquet").exists()
 
 
+def test_acquire_public_caches_fetches_hipaa_breach_table(tmp_path, monkeypatch) -> None:
+    def fake_read_html(url: str):
+        assert url == "https://ocrportal.hhs.gov/ocr/breach/breach_report_hip.jsf"
+        return [
+            pd.DataFrame({"not": ["it"]}),
+            pd.DataFrame(
+                {
+                    "Name of Covered Entity": ["Example Hospital"],
+                    "State": ["PA"],
+                    "Covered Entity Type": ["Healthcare Provider"],
+                    "Individuals Affected": [1234],
+                    "Breach Submission Date": ["04/01/2026"],
+                    "Type of Breach": ["Hacking/IT Incident"],
+                    "Location of Breached Information": ["Email"],
+                }
+            ),
+        ]
+
+    monkeypatch.setattr(pd, "read_html", fake_read_html)
+
+    results = acquire_public_caches(cache_root=tmp_path / "cache", hipaa_breaches=True)
+
+    target = tmp_path / "cache" / "public-records" / "hipaa_breaches.csv"
+    assert "1 rows" in results[0]
+    assert "Example Hospital" in target.read_text(encoding="utf-8")
+
+
 def test_cache_status_reports_missing_manual_data(tmp_path, capsys) -> None:
     print_cache_status(tmp_path / "cache")
 
     output = capsys.readouterr().out
     assert "340B covered entities: MISSING" in output
     assert "public_records.get_340b_status" in output
+    assert "hc-mcp-setup --acquire-hipaa-breaches" in output
 
 
 def test_cache_guide_prints_source_and_import_commands(tmp_path, capsys) -> None:
     print_cache_guide(tmp_path / "cache")
 
     output = capsys.readouterr().out
-    assert "Manual data acquisition guide" in output
+    assert "Data acquisition guide" in output
     assert "https://340bopais.hrsa.gov" in output
+    assert "hc-mcp-setup --acquire-hipaa-breaches" in output
     assert "hc-mcp-setup --import-340b-json" in output
 
 
@@ -127,4 +159,5 @@ def test_agent_cache_instructions_skip_ready_cache(tmp_path, capsys) -> None:
     output = capsys.readouterr().out
     assert "340B covered entities" not in output
     assert "HIPAA breach reports" in output
+    assert "hc-mcp-setup --acquire-hipaa-breaches" in output
     assert "After imports" in output
