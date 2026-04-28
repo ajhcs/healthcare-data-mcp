@@ -1,0 +1,41 @@
+{
+  "name": "Epic MyChart Export",
+  "vendor": "Epic",
+  "version": "2.1",
+  "author": "Community",
+  "description": "Template for Epic MyChart machine-readable file exports. Epic systems often use slightly different column naming conventions.",
+  "column_mappings": {
+    "description": "description",
+    "cpt_code": "code_1",
+    "cpt_type": "code_1_type",
+    "hcpcs_code": "code_2",
+    "hcpcs_type": "code_2_type",
+    "modifier": "modifiers",
+    "patient_setting": "setting",
+    "gross_price": "gross_charge",
+    "cash_price": "discounted_cash",
+    "payer": "payer_name",
+    "plan": "plan_name",
+    "negotiated_rate": "negotiated_dollar",
+    "negotiated_pct": "negotiated_percentage",
+    "pricing_methodology": "methodology",
+    "minimum_price": "min_charge",
+    "maximum_price": "max_charge",
+    "notes": "additional_notes",
+    "service_class": "billing_class"
+  },
+  "preprocessing": [
+    {
+      "type": "skip_rows",
+      "count": 1,
+      "description": "Skip Epic header row"
+    },
+    {
+      "type": "encoding",
+      "value": "utf-8-sig",
+      "description": "Handle UTF-8 BOM if present"
+    }
+  ],
+  "created": "2024-01-01",
+  "updated": "2024-01-15"
+}

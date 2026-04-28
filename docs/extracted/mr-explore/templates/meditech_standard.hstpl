@@ -1,0 +1,35 @@
+{
+  "name": "Meditech Expanse",
+  "vendor": "Meditech",
+  "version": "1.0",
+  "author": "Community",
+  "description": "Template for Meditech Expanse system price transparency exports. Common in smaller community hospitals.",
+  "column_mappings": {
+    "item_description": "description",
+    "proc_code": "code_1",
+    "proc_code_type": "code_1_type",
+    "alt_code": "code_2",
+    "alt_code_type": "code_2_type",
+    "modifiers": "modifiers",
+    "setting": "setting",
+    "chargemaster_price": "gross_charge",
+    "self_pay_discount": "discounted_cash",
+    "payer_name": "payer_name",
+    "plan_name": "plan_name",
+    "negotiated_price": "negotiated_dollar",
+    "price_method": "methodology",
+    "min_price": "min_charge",
+    "max_price": "max_charge",
+    "additional_info": "additional_notes",
+    "revenue_code_class": "billing_class"
+  },
+  "preprocessing": [
+    {
+      "type": "skip_rows",
+      "count": 1,
+      "description": "Skip header row"
+    }
+  ],
+  "created": "2024-01-20",
+  "updated": "2024-01-20"
+}
