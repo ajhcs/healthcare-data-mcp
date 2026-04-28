@@ -24,6 +24,7 @@ try:
     )
     from .facility_enrichment import aggregate_off_site, enrich_facility
     from .graph_expansion import expand_related_providers
+    from .generic_reconciliation import reconcile_generic_system_facilities
     from .jefferson_resolver import (
         JEFFERSON_SLUG,
         build_combined_system_profile,
@@ -48,6 +49,7 @@ except ImportError:
     )
     from facility_enrichment import aggregate_off_site, enrich_facility
     from graph_expansion import expand_related_providers
+    from generic_reconciliation import reconcile_generic_system_facilities
     from jefferson_resolver import (
         JEFFERSON_SLUG,
         build_combined_system_profile,
@@ -86,6 +88,13 @@ async def _load_pos() -> pd.DataFrame:
 
 async def _search_nppes(**kwargs) -> list[dict]:
     return await search_nppes(**kwargs)
+
+def _load_provider_enrollment() -> pd.DataFrame:
+    try:
+        from servers.provider_enrollment.data_loaders import ENROLLMENT_DATASET_KEYS, load_cached_frames
+    except Exception:
+        return pd.DataFrame()
+    return load_cached_frames(ENROLLMENT_DATASET_KEYS)
 
 
 # ---- MCP Tools ----
@@ -230,7 +239,16 @@ async def get_system_profile(
         outpatient_sites=[o.model_dump() for o in outpatient_sites],
         off_site_summary=off_site.model_dump(),
     )
-    return to_structured(profile.model_dump())
+    payload = profile.model_dump()
+    payload["facility_reconciliation"] = reconcile_generic_system_facilities(
+        system_id,
+        as_of_date=edition_date,
+        systems_df=systems_df,
+        ahrq_hospitals=hospitals_df,
+        cms_hgi=pos_df,
+        resolved_system=sys_info.to_dict(),
+    )
+    return to_structured(payload)
 
 
 @mcp.tool(structured_output=True)
@@ -238,16 +256,34 @@ async def reconcile_system_facilities(
     system_slug: str,
     as_of_date: str | None = None,
 ) -> dict[str, Any]:
-    """Return a canonical facility ledger for deterministic system resolvers.
+    """Return a facility reconciliation ledger for a health system.
 
     Jefferson Health is reconciled as a combined post-merger system by merging the
     legacy Jefferson, Einstein, and LVHN rosters rather than relying on AHRQ 2023 alone.
+    Other systems use generic AHRQ Compendium linkage with CMS POS enrichment.
 
     Args:
-        system_slug: Deterministic system slug, currently "jefferson-health".
+        system_slug: Jefferson alias, AHRQ system ID, normalized system name, or slug.
         as_of_date: Ledger as-of date. Jefferson/LVHN is valid on or after 2024-08-01.
     """
-    result = reconcile_jefferson_facilities(system_slug, as_of_date=as_of_date)
+    if resolve_combined_system_slug(system_name=system_slug, system_slug=system_slug) == JEFFERSON_SLUG:
+        result = reconcile_jefferson_facilities(JEFFERSON_SLUG, as_of_date=as_of_date)
+        if "error" in result:
+            return error_response(result["error"])
+        return to_structured(result)
+
+    systems_df = await _load_ahrq_systems()
+    hospitals_df = await _load_ahrq_hospitals()
+    pos_df = await _load_pos()
+    provider_enrollment_df = _load_provider_enrollment()
+    result = reconcile_generic_system_facilities(
+        system_slug,
+        as_of_date=as_of_date,
+        systems_df=systems_df,
+        ahrq_hospitals=hospitals_df,
+        cms_hgi=pos_df,
+        provider_enrollment=provider_enrollment_df,
+    )
     if "error" in result:
         return error_response(result["error"])
     return to_structured(result)
