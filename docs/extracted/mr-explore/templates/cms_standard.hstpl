@@ -1,0 +1,40 @@
+{
+  "name": "CMS Standard",
+  "vendor": "CMS",
+  "version": "2024",
+  "author": "MR-Explore",
+  "description": "Standard CMS hospital price transparency format. Works with most CMS-compliant machine-readable files.",
+  "column_mappings": {
+    "Description": "description",
+    "Code|1": "code_1",
+    "Code|1|Type": "code_1_type",
+    "Code|2": "code_2",
+    "Code|2|Type": "code_2_type",
+    "Modifiers": "modifiers",
+    "Setting": "setting",
+    "Drug_Unit_Of_Measurement": "drug_unit_of_measurement",
+    "Drug_Type_Of_Measurement": "drug_type_of_measurement",
+    "Standard_Charge|Gross": "gross_charge",
+    "Standard_Charge|Discounted_Cash": "discounted_cash",
+    "Payer_Name": "payer_name",
+    "Plan_Name": "plan_name",
+    "Standard_Charge|Negotiated_Dollar": "negotiated_dollar",
+    "Standard_Charge|Negotiated_Percentage": "negotiated_percentage",
+    "Standard_Charge|Negotiated_Algorithm": "negotiated_algorithm",
+    "Estimated_Amount": "estimated_amount",
+    "Standard_Charge|Methodology": "methodology",
+    "Standard_Charge|Min": "min_charge",
+    "Standard_Charge|Max": "max_charge",
+    "Additional_Generic_Notes": "additional_notes",
+    "Billing_Class": "billing_class"
+  },
+  "preprocessing": [
+    {
+      "type": "skip_rows",
+      "count": 2,
+      "description": "Skip header metadata rows"
+    }
+  ],
+  "created": "2024-01-01",
+  "updated": "2024-01-01"
+}

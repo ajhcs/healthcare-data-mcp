@@ -1,0 +1,442 @@
+================================================================================
+ENTITY vs FACILITY MODEL ARCHITECTURE
+================================================================================
+
+1. DOMAIN MODEL HIERARCHY
+================================================================================
+
+                              REAL WORLD
+                              =========
+
+                        Mayo Clinic (Organization)
+                                |
+                    ____________|_____________
+                   /            |            \
+         Rochester       Jacksonville      Phoenix
+         Hospital        Hospital         Hospital
+           (Facility)      (Facility)      (Facility)
+
+
+                          DATA LAYER MAPPING
+                          =================
+
+    HealthSystem (entities.py)        Facility (facilities.py)
+    ===========================       ======================
+
+    id: 1                            id: 100
+    name: "Mayo Clinic"     ------>  name: "Mayo Clinic - Rochester"
+    ein: "41-6011845"                health_system_id: 1
+    npi: (org-level)                 cms_ccn: "240003"
+    aliases: [...]                   npi: (facility-level)
+    region: "Midwest"                facility_type: SHORT_TERM_ACUTE_HOSPITAL
+    ...                              licensed_beds: 1265
+                                     er_capable: true
+                                     ...
+
+                           id: 101
+                     ------>  name: "Mayo Clinic - Jacksonville"
+                              health_system_id: 1
+                              cms_ccn: "100001"
+                              licensed_beds: 880
+                              ...
+
+                           id: 102
+                     ------>  name: "Mayo Clinic - Phoenix"
+                              health_system_id: 1
+                              cms_ccn: "050456"
+                              licensed_beds: 645
+                              ...
+
+
+2. DATA IMPORT PIPELINES
+================================================================================
+
+PIPELINE A: IRS 990 (Organizational Data)
+------------------------------------------
+
+    IRS Form 990 CSV Files
+            |
+            v
+    [Parse: ein, organization_name, address]
+            |
+            v
+    EINLinker (src/data/linkers/ein_linker.py)
+            |
+        ____|____
+       /         \
+      v           v
+    EIN Match?   Name Match?
+    (exact)      (fuzzy 85%)
+      |           |
+      v           v
+    Found      Found
+      |           |
+      +-----+-----+
+            |
+            v
+    EntityStore.create_entity() OR EntityStore.link_source()
+            |
+        ____|____
+       /         \
+      v           v
+    entities.parquet    entity_links.parquet
+    (HealthSystem)      (IRS 990 link record)
+
+
+PIPELINE B: CMS Hospital Price File (Facility Data)
+-----------------------------------------------------
+
+    CMS Hospital Price File (MRF)
+            |
+            v
+    [Parse: hospital_id (CCN), name, address, charges]
+            |
+            v
+    CMSProviderOfServicesParser (facility_sources.py)
+            |
+            v
+    FacilityMatcher
+            |
+        ____|____
+       /         \
+      v           v
+    CCN Match?   Name+Address Match?
+    (exact)      (fuzzy, 85% threshold)
+      |           |
+      v           v
+    Found      Found
+      |           |
+      +-----+-----+
+            |
+            v
+    ConflictDetector (facility_conflicts.py)
+            |
+      ______|______
+     /             \
+    v               v
+  Conflict       No Conflict
+   Detected       OK
+    |               |
+    v               v
+FacilityStore.create_facility(health_system_id=???)
+            |
+            v
+    FacilityStore.add_source_link()
+            |
+        ____|____________________
+       /         |               \
+      v          v                v
+    facilities.parquet    facility_source_links.parquet    charge linkage
+    (Facility record)     (CCN attribution)                (facility_id -> charges)
+
+
+3. DATA RELATIONSHIPS
+================================================================================
+
+HealthSystem                    Facility                    FacilityUnit
+=============                   ========                    ============
+id: 1 <-----PRIMARY KEY         id: 100 <---PK              id: 1000 <---PK
+name: str                       name: str                   name: str
+ein: str (unique)               health_system_id: int ---FK--> 1 (ref HS)
+npi: str                        npi: str                    facility_id: int ---FK--> 100
+address: str?                   address: str (required)     unit_type: UnitType
+region: str                     city: str (required)        category: FacilityCategory
+aliases: [str]                  state: str (required)       beds: int?
+timestamps: datetime            zip_code: str (required)    staff_fte: float?
+                                cms_ccn: str (critical!)    timestamps: datetime
+                                facility_type: FacilityType
+                                licensed_beds: int?
+                                operating_beds: int?
+                                weight_inpatient: float (0-1)
+                                weight_outpatient: float (0-1)
+                                weight_admin: float (0-1)
+                                timestamps: datetime
+
+
+EntityLink                      FacilitySourceLink
+==========                      ==================
+id: 1 <---PK                    id: 1 <---PK
+entity_id: int ---FK--> 1       facility_id: int ---FK--> 100
+source_type: "irs990"           source_type: "cms_pos"
+source_id: str                  source_record_id: str
+confidence: float (0-1)         confidence: float (0-1)
+linked_by: str                  source_name: str?
+timestamp: datetime             source_address: str?
+                                source_beds: int?
+                                timestamp: datetime
+
+
+4. CARDINALITY
+================================================================================
+
+1 HealthSystem : N Facilities
+    |
+    +-- One organization can own many facilities
+    +-- Example: Mayo Clinic owns Rochester, Jacksonville, Phoenix
+    +-- Linked via Facility.health_system_id -> HealthSystem.id
+
+1 Facility : N FacilityUnits
+    |
+    +-- One facility can have many departments/units
+    +-- Example: Rochester has Cardiology, Emergency, Surgery
+    +-- Linked via FacilityUnit.facility_id -> Facility.id
+
+1 HealthSystem : N EntityLinks
+    |
+    +-- One organization can have links to multiple sources
+    +-- Example: Mayo linked to IRS 990, possibly MRF, CMS
+    +-- Linked via EntityLink.entity_id -> HealthSystem.id
+
+1 Facility : N FacilitySourceLinks
+    |
+    +-- One facility can be sourced from multiple places
+    +-- Example: Rochester in CMS POS, NPI Registry, IRS 990-H
+    +-- Linked via FacilitySourceLink.facility_id -> Facility.id
+
+
+5. PERSISTENCE
+================================================================================
+
+ENTITIES STORAGE                FACILITIES STORAGE
+================                ==================
+
+data/packs/entities.parquet     data/packs/facilities.parquet
+├─ id: int64                    ├─ id: int64
+├─ name: string                 ├─ health_system_id: int64 (FK)
+├─ aliases: string              ├─ name: string
+├─ ein: string                  ├─ address: string
+├─ npi: string                  ├─ city: string
+├─ address: string              ├─ state: string
+├─ city: string                 ├─ zip_code: string
+├─ state: string                ├─ latitude: float64
+├─ region: string               ├─ longitude: float64
+├─ created_at: string           ├─ primary_category: string
+└─ updated_at: string           ├─ facility_type: string
+                                ├─ weight_inpatient: float64
+data/packs/entity_links.parquet ├─ weight_outpatient: float64
+├─ id: int64                    ├─ weight_admin: float64
+├─ entity_id: int64 (FK)        ├─ weight_source: string
+├─ source_type: string          ├─ cms_ccn: string
+├─ source_id: string            ├─ npi: string
+├─ confidence: float64          ├─ state_license: string
+├─ linked_by: string            ├─ licensed_beds: int32
+└─ created_at: string           ├─ operating_beds: int32
+                                ├─ er_capable: boolean
+                                ├─ trauma_level: string
+                                ├─ created_at: string
+                                └─ updated_at: string
+
+                                data/packs/facility_units.parquet
+                                ├─ id: int64
+                                ├─ facility_id: int64 (FK)
+                                ├─ name: string
+                                ├─ unit_type: string
+                                ├─ category: string
+                                ├─ beds: int32
+                                ├─ staff_fte: float64
+                                ├─ created_at: string
+                                └─ updated_at: string
+
+                                data/packs/facility_source_links.parquet
+                                ├─ id: int64
+                                ├─ facility_id: int64 (FK)
+                                ├─ source_type: string
+                                ├─ source_record_id: string
+                                ├─ confidence: float64
+                                ├─ source_name: string
+                                ├─ source_address: string
+                                ├─ source_beds: int32
+                                └─ created_at: string
+
+
+6. MATCHING LOGIC
+================================================================================
+
+ENTITY MATCHING (ein_linker.py)
+============================
+
+find_matching_entity(name, ein?, npi?):
+    |
+    +-- If ein provided:
+    |   └── Exact match by ein → confidence = 1.0
+    |
+    +-- Else if npi provided:
+    |   └── Exact match by npi → confidence = 1.0
+    |
+    +-- Else:
+        └── Fuzzy name match on name + aliases
+            └── If best_score >= 0.85 → return (entity, score)
+            └── Else → no match
+
+
+FACILITY MATCHING (facility_sources.py)
+====================================
+
+FacilityMatcher.match(facility1, facility2):
+    |
+    +-- If CCN match:
+    |   └── confidence = 1.0 (exact)
+    |
+    +-- Else if NPI match:
+    |   └── confidence = 1.0 (exact)
+    |
+    +-- Else:
+        +-- Fuzzy name match (40% weight)
+        +-- Fuzzy address match (30% weight)
+        +-- City/state match (30% weight)
+        └── If combined score >= 0.85 → match found
+
+
+7. KEY DIFFERENCES AT A GLANCE
+================================================================================
+
+ASPECT                  HEALTHSYSTEM            FACILITY
+======                  ============            ========
+
+Purpose                 Organization            Physical Location
+Data Source             IRS 990 + NPI           CMS + NPI + Price Files
+Primary ID Key          EIN (Federal Tax)       CCN (CMS Hospital ID)
+Level of Detail         Org-wide                Facility-specific
+Address                 HQ (optional)           Required (complete)
+Identifiers             EIN, NPI, aliases       CCN, NPI, state license
+Operational Data        None                    Beds, ER, trauma, category
+Workload Model          None                    Inpatient/outpatient/admin %
+Parent Ref              None                    health_system_id (FK)
+Sub-items               EntityLinks             FacilityUnits + SourceLinks
+Cardinality             1 entity : N facilities 1 facility : N units
+Matching               EIN exact > fuzzy name  CCN exact > fuzzy addr
+Parquet Files          2 files                 3 files
+Search Method          Name/alias search       Name/address search
+
+
+8. USE CASE EXAMPLE: MAYO CLINIC
+================================================================================
+
+SCENARIO: Import Mayo Clinic's IRS 990 and price files
+
+STEP 1: Create HealthSystem from IRS 990
+────────────────────────────────────────
+Input:
+  - Form 990: EIN=41-6011845, Name="Mayo Foundation"
+
+Processing:
+  - EINLinker.link_990_to_entity()
+  - find_entity_by_ein("41-6011845") → not found
+  - EINLinker.find_entity_by_name("Mayo Foundation")
+    → matches "Mayo Clinic" with 0.92 confidence
+  - Confidence >= 0.85, so auto-link
+
+Output:
+  - HealthSystem[id=1, name="Mayo Clinic", ein="41-6011845"]
+  - EntityLink[entity_id=1, source_type="irs990", source_id="41-6011845", confidence=1.0]
+
+
+STEP 2: Import Price File with CCN Links
+───────────────────────────────────────────
+Input:
+  - MRF CSV: hospital_id="240003", name="Mayo Rochester", beds=1265, charges=[...]
+
+Processing:
+  - CMSProviderOfServicesParser.parse() → ParsedFacility
+  - FacilityIngestionManager.ingest_for_health_system(health_system_id=1)
+    └─ FacilityMatcher.match(parsed_facility, existing_facilities)
+       └─ No match → create new
+  - FacilityStore.create_facility(
+      health_system_id=1,
+      name="Mayo Clinic - Rochester",
+      cms_ccn="240003",
+      licensed_beds=1265,
+      facility_type=SHORT_TERM_ACUTE_HOSPITAL
+    )
+  - FacilityStore.add_source_link(
+      facility_id=100,
+      source_type="cms_pos",
+      source_record_id="240003",
+      confidence=1.0
+    )
+
+Output:
+  - Facility[id=100, health_system_id=1, cms_ccn="240003", ...]
+  - FacilitySourceLink[facility_id=100, source_type="cms_pos", source_record_id="240003"]
+  - Charge records linked to facility_id=100
+
+
+STEP 3: Data Ready for Analysis
+─────────────────────────────────
+Structure:
+  HealthSystem[id=1] "Mayo Clinic"
+    └─ EntityLink: IRS 990
+    └─ Facilities:
+       ├─ Facility[id=100] "Rochester" (CCN=240003)
+       │  ├─ FacilitySourceLink: CMS POS
+       │  ├─ ChargeRecord[facility_id=100]
+       │  ├─ ChargeRecord[facility_id=100]
+       │  └─ ... (many charges)
+       │
+       ├─ Facility[id=101] "Jacksonville" (CCN=100001)
+       │  ├─ FacilitySourceLink: CMS POS
+       │  ├─ ChargeRecord[facility_id=101]
+       │  └─ ...
+       │
+       └─ Facility[id=102] "Phoenix" (CCN=050456)
+          ├─ FacilitySourceLink: CMS POS
+          ├─ ChargeRecord[facility_id=102]
+          └─ ...
+
+Usage:
+  - User can view Mayo Clinic's organizational info (HealthSystem)
+  - User can compare Rochester vs Jacksonville facilities
+  - User can search prices across all Mayo facilities
+  - User can link to IRS 990 data for organizational insights
+
+
+9. WHY NOT CONSOLIDATE?
+================================================================================
+
+OPTION A: Single "Organization" Model
+───────────────────────────────────
+Problems:
+  ✗ address field becomes ambiguous (HQ vs facility?)
+  ✗ required fields conflict (address required for facility, optional for org)
+  ✗ facility-specific fields (beds, er_capable) irrelevant for org
+  ✗ workload model (weight_inpatient %) doesn't apply to org
+  ✗ cms_ccn would be optional (but critical for facility linking)
+  ✗ health_system_id would be circular or confusing
+  ✗ Loses clear domain semantics (organization ≠ facility)
+
+OPTION B: Single "Facility" Model with Organization as Special Case
+───────────────────────────────────────────────────────────────────
+Problems:
+  ✗ Facility type "ORGANIZATION" is not a facility
+  ✗ Can't represent hierarchies (1 org : N facilities)
+  ✗ Organization-specific data (EIN, aliases) wouldn't fit
+  ✗ Would bloat facility table with unused org fields
+  ✗ IRS 990 linking (organization-level) doesn't fit
+  ✗ Loses clear responsibility separation
+
+OPTION C: Keep Separate (Current)
+──────────────────────────────
+Benefits:
+  ✓ Clear semantics (HealthSystem vs Facility)
+  ✓ Proper hierarchy (1:N relationship)
+  ✓ Different persistence (can load separately if needed)
+  ✓ Independent matching logic (EIN vs CCN)
+  ✓ Supports different import pipelines (IRS vs CMS)
+  ✓ Natural domain modeling (reflects healthcare reality)
+  ✓ Easier to understand and maintain
+  ✓ Enables specialized queries on each level
+
+
+10. CONCLUSION
+================================================================================
+
+Entity vs Facility = NOT DUPLICATION, but COMPLEMENTARY HIERARCHY
+
+Keep them separate for:
+  • Clear domain semantics
+  • Proper data organization
+  • Independent import pipelines
+  • Correct cardinality modeling
+  • Maintainability
+
+================================================================================
