@@ -125,6 +125,9 @@ def test_generic_reconciliation_resolves_system_id_and_enriches_ccns(
         "ahrq_hospital_linkage_row",
         "cms_pos_row",
     ]
+    assert by_ccn["390901"]["npi"] == ""
+    assert by_ccn["390901"]["subsystem"] == ""
+    assert by_ccn["390901"]["legacy_system"] == "Example Regional Health"
     assert "provider_enrollment_row" in by_ccn["390902"]["source_refs"]
     assert by_ccn["390902"]["confidence"] == 0.9
     assert "no_ccn_reason" not in by_ccn["390901"]
@@ -203,6 +206,7 @@ async def test_reconcile_system_facilities_tool_uses_generic_path_without_stale_
     assert result["merger_evidence"] == []
     assert result["discrepancy_closure"] is None
     assert "not a curated merger ledger" in result["source_evidence"]["note"]
+    assert all({"npi", "subsystem", "legacy_system"} <= facility.keys() for facility in result["facilities"])
 
 
 @pytest.mark.asyncio
@@ -210,13 +214,12 @@ async def test_get_system_profile_includes_generic_facility_reconciliation(
     generic_systems,
     generic_hospitals,
     generic_pos,
-    generic_provider_enrollment,
 ):
     with (
         patch.object(server, "_load_ahrq_systems", new_callable=AsyncMock, return_value=generic_systems),
         patch.object(server, "_load_ahrq_hospitals", new_callable=AsyncMock, return_value=generic_hospitals),
         patch.object(server, "_load_pos", new_callable=AsyncMock, return_value=generic_pos),
-        patch.object(server, "_load_provider_enrollment", return_value=generic_provider_enrollment),
+        patch.object(server, "_load_provider_enrollment") as load_provider_enrollment,
         patch.object(server, "_search_nppes", new_callable=AsyncMock, return_value=[]),
     ):
         result = await server.get_system_profile(
@@ -225,6 +228,7 @@ async def test_get_system_profile_includes_generic_facility_reconciliation(
             include_outpatient=False,
         )
 
+    load_provider_enrollment.assert_not_called()
     assert result["system"]["system_id"] == "SYS_999"
     assert result["system"]["name"] == "Example Regional Health"
     assert len(result["inpatient_facilities"]) == 2

@@ -90,7 +90,10 @@ def reconcile_generic_system_facilities(
 
     pos_frame = cms_hgi if cms_hgi is not None else pd.DataFrame()
     enrollment_frame = provider_enrollment if provider_enrollment is not None else pd.DataFrame()
-    facilities = [_facility_from_ahrq_row(row, pos_frame, enrollment_frame) for _, row in hospitals.iterrows()]
+    facilities = [
+        _facility_from_ahrq_row(row, pos_frame, enrollment_frame, legacy_system=system_name)
+        for _, row in hospitals.iterrows()
+    ]
 
     return {
         "system_slug": system_slug_from_name(system_name) or system_id,
@@ -140,6 +143,8 @@ def _facility_from_ahrq_row(
     row: pd.Series,
     cms_hgi: pd.DataFrame,
     provider_enrollment: pd.DataFrame,
+    *,
+    legacy_system: str = "",
 ) -> dict[str, Any]:
     raw_ccn = str(row.get("ccn", "") or "").strip()
     ccn = raw_ccn.zfill(6) if raw_ccn else ""
@@ -178,6 +183,9 @@ def _facility_from_ahrq_row(
     facility["source_refs"] = sorted(source_refs)
     facility["confidence"] = confidence
     facility["active_status"] = "active"
+    facility["npi"] = str(facility.get("npi", "") or "")
+    facility["subsystem"] = str(facility.get("subsystem", "") or "")
+    facility["legacy_system"] = legacy_system
     if not ccn:
         facility["no_ccn_reason"] = "AHRQ hospital linkage row did not include a CCN"
     return facility

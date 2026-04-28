@@ -240,14 +240,12 @@ async def get_system_profile(
         off_site_summary=off_site.model_dump(),
     )
     payload = profile.model_dump()
-    provider_enrollment_df = _load_provider_enrollment()
     payload["facility_reconciliation"] = reconcile_generic_system_facilities(
         system_id,
         as_of_date=edition_date,
         systems_df=systems_df,
         ahrq_hospitals=hospitals_df,
         cms_hgi=pos_df,
-        provider_enrollment=provider_enrollment_df,
         resolved_system=sys_info.to_dict(),
     )
     return to_structured(payload)
