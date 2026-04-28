@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Generalized health-system facility reconciliation beyond Jefferson by adding
+  generic AHRQ/CMS facility ledgers for non-curated systems while preserving the
+  Jefferson/LVHN merger resolver.
+
 ## v0.1.1 - Development readiness cleanup
 
 - Consolidated the open release-prep branches into a single candidate branch.
