@@ -343,6 +343,7 @@ def _enrollment(row: dict[str, Any]) -> EnrollmentRecord:
         provider_type=str(row.get("provider_type") or ""),
         provider_name=str(row.get("provider_name") or ""),
         facility_name=str(row.get("facility_name") or ""),
+        **data_loaders.source_evidence_for_row(row),
         raw=data_loaders.row_to_raw(row),
     )
 
@@ -368,6 +369,7 @@ def _ownership(row: dict[str, Any]) -> OwnershipRecord:
         private_equity=str(row.get("private_equity") or ""),
         reit=str(row.get("reit") or ""),
         holding_company=str(row.get("holding_company") or ""),
+        **data_loaders.source_evidence_for_row(row),
         raw=data_loaders.row_to_raw(row),
     )
 
@@ -385,6 +387,7 @@ def _chow(row: dict[str, Any]) -> ChangeOfOwnershipRecord:
         transaction_date=str(row.get("transaction_date") or ""),
         effective_date=str(row.get("effective_date") or ""),
         change_type=str(row.get("change_type") or ""),
+        **data_loaders.source_evidence_for_row(row),
         raw=data_loaders.row_to_raw(row),
     )
 

@@ -44,10 +44,22 @@ mcp = FastMCP(**_mcp_kwargs)
 def _docgraph_setup_message() -> str:
     """Return a user-facing setup message for DocGraph-backed tools."""
     return (
-        "DocGraph shared patient data is not cached. Download the CareSet "
+        "DocGraph shared patient data is unavailable because a licensed CareSet/DocGraph "
+        "source file is not loaded. If you have access, download the CareSet "
         f"DocGraph CSV from {_DOCGRAPH_DOWNLOAD_URL} and run "
         "load_docgraph_cache(csv_path='/path/to/docgraph.csv'), or set "
         "DOCGRAPH_CSV_PATH and call load_docgraph_cache()."
+    )
+
+
+def _docgraph_unavailable_response() -> dict[str, Any]:
+    """Return deterministic unavailability metadata for DocGraph-backed tools."""
+    return error_response(
+        _docgraph_setup_message(),
+        code="data_unavailable",
+        data_unavailable="licensed_source_missing",
+        download_url=_DOCGRAPH_DOWNLOAD_URL,
+        cache_path=referral_network.get_docgraph_cache_path(),
     )
 
 
@@ -148,11 +160,7 @@ async def load_docgraph_cache(csv_path: str = "") -> dict[str, Any]:
     try:
         resolved_path = csv_path.strip() or _os.environ.get("DOCGRAPH_CSV_PATH", "").strip()
         if not resolved_path:
-            return error_response(
-                _docgraph_setup_message(),
-                download_url=_DOCGRAPH_DOWNLOAD_URL,
-                cache_path=referral_network.get_docgraph_cache_path(),
-            )
+            return _docgraph_unavailable_response()
 
         rows_loaded = await asyncio.to_thread(referral_network.load_docgraph_csv, resolved_path)
         return to_structured({
@@ -186,7 +194,7 @@ async def map_referral_network(
     """
     try:
         if not referral_network.is_docgraph_cached():
-            return error_response(_docgraph_setup_message())
+            return _docgraph_unavailable_response()
 
         result = referral_network.get_referral_network(npi, depth=depth, min_shared=min_shared)
 
@@ -292,7 +300,7 @@ async def detect_leakage(
     """
     try:
         if not referral_network.is_docgraph_cached():
-            return error_response(_docgraph_setup_message())
+            return _docgraph_unavailable_response()
 
         # Get system's physician NPIs
         mix_result = await physician_mix.analyze_system_mix(system_name, state)

@@ -17,6 +17,21 @@ from pydantic_core import to_jsonable_python
 
 JsonDict = dict[str, Any]
 JsonValue = dict[str, Any] | list[Any] | str | int | float | bool | None
+REPORT_SOURCE_METADATA_FIELDS = (
+    "source_name",
+    "source_url",
+    "landing_page",
+    "retrieved_at",
+    "source_modified",
+    "entity_scope",
+    "query",
+    "cache_key",
+    "confidence",
+)
+
+
+class ReportIngestContractError(ValueError):
+    """Raised when report-ingest fact rows lack source evidence."""
 
 
 def to_structured(value: Any) -> JsonValue:
@@ -139,6 +154,36 @@ def error_response(
     return response
 
 
+def validate_report_ingest_payload(payload: Any) -> None:
+    """Reject report-ingest fact rows that do not include source evidence fields.
+
+    Report builders pass nested payloads assembled from MCP tool results. Any
+    dict row under a ``facts`` or ``fact_rows`` collection is a report-ingest
+    fact row and must carry the source evidence contract directly.
+    """
+
+    missing: list[str] = []
+
+    def walk(value: Any, path: str, *, in_fact_rows: bool = False) -> None:
+        if isinstance(value, Mapping):
+            if in_fact_rows:
+                absent = [field for field in REPORT_SOURCE_METADATA_FIELDS if field not in value or value[field] in ("", None)]
+                if absent:
+                    missing.append(f"{path}: {', '.join(absent)}")
+            for key, child in value.items():
+                child_path = f"{path}.{key}" if path else str(key)
+                walk(child, child_path, in_fact_rows=key in {"facts", "fact_rows"})
+            return
+
+        if isinstance(value, list):
+            for index, child in enumerate(value):
+                walk(child, f"{path}[{index}]", in_fact_rows=in_fact_rows)
+
+    walk(to_structured(payload), "")
+    if missing:
+        raise ReportIngestContractError("Report-ingest fact rows missing source metadata: " + "; ".join(missing))
+
+
 def tool_error(message: str, *, code: str = "tool_error", detail: Any | None = None) -> ToolError:
     """Create a FastMCP ToolError with compact structured context in the message."""
     if detail is None:
@@ -174,6 +219,9 @@ __all__ = [
     "raise_tool_error",
     "record_response",
     "response_envelope",
+    "REPORT_SOURCE_METADATA_FIELDS",
+    "ReportIngestContractError",
     "to_structured",
     "tool_error",
+    "validate_report_ingest_payload",
 ]

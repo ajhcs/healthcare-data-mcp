@@ -7,8 +7,11 @@ This is intentionally lightweight enough for CI:
 """
 
 import importlib
+import os
 
 import pytest
+
+os.environ.setdefault("SEC_USER_AGENT", "CI ci@example.com")
 
 SERVER_SPECS = [
     ("cms-facility", "servers.cms_facility.server", 5),
@@ -16,13 +19,13 @@ SERVER_SPECS = [
     ("geo-demographics", "servers.geo_demographics.server", 6),
     ("drive-time", "servers.drive_time.server", 5),
     ("hospital-quality", "servers.hospital_quality.server", 6),
-    ("health-system-profiler", "servers.health_system_profiler.server", 3),
-    ("financial-intelligence", "servers.financial_intelligence.server", 6),
+    ("health-system-profiler", "servers.health_system_profiler.server", 4),
+    ("financial-intelligence", "servers.financial_intelligence.server", 7),
     ("price-transparency", "servers.price_transparency.server", 5),
     ("physician-referral-network", "servers.physician_referral_network.server", 6),
     ("workforce-analytics", "servers.workforce_analytics.server", 7),
     ("claims-analytics", "servers.claims_analytics.server", 5),
-    ("public-records", "servers.public_records.server", 15),
+    ("public-records", "servers.public_records.server", 16),
     ("web-intelligence", "servers.web_intelligence.server", 5),
 ]
 

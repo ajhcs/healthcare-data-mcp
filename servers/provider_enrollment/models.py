@@ -18,9 +18,17 @@ class SourceMetadata(BaseModel):
     title: str = ""
     modified: str = ""
     fetched_at: str = ""
+    retrieved_at: str = ""
+    source_modified: str = ""
     record_count: int | None = None
     checksum: str = ""
+    etag: str = ""
+    last_modified: str = ""
     cache_path: str = ""
+    entity_scope: str = ""
+    query: dict[str, Any] = Field(default_factory=dict)
+    cache_key: str = ""
+    confidence: str = ""
 
 
 class EnrollmentRecord(BaseModel):
@@ -37,6 +45,15 @@ class EnrollmentRecord(BaseModel):
     provider_type: str = ""
     provider_name: str = ""
     facility_name: str = ""
+    source_name: str = ""
+    source_url: str = ""
+    landing_page: str = ""
+    retrieved_at: str = ""
+    source_modified: str = ""
+    entity_scope: str = ""
+    query: dict[str, Any] = Field(default_factory=dict)
+    cache_key: str = ""
+    confidence: str = ""
     raw: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -62,6 +79,15 @@ class OwnershipRecord(BaseModel):
     private_equity: str = ""
     reit: str = ""
     holding_company: str = ""
+    source_name: str = ""
+    source_url: str = ""
+    landing_page: str = ""
+    retrieved_at: str = ""
+    source_modified: str = ""
+    entity_scope: str = ""
+    query: dict[str, Any] = Field(default_factory=dict)
+    cache_key: str = ""
+    confidence: str = ""
     raw: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -79,6 +105,15 @@ class ChangeOfOwnershipRecord(BaseModel):
     transaction_date: str = ""
     effective_date: str = ""
     change_type: str = ""
+    source_name: str = ""
+    source_url: str = ""
+    landing_page: str = ""
+    retrieved_at: str = ""
+    source_modified: str = ""
+    entity_scope: str = ""
+    query: dict[str, Any] = Field(default_factory=dict)
+    cache_key: str = ""
+    confidence: str = ""
     raw: dict[str, Any] = Field(default_factory=dict)
 
 

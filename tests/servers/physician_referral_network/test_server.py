@@ -58,4 +58,6 @@ async def test_docgraph_backed_tools_return_loader_guidance_when_cache_missing(m
 
     assert "load_docgraph_cache" in network_result["error"]
     assert "DOCGRAPH_CSV_PATH" in network_result["error"]
+    assert network_result["data_unavailable"] == "licensed_source_missing"
     assert "load_docgraph_cache" in leakage_result["error"]
+    assert leakage_result["data_unavailable"] == "licensed_source_missing"

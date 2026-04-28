@@ -134,8 +134,34 @@ def test_cache_status_reports_missing_manual_data(tmp_path, capsys) -> None:
 
     output = capsys.readouterr().out
     assert "340B covered entities: MISSING" in output
+    assert "DocGraph shared patients: UNAVAILABLE" in output
+    assert "data_unavailable: licensed_source_missing" in output
     assert "public_records.get_340b_status" in output
     assert "hc-mcp-setup --acquire-hipaa-breaches" in output
+
+
+def test_cache_status_requires_docgraph_parquet_for_ready(tmp_path, capsys) -> None:
+    cache_root = tmp_path / "cache"
+    seed = cache_root / "docgraph" / "shared_patients.csv"
+    seed.parent.mkdir(parents=True)
+    seed.write_text("npi1,npi2,shared_patients\n1111111111,2222222222,7\n", encoding="utf-8")
+
+    print_cache_status(cache_root)
+
+    output = capsys.readouterr().out
+    assert "DocGraph shared patients: UNAVAILABLE" in output
+    assert "DocGraph shared patients: READY" not in output
+
+
+def test_cache_status_reports_340b_ready(tmp_path, capsys) -> None:
+    ready = tmp_path / "cache" / "public-records" / "340b_covered_entities.json"
+    ready.parent.mkdir(parents=True)
+    ready.write_text("[]", encoding="utf-8")
+
+    print_cache_status(tmp_path / "cache")
+
+    output = capsys.readouterr().out
+    assert "340B covered entities: READY" in output
 
 
 def test_cache_guide_prints_source_and_import_commands(tmp_path, capsys) -> None:

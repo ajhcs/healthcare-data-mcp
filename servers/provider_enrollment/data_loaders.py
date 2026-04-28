@@ -220,8 +220,36 @@ async def ensure_dataset_cached(
         catalog_data = await fetch_cms_catalog()
     manifest = resolve_dataset_manifest(dataset_key, catalog_data=catalog_data, catalog_path=catalog_path)
     response = await resilient_request("GET", manifest.source_url, timeout=300.0)
+    manifest.etag = manifest.etag or response.headers.get("etag", "")
+    manifest.last_modified = manifest.last_modified or response.headers.get("last-modified", "")
     frame = parse_cms_payload(response.content, source_url=manifest.source_url)
     return cache_dataframe(dataset_key, frame, manifest, cache_dir=cache_dir)
+
+
+async def ensure_all_datasets_cached(
+    *,
+    cache_dir: str | Path | None = None,
+    catalog_data: dict[str, Any] | None = None,
+    catalog_path: str | Path | None = None,
+    force_refresh: bool = False,
+) -> list[SourceManifest]:
+    """Resolve, download, normalize, and cache all provider-enrollment datasets."""
+
+    if catalog_data is None and catalog_path is None:
+        catalog_data = await fetch_cms_catalog()
+
+    manifests: list[SourceManifest] = []
+    for dataset_key in DATASETS:
+        manifests.append(
+            await ensure_dataset_cached(
+                dataset_key,
+                cache_dir=cache_dir,
+                catalog_data=catalog_data,
+                catalog_path=catalog_path,
+                force_refresh=force_refresh,
+            )
+        )
+    return manifests
 
 
 def cache_csv(
@@ -434,9 +462,47 @@ def source_metadata_for_keys(
         payload = manifest.to_dict()
         payload["dataset_key"] = key
         payload["source_name"] = "CMS Provider Enrollment"
+        payload["retrieved_at"] = manifest.fetched_at
+        payload["source_modified"] = manifest.modified or manifest.last_modified
+        payload["entity_scope"] = _entity_scope_for_key(key)
+        payload["query"] = {"dataset_key": key}
+        payload["cache_key"] = key
+        payload["confidence"] = "source_manifest"
         payload["cache_path"] = manifest.extra.get("cache_path") or str(dataset_cache_path(key, cache_dir=cache_dir))
         metadata.append(payload)
     return metadata
+
+
+def source_evidence_for_row(row: dict[str, Any], *, cache_dir: str | Path | None = None) -> dict[str, Any]:
+    """Return report-ingest source evidence fields for one normalized cached row."""
+
+    dataset_key = str(row.get("source_dataset_key") or row.get("dataset_key") or "")
+    payload = source_metadata_for_keys((dataset_key,), cache_dir=cache_dir)
+    if payload:
+        metadata = payload[0]
+        return {
+            "source_name": metadata.get("source_name", "CMS Provider Enrollment"),
+            "source_url": metadata.get("source_url", ""),
+            "landing_page": metadata.get("landing_page", ""),
+            "retrieved_at": metadata.get("retrieved_at") or metadata.get("fetched_at", ""),
+            "source_modified": metadata.get("source_modified") or metadata.get("modified", ""),
+            "entity_scope": metadata.get("entity_scope") or _entity_scope_for_key(dataset_key),
+            "query": {"dataset_key": dataset_key},
+            "cache_key": dataset_key,
+            "confidence": "source_row",
+        }
+
+    return {
+        "source_name": "CMS Provider Enrollment",
+        "source_url": "",
+        "landing_page": "",
+        "retrieved_at": "",
+        "source_modified": "",
+        "entity_scope": _entity_scope_for_key(dataset_key),
+        "query": {"dataset_key": dataset_key} if dataset_key else {},
+        "cache_key": dataset_key,
+        "confidence": "missing_manifest",
+    }
 
 
 def search_enrollments(
@@ -617,6 +683,16 @@ def _dataset(dataset_key: str) -> ProviderEnrollmentDataset:
         return DATASETS[dataset_key]
     except KeyError as exc:
         raise KeyError(f"Unknown provider enrollment dataset: {dataset_key}") from exc
+
+
+def _entity_scope_for_key(dataset_key: str) -> str:
+    if not dataset_key:
+        return ""
+    try:
+        dataset = _dataset(dataset_key)
+    except KeyError:
+        return dataset_key
+    return f"{dataset.provider_category}:{dataset.record_type}"
 
 
 def _fixture_manifest(dataset_key: str, source: str | Path) -> SourceManifest:

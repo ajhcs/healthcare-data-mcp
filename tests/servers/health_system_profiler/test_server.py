@@ -86,7 +86,7 @@ async def test_get_system_profile(mock_ahrq_systems, mock_ahrq_hospitals, mock_p
         patch.object(server, "_load_pos", new_callable=AsyncMock, return_value=mock_pos),
         patch.object(server, "_search_nppes", new_callable=AsyncMock, return_value=[]),
     ):
-        result = await server.get_system_profile(system_name="Jefferson Health")
+        result = await server.get_system_profile(system_id="SYS_001")
     assert result["system"]["name"] == "Jefferson Health"
     assert result["system"]["hospital_count"] == 2
     assert len(result["inpatient_facilities"]) == 2

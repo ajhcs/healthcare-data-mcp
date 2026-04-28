@@ -7,20 +7,26 @@ class MRFLocation(BaseModel):
     """A single MRF file location for a hospital."""
 
     url: str = Field(description="URL to the MRF file (CSV or JSON)")
+    machine_readable_url: str = Field(default="", description="Canonical machine-readable file URL")
     format: str = Field(default="csv", description="File format: 'csv' or 'json'")
     last_verified: str = ""
+    last_updated: str = ""
+    version: str = ""
+    source_page_url: str = ""
 
 
 class MRFIndexResult(BaseModel):
     """Result from search_mrf_index — hospital info + MRF URLs."""
 
     hospital_name: str = ""
+    hospital_id: str = Field(default="", description="Normalized hospital identifier, preferring CCN")
     ccn: str = Field(default="", description="CMS Certification Number")
     ein: str = Field(default="", description="Employer Identification Number")
     city: str = ""
     state: str = ""
     mrf_urls: list[MRFLocation] = Field(default_factory=list)
     cached: bool = Field(default=False, description="Whether Parquet index exists for this hospital")
+    cache_status: str = Field(default="missing", description="ready, stale, or missing")
     cache_date: str = Field(default="", description="Date the Parquet index was built")
     row_count: int | None = Field(default=None, description="Number of charge records in cache")
 

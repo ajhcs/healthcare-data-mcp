@@ -80,6 +80,7 @@ class MuniBond(BaseModel):
     state: str = ""
     filing_date: str = ""
     filing_url: str = ""
+    source_url: str = ""
 
 
 class MuniBondDetails(BaseModel):
@@ -89,4 +90,7 @@ class MuniBondDetails(BaseModel):
     issuer_name: str = ""
     filing_date: str = ""
     documents: list[dict] = Field(default_factory=list, description="[{name, url, type}]")
+    source_url: str = ""
+    official_statement_url: str = ""
+    disclosure_count: int = 0
     description: str = ""

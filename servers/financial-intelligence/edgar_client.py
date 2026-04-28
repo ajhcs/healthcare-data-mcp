@@ -6,6 +6,7 @@ import os
 import re
 import time
 import httpx
+from bs4 import BeautifulSoup
 
 from shared.utils.http_client import resilient_request
 
@@ -281,18 +282,25 @@ async def get_filing_index(cik: str, accession_number: str) -> dict:
         html = resp.text
 
         documents = []
-        for match in re.finditer(
-                r'<tr[^>]*>.*?href="([^"]+)"[^>]*>([^<]*)</a>.*?<td[^>]*>([^<]*)</td>',
-            html,
-            re.DOTALL,
-        ):
-            href, name, doc_type = match.groups()
+        soup = BeautifulSoup(html, "html.parser")
+        for row in soup.select("table.tableFile tr"):
+            cells = row.find_all("td")
+            link = row.find("a", href=True)
+            if not cells or link is None:
+                continue
+            href = str(link["href"])
             if not href.startswith("http"):
                 href = f"{ARCHIVES_BASE}/{padded_cik}/{acc_no_hyphens}/{href}"
+            name = link.get_text(" ", strip=True)
+            doc_type = cells[3].get_text(" ", strip=True) if len(cells) > 3 else ""
+            description = cells[1].get_text(" ", strip=True) if len(cells) > 1 else ""
             documents.append({
                 "name": name.strip(),
                 "url": href,
                 "type": doc_type.strip(),
+                "description": description.strip(),
+                "accession_number": accession_number,
+                "source_url": index_url,
             })
 
         desc_match = re.search(r"<div[^>]*>.*?Filing Type.*?</div>\s*<div[^>]*>(.*?)</div>", html, re.DOTALL)
@@ -300,7 +308,7 @@ async def get_filing_index(cik: str, accession_number: str) -> dict:
         if desc_match:
             description = re.sub(r"<[^>]+>", "", desc_match.group(1)).strip()
 
-        return {"documents": documents, "description": description}
+        return {"documents": documents, "description": description, "source_url": index_url}
     except Exception as e:
         logger.warning("Failed to get filing index for %s: %s", accession_number, e)
-        return {"documents": [], "description": ""}
+        return {"documents": [], "description": "", "source_url": index_url}
