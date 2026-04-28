@@ -60,23 +60,27 @@ async def search_mrf_index(query: str, state: str = "") -> dict[str, Any]:
 
             # Check cache status
             cached = False
+            cache_status = "missing"
             cache_date = ""
             row_count = None
             if hospital_id:
                 cached = mrf_processor.is_cached(hospital_id)
                 if cached:
+                    cache_status = "ready"
                     meta = mrf_processor.get_cache_metadata(hospital_id)
                     cache_date = meta.get("cached_at", "")
                     row_count = meta.get("row_count")
 
             results.append(MRFIndexResult(
                 hospital_name=hosp.get("name", ""),
+                hospital_id=hospital_id,
                 ccn=ccn,
                 ein=hosp.get("ein", ""),
                 city=hosp.get("city", ""),
                 state=hosp.get("state", ""),
                 mrf_urls=[MRFLocation(**u) for u in hosp.get("mrf_urls", [])],
                 cached=cached,
+                cache_status=cache_status,
                 cache_date=cache_date,
                 row_count=row_count,
             ).model_dump())

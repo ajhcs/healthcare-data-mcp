@@ -24,6 +24,12 @@ try:
     )
     from .facility_enrichment import aggregate_off_site, enrich_facility
     from .graph_expansion import expand_related_providers
+    from .jefferson_resolver import (
+        JEFFERSON_SLUG,
+        build_combined_system_profile,
+        reconcile_system_facilities as reconcile_jefferson_facilities,
+        resolve_combined_system_slug,
+    )
     from .models import (
         BedBreakdown,
         FacilitySummary,
@@ -42,6 +48,12 @@ except ImportError:
     )
     from facility_enrichment import aggregate_off_site, enrich_facility
     from graph_expansion import expand_related_providers
+    from jefferson_resolver import (
+        JEFFERSON_SLUG,
+        build_combined_system_profile,
+        reconcile_system_facilities as reconcile_jefferson_facilities,
+        resolve_combined_system_slug,
+    )
     from models import (
         BedBreakdown,
         FacilitySummary,
@@ -97,6 +109,7 @@ async def search_health_systems(query: str, limit: int = 10) -> dict[str, Any]:
 async def get_system_profile(
     system_id: str | None = None,
     system_name: str | None = None,
+    edition_date: str | None = None,
     include_outpatient: bool = True,
 ) -> dict[str, Any]:
     """Get a complete health system profile in one call.
@@ -110,8 +123,15 @@ async def get_system_profile(
     Args:
         system_id: AHRQ system ID (e.g. "SYS_001"). Preferred.
         system_name: System name for auto-resolution (e.g. "Jefferson Health").
+        edition_date: Profile edition/as-of date. Jefferson Health uses this to apply the
+            post-2024 LVHN combined-system resolver.
         include_outpatient: Include NPPES outpatient site discovery (default True).
     """
+    if not system_id and system_name and resolve_combined_system_slug(system_name=system_name) == JEFFERSON_SLUG:
+        profile = build_combined_system_profile(system_name, edition_date=edition_date)
+        if profile is not None:
+            return to_structured(profile)
+
     systems_df = await _load_ahrq_systems()
     hospitals_df = await _load_ahrq_hospitals()
     pos_df = await _load_pos()
@@ -211,6 +231,26 @@ async def get_system_profile(
         off_site_summary=off_site.model_dump(),
     )
     return to_structured(profile.model_dump())
+
+
+@mcp.tool(structured_output=True)
+async def reconcile_system_facilities(
+    system_slug: str,
+    as_of_date: str | None = None,
+) -> dict[str, Any]:
+    """Return a canonical facility ledger for deterministic system resolvers.
+
+    Jefferson Health is reconciled as a combined post-merger system by merging the
+    legacy Jefferson, Einstein, and LVHN rosters rather than relying on AHRQ 2023 alone.
+
+    Args:
+        system_slug: Deterministic system slug, currently "jefferson-health".
+        as_of_date: Ledger as-of date. Jefferson/LVHN is valid on or after 2024-08-01.
+    """
+    result = reconcile_jefferson_facilities(system_slug, as_of_date=as_of_date)
+    if "error" in result:
+        return error_response(result["error"])
+    return to_structured(result)
 
 
 @mcp.tool(structured_output=True)

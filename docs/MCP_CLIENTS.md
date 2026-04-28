@@ -39,7 +39,7 @@ The setup wizard prompts for known keys, preserves existing values, avoids echoi
 ```bash
 hc-mcp-setup --validate-only
 hc-mcp-setup --print-client-snippets
-hc-mcp-setup --set SAM_GOV_API_KEY=... --set 'SEC_USER_AGENT=HealthcareData clyons@ajhcs.org'
+hc-mcp-setup --set SAM_GOV_API_KEY=... --set 'SEC_USER_AGENT=HealthcareData contact@example.org'
 ```
 
 `hc-mcp` automatically loads `.env` from the current working directory. For GUI clients that launch from a different directory, set `HC_MCP_ENV_FILE=/absolute/path/to/.env` in the client configuration or pass `--env-file /absolute/path/to/.env`.

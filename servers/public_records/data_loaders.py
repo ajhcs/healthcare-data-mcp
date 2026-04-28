@@ -1044,14 +1044,16 @@ def query_340b(
     try:
         cols = _detect_columns(con)
 
-        id_col = _find_col(cols, ["entity_id", "id", "340b_id", "covered_entity_id"])
-        name_col = _find_col(cols, ["entity_name", "name", "covered_entity_name", "organization_name"])
-        state_col = _find_col(cols, ["state", "state_code", "entity_state"])
+        id_col = _find_col(cols, ["entity_id", "id", "340b_id", "covered_entity_id", "covered_entity_id_number"])
+        name_col = _find_col(cols, [
+            "entity_name", "name", "covered_entity_name", "organization_name", "name_of_covered_entity",
+        ])
+        state_col = _find_col(cols, ["state", "state_code", "entity_state", "covered_entity_state"])
         type_col = _find_col(cols, ["entity_type", "type", "covered_entity_type"])
-        addr_col = _find_col(cols, ["address", "street_address", "address_line_1"])
-        city_col = _find_col(cols, ["city", "entity_city"])
-        zip_col = _find_col(cols, ["zip_code", "zip", "postal_code"])
-        grant_col = _find_col(cols, ["grant_number", "grant_num", "grant_id"])
+        addr_col = _find_col(cols, ["address", "street_address", "address_line_1", "covered_entity_street_address"])
+        city_col = _find_col(cols, ["city", "entity_city", "covered_entity_city"])
+        zip_col = _find_col(cols, ["zip_code", "zip", "postal_code", "covered_entity_zip_code"])
+        grant_col = _find_col(cols, ["grant_number", "grant_num", "grant_id", "340b_id"])
         participating_col = _find_col(cols, ["participating", "active", "status"])
         pharmacy_col = _find_col(cols, [
             "contract_pharmacy_count", "pharmacy_count",

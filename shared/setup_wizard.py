@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
 import getpass
 import hashlib
 import re
@@ -41,6 +42,7 @@ class ManualCacheItem:
     automation_note: str
     agent_prompt: str
     acquire_flag: str = ""
+    unavailable_reason: str = ""
 
 
 CONFIG_KEYS: tuple[ConfigKey, ...] = (
@@ -116,6 +118,7 @@ MANUAL_CACHE_ITEMS: tuple[ManualCacheItem, ...] = (
             "Locate the local CareSet/DocGraph shared-patients CSV or Parquet file. If it is CSV, "
             "run hc-mcp-setup --import-docgraph-csv. If it is Parquet, run --import-docgraph-parquet."
         ),
+        unavailable_reason="licensed_source_missing",
     ),
 )
 
@@ -172,6 +175,11 @@ def parse_args() -> argparse.Namespace:
         help="Fetch the public HHS OCR HIPAA breach table and store it as the breach CSV seed.",
     )
     parser.add_argument(
+        "--acquire-provider-enrollment",
+        action="store_true",
+        help="Fetch CMS PECOS provider-enrollment, owners, CHOW, and owner-info datasets into Parquet caches.",
+    )
+    parser.add_argument(
         "--force-cache-refresh",
         action="store_true",
         help="Overwrite existing acquired public cache files.",
@@ -225,6 +233,7 @@ def main() -> None:
     acquisition_results = acquire_public_caches(
         cache_root=args.cache_root,
         hipaa_breaches=args.acquire_public_caches or args.acquire_hipaa_breaches,
+        provider_enrollment=args.acquire_public_caches or args.acquire_provider_enrollment,
         force=args.force_cache_refresh,
     )
     for result in acquisition_results:
@@ -368,6 +377,7 @@ def acquire_public_caches(
     *,
     cache_root: Path,
     hipaa_breaches: bool = False,
+    provider_enrollment: bool = False,
     force: bool = False,
 ) -> list[str]:
     """Acquire public datasets that have stable unauthenticated access paths."""
@@ -379,7 +389,22 @@ def acquire_public_caches(
         rows = _acquire_hipaa_breaches(target, force=force)
         results.append(f"Acquired HIPAA breach CSV -> {target} ({rows} rows)")
 
+    if provider_enrollment:
+        provider_dir = root / "provider-enrollment"
+        manifests = asyncio.run(_acquire_provider_enrollment(provider_dir, force=force))
+        total_rows = sum(manifest.record_count or 0 for manifest in manifests)
+        results.append(
+            f"Acquired CMS provider enrollment caches -> {provider_dir} "
+            f"({len(manifests)} datasets, {total_rows} rows)"
+        )
+
     return results
+
+
+async def _acquire_provider_enrollment(cache_dir: Path, *, force: bool = False):
+    from servers.provider_enrollment import data_loaders
+
+    return await data_loaders.ensure_all_datasets_cached(cache_dir=cache_dir, force_refresh=force)
 
 
 def print_cache_status(cache_root: Path) -> None:
@@ -389,12 +414,18 @@ def print_cache_status(cache_root: Path) -> None:
     for item in MANUAL_CACHE_ITEMS:
         seed = root / item.seed_path
         parquet = root / item.parquet_path
-        ready = seed.exists() or parquet.exists()
-        status = "READY" if ready else "MISSING"
+        if item.unavailable_reason:
+            ready = parquet.exists()
+            status = "READY" if ready else "UNAVAILABLE"
+        else:
+            ready = seed.exists() or parquet.exists()
+            status = "READY" if ready else "MISSING"
         print(f"- {item.name}: {status}")
         print(f"  seed: {seed}")
         print(f"  cache: {parquet}")
         if not ready:
+            if item.unavailable_reason:
+                print(f"  data_unavailable: {item.unavailable_reason}")
             print(f"  affected tools: {', '.join(item.tools)}")
             print(f"  next step: {item.instructions}")
             print(f"  source: {item.source_url}")
@@ -493,7 +524,12 @@ def _convert_docgraph_csv(source: Path, target: Path) -> int:
 
     df = df[["npi_from", "npi_to", "shared_count", "transaction_count", "same_day_count"]]
     target.parent.mkdir(parents=True, exist_ok=True)
-    df.to_parquet(target, compression="zstd", index=False)
+    try:
+        df.to_parquet(target, compression="zstd", index=False)
+    except ImportError:
+        import polars as pl
+
+        pl.DataFrame(df.to_dict(orient="list")).write_parquet(target, compression="zstd")
     return len(df)
 
 

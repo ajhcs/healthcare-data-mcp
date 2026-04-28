@@ -119,7 +119,12 @@ def load_docgraph_csv(csv_path: str | Path) -> int:
     df = df[["npi_from", "npi_to", "shared_count", "transaction_count", "same_day_count"]]
 
     # Write Parquet
-    df.to_parquet(_SHARED_PATIENTS_CACHE, compression="zstd", index=False)
+    try:
+        df.to_parquet(_SHARED_PATIENTS_CACHE, compression="zstd", index=False)
+    except ImportError:
+        import polars as pl
+
+        pl.DataFrame(df.to_dict(orient="list")).write_parquet(_SHARED_PATIENTS_CACHE, compression="zstd")
     logger.info("DocGraph cached: %d referral pairs", len(df))
 
     return len(df)

@@ -13,6 +13,7 @@ from mcp.server.fastmcp import FastMCP
 from shared.utils.mcp_response import error_response, to_structured
 
 from . import edgar_client, propublica_client
+from .audited_financial_pdf import parse_audited_financial_pdf as _parse_audited_financial_pdf
 from .irs990_parser import download_990_xml, lookup_xml_url, parse_990_xml
 from .models import (
     Form990Details,
@@ -392,6 +393,7 @@ async def search_muni_bonds(query: str, state: str = "", date_from: str = "", da
                 state=hit_state,
                 filing_date=source.get("file_date", ""),
                 filing_url=filing_url,
+                source_url=filing_url,
             ).model_dump())
 
             if len(results) >= 25:
@@ -432,18 +434,81 @@ async def get_muni_bond_details(accession_number: str) -> dict[str, Any]:
                 break
 
         index_data = await edgar_client.get_filing_index(cik, accession_number)
+        source_url = index_data.get("source_url", "")
+        documents = _bounded_disclosure_documents(index_data.get("documents", []), source_url=source_url)
+        if not documents:
+            return error_response(
+                "No parseable disclosure documents found for municipal bond filing.",
+                code="source_unparsed",
+                detail={"accession_number": accession_number, "source_url": source_url},
+            )
+        official_statement_url = _official_statement_url(documents)
 
         result = MuniBondDetails(
             accession_number=accession_number,
             issuer_name=issuer_name,
             filing_date=filing_date,
-            documents=index_data.get("documents", []),
+            documents=documents,
+            source_url=source_url,
+            official_statement_url=official_statement_url,
+            disclosure_count=len(documents),
             description=index_data.get("description", ""),
         )
         return to_structured(result.model_dump())
     except Exception as e:
         logger.exception("get_muni_bond_details failed")
         return error_response(f"get_muni_bond_details failed: {e}")
+
+
+def _bounded_disclosure_documents(documents: list[dict], limit: int = 25, source_url: str = "") -> list[dict]:
+    parseable_suffixes = (".pdf", ".txt", ".xml", ".xbrl")
+    bounded: list[dict] = []
+    for document in documents:
+        url = str(document.get("url", ""))
+        name = str(document.get("name", ""))
+        if not url:
+            continue
+        lower_url = url.lower()
+        lower_name = name.lower()
+        if not (lower_url.endswith(parseable_suffixes) or lower_name.endswith(parseable_suffixes)):
+            continue
+        normalized = dict(document)
+        normalized.setdefault("source_url", source_url)
+        bounded.append(normalized)
+        if len(bounded) >= limit:
+            break
+    return bounded
+
+
+def _official_statement_url(documents: list[dict]) -> str:
+    for document in documents:
+        haystack = " ".join(
+            str(document.get(key, "")) for key in ("name", "type", "description", "url")
+        ).lower()
+        if "official" in haystack and "statement" in haystack:
+            return str(document.get("url", ""))
+    for document in documents:
+        if str(document.get("url", "")).lower().endswith(".pdf"):
+            return str(document.get("url", ""))
+    return str(documents[0].get("url", "")) if documents else ""
+
+
+# ---------------------------------------------------------------------------
+# Tool 7: parse_audited_financial_pdf
+# ---------------------------------------------------------------------------
+@mcp.tool(structured_output=True)
+async def parse_audited_financial_pdf(url_or_path: str, entity_name: str, fiscal_year: int | str) -> dict[str, Any]:
+    """Parse headline financial metrics from an audited health-system PDF.
+
+    Extracts common balance sheet, operations, and cash-flow metrics with page
+    anchors and source citation locators. Values in PDFs labeled "In Thousands"
+    are returned in whole dollars.
+    """
+    try:
+        return to_structured(_parse_audited_financial_pdf(url_or_path, entity_name, fiscal_year))
+    except Exception as e:
+        logger.exception("parse_audited_financial_pdf failed")
+        return error_response(f"parse_audited_financial_pdf failed: {e}")
 
 
 if __name__ == "__main__":

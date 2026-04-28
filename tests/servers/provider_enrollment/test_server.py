@@ -70,9 +70,22 @@ async def test_search_provider_enrollment(provider_cache) -> None:
     result = await server.search_provider_enrollment(npi="1234567893")
 
     assert result["total_results"] == 1
-    assert result["enrollments"][0]["npi"] == "1234567893"
-    assert result["enrollments"][0]["raw"]["PAC ID"] == "PAC-77"
+    enrollment = result["enrollments"][0]
+    assert enrollment["npi"] == "1234567893"
+    assert enrollment["raw"]["PAC ID"] == "PAC-77"
+    assert enrollment["source_name"] == "CMS Provider Enrollment"
+    assert enrollment["source_url"] == "records"
+    assert enrollment["landing_page"] == "fixture://medicare_ffs_public_provider_enrollment"
+    assert enrollment["retrieved_at"]
+    assert enrollment["source_modified"] == ""
+    assert enrollment["entity_scope"] == "medicare_ffs:enrollment"
+    assert enrollment["query"] == {"dataset_key": "medicare_ffs_public_provider_enrollment"}
+    assert enrollment["cache_key"] == "medicare_ffs_public_provider_enrollment"
+    assert enrollment["confidence"] == "source_row"
     assert result["metadata"]
+    assert result["metadata"][0]["source_modified"] == ""
+    assert result["metadata"][0]["entity_scope"]
+    assert result["metadata"][0]["cache_key"]
 
 
 @pytest.mark.asyncio

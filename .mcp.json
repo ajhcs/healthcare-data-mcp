@@ -2,93 +2,93 @@
   "mcpServers": {
     "cms-facility": {
       "type": "stdio",
-      "command": "/mnt/d/Coding Projects/healthcare-data-mcp/.venv/bin/hc-mcp",
-      "args": ["cms-facility", "--env-file", "/mnt/d/Coding Projects/healthcare-data-mcp/.env"]
+      "command": "hc-mcp",
+      "args": ["cms-facility"]
     },
     "service-area": {
       "type": "stdio",
-      "command": "/mnt/d/Coding Projects/healthcare-data-mcp/.venv/bin/hc-mcp",
-      "args": ["service-area", "--env-file", "/mnt/d/Coding Projects/healthcare-data-mcp/.env"]
+      "command": "hc-mcp",
+      "args": ["service-area"]
     },
     "geo-demographics": {
       "type": "stdio",
-      "command": "/mnt/d/Coding Projects/healthcare-data-mcp/.venv/bin/hc-mcp",
-      "args": ["geo-demographics", "--env-file", "/mnt/d/Coding Projects/healthcare-data-mcp/.env"]
+      "command": "hc-mcp",
+      "args": ["geo-demographics"]
     },
     "drive-time": {
       "type": "stdio",
-      "command": "/mnt/d/Coding Projects/healthcare-data-mcp/.venv/bin/hc-mcp",
-      "args": ["drive-time", "--env-file", "/mnt/d/Coding Projects/healthcare-data-mcp/.env"]
+      "command": "hc-mcp",
+      "args": ["drive-time"]
     },
     "hospital-quality": {
       "type": "stdio",
-      "command": "/mnt/d/Coding Projects/healthcare-data-mcp/.venv/bin/hc-mcp",
-      "args": ["hospital-quality", "--env-file", "/mnt/d/Coding Projects/healthcare-data-mcp/.env"]
+      "command": "hc-mcp",
+      "args": ["hospital-quality"]
     },
     "health-system-profiler": {
       "type": "stdio",
-      "command": "/mnt/d/Coding Projects/healthcare-data-mcp/.venv/bin/hc-mcp",
-      "args": ["health-system-profiler", "--env-file", "/mnt/d/Coding Projects/healthcare-data-mcp/.env"]
+      "command": "hc-mcp",
+      "args": ["health-system-profiler"]
     },
     "financial-intelligence": {
       "type": "stdio",
-      "command": "/mnt/d/Coding Projects/healthcare-data-mcp/.venv/bin/hc-mcp",
-      "args": ["financial-intelligence", "--env-file", "/mnt/d/Coding Projects/healthcare-data-mcp/.env"]
+      "command": "hc-mcp",
+      "args": ["financial-intelligence"]
     },
     "price-transparency": {
       "type": "stdio",
-      "command": "/mnt/d/Coding Projects/healthcare-data-mcp/.venv/bin/hc-mcp",
-      "args": ["price-transparency", "--env-file", "/mnt/d/Coding Projects/healthcare-data-mcp/.env"]
+      "command": "hc-mcp",
+      "args": ["price-transparency"]
     },
     "physician-referral-network": {
       "type": "stdio",
-      "command": "/mnt/d/Coding Projects/healthcare-data-mcp/.venv/bin/hc-mcp",
-      "args": ["physician-referral-network", "--env-file", "/mnt/d/Coding Projects/healthcare-data-mcp/.env"]
+      "command": "hc-mcp",
+      "args": ["physician-referral-network"]
     },
     "workforce-analytics": {
       "type": "stdio",
-      "command": "/mnt/d/Coding Projects/healthcare-data-mcp/.venv/bin/hc-mcp",
-      "args": ["workforce-analytics", "--env-file", "/mnt/d/Coding Projects/healthcare-data-mcp/.env"]
+      "command": "hc-mcp",
+      "args": ["workforce-analytics"]
     },
     "claims-analytics": {
       "type": "stdio",
-      "command": "/mnt/d/Coding Projects/healthcare-data-mcp/.venv/bin/hc-mcp",
-      "args": ["claims-analytics", "--env-file", "/mnt/d/Coding Projects/healthcare-data-mcp/.env"]
+      "command": "hc-mcp",
+      "args": ["claims-analytics"]
     },
     "public-records": {
       "type": "stdio",
-      "command": "/mnt/d/Coding Projects/healthcare-data-mcp/.venv/bin/hc-mcp",
-      "args": ["public-records", "--env-file", "/mnt/d/Coding Projects/healthcare-data-mcp/.env"]
+      "command": "hc-mcp",
+      "args": ["public-records"]
     },
     "web-intelligence": {
       "type": "stdio",
-      "command": "/mnt/d/Coding Projects/healthcare-data-mcp/.venv/bin/hc-mcp",
-      "args": ["web-intelligence", "--env-file", "/mnt/d/Coding Projects/healthcare-data-mcp/.env"]
+      "command": "hc-mcp",
+      "args": ["web-intelligence"]
     },
     "discovery": {
       "type": "stdio",
-      "command": "/mnt/d/Coding Projects/healthcare-data-mcp/.venv/bin/hc-mcp",
-      "args": ["discovery", "--env-file", "/mnt/d/Coding Projects/healthcare-data-mcp/.env"]
+      "command": "hc-mcp",
+      "args": ["discovery"]
     },
     "gateway": {
       "type": "stdio",
-      "command": "/mnt/d/Coding Projects/healthcare-data-mcp/.venv/bin/hc-mcp",
-      "args": ["gateway", "--env-file", "/mnt/d/Coding Projects/healthcare-data-mcp/.env"]
+      "command": "hc-mcp",
+      "args": ["gateway"]
     },
     "provider-enrollment": {
       "type": "stdio",
-      "command": "/mnt/d/Coding Projects/healthcare-data-mcp/.venv/bin/hc-mcp",
-      "args": ["provider-enrollment", "--env-file", "/mnt/d/Coding Projects/healthcare-data-mcp/.env"]
+      "command": "hc-mcp",
+      "args": ["provider-enrollment"]
     },
     "community-health": {
       "type": "stdio",
-      "command": "/mnt/d/Coding Projects/healthcare-data-mcp/.venv/bin/hc-mcp",
-      "args": ["community-health", "--env-file", "/mnt/d/Coding Projects/healthcare-data-mcp/.env"]
+      "command": "hc-mcp",
+      "args": ["community-health"]
     },
     "research-trials": {
       "type": "stdio",
-      "command": "/mnt/d/Coding Projects/healthcare-data-mcp/.venv/bin/hc-mcp",
-      "args": ["research-trials", "--env-file", "/mnt/d/Coding Projects/healthcare-data-mcp/.env"]
+      "command": "hc-mcp",
+      "args": ["research-trials"]
     }
   }
 }

@@ -474,6 +474,12 @@ async def get_340b_status(
         return error_response(f"get_340b_status failed: {e}")
 
 
+@mcp.tool(structured_output=True)
+async def check_340b_status(entity_name: str = "", entity_id: str = "", state: str = "") -> dict[str, Any]:
+    """Alias for get_340b_status."""
+    return await get_340b_status(entity_name=entity_name, entity_id=entity_id, state=state)
+
+
 # ---------------------------------------------------------------------------
 # Tool 4: get_breach_history
 # ---------------------------------------------------------------------------

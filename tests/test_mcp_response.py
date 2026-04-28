@@ -11,6 +11,8 @@ from mcp.server.fastmcp.tools import Tool
 from pydantic import BaseModel
 
 from shared.utils.mcp_response import (
+    REPORT_SOURCE_METADATA_FIELDS,
+    ReportIngestContractError,
     collection_response,
     empty_response,
     error_response,
@@ -20,6 +22,7 @@ from shared.utils.mcp_response import (
     response_envelope,
     to_structured,
     tool_error,
+    validate_report_ingest_payload,
 )
 
 
@@ -154,3 +157,27 @@ async def test_fastmcp_accepts_helper_response_as_structured_output() -> None:
     assert structured["ok"] is True
     assert structured["count"] == 1
     assert structured["results"][0]["opened_on"] == "1995-04-12"
+
+
+def test_report_ingest_payload_requires_source_metadata_on_nested_fact_rows() -> None:
+    payload = {
+        "sections": [
+            {
+                "name": "ownership",
+                "fact_rows": [
+                    {
+                        "label": "Owner",
+                        "value": "Jefferson Parent LLC",
+                        **{field: "source" for field in REPORT_SOURCE_METADATA_FIELDS if field != "query"},
+                        "query": {"ccn": "390001"},
+                    }
+                ],
+            }
+        ]
+    }
+
+    validate_report_ingest_payload(payload)
+
+    del payload["sections"][0]["fact_rows"][0]["source_url"]
+    with pytest.raises(ReportIngestContractError, match="source_url"):
+        validate_report_ingest_payload(payload)

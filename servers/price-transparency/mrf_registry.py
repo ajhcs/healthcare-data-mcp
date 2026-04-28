@@ -21,6 +21,155 @@ _REGISTRY_PATH = _CACHE_DIR / "registry.json"
 
 CMS_PROVIDER_DATASET = "xubh-q36u"
 CMS_PROVIDER_API = f"https://data.cms.gov/provider-data/api/1/datastore/query/{CMS_PROVIDER_DATASET}/0"
+_MRF_VERIFIED_DATE = "2026-04-28"
+
+
+def _mrf(url: str, *, source_page_url: str) -> dict[str, str]:
+    return {
+        "url": url.strip(),
+        "machine_readable_url": url.strip(),
+        "format": "json" if url.lower().endswith(".json") else "csv",
+        "last_verified": _MRF_VERIFIED_DATE,
+        "last_updated": _MRF_VERIFIED_DATE,
+        "version": "cms-hpt.txt",
+        "source_page_url": source_page_url,
+    }
+
+
+_JEFFERSON_SOURCE = "https://www.jeffersonhealth.org/pay-my-bill/charge-description"
+_LVHN_SOURCE = "https://www.lvhn.org/get-price-quote"
+_BUILTIN_HOSPITALS: dict[str, dict] = {
+    "390113": {
+        "name": "Jefferson Lansdale Hospital",
+        "ein": "263359979",
+        "city": "Lansdale",
+        "state": "PA",
+        "domain": "www.jeffersonhealth.org",
+        "mrf_urls": [
+            _mrf(
+                "https://use2webtechstgpricelist.blob.core.windows.net/pricelist/Complete%20File/263359979_jefferson-lansdale-hospital_standardcharges.csv",
+                source_page_url=_JEFFERSON_SOURCE,
+            )
+        ],
+    },
+    "390115": {
+        "name": "Jefferson Health - Northeast",
+        "ein": "230596940",
+        "city": "Philadelphia",
+        "state": "PA",
+        "domain": "www.jeffersonhealth.org",
+        "mrf_urls": [
+            _mrf(
+                "https://use2webtechstgpricelist.blob.core.windows.net/pricelist/Complete%20File/230596940_jefferson-frankford-hospital_standardcharges.csv",
+                source_page_url=_JEFFERSON_SOURCE,
+            ),
+            _mrf(
+                "https://use2webtechstgpricelist.blob.core.windows.net/pricelist/Complete%20File/230596940_jefferson-torresdale-hospital_standardcharges.csv",
+                source_page_url=_JEFFERSON_SOURCE,
+            ),
+            _mrf(
+                "https://use2webtechstgpricelist.blob.core.windows.net/pricelist/Complete%20File/230596940_jefferson-bucks-hospital_standardcharges.csv",
+                source_page_url=_JEFFERSON_SOURCE,
+            ),
+        ],
+    },
+    "390142": {
+        "name": "Jefferson Einstein Philadelphia Hospital",
+        "ein": "231396794",
+        "city": "Philadelphia",
+        "state": "PA",
+        "domain": "www.jeffersonhealth.org",
+        "mrf_urls": [
+            _mrf(
+                "https://use2webtechstgpricelist.blob.core.windows.net/pricelist/Complete%20File/231396794_jefferson-einstein-philadelphia-hospital_standardcharges.csv",
+                source_page_url=_JEFFERSON_SOURCE,
+            )
+        ],
+    },
+    "390174": {
+        "name": "Thomas Jefferson University Hospital",
+        "ein": "232829095",
+        "city": "Philadelphia",
+        "state": "PA",
+        "domain": "www.jeffersonhealth.org",
+        "mrf_urls": [
+            _mrf(
+                "https://use2webtechstgpricelist.blob.core.windows.net/pricelist/Complete%20File/232829095_thomas-jefferson-university-hospital_standardcharges.csv",
+                source_page_url=_JEFFERSON_SOURCE,
+            ),
+            _mrf(
+                "https://use2webtechstgpricelist.blob.core.windows.net/pricelist/Complete%20File/232829095_jefferson-methodist-hospital_standardcharges.csv",
+                source_page_url=_JEFFERSON_SOURCE,
+            ),
+        ],
+    },
+    "390231": {
+        "name": "Jefferson Abington Hospital",
+        "ein": "231352152",
+        "city": "Abington",
+        "state": "PA",
+        "domain": "www.jeffersonhealth.org",
+        "mrf_urls": [
+            _mrf(
+                "https://use2webtechstgpricelist.blob.core.windows.net/pricelist/Complete%20File/231352152%20_jefferson-abington-hospital_standardcharges.csv",
+                source_page_url=_JEFFERSON_SOURCE,
+            )
+        ],
+    },
+    "390329": {
+        "name": "Jefferson Einstein Montgomery Hospital",
+        "ein": "204193243",
+        "city": "East Norriton",
+        "state": "PA",
+        "domain": "www.jeffersonhealth.org",
+        "mrf_urls": [
+            _mrf(
+                "https://use2webtechstgpricelist.blob.core.windows.net/pricelist/Complete%20File/204193243_jefferson-einstein-montgomery-hospital_standardcharges.csv",
+                source_page_url=_JEFFERSON_SOURCE,
+            )
+        ],
+    },
+    "390133": {
+        "name": "Lehigh Valley Hospital",
+        "ein": "",
+        "city": "Allentown",
+        "state": "PA",
+        "domain": "www.lvhn.org",
+        "mrf_urls": [_mrf("https://lvhn.pt.panaceainc.com/MRFDownload/lvhn/lehigh", source_page_url=_LVHN_SOURCE)],
+    },
+    "390039": {
+        "name": "Lehigh Valley Hospital - Hazleton",
+        "ein": "",
+        "city": "Hazleton",
+        "state": "PA",
+        "domain": "www.lvhn.org",
+        "mrf_urls": [_mrf("https://lvhn.pt.panaceainc.com/MRFDownload/lvhn/hazleton", source_page_url=_LVHN_SOURCE)],
+    },
+    "390328": {
+        "name": "Lehigh Valley Hospital - Pocono",
+        "ein": "",
+        "city": "East Stroudsburg",
+        "state": "PA",
+        "domain": "www.lvhn.org",
+        "mrf_urls": [_mrf("https://lvhn.pt.panaceainc.com/MRFDownload/lvhn/pocono", source_page_url=_LVHN_SOURCE)],
+    },
+    "390338": {
+        "name": "Lehigh Valley Hospital - Dickson City",
+        "ein": "",
+        "city": "Dickson City",
+        "state": "PA",
+        "domain": "www.lvhn.org",
+        "mrf_urls": [_mrf("https://lvhn.pt.panaceainc.com/MRFDownload/lvhn/dicksoncity", source_page_url=_LVHN_SOURCE)],
+    },
+    "390430": {
+        "name": "Lehigh Valley Hospital - Macungie",
+        "ein": "",
+        "city": "Macungie",
+        "state": "PA",
+        "domain": "www.lvhn.org",
+        "mrf_urls": [_mrf("https://lvhn.pt.panaceainc.com/MRFDownload/lvhn/Macungie", source_page_url=_LVHN_SOURCE)],
+    },
+}
 
 
 # ---------------------------------------------------------------------------
@@ -49,10 +198,11 @@ def search_registry(query: str, state: str = "") -> list[dict]:
     name, ccn, ein, domain, mrf_urls, city, state).
     """
     registry = _load_registry()
+    hospitals = {**registry.get("hospitals", {}), **_BUILTIN_HOSPITALS}
     query_lower = query.strip().lower()
     results = []
 
-    for ccn, entry in registry.get("hospitals", {}).items():
+    for ccn, entry in hospitals.items():
         name = entry.get("name", "").lower()
         ein = entry.get("ein", "").lower()
         entry_state = entry.get("state", "").upper()

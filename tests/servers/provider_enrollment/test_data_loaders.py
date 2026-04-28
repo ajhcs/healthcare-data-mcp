@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+import json
+from types import SimpleNamespace
+
+import pytest
+
 from shared.utils.source_catalog import SourceManifest
 
 from servers.provider_enrollment import data_loaders
@@ -147,3 +152,53 @@ def test_search_enrollments_filters_npi_state_and_name(tmp_path) -> None:
 
     assert len(rows) == 1
     assert rows[0]["provider_name"] == "Jefferson Medical Group"
+
+
+@pytest.mark.asyncio
+async def test_ensure_all_datasets_cached_writes_nine_parquets_and_manifests(tmp_path, monkeypatch) -> None:
+    catalog = {
+        "dataset": [
+            {
+                "title": dataset.title,
+                "identifier": f"{dataset.key}-id",
+                "modified": "2026-04-20",
+                "landingPage": f"https://data.cms.gov/provider-enrollment/{dataset.landing_page_slug}",
+                "distribution": [
+                    {
+                        "downloadURL": f"https://example.test/{dataset.key}.csv",
+                        "format": "CSV",
+                    }
+                ],
+            }
+            for dataset in data_loaders.DATASETS.values()
+        ]
+    }
+
+    async def fake_request(method: str, url: str, **_kwargs):
+        assert method == "GET"
+        key = url.rsplit("/", 1)[-1].removesuffix(".csv")
+        return SimpleNamespace(
+            content=(
+                "NPI,Enrollment ID,CCN,Facility Name,State,Owner Organization Name,Transaction Date\n"
+                f"1234567893,{key}-ENR,390001,Jefferson Hospital,PA,{key} Owner,2026-04-01\n"
+            ).encode(),
+            headers={"etag": f'"{key}-etag"', "last-modified": "Mon, 20 Apr 2026 00:00:00 GMT"},
+        )
+
+    monkeypatch.setattr(data_loaders, "resilient_request", fake_request)
+
+    manifests = await data_loaders.ensure_all_datasets_cached(cache_dir=tmp_path, catalog_data=catalog)
+
+    assert len(manifests) == 9
+    for dataset_key in data_loaders.DATASETS:
+        parquet_path = tmp_path / f"{dataset_key}.parquet"
+        meta_path = tmp_path / f"{dataset_key}.meta.json"
+        assert parquet_path.exists()
+        assert meta_path.exists()
+        metadata = json.loads(meta_path.read_text(encoding="utf-8"))
+        assert metadata["source_url"] == f"https://example.test/{dataset_key}.csv"
+        assert metadata["modified"] == "2026-04-20"
+        assert metadata["fetched_at"]
+        assert metadata["record_count"] > 0
+        assert metadata["checksum"]
+        assert metadata["etag"] == f'"{dataset_key}-etag"'
