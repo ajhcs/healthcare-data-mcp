@@ -39,7 +39,7 @@ def _mrf(url: str, *, source_page_url: str) -> dict[str, str]:
 _JEFFERSON_SOURCE = "https://www.jeffersonhealth.org/pay-my-bill/charge-description"
 _LVHN_SOURCE = "https://www.lvhn.org/get-price-quote"
 _BUILTIN_HOSPITALS: dict[str, dict] = {
-    "390012": {
+    "390113": {
         "name": "Jefferson Lansdale Hospital",
         "ein": "263359979",
         "city": "Lansdale",
@@ -137,7 +137,7 @@ _BUILTIN_HOSPITALS: dict[str, dict] = {
         "domain": "www.lvhn.org",
         "mrf_urls": [_mrf("https://lvhn.pt.panaceainc.com/MRFDownload/lvhn/lehigh", source_page_url=_LVHN_SOURCE)],
     },
-    "390185": {
+    "390039": {
         "name": "Lehigh Valley Hospital - Hazleton",
         "ein": "",
         "city": "Hazleton",
@@ -145,7 +145,7 @@ _BUILTIN_HOSPITALS: dict[str, dict] = {
         "domain": "www.lvhn.org",
         "mrf_urls": [_mrf("https://lvhn.pt.panaceainc.com/MRFDownload/lvhn/hazleton", source_page_url=_LVHN_SOURCE)],
     },
-    "390201": {
+    "390328": {
         "name": "Lehigh Valley Hospital - Pocono",
         "ein": "",
         "city": "East Stroudsburg",

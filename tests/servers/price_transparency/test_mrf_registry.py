@@ -3,6 +3,7 @@
 import pytest
 
 from servers.price_transparency import mrf_registry, server
+from servers.health_system_profiler.jefferson_resolver import JEFFERSON_SLUG, reconcile_system_facilities
 from tests.helpers import parse_tool_result
 
 
@@ -23,8 +24,30 @@ def test_builtin_registry_finds_lvhn_pa_mrfs() -> None:
     results = mrf_registry.search_registry("Lehigh Valley Hospital", state="PA")
 
     ccns = {result["ccn"] for result in results}
-    assert {"390133", "390185", "390201", "390338", "390430"}.issubset(ccns)
+    assert {"390133", "390039", "390328", "390338", "390430"}.issubset(ccns)
     assert all(result["mrf_urls"] for result in results)
+
+
+def test_builtin_registry_matches_jefferson_facility_ledger_ccns() -> None:
+    ledger = reconcile_system_facilities(JEFFERSON_SLUG, as_of_date="2026-04-28")
+    expected_ccns = {
+        facility["name"]: facility["ccn"]
+        for facility in ledger["facilities"]
+        if facility["name"]
+        in {
+            "Jefferson Lansdale Hospital",
+            "Lehigh Valley Hospital - Hazleton",
+            "Lehigh Valley Hospital - Pocono",
+        }
+    }
+
+    assert expected_ccns == {
+        "Jefferson Lansdale Hospital": "390113",
+        "Lehigh Valley Hospital - Hazleton": "390039",
+        "Lehigh Valley Hospital - Pocono": "390328",
+    }
+    for name, ccn in expected_ccns.items():
+        assert mrf_registry._BUILTIN_HOSPITALS[ccn]["name"] == name
 
 
 @pytest.mark.asyncio
