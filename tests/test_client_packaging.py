@@ -30,9 +30,11 @@ def test_codex_example_includes_new_servers_and_http_entries() -> None:
     assert mcp_servers["providerEnrollment"]["args"] == ["provider-enrollment"]
     assert mcp_servers["communityHealth"]["args"] == ["community-health"]
     assert mcp_servers["researchTrials"]["args"] == ["research-trials"]
+    assert mcp_servers["liveGateway"]["args"] == ["live-gateway"]
     assert mcp_servers["providerEnrollmentHttp"]["url"].endswith(":8017/mcp")
     assert mcp_servers["communityHealthHttp"]["url"].endswith(":8018/mcp")
     assert mcp_servers["researchTrialsHttp"]["url"].endswith(":8019/mcp")
+    assert mcp_servers["liveGatewayHttp"]["url"].endswith(":8020/mcp")
 
 
 def test_claude_desktop_stdio_example_is_valid_json_and_includes_env_pointer() -> None:
@@ -42,4 +44,5 @@ def test_claude_desktop_stdio_example_is_valid_json_and_includes_env_pointer() -
     assert mcp_servers["provider-enrollment"]["args"] == ["provider-enrollment"]
     assert mcp_servers["community-health"]["args"] == ["community-health"]
     assert mcp_servers["research-trials"]["args"] == ["research-trials"]
+    assert mcp_servers["live-gateway"]["args"] == ["live-gateway"]
     assert "HC_MCP_ENV_FILE" in mcp_servers["public-records"]["env"]

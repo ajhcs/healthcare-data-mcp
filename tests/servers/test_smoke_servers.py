@@ -26,7 +26,8 @@ SERVER_SPECS = [
     ("workforce-analytics", "servers.workforce_analytics.server", 7),
     ("claims-analytics", "servers.claims_analytics.server", 5),
     ("public-records", "servers.public_records.server", 16),
-    ("web-intelligence", "servers.web_intelligence.server", 5),
+    ("web-intelligence", "servers.web_intelligence.server", 7),
+    ("live-gateway", "servers.live_gateway.server", 38),
 ]
 
 

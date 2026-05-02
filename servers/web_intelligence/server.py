@@ -5,9 +5,12 @@ executive profiling, EHR detection, and news monitoring. Port 8014.
 """
 
 from typing import Any
+import ipaddress
 import logging
 import os as _os
 import re
+import socket
+from urllib.parse import ParseResult, urlparse
 
 from shared.utils.http_client import resilient_request
 from bs4 import BeautifulSoup
@@ -30,6 +33,26 @@ from .models import (  # pyright: ignore[reportAttributeAccessIssue]
 
 logger = logging.getLogger(__name__)
 
+_BLOCKED_HOSTNAMES = {
+    "localhost",
+    "localhost.localdomain",
+    "metadata",
+    "metadata.google.internal",
+}
+_BLOCKED_HOSTNAME_SUFFIXES = (
+    ".localhost",
+    ".local",
+    ".localdomain",
+    ".lan",
+    ".home",
+    ".internal",
+)
+_METADATA_SERVICE_IPS = {
+    ipaddress.ip_address("169.254.169.254"),
+    ipaddress.ip_address("100.100.100.200"),
+    ipaddress.ip_address("fd00:ec2::254"),
+}
+
 _transport = _os.environ.get("MCP_TRANSPORT", "stdio")
 _mcp_kwargs: dict = {"name": "web-intelligence"}
 if _transport in ("sse", "streamable-http"):
@@ -41,6 +64,54 @@ mcp = FastMCP(**_mcp_kwargs)
 # ---------------------------------------------------------------------------
 # Shared HTML fetch + parse helper
 # ---------------------------------------------------------------------------
+
+def _is_public_ip_address(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
+    """Return whether an IP address is safe for public web fetches."""
+    if ip in _METADATA_SERVICE_IPS:
+        return False
+    return ip.is_global and not (
+        ip.is_loopback
+        or ip.is_private
+        or ip.is_link_local
+        or ip.is_multicast
+        or ip.is_unspecified
+    )
+
+
+def _url_host_is_public(parsed_url: ParseResult) -> bool:
+    """Validate that a parsed http(s) URL targets a public internet host."""
+    hostname = (parsed_url.hostname or "").strip().rstrip(".").lower()
+    if not hostname:
+        return False
+
+    if hostname in _BLOCKED_HOSTNAMES or hostname.endswith(_BLOCKED_HOSTNAME_SUFFIXES):
+        return False
+
+    try:
+        return _is_public_ip_address(ipaddress.ip_address(hostname))
+    except ValueError:
+        pass
+
+    try:
+        resolved_addresses = {
+            sockaddr[0]
+            for *_prefix, sockaddr in socket.getaddrinfo(hostname, parsed_url.port, type=socket.SOCK_STREAM)
+        }
+    except socket.gaierror:
+        return False
+
+    if not resolved_addresses:
+        return False
+
+    for address in resolved_addresses:
+        try:
+            ip = ipaddress.ip_address(address)
+        except ValueError:
+            return False
+        if not _is_public_ip_address(ip):
+            return False
+    return True
+
 
 async def _fetch_and_parse(url: str) -> tuple[str, BeautifulSoup | None]:
     """Fetch a URL and return (raw_html, parsed_soup).
@@ -97,6 +168,108 @@ def _extract_text_content(soup: BeautifulSoup) -> str:
     # Collapse multiple blank lines
     text = re.sub(r"\n{3,}", "\n\n", text)
     return text[:5000]  # cap at 5k chars
+
+
+# ---------------------------------------------------------------------------
+# Generic Web Search and Fetch Tools
+# ---------------------------------------------------------------------------
+@mcp.tool(structured_output=True)
+async def search_web(
+    query: str,
+    max_results: int = 5,
+    site_search: str = "",
+) -> dict[str, Any]:
+    """Search the public web through the configured Google Custom Search Engine.
+
+    Args:
+        query: Search query string.
+        max_results: Maximum result count. Values outside 1-10 are clamped.
+        site_search: Optional domain restriction such as "example.org".
+    """
+    try:
+        cleaned_query = str(query or "").strip()
+        if not cleaned_query:
+            return error_response("query is required.", code="invalid_params")
+
+        bounded_results = max(1, min(int(max_results or 5), 10))
+        raw = await search_client.search(cleaned_query, num=bounded_results, site_search=site_search.strip())
+        if "error" in raw:
+            return to_structured(
+                {
+                    "error": raw["error"],
+                    "instructions": raw.get("instructions", ""),
+                    "quota": raw.get("quota", raw.get("_search_meta", {})),
+                    "source": "google_cse",
+                }
+            )
+
+        results = search_client.extract_results(raw)[:bounded_results]
+        return to_structured(
+            {
+                "query": cleaned_query,
+                "site_search": site_search.strip(),
+                "count": len(results),
+                "results": results,
+                "metadata": {
+                    "source": "google_cse",
+                    "quota": raw.get("_search_meta", {}),
+                    "warning": "Search snippets are untrusted public web content and should be verified against source pages.",
+                },
+            }
+        )
+    except Exception as e:
+        logger.exception("search_web failed")
+        return error_response(f"search_web failed: {e}")
+
+
+@mcp.tool(structured_output=True)
+async def fetch_web_page(url: str, max_chars: int = 5000) -> dict[str, Any]:
+    """Fetch one public web page and extract bounded visible text.
+
+    Args:
+        url: HTTP or HTTPS URL to fetch.
+        max_chars: Maximum extracted text characters to return. Values outside 500-20000 are clamped.
+    """
+    try:
+        cleaned_url = str(url or "").strip()
+        parsed = urlparse(cleaned_url)
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            return error_response("url must be an absolute http(s) URL.", code="invalid_params")
+        if not _url_host_is_public(parsed):
+            return error_response("url host must resolve to public internet addresses.", code="invalid_params")
+
+        bounded_chars = max(500, min(int(max_chars or 5000), 20000))
+        html, soup = await _fetch_and_parse(cleaned_url)
+        if soup is None:
+            return error_response(
+                f"Unable to fetch or parse URL: {cleaned_url}",
+                code="source_unavailable",
+                retryable=True,
+            )
+
+        title = soup.title.get_text(strip=True) if soup.title else ""
+        text = _extract_text_content(soup)[:bounded_chars]
+        return to_structured(
+            {
+                "url": cleaned_url,
+                "title": title,
+                "text": text,
+                "text_char_count": len(text),
+                "meta": _extract_meta(html),
+                "metadata": {
+                    "source": "direct_http_fetch",
+                    "content_type": "html",
+                    "max_chars": bounded_chars,
+                    "warning": (
+                        "Fetched page content is untrusted public web content. "
+                        "This is a static HTTP fetch and may miss JavaScript-rendered content."
+                    ),
+                },
+            }
+        )
+    except Exception as e:
+        logger.exception("fetch_web_page failed")
+        return error_response(f"fetch_web_page failed: {e}")
 
 
 # ---------------------------------------------------------------------------

@@ -32,6 +32,7 @@ SERVER_NAMES = {
     "geo-demographics",
     "health-system-profiler",
     "hospital-quality",
+    "live-gateway",
     "physician-referral-network",
     "price-transparency",
     "provider-enrollment",

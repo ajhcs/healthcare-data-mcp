@@ -61,6 +61,20 @@ web_intelligence
 workforce_labor
 ```
 
+## Tools
+
+The discovery server also exposes tool-callable versions of the catalog resources for clients that do not reliably use MCP resources:
+
+| Tool | Purpose |
+| --- | --- |
+| `list_datasets` | Search/filter catalog entries by text, owning server, or category/tag. |
+| `get_dataset` | Return full metadata for one `dataset_id`. |
+| `get_dataset_schema` | Return grain, identity fields, common fields, and join keys. |
+| `get_dataset_source` | Return source URLs and expected cache files. |
+| `get_cache_status` | Return filesystem-only cache status. |
+| `list_runbooks` | List cache/source-audit runbooks. |
+| `get_runbook` | Return one runbook by id. |
+
 ## Prompts
 
 | Prompt | Purpose |

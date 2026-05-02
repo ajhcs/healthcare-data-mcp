@@ -303,6 +303,35 @@ services:
       retries: 3
       start_period: 30s
 
+  live-gateway:
+    build: .
+    command: python -m servers.live_gateway.server
+    profiles: ["live-gateway"]
+    ports:
+      - "8020:8020"
+    environment:
+      - MCP_TRANSPORT=streamable-http
+      - MCP_HOST=0.0.0.0
+      - MCP_PORT=8020
+      - MCP_LIVE_GATEWAY_AUTH_REQUIRED=${MCP_LIVE_GATEWAY_AUTH_REQUIRED:-true}
+      - MCP_LIVE_GATEWAY_BEARER_TOKEN_SHA256=${MCP_LIVE_GATEWAY_BEARER_TOKEN_SHA256:-}
+      - MCP_LIVE_GATEWAY_BEARER_TOKEN_SHA256_LIST=${MCP_LIVE_GATEWAY_BEARER_TOKEN_SHA256_LIST:-}
+      - MCP_LIVE_GATEWAY_REQUIRED_SCOPES=${MCP_LIVE_GATEWAY_REQUIRED_SCOPES:-mcp:read}
+      - MCP_LIVE_GATEWAY_ALLOWED_HOSTS=${MCP_LIVE_GATEWAY_ALLOWED_HOSTS:-localhost:8020,127.0.0.1:8020}
+      - MCP_LIVE_GATEWAY_ALLOWED_ORIGINS=${MCP_LIVE_GATEWAY_ALLOWED_ORIGINS:-http://localhost:*,http://127.0.0.1:*}
+      - MCP_LIVE_GATEWAY_PUBLIC_URL=${MCP_LIVE_GATEWAY_PUBLIC_URL:-}
+      - MCP_LIVE_GATEWAY_ISSUER_URL=${MCP_LIVE_GATEWAY_ISSUER_URL:-}
+      - SAM_GOV_API_KEY=${SAM_GOV_API_KEY:-}
+    volumes:
+      - healthcare-cache:/root/.healthcare-data-mcp/cache
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost',8020),5); s.close()"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
   provider-enrollment:
     build: .
     command: python -m servers.provider_enrollment.server
