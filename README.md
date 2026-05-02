@@ -33,6 +33,7 @@ Healthcare data is public, but it is scattered across CMS, CDC, NIH, HHS OIG, SA
 | Research health systems, referrals, finance, trials, publications, or web presence | `health-system-profiler`, `physician-referral-network`, `financial-intelligence`, `research-trials`, `web-intelligence` |
 | Screen organizations against public compliance signals | `public-records` |
 | Let remote MCP clients search dataset metadata safely | `gateway`, `discovery` |
+| Give one authenticated local/remote endpoint access to approved live tools | `live-gateway` |
 
 ## Quick Example
 
@@ -62,6 +63,7 @@ docker compose up --build
 | Structured responses | Bounded JSON-compatible results with provenance fields where available | CMS, CDC, NIH, ClinicalTrials.gov, SAM.gov, HHS OIG |
 | Local-first operation | Stdio and localhost HTTP by default, with cache reuse across sessions | `~/.healthcare-data-mcp/cache` or Docker `healthcare-cache` |
 | Remote-safe metadata mode | A gateway that exposes `search` and `fetch` for dataset metadata only | OpenAI and Claude remote MCP connector shapes |
+| Authenticated live router | One allowlisted gateway for provider, quality, claims, compliance, PLACES, NIH, and ClinicalTrials tools | Local stdio, or Streamable HTTP behind bearer auth/HTTPS |
 | Practical client packaging | Examples for Codex, Claude Code, Claude Desktop, generic MCP clients, Docker, and MCPB | `examples/`, `configs/`, `desktop-extension/` |
 
 ## Server Catalog
@@ -86,6 +88,7 @@ docker compose up --build
 | `provider-enrollment` | 8017 | CMS PECOS-derived enrollment, ownership graph, and CHOW history |
 | `community-health` | 8018 | CDC PLACES county, place, tract, and ZCTA estimates |
 | `research-trials` | 8019 | NIH RePORTER funding and ClinicalTrials.gov study activity |
+| `live-gateway` | 8020 | Authenticated live router for approved provider, quality, claims, compliance, community, and research tools |
 
 HTTP servers bind to `127.0.0.1` by default. Use `MCP_HOST=0.0.0.0` only in containers or behind a trusted reverse proxy with authentication.
 
@@ -130,7 +133,8 @@ The installer detects common MCP clients and can install via local Python or Doc
 | Claude Code | Project HTTP via `.mcp.json`, or stdio for selected servers | `.mcp.json` or `claude mcp add ...` |
 | Claude Desktop / shared desktops | Stdio JSON, Desktop Extension/MCPB, or local HTTP | `examples/claude-desktop-stdio.json`, `.mcp.json`, or `scripts/build_mcpb.py` |
 | Generic MCP clients | Stdio command or local Streamable HTTP URL | `hc-mcp <server>` or `http://localhost:<port>/mcp` |
-| OpenAI/Anthropic remote MCP integrations | HTTPS gateway only | `hc-mcp gateway --transport streamable-http` behind HTTPS/auth |
+| OpenAI/Anthropic remote MCP metadata integrations | HTTPS metadata gateway | `hc-mcp gateway --transport streamable-http` behind HTTPS/auth |
+| OpenAI/Anthropic remote MCP live integrations | HTTPS live gateway with auth | `hc-mcp live-gateway --transport streamable-http` behind HTTPS/auth |
 
 Local stdio examples:
 
@@ -280,6 +284,8 @@ LEIE stores `public-records/leie_current.csv`, `leie_current.parquet`, and `leie
 
 The remote `gateway` is intentionally metadata-only. It exposes dataset search/fetch records for remote MCP clients and does not proxy live exclusion screening, provider-enrollment queries, PLACES queries, RePORTER, or ClinicalTrials.gov.
 
+Use `live-gateway` when a client needs one allowlisted endpoint for live provider enrollment, quality, claims, LEIE/SAM, PLACES, NIH, or ClinicalTrials.gov calls. HTTP/SSE live-gateway deployments require bearer-token or token-hash configuration through `MCP_LIVE_GATEWAY_*` environment variables; local stdio use does not.
+
 ## Development
 
 ```bash
@@ -318,7 +324,7 @@ The script requires a clean worktree and an authenticated `gh` CLI. It enables b
 | Docker port conflict | Check `docker-compose.yml` ports and run `ss -tlnp` before changing ports |
 | Claude Code ignores project config | Approve the project `.mcp.json`, or add servers with `claude mcp add --scope local ...` |
 | Codex does not see a server | Check `~/.codex/config.toml` or `.codex/config.toml`; Codex CLI and IDE share that config |
-| Remote MCP client cannot use localhost | Deploy `gateway` behind HTTPS/auth; stdio and localhost HTTP are local-only |
+| Remote MCP client cannot use localhost | Deploy `gateway` or `live-gateway` behind HTTPS/auth; stdio and localhost HTTP are local-only |
 
 ## Limitations
 
@@ -326,7 +332,7 @@ The script requires a clean worktree and an authenticated `gh` CLI. It enables b
 - Some source APIs require keys for reliable or full access.
 - Large public datasets are cached locally; first use can take longer while files download and normalize.
 - Public exclusion screening is not final SSN/EIN identity verification or legal clearance.
-- The remote gateway is metadata-only unless a separate authenticated live-data gateway is designed and approved.
+- The remote `gateway` is metadata-only. Live calls belong on the separate authenticated `live-gateway`.
 - The MCPB Desktop Extension skeleton should be validated in Claude Desktop before broad distribution.
 
 ## FAQ
@@ -338,10 +344,10 @@ No. The project is built around public datasets and local cache files. Do not pu
 Not for every server. Many tools work with public downloads or unauthenticated public APIs, but SAM.gov, SEC EDGAR, Census, HUD, ORS, BLS, Google CSE, CHPL, and Proxycurl features may need keys or contact metadata.
 
 **Should I use stdio or HTTP?**
-Use stdio for local desktop/CLI agents. Use local Streamable HTTP when Docker is already running or when multiple local clients share the same server process. Use the HTTPS `gateway` for remote MCP integrations.
+Use stdio for local desktop/CLI agents. Use local Streamable HTTP when Docker is already running or when multiple local clients share the same server process. Use the HTTPS `gateway` for remote metadata integrations and HTTPS `live-gateway` only when live-tool auth is configured.
 
 **Can I expose every server to ChatGPT or another remote MCP client?**
-Not directly. Use the metadata-only `gateway` unless you have designed authentication, authorization, rate limits, Host/Origin validation, and source-specific compliance controls for live tools.
+Use the metadata-only `gateway` for discovery. Use `live-gateway` only behind HTTPS with bearer auth/OIDC-equivalent edge policy, Host/Origin validation, rate limits, and source-specific compliance controls.
 
 **Where do cached datasets live?**
 Local Python runs use `~/.healthcare-data-mcp/cache`. Docker Compose uses the `healthcare-cache` volume.

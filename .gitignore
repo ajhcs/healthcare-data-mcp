@@ -14,6 +14,8 @@ cookies*.txt
 *.cookies
 
 # Beads / Dolt files (added by bd init)
+.beads/
+issues.jsonl
 .dolt/
 *.db
 .beads-credential-key

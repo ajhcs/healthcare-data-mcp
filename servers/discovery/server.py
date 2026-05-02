@@ -1004,6 +1004,94 @@ def runbook_payload(runbook_id: str) -> dict[str, Any]:
     return {"runbook_id": runbook_id, **runbook}
 
 
+@mcp.tool(structured_output=True)
+async def list_datasets(query: str = "", server: str = "", tag: str = "", limit: int = 50) -> dict[str, Any]:
+    """List dataset catalog entries with optional text, server, and category filters."""
+
+    payload = dataset_catalog_payload()
+    query_token = query.strip().lower()
+    server_token = server.strip().lower()
+    tag_token = tag.strip().lower()
+    try:
+        parsed_limit = int(limit or 50)
+    except (TypeError, ValueError):
+        parsed_limit = 50
+    bounded_limit = max(1, min(parsed_limit, 200))
+
+    datasets = []
+    for dataset in payload["datasets"]:
+        haystack = " ".join(
+            [
+                dataset["dataset_id"],
+                dataset["title"],
+                dataset["category"],
+                dataset["grain"],
+                dataset["source_system"],
+                " ".join(dataset["server"]),
+                " ".join(dataset["workflows"]),
+            ]
+        ).lower()
+        if query_token and query_token not in haystack:
+            continue
+        if server_token and server_token not in {item.lower() for item in dataset["server"]}:
+            continue
+        if tag_token and tag_token not in dataset["category"].lower() and tag_token not in haystack:
+            continue
+        datasets.append(dataset)
+
+    return {
+        **{key: value for key, value in payload.items() if key != "datasets"},
+        "query": query.strip(),
+        "server": server.strip(),
+        "tag": tag.strip(),
+        "limit": bounded_limit,
+        "matched_count": len(datasets),
+        "datasets": datasets[:bounded_limit],
+    }
+
+
+@mcp.tool(structured_output=True)
+async def get_dataset(dataset_id: str) -> dict[str, Any]:
+    """Return full metadata for one dataset by dataset_id."""
+
+    return dataset_metadata_payload(dataset_id)
+
+
+@mcp.tool(structured_output=True)
+async def get_dataset_schema(dataset_id: str) -> dict[str, Any]:
+    """Return schema, grain, and join-key metadata for one dataset."""
+
+    return dataset_schema_payload(dataset_id)
+
+
+@mcp.tool(structured_output=True)
+async def get_dataset_source(dataset_id: str) -> dict[str, Any]:
+    """Return source URLs and expected cache files for one dataset."""
+
+    return dataset_source_payload(dataset_id)
+
+
+@mcp.tool(structured_output=True)
+async def get_cache_status() -> dict[str, Any]:
+    """Return filesystem-only cache status for expected dataset cache files."""
+
+    return cache_status_payload()
+
+
+@mcp.tool(structured_output=True)
+async def list_runbooks() -> dict[str, Any]:
+    """List available discovery and cache runbooks."""
+
+    return cache_runbooks_payload()
+
+
+@mcp.tool(structured_output=True)
+async def get_runbook(runbook_id: str) -> dict[str, Any]:
+    """Return one discovery/cache runbook by id."""
+
+    return runbook_payload(runbook_id)
+
+
 @mcp.resource(
     "healthcare-data://datasets/catalog",
     name="dataset_catalog",

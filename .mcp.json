@@ -75,6 +75,11 @@
       "command": "hc-mcp",
       "args": ["gateway"]
     },
+    "live-gateway": {
+      "type": "stdio",
+      "command": "hc-mcp",
+      "args": ["live-gateway"]
+    },
     "provider-enrollment": {
       "type": "stdio",
       "command": "hc-mcp",

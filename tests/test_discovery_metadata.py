@@ -117,6 +117,34 @@ async def test_fastmcp_resources_are_registered() -> None:
 
 
 @pytest.mark.asyncio
+async def test_fastmcp_tools_expose_discovery_payloads() -> None:
+    tools = await server.mcp.list_tools()
+    tool_names = {tool.name for tool in tools}
+
+    assert {
+        "list_datasets",
+        "get_dataset",
+        "get_dataset_schema",
+        "get_dataset_source",
+        "get_cache_status",
+        "list_runbooks",
+        "get_runbook",
+    } <= tool_names
+
+    catalog = await server.list_datasets(query="PLACES", limit=5)
+    dataset = await server.get_dataset("cdc_places")
+    schema = await server.get_dataset_schema("cdc_places")
+    source = await server.get_dataset_source("cdc_places")
+    runbooks = await server.list_runbooks()
+
+    assert catalog["matched_count"] >= 1
+    assert dataset["dataset_id"] == "cdc_places"
+    assert schema["dataset_id"] == "cdc_places"
+    assert source["dataset_id"] == "cdc_places"
+    assert runbooks["runbook_count"] == len(server.RUNBOOKS)
+
+
+@pytest.mark.asyncio
 async def test_fastmcp_prompts_render_common_workflows() -> None:
     prompts = await server.mcp.list_prompts()
     prompt_names = {prompt.name for prompt in prompts}

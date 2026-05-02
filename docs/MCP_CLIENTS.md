@@ -55,6 +55,7 @@ April 2026 local HTTP additions in `.mcp.json`:
 | `provider-enrollment` | `http://localhost:8017/mcp` |
 | `community-health` | `http://localhost:8018/mcp` |
 | `research-trials` | `http://localhost:8019/mcp` |
+| `live-gateway` | `http://localhost:8020/mcp` |
 
 `public-records` remains on `http://localhost:8013/mcp` for HHS OIG LEIE and SAM.gov Exclusions. Set `SAM_GOV_API_KEY` in the server environment for SAM.gov API-backed exclusion checks.
 
@@ -101,7 +102,7 @@ Codex/OpenAI remote HTTP config should point at the deployed HTTPS gateway endpo
 url = "https://your-domain.example/mcp"
 ```
 
-The remote gateway is metadata-only. It should advertise dataset availability and source metadata, not proxy live provider-enrollment, LEIE, SAM exclusion, PLACES, RePORTER, or ClinicalTrials.gov queries without a separate authenticated gateway design.
+The remote `gateway` is metadata-only. It advertises dataset availability and source metadata. Use the separate `live-gateway` for one-endpoint live provider-enrollment, LEIE, SAM exclusion, PLACES, RePORTER, or ClinicalTrials.gov calls, and only behind HTTPS/auth.
 
 Codex local stdio config in `~/.codex/config.toml`:
 
@@ -127,11 +128,13 @@ Claude Code can import Claude Desktop server config and also supports local/proj
 | Claude Desktop | Stdio JSON or MCPB Desktop Extension | `examples/claude-desktop-stdio.json` or generated `.mcpb` |
 | Claude Desktop cowork/shared machine | Docker Compose HTTP on localhost plus per-user client config | `.mcp.json` plus `.env` on the host |
 | Generic MCP clients | Stdio command or Streamable HTTP URL | `hc-mcp <server>` or `http://localhost:<port>/mcp` |
-| OpenAI API / ChatGPT remote MCP style integrations | HTTPS remote gateway only | `hc-mcp gateway --transport streamable-http` behind HTTPS/auth |
+| OpenAI API / ChatGPT remote MCP metadata integrations | HTTPS remote gateway | `hc-mcp gateway --transport streamable-http` behind HTTPS/auth |
+| OpenAI API / ChatGPT remote MCP live integrations | HTTPS live gateway with auth | `hc-mcp live-gateway --transport streamable-http` behind HTTPS/auth |
 
 ## Gaps To Close Before Public Remote Use
 
 - Deploy `hc-mcp gateway` behind HTTPS with OAuth/OIDC or a trusted identity-aware proxy.
+- Configure `hc-mcp live-gateway` with `MCP_LIVE_GATEWAY_*` bearer auth or equivalent edge identity before exposing live tools.
 - Add integration tests with MCP Inspector against stdio and Streamable HTTP.
 - Replace date-specific CMS download URLs with catalog discovery where possible.
 - Expand unit tests beyond `health-system-profiler`.

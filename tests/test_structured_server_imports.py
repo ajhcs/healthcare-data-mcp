@@ -16,6 +16,7 @@ STRUCTURED_SERVER_MODULES = [
     "servers.geo-demographics.server",
     "servers.health-system-profiler.server",
     "servers.hospital-quality.server",
+    "servers.live_gateway.server",
     "servers.physician-referral-network.server",
     "servers.price-transparency.server",
     "servers.provider_enrollment.server",

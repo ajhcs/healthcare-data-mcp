@@ -49,6 +49,11 @@ SERVERS: dict[str, ServerSpec] = {
     "web-intelligence": ServerSpec("servers.web_intelligence.server", 8014, "Web search and health system OSINT"),
     "discovery": ServerSpec("servers.discovery.server", 8015, "Dataset catalog resources, cache status, and prompts"),
     "gateway": ServerSpec("servers.gateway.server", 8016, "Remote-safe metadata gateway with search/fetch"),
+    "live-gateway": ServerSpec(
+        "servers.live_gateway.server",
+        8020,
+        "Authenticated live router for approved provider, quality, claims, compliance, community, and research tools",
+    ),
     "provider-enrollment": ServerSpec(
         "servers.provider_enrollment.server",
         8017,

@@ -63,6 +63,10 @@
       "command": "hc-mcp",
       "args": ["gateway"]
     },
+    "live-gateway": {
+      "command": "hc-mcp",
+      "args": ["live-gateway"]
+    },
     "provider-enrollment": {
       "command": "hc-mcp",
       "args": ["provider-enrollment"]

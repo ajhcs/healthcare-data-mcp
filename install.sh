@@ -38,6 +38,7 @@ declare -A SERVER_MODULES=(
   [hc-web-intelligence]="servers.web_intelligence.server"
   [hc-discovery]="servers.discovery.server"
   [hc-gateway]="servers.gateway.server"
+  [hc-live-gateway]="servers.live_gateway.server"
   [hc-provider-enrollment]="servers.provider_enrollment.server"
   [hc-community-health]="servers.community_health.server"
   [hc-research-trials]="servers.research_trials.server"
@@ -59,6 +60,7 @@ declare -A SERVER_PORTS=(
   [hc-web-intelligence]=8014
   [hc-discovery]=8015
   [hc-gateway]=8016
+  [hc-live-gateway]=8020
   [hc-provider-enrollment]=8017
   [hc-community-health]=8018
   [hc-research-trials]=8019
@@ -75,6 +77,7 @@ NO_KEY_SERVERS=(
   hc-claims-analytics
   hc-discovery
   hc-gateway
+  hc-live-gateway
   hc-provider-enrollment
   hc-community-health
   hc-research-trials

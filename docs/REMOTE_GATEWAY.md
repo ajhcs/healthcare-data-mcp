@@ -29,6 +29,8 @@ These names and response fields are shaped for OpenAI remote MCP search/fetch ex
 
 April 2026 metadata can include provider enrollment/ownership, CDC PLACES, NIH RePORTER, ClinicalTrials.gov, HHS OIG LEIE, and SAM.gov Exclusions dataset descriptions. The gateway must remain metadata-only for these domains: do not expose live exclusion screening, full provider-enrollment queries, or other source API proxies through the remote gateway unless a separate authenticated design is approved.
 
+For live calls through one MCP endpoint, use the separate `live-gateway` server. It is an allowlisted router over existing provider-enrollment, hospital-quality, claims-analytics, public-records exclusion, community-health, and research-trials tools.
+
 ## Security Configuration
 
 Use environment variables to move from local development to a locked-down remote service:
@@ -107,3 +109,24 @@ url = "https://gateway.example.com/mcp"
 ```
 
 Claude remote MCP connectors should use the same HTTPS MCP URL. Local Claude/Codex development can continue to use the existing stdio servers for live data workflows.
+
+## Live Gateway
+
+`hc-mcp live-gateway` is separate from the metadata gateway:
+
+- Port: `8020`.
+- Stdio: allowed for local desktop/CLI use without bearer auth.
+- HTTP/SSE: requires bearer-token or SHA-256 token-hash configuration by default.
+- Auth variables use the `MCP_LIVE_GATEWAY_*` prefix, for example `MCP_LIVE_GATEWAY_BEARER_TOKEN_SHA256`, `MCP_LIVE_GATEWAY_ALLOWED_HOSTS`, and `MCP_LIVE_GATEWAY_PUBLIC_URL`.
+- The public tool `list_live_tools()` returns the approved router surface.
+
+Example local HTTP run with a token hash:
+
+```bash
+MCP_TRANSPORT=streamable-http \
+MCP_HOST=127.0.0.1 \
+MCP_PORT=8020 \
+MCP_LIVE_GATEWAY_BEARER_TOKEN_SHA256=<sha256-token-hash> \
+MCP_LIVE_GATEWAY_ALLOWED_HOSTS=localhost:8020,127.0.0.1:8020 \
+hc-mcp live-gateway
+```

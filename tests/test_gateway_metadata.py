@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import importlib
+
 import pytest
 
+from servers._launcher import SERVERS
 from servers.gateway import server
 
 
@@ -41,3 +44,28 @@ async def test_gateway_fastmcp_tools_have_output_schemas() -> None:
 
     assert by_name["search"].outputSchema
     assert by_name["fetch"].outputSchema
+
+
+@pytest.mark.asyncio
+async def test_gateway_advertises_only_registered_server_tools(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SEC_USER_AGENT", "healthcare-data-mcp tests@example.com")
+
+    for dataset in server.DATASETS:
+        spec = SERVERS[dataset.server]
+        module = importlib.import_module(spec.module)
+        tools = await module.mcp.list_tools()
+        registered = {tool.name for tool in tools}
+
+        assert set(dataset.tools) <= registered, (
+            f"{dataset.id} advertises missing tools for {dataset.server}: "
+            f"{sorted(set(dataset.tools) - registered)}"
+        )
+
+
+def test_gateway_includes_april_2026_servers() -> None:
+    dataset_ids = {dataset.id for dataset in server.DATASETS}
+
+    assert "service-area" in dataset_ids
+    assert "provider-enrollment" in dataset_ids
+    assert "community-health" in dataset_ids
+    assert "research-trials" in dataset_ids
