@@ -52,6 +52,49 @@ PBJ_API_URL = "https://data.cms.gov/data-api/v1/dataset/7e0d53ba-8f02-4c66-98a5-
 # We use the provider-compliance API for structured access
 HCRIS_API_URL = "https://data.cms.gov/provider-compliance/cost-reports/hospital-provider-cost-report"
 
+_HCRIS_PROVIDER_COLUMNS = (
+    "prvdr_num",
+    "provider_number",
+    "provider_id",
+    "ccn",
+    "cms_certification_number",
+)
+_HCRIS_YEAR_COLUMNS = (
+    "fiscal_year",
+    "fy",
+    "report_year",
+    "cost_report_year",
+    "year",
+    "fy_end_dt",
+    "fiscal_year_end",
+    "fiscal_year_end_date",
+)
+_HCRIS_REPORT_RECORD_COLUMNS = ("rpt_rec_num", "report_record_number", "rpt_rec")
+_HCRIS_VALUE_COLUMNS = ("itm_val_num", "itm_val", "value", "val")
+_S3_FTE_COLUMN_MAP = {
+    "001": "total_ftes",
+    "002": "rn_ftes",
+    "003": "lpn_ftes",
+    "004": "aide_ftes",
+}
+_S3_DEPARTMENT_LINES = {
+    "001": "Hospital Adults & Pediatrics",
+    "002": "Intensive Care Unit",
+    "003": "Coronary Care Unit",
+    "004": "Burn Intensive Care Unit",
+    "005": "Surgical Intensive Care Unit",
+    "006": "Other Special Care",
+    "007": "Nursery",
+    "014": "Total Adults and Pediatrics",
+    "016": "Subprovider - IPF",
+    "017": "Subprovider - IRF",
+    "019": "Skilled Nursing Facility",
+    "020": "Nursing Facility",
+    "022": "Home Health Agency",
+    "023": "ASC",
+    "024": "Hospice",
+}
+
 _ACGME_COLUMN_ALIASES: dict[str, tuple[str, ...]] = {
     "program_id": (
         "program_id",
@@ -199,6 +242,59 @@ def _is_cache_valid(path: Path, ttl_days: int = _CACHE_TTL_DAYS) -> bool:
     return is_cache_valid(path, max_age_days=ttl_days)
 
 
+def _first_column(columns: list[str], candidates: tuple[str, ...], contains: str = "") -> str | None:
+    if contains:
+        return next((column for column in columns if contains in column), None)
+    return next((column for column in candidates if column in columns), None)
+
+
+def _hcris_code(value: object) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    digits = "".join(ch for ch in text if ch.isdigit())
+    if not digits:
+        return ""
+    return digits[:3].zfill(3)
+
+
+def _hcris_float(value: object) -> float:
+    try:
+        return float(str(value).replace(",", "").strip()) if str(value).strip() else 0.0
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _filter_hcris_provider_year(
+    con: duckdb.DuckDBPyConnection,
+    *,
+    ccn: str,
+    worksheet_prefix: str,
+    year: int = 0,
+) -> pd.DataFrame:
+    cols = [
+        r[0]
+        for r in con.execute(
+            "SELECT column_name FROM information_schema.columns WHERE table_name='hcris'"
+        ).fetchall()
+    ]
+    wksht_col = _first_column(cols, (), contains="wksht")
+    prvdr_col = _first_column(cols, _HCRIS_PROVIDER_COLUMNS)
+    if not wksht_col or not prvdr_col:
+        return pd.DataFrame()
+
+    where_parts = [f"{prvdr_col} = ?", f"{wksht_col} LIKE ?"]
+    params: list[object] = [ccn.strip().zfill(6), f"{worksheet_prefix}%"]
+    if year:
+        year_col = _first_column(cols, _HCRIS_YEAR_COLUMNS)
+        if year_col:
+            where_parts.append(f"CAST({year_col} AS VARCHAR) LIKE ?")
+            params.append(f"%{int(year)}%")
+
+    where = " AND ".join(where_parts)
+    return con.execute(f"SELECT * FROM hcris WHERE {where} LIMIT 1000", params).fetchdf()
+
+
 # ---------------------------------------------------------------------------
 # HRSA HPSA Data
 # ---------------------------------------------------------------------------
@@ -342,7 +438,7 @@ async def ensure_hcris_cached() -> bool:
                 logger.warning("No NMRC file found in HCRIS ZIP")
                 return False
 
-            # Read report file for provider names
+            # Read report file for provider/year metadata. NMRC rows are keyed by report record.
             rpt_df = None
             if rpt_files:
                 with zf.open(rpt_files[0]) as f:
@@ -367,13 +463,16 @@ async def ensure_hcris_cached() -> bool:
 
         result_df = pd.concat(filtered_chunks, ignore_index=True)
 
-        # Join with report file for provider names if available
+        # Join with report file for provider number, fiscal year, and provider names if available.
         if rpt_df is not None:
-            rpt_rec_col = next((c for c in result_df.columns if "rpt_rec" in c), None)
+            rpt_rec_col = _first_column(list(result_df.columns), _HCRIS_REPORT_RECORD_COLUMNS, contains="rpt_rec")
             if rpt_rec_col and rpt_rec_col in rpt_df.columns:
+                provider_cols = [c for c in _HCRIS_PROVIDER_COLUMNS if c in rpt_df.columns]
+                year_cols = [c for c in _HCRIS_YEAR_COLUMNS if c in rpt_df.columns]
                 name_cols = [c for c in rpt_df.columns if "prvdr" in c or "name" in c]
-                if name_cols:
-                    merge_cols = [rpt_rec_col] + name_cols[:2]
+                merge_cols = [rpt_rec_col] + provider_cols[:1] + year_cols[:2] + name_cols[:2]
+                merge_cols = list(dict.fromkeys(merge_cols))
+                if len(merge_cols) > 1:
                     deduped = pd.DataFrame(rpt_df[merge_cols]).drop_duplicates(subset=rpt_rec_col)
                     result_df = result_df.merge(
                         deduped, on=rpt_rec_col, how="left"
@@ -391,7 +490,7 @@ async def ensure_hcris_cached() -> bool:
         return False
 
 
-def query_hcris_gme(ccn: str) -> dict | None:
+def query_hcris_gme(ccn: str, year: int = 0) -> dict | None:
     """Query HCRIS S-2 data for GME/teaching hospital profile."""
     if not _HCRIS_CACHE.exists():
         return None
@@ -404,27 +503,15 @@ def query_hcris_gme(ccn: str) -> dict | None:
             "SELECT column_name FROM information_schema.columns WHERE table_name='hcris'"
         ).fetchall()]
 
-        wksht_col = next((c for c in cols if "wksht" in c), None)
-        line_col = next((c for c in cols if "line" in c), None)
-        clmn_col = next((c for c in cols if "clmn" in c), None)
-        val_col = next((c for c in cols if "val" in c or "itm" in c), None)
-        prvdr_col = next((c for c in cols if "prvdr" in c and "num" in c), None)
+        line_col = _first_column(cols, (), contains="line")
+        clmn_col = _first_column(cols, (), contains="clmn")
+        val_col = _first_column(cols, _HCRIS_VALUE_COLUMNS)
 
-        if not all([wksht_col, line_col, clmn_col, val_col]):
+        if not all([line_col, clmn_col, val_col]):
             con.close()
             return None
 
-        # First find the report record for this CCN
-        if prvdr_col:
-            rows = con.execute(f"""
-                SELECT * FROM hcris
-                WHERE {prvdr_col} = ? AND {wksht_col} LIKE 'S2%'
-                LIMIT 100
-            """, [ccn.strip().zfill(6)]).fetchdf()
-        else:
-            con.close()
-            return None
-
+        rows = _filter_hcris_provider_year(con, ccn=ccn, worksheet_prefix="S2", year=year)
         con.close()
 
         if rows.empty:
@@ -433,17 +520,12 @@ def query_hcris_gme(ccn: str) -> dict | None:
         # Parse S-2 worksheet values
         result: dict = {"ccn": ccn, "teaching_status": "Non-Teaching"}
         for _, row in rows.iterrows():
-            line = str(row.get(line_col, ""))
-            col = str(row.get(clmn_col, ""))
-            val = str(row.get(val_col, ""))
-
-            try:
-                fval = float(val.replace(",", "")) if val.strip() else 0.0
-            except ValueError:
-                fval = 0.0
+            line = _hcris_code(row.get(line_col, ""))
+            col = _hcris_code(row.get(clmn_col, ""))
+            fval = _hcris_float(row.get(val_col, ""))
 
             # Resident FTEs (line 66, col 1 = IME FTEs)
-            if line.startswith("066") and col.startswith("001"):
+            if line == "066" and col == "001":
                 result["total_resident_ftes"] = fval
                 if fval > 0:
                     result["teaching_status"] = "Teaching"
@@ -455,7 +537,7 @@ def query_hcris_gme(ccn: str) -> dict | None:
         return None
 
 
-def query_hcris_staffing(ccn: str) -> dict | None:
+def query_hcris_staffing(ccn: str, year: int = 0) -> dict | None:
     """Query HCRIS S-3 data for staffing FTEs by department."""
     if not _HCRIS_CACHE.exists():
         return None
@@ -468,52 +550,54 @@ def query_hcris_staffing(ccn: str) -> dict | None:
             "SELECT column_name FROM information_schema.columns WHERE table_name='hcris'"
         ).fetchall()]
 
-        wksht_col = next((c for c in cols if "wksht" in c), None)
-        line_col = next((c for c in cols if "line" in c), None)
-        clmn_col = next((c for c in cols if "clmn" in c), None)
-        val_col = next((c for c in cols if "val" in c or "itm" in c), None)
-        prvdr_col = next((c for c in cols if "prvdr" in c and "num" in c), None)
+        line_col = _first_column(cols, (), contains="line")
+        clmn_col = _first_column(cols, (), contains="clmn")
+        val_col = _first_column(cols, _HCRIS_VALUE_COLUMNS)
 
-        if not all([wksht_col, line_col, clmn_col, val_col, prvdr_col]):
+        if not all([line_col, clmn_col, val_col]):
             con.close()
             return None
 
-        rows = con.execute(f"""
-            SELECT * FROM hcris
-            WHERE {prvdr_col} = ? AND {wksht_col} LIKE 'S3%'
-            LIMIT 500
-        """, [ccn.strip().zfill(6)]).fetchdf()
+        rows = _filter_hcris_provider_year(con, ccn=ccn, worksheet_prefix="S3", year=year)
         con.close()
 
         if rows.empty:
             return None
 
         # Parse S-3 worksheet values into departments
-        departments: dict[str, dict] = {}
-        total_ftes = 0.0
+        departments: dict[str, dict[str, float | str]] = {}
 
         for _, row in rows.iterrows():
-            line = str(row.get(line_col, ""))
-            col = str(row.get(clmn_col, ""))
-            val = str(row.get(val_col, ""))
+            line = _hcris_code(row.get(line_col, ""))
+            col = _hcris_code(row.get(clmn_col, ""))
+            metric = _S3_FTE_COLUMN_MAP.get(col)
+            if not line or not metric:
+                continue
 
-            try:
-                fval = float(val.replace(",", "")) if val.strip() else 0.0
-            except ValueError:
-                fval = 0.0
+            fval = _hcris_float(row.get(val_col, ""))
+            dept_key = f"line_{line}"
+            if dept_key not in departments:
+                departments[dept_key] = {
+                    "dept_name": _S3_DEPARTMENT_LINES.get(line, f"Cost Center {line}"),
+                    "total_ftes": 0.0,
+                    "rn_ftes": 0.0,
+                    "lpn_ftes": 0.0,
+                    "aide_ftes": 0.0,
+                }
+            departments[dept_key][metric] = fval
 
-            # S-3 Part I: Employee FTEs by cost center line
-            if col.startswith("001"):  # Column 1 = employee FTEs
-                dept_key = f"line_{line}"
-                if dept_key not in departments:
-                    departments[dept_key] = {"dept_name": f"Cost Center {line}", "total_ftes": 0.0}
-                departments[dept_key]["total_ftes"] = fval
-                total_ftes += fval
+        total_ftes = sum(float(d["total_ftes"]) for d in departments.values())
 
         dept_list = [
-            {"dept_name": d["dept_name"], "total_ftes": d["total_ftes"],
-             "rn_ftes": 0.0, "lpn_ftes": 0.0, "aide_ftes": 0.0}
-            for d in departments.values() if d["total_ftes"] > 0
+            {
+                "dept_name": str(d["dept_name"]),
+                "total_ftes": float(d["total_ftes"]),
+                "rn_ftes": float(d["rn_ftes"]),
+                "lpn_ftes": float(d["lpn_ftes"]),
+                "aide_ftes": float(d["aide_ftes"]),
+            }
+            for d in departments.values()
+            if any(float(d[key]) > 0 for key in ("total_ftes", "rn_ftes", "lpn_ftes", "aide_ftes"))
         ]
 
         return {

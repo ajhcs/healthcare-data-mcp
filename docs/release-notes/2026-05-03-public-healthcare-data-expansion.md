@@ -1,0 +1,61 @@
+# Public Healthcare Data Expansion
+
+Released: 2026-05-03
+
+This release expands public-source healthcare intelligence across 340B, PHC4,
+PA/NJ/DE state hospital artifacts, public financial health, staffing,
+throughput, and cyber incident enrichment. It keeps the original boundary:
+public data only, no paid PHC4 discharge files, no internal imports, and no
+unsupported MAP revenue-cycle KPI proxies.
+
+## Public Cache Acquisition
+
+- Added setup and discovery coverage for `state_health_data`,
+  `phc4_public_reports`, `ahrq_hfmd`, `pa_hospital_reports`,
+  `nj_hospital_public_data`, and `de_hospital_discharge`.
+- Added acquisition flags for PHC4 public reports, AHRQ HFMD, PA hospital
+  reports, NJ hospital public data, DE hospital discharge artifacts, and HRSA
+  340B OPAIS status checks.
+- HRSA 340B OPAIS automation now reports a precise `not_automatable` status
+  when the public reports page does not expose a stable unauthenticated JSON
+  export URL.
+
+## PHC4 and State Public Data
+
+- Added PHC4 public report indexing with report title, type, year, artifact URL,
+  landing page URL, publication date, and extracted table provenance where
+  available.
+- Added normalized PA/NJ/DE public state-health artifact metadata and query
+  helpers with state, source, facility, metric, page/table, confidence, and
+  source URL fields.
+- Added structured operations helpers so throughput metrics can prefer state
+  public fields, then public cost-report fields, then public summary/linkage
+  sources.
+
+## Finance, Staffing, and Throughput
+
+- Added public financial health/community-benefit profiles using high-confidence
+  public fields from HCRIS, IRS 990 Schedule H, and AHRQ HFMD caches.
+- Added explicit confidence values for public financial metrics and regression
+  tests preventing HFMA MAP KPI calculations or HCRIS days-in-A/R proxy output.
+- Added staffing and productivity outputs for FTE, adjusted patient day, SNF
+  nursing hours, resident FTE, staff-to-bed, staff-to-discharge, peer groups,
+  provider-year selection, and case-mix-adjusted discharges per FTE only when
+  required public fields are present.
+- Added public throughput, ED volume, OR/procedure volume, and modality volume
+  profiles with source ranking and provenance.
+
+## Cyber Enrichment
+
+- Added OCR enforcement action indexing, SEC cyber disclosure lookup support,
+  PA/NJ/DE state breach notice source status, and CISA KEV vulnerability
+  context.
+- Cyber outputs now distinguish entity-match confidence, incident-type
+  confidence, disclosed timelines, source type, and vulnerability context from
+  actual incident evidence.
+
+## Verification
+
+- `.venv/bin/pytest -q`
+- `.venv/bin/ruff check <touched files>`
+- `git diff --check`

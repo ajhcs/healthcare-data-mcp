@@ -7,6 +7,7 @@ accreditation, and interoperability data. Port 8013.
 from typing import Any
 import csv
 from datetime import UTC, datetime
+import json
 import logging
 import os as _os
 from pathlib import Path
@@ -16,6 +17,7 @@ import re
 from shared.utils.http_client import resilient_request
 from mcp.server.fastmcp import FastMCP
 from shared.utils.mcp_response import error_response, to_structured
+from shared import state_health_data
 
 from . import data_loaders, usaspending_client, sam_client, sam_exclusions_client  # pyright: ignore[reportAttributeAccessIssue]
 from .models import (
@@ -26,6 +28,9 @@ from .models import (
     SAMOpportunity,
     SAMResponse,
     CoveredEntity340B,
+    CISAKevContext,
+    CyberIncidentRecord,
+    CyberSourceStatus,
     Status340BResponse,
     BreachRecord,
     BreachHistoryResponse,
@@ -141,6 +146,119 @@ def _normalized_key(value: object) -> str:
 
 def _contains_sensitive_identifier_keys(payload: dict[str, Any]) -> bool:
     return bool(_SENSITIVE_IDENTIFIER_KEYS & {_normalized_key(key) for key in payload})
+
+
+# ---------------------------------------------------------------------------
+# Cyber incident enrichment helpers
+# ---------------------------------------------------------------------------
+
+_STATE_AG_BREACH_NOTICE_SOURCE_STATUSES: dict[str, CyberSourceStatus] = {
+    "PA": CyberSourceStatus(
+        source_name="Pennsylvania Office of Attorney General breach notices",
+        source_type="state_ag_breach_notice",
+        status="ready",
+        reason="Pennsylvania notices can be represented as public-page records in the local cyber index.",
+        source_url="https://www.attorneygeneral.gov/",
+        next_step="Seed public notice pages or structured fixture rows into the public-records cyber cache.",
+    ),
+    "NJ": CyberSourceStatus(
+        source_name="New Jersey Division of Consumer Affairs breach notices",
+        source_type="state_ag_breach_notice",
+        status="not_searchable",
+        reason="The public source does not expose a stable structured search/export endpoint for automated entity lookup.",
+        source_url="https://www.njconsumeraffairs.gov/",
+        next_step="Use manual source review or add curated public notice fixtures when available.",
+    ),
+    "DE": CyberSourceStatus(
+        source_name="Delaware Department of Justice breach notices",
+        source_type="state_ag_breach_notice",
+        status="not_automatable",
+        reason="The public source should not be automated without a stable unauthenticated index or documented export path.",
+        source_url="https://attorneygeneral.delaware.gov/",
+        next_step="Treat Delaware AG breach notices as manual-review evidence until a stable public feed exists.",
+    ),
+}
+
+
+def _cyber_source_statuses(states: list[str] | None = None) -> dict[str, dict[str, Any]]:
+    requested = [state.strip().upper() for state in states or [] if state.strip()]
+    keys = requested or ["PA", "NJ", "DE"]
+    statuses: dict[str, dict[str, Any]] = {}
+    for state in keys:
+        status = _STATE_AG_BREACH_NOTICE_SOURCE_STATUSES.get(
+            state,
+            CyberSourceStatus(
+                source_name=f"{state} state AG breach notices",
+                source_type="state_ag_breach_notice",
+                status="not_searchable",
+                reason="No state-specific public breach notice search status has been configured.",
+                next_step="Add a reviewed source status before using this state for automated enrichment.",
+            ),
+        )
+        statuses[state] = status.model_dump()
+    return statuses
+
+
+def _breach_incident_type(breach: dict[str, Any]) -> str:
+    haystack = json.dumps(breach).lower()
+    if "ransomware" in haystack:
+        return "ransomware"
+    if "malware" in haystack:
+        return "malware"
+    if "phishing" in haystack:
+        return "phishing"
+    if "hacking" in haystack or "unauthorized access" in haystack:
+        return "unauthorized_access"
+    if "network" in haystack or "it incident" in haystack or "cyber" in haystack:
+        return "cybersecurity_incident"
+    return ""
+
+
+def _breach_incident_type_confidence(breach: dict[str, Any]) -> str:
+    incident_type = _breach_incident_type(breach)
+    if incident_type in {"ransomware", "malware", "phishing", "unauthorized_access"}:
+        return "high"
+    if incident_type:
+        return "medium"
+    return "low"
+
+
+def _breach_entity_match_confidence(entity_name: str, breach: dict[str, Any]) -> str:
+    breach_name = str(breach.get("entity_name", ""))
+    if not entity_name.strip():
+        return "not_requested"
+    if entity_name.lower() in breach_name.lower() or breach_name.lower() in entity_name.lower():
+        return "high"
+    if entity_name.lower() in json.dumps(breach).lower():
+        return "medium"
+    return "low"
+
+
+def _cyber_incident_from_breach(entity_name: str, breach: dict[str, Any]) -> dict[str, Any]:
+    incident_type_confidence = _breach_incident_type_confidence(breach)
+    entity_match_confidence = _breach_entity_match_confidence(entity_name, breach)
+    return CyberIncidentRecord(
+        entity_name=str(breach.get("entity_name", "")),
+        state=str(breach.get("state", "")),
+        incident_type=_breach_incident_type(breach),
+        incident_date="",
+        disclosure_date=str(breach.get("breach_submission_date", "")),
+        date=str(breach.get("breach_submission_date", "")),
+        title=str(breach.get("entity_name", "")),
+        summary=str(breach.get("web_description", "")),
+        source_type="hhs_ocr_breach_portal",
+        entity_match_confidence=entity_match_confidence,
+        incident_type_confidence=incident_type_confidence,
+        timeline_disclosed=bool(breach.get("breach_submission_date")),
+        timeline_inferred=False,
+        confidence=(
+            "high"
+            if entity_match_confidence == "high" and incident_type_confidence == "high"
+            else "medium"
+            if incident_type_confidence in {"high", "medium"}
+            else "low"
+        ),
+    ).model_dump()
 
 
 # ---------------------------------------------------------------------------
@@ -432,7 +550,9 @@ async def get_340b_status(
 ) -> dict[str, Any]:
     """Look up 340B Drug Pricing Program enrollment and contract pharmacy data.
 
-    Requires manual download of the HRSA 340B OPAIS daily JSON export.
+    Uses the cached HRSA 340B OPAIS daily JSON export when available. If the
+    public reports page does not expose a stable direct JSON URL, the response
+    includes a not_automatable source status with precise next steps.
 
     Args:
         entity_name: Search by covered entity name.
@@ -444,12 +564,15 @@ async def get_340b_status(
             return error_response("At least one of entity_name or entity_id is required.")
 
         if not data_loaders.ensure_340b_loaded():
+            source_status = await state_health_data.acquire_340b_opais()
             return error_response(
                 "340B data not available",
+                code="source_not_automatable" if source_status.status == "not_automatable" else "source_unavailable",
                 instructions=(
-                    "Download the HRSA 340B OPAIS daily JSON export and place it at: "
-                    f"{data_loaders._340B_JSON}"
+                    source_status.next_step
+                    or f"Download the HRSA 340B OPAIS daily JSON export and place it at: {data_loaders._340B_JSON}"
                 ),
+                source_status=source_status.to_dict(),
             )
 
         rows = data_loaders.query_340b(
@@ -478,6 +601,70 @@ async def get_340b_status(
 async def check_340b_status(entity_name: str = "", entity_id: str = "", state: str = "") -> dict[str, Any]:
     """Alias for get_340b_status."""
     return await get_340b_status(entity_name=entity_name, entity_id=entity_id, state=state)
+
+
+@mcp.tool(structured_output=True)
+async def get_340b_profile(entity_name: str = "", entity_id: str = "", state: str = "") -> dict[str, Any]:
+    """Return a normalized 340B profile with parent/child and pharmacy context."""
+    result = await get_340b_status(entity_name=entity_name, entity_id=entity_id, state=state)
+    if result.get("ok") is False:
+        return result
+    entities = result.get("entities", [])
+    if not entities:
+        return to_structured({"search_term": entity_name or entity_id, "total_results": 0, "profiles": []})
+    profiles = []
+    for entity in entities:
+        profiles.append(
+            {
+                "entity_id": entity.get("entity_id", ""),
+                "entity_name": entity.get("entity_name", ""),
+                "entity_type": entity.get("entity_type", ""),
+                "parent_child_relation": entity.get("parent_child_relation", ""),
+                "parent_entity_id": entity.get("parent_entity_id", ""),
+                "parent_entity_name": entity.get("parent_entity_name", ""),
+                "contract_pharmacy_count": entity.get("contract_pharmacy_count", 0),
+                "participation_status": entity.get("participation_status", ""),
+                "participating": entity.get("participating", True),
+                "effective_date": entity.get("effective_date", ""),
+                "termination_date": entity.get("termination_date", ""),
+                "source_report_date": entity.get("source_report_date", ""),
+                "address": entity.get("address", ""),
+                "city": entity.get("city", ""),
+                "state": entity.get("state", ""),
+                "zip_code": entity.get("zip_code", ""),
+            }
+        )
+    return to_structured({"search_term": entity_name or entity_id, "total_results": len(profiles), "profiles": profiles})
+
+
+@mcp.tool(structured_output=True)
+async def find_340b_entities_near_facility(
+    facility_name: str = "",
+    state: str = "",
+    city: str = "",
+    limit: int = 25,
+) -> dict[str, Any]:
+    """Find 340B covered entities by facility/city/state public-record proximity filters.
+
+    This is textual proximity only; it does not infer geographic radius unless
+    coordinates are present in the OPAIS cache.
+    """
+    result = await get_340b_status(entity_name=facility_name, state=state)
+    if result.get("ok") is False:
+        return result
+    entities = result.get("entities", [])
+    if city:
+        entities = [entity for entity in entities if str(entity.get("city", "")).lower() == city.lower()]
+    return to_structured(
+        {
+            "facility_name": facility_name,
+            "state": state.upper() if state else "",
+            "city": city,
+            "match_method": "opais_name_city_state_text_filter",
+            "total_results": min(len(entities), max(1, min(limit, 100))),
+            "entities": entities[: max(1, min(limit, 100))],
+        }
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -529,6 +716,11 @@ async def get_breach_history(
                 location_of_breached_info=r.get("location_of_breached_info", ""),
                 business_associate_present=r.get("business_associate_present", ""),
                 web_description=r.get("web_description", ""),
+                entity_match_confidence=_breach_entity_match_confidence(entity_name, r),
+                incident_type_confidence=_breach_incident_type_confidence(r),
+                timeline_disclosed=bool(r.get("breach_submission_date")),
+                timeline_inferred=False,
+                source_type="hhs_ocr_breach_portal",
             ))
 
         total_individuals = sum(b.individuals_affected for b in breaches)
@@ -543,6 +735,208 @@ async def get_breach_history(
     except Exception as e:
         logger.exception("get_breach_history failed")
         return error_response(f"get_breach_history failed: {e}")
+
+
+@mcp.tool(structured_output=True)
+async def search_phc4_public_reports(query: str, year: str = "", report_type: str = "") -> dict[str, Any]:
+    """Search the indexed PHC4 public report library without using paid PHC4 datasets."""
+    try:
+        return to_structured(await state_health_data.search_phc4_reports(query, year=year, report_type=report_type))
+    except Exception as e:
+        logger.exception("search_phc4_public_reports failed")
+        return error_response(f"search_phc4_public_reports failed: {e}")
+
+
+@mcp.tool(structured_output=True)
+async def get_phc4_hospital_performance(hospital_name: str = "", year: int = 0) -> dict[str, Any]:
+    """Return PHC4 public Hospital Performance report matches and provenance."""
+    try:
+        return to_structured(await state_health_data.phc4_report_profile(hospital_name=hospital_name, year=year, report_type="hospital_performance"))
+    except Exception as e:
+        logger.exception("get_phc4_hospital_performance failed")
+        return error_response(f"get_phc4_hospital_performance failed: {e}")
+
+
+@mcp.tool(structured_output=True)
+async def get_phc4_financial_analysis(hospital_name: str = "", fiscal_year: int = 0) -> dict[str, Any]:
+    """Return PHC4 public Financial Analysis report matches and provenance."""
+    try:
+        return to_structured(await state_health_data.phc4_report_profile(hospital_name=hospital_name, fiscal_year=fiscal_year, report_type="financial_analysis"))
+    except Exception as e:
+        logger.exception("get_phc4_financial_analysis failed")
+        return error_response(f"get_phc4_financial_analysis failed: {e}")
+
+
+@mcp.tool(structured_output=True)
+async def get_phc4_common_procedure_profile(
+    hospital_name: str = "", procedure: str = "", year: int = 0,
+) -> dict[str, Any]:
+    """Return PHC4 public Common Procedures report matches and provenance."""
+    try:
+        return to_structured(
+            await state_health_data.phc4_report_profile(
+                hospital_name=hospital_name,
+                procedure=procedure,
+                year=year,
+                report_type="common_procedure",
+            )
+        )
+    except Exception as e:
+        logger.exception("get_phc4_common_procedure_profile failed")
+        return error_response(f"get_phc4_common_procedure_profile failed: {e}")
+
+
+@mcp.tool(structured_output=True)
+async def search_ocr_enforcement_actions(
+    query: str = "",
+    entity_name: str = "",
+    state: str = "",
+    limit: int = 25,
+) -> dict[str, Any]:
+    """Search locally indexed HHS OCR enforcement action public pages."""
+    try:
+        result = data_loaders.search_ocr_enforcement_actions(
+            query=query,
+            entity_name=entity_name,
+            state=state,
+            limit=limit,
+        )
+        return to_structured(
+            {
+                "query": query,
+                "entity_name": entity_name,
+                "state": state.upper() if state else "",
+                "total_results": len(result.get("records", [])),
+                "source_status": result.get("source_status", {}),
+                "records": result.get("records", []),
+            }
+        )
+    except Exception as e:
+        logger.exception("search_ocr_enforcement_actions failed")
+        return error_response(f"search_ocr_enforcement_actions failed: {e}")
+
+
+@mcp.tool(structured_output=True)
+async def search_sec_cyber_disclosures(
+    entity_name: str = "",
+    cik: str = "",
+    query: str = "",
+    start_date: str = "",
+    end_date: str = "",
+    limit: int = 25,
+) -> dict[str, Any]:
+    """Search locally indexed SEC cyber disclosures.
+
+    SEC_USER_AGENT is required for this search path so callers do not build SEC
+    workflows that ignore EDGAR's contactable user-agent policy.
+    """
+    try:
+        sec_user_agent = _os.environ.get("SEC_USER_AGENT", "").strip()
+        if not sec_user_agent:
+            return error_response(
+                "SEC_USER_AGENT is required for SEC cyber disclosure search.",
+                code="invalid_config",
+                instructions="Set SEC_USER_AGENT to a contactable application name and email before using SEC paths.",
+            )
+
+        result = data_loaders.search_sec_cyber_disclosures(
+            entity_name=entity_name,
+            cik=cik,
+            query=query,
+            start_date=start_date,
+            end_date=end_date,
+            limit=limit,
+        )
+        records = result.get("records", [])
+        return to_structured(
+            {
+                "entity_name": entity_name,
+                "cik": cik,
+                "query": query,
+                "start_date": start_date,
+                "end_date": end_date,
+                "total_results": len(records),
+                "source_status": result.get("source_status", {}),
+                "records": records,
+            }
+        )
+    except Exception as e:
+        logger.exception("search_sec_cyber_disclosures failed")
+        return error_response(f"search_sec_cyber_disclosures failed: {e}")
+
+
+@mcp.tool(structured_output=True)
+async def get_state_ag_breach_notice_sources(states: list[str] | None = None) -> dict[str, Any]:
+    """Return PA/NJ/DE state AG breach notice source statuses and reasons."""
+    return to_structured({"sources": _cyber_source_statuses(states)})
+
+
+@mcp.tool(structured_output=True)
+async def get_cisa_kev_context_status() -> dict[str, Any]:
+    """Return CISA KEV context-only status; this source is not attribution evidence."""
+    return to_structured(CISAKevContext().model_dump())
+
+
+@mcp.tool(structured_output=True)
+async def get_cyber_incident_profile(entity_name: str, state: str = "") -> dict[str, Any]:
+    """Enrich public cyber incident history from OCR breach data and public-source flags.
+
+    The tool returns confidence flags and does not infer response timelines
+    unless a source row explicitly contains timing fields.
+    """
+    try:
+        breach_result = await get_breach_history(entity_name=entity_name, state=state)
+        if breach_result.get("ok") is False:
+            breaches: list[dict[str, Any]] = []
+            ocr_status = breach_result.get("error", {}).get("code", "source_unavailable")
+        else:
+            breaches = breach_result.get("breaches", [])
+            ocr_status = "ready"
+
+        incidents = [_cyber_incident_from_breach(entity_name, breach) for breach in breaches]
+
+        ocr_enforcement = data_loaders.search_ocr_enforcement_actions(entity_name=entity_name, state=state, limit=10)
+        incidents.extend(ocr_enforcement.get("records", []))
+
+        sec_status: dict[str, Any]
+        if _os.environ.get("SEC_USER_AGENT", "").strip():
+            sec_result = data_loaders.search_sec_cyber_disclosures(entity_name=entity_name, limit=10)
+            sec_status = sec_result.get("source_status", {})
+            incidents.extend(sec_result.get("records", []))
+        else:
+            sec_status = CyberSourceStatus(
+                source_name="SEC EDGAR cyber disclosures",
+                source_type="sec_cyber_disclosure",
+                status="not_searchable",
+                reason="SEC_USER_AGENT is not set; SEC search paths require a contactable user agent.",
+                source_url="https://www.sec.gov/edgar/search/",
+                next_step="Set SEC_USER_AGENT before searching SEC cyber disclosures.",
+            ).model_dump()
+
+        cisa_context = CISAKevContext().model_dump()
+        return to_structured(
+            {
+                "entity_name": entity_name,
+                "state": state.upper() if state else "",
+                "sources": {
+                    "hhs_ocr_breach_portal": ocr_status,
+                    "ocr_enforcement_actions": ocr_enforcement.get("source_status", {}),
+                    "sec_cyber_disclosures": sec_status,
+                    "state_ag_breach_notices": _cyber_source_statuses([state] if state else None),
+                    "cisa_kev": cisa_context,
+                },
+                "incident_count": len(incidents),
+                "incidents": incidents,
+                "confidence_flags": {
+                    "hhs_ocr_name_match": "medium" if breaches else "none",
+                    "timeline_inferred": False,
+                    "cisa_kev_used_for_attribution": cisa_context["attribution_used"],
+                },
+            }
+        )
+    except Exception as e:
+        logger.exception("get_cyber_incident_profile failed")
+        return error_response(f"get_cyber_incident_profile failed: {e}")
 
 
 # ---------------------------------------------------------------------------

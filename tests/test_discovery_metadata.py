@@ -29,6 +29,12 @@ def test_catalog_lists_expected_dataset_groups() -> None:
     assert "clinicaltrials_gov" in dataset_ids
     assert "hhs_oig_leie" in dataset_ids
     assert "sam_gov_exclusions" in dataset_ids
+    assert "state_health_data" in dataset_ids
+    assert "phc4_public_reports" in dataset_ids
+    assert "ahrq_hfmd" in dataset_ids
+    assert "pa_hospital_reports" in dataset_ids
+    assert "nj_hospital_public_data" in dataset_ids
+    assert "de_hospital_discharge" in dataset_ids
     assert "healthcare-data://datasets/{dataset_id}/schema" in payload["resource_templates"]
 
 
@@ -100,6 +106,17 @@ def test_cache_status_includes_leie_cache_ttl(tmp_path) -> None:
     assert entries["public-records/leie_current.csv"]["ttl_days"] == 31
     assert entries["public-records/leie_current.parquet"]["status"] == "missing"
     assert entries["public-records/leie_current.meta.json"]["ttl_days"] == 31
+
+
+def test_cache_status_includes_public_state_health_caches(tmp_path) -> None:
+    payload = server.cache_status_payload(cache_root=tmp_path)
+    paths = {entry["relative_path"]: entry for entry in payload["entries"]}
+
+    assert paths["state-health-data/phc4/report_index.json"]["dataset_id"] == "phc4_public_reports"
+    assert paths["state-health-data/pa-hospital-reports/artifact_index.json"]["status"] == "missing"
+    assert paths["state-health-data/pa-hospital-reports/artifact_metadata.csv"]["dataset_id"] == "pa_hospital_reports"
+    assert paths["state-health-data/nj-hospital-public-data/artifact_index.json"]["dataset_id"] == "nj_hospital_public_data"
+    assert paths["state-health-data/de-hospital-discharge/artifact_index.json"]["dataset_id"] == "de_hospital_discharge"
 
 
 @pytest.mark.asyncio

@@ -99,12 +99,21 @@ _FY_END_CANDIDATES = (
     "fiscal_year_end_dt",
 )
 
+_FY_CANDIDATES = (
+    "fiscal_year",
+    "fy",
+    "report_year",
+    "cost_report_year",
+    "year",
+)
+
 
 async def load_cost_report_row(
     data_loaders: Any,
     ccn: str,
+    year: int = 0,
 ) -> tuple[Any, str]:
-    """Load the most-recent Cost Report PUF row for *ccn*.
+    """Load the requested or most-recent Cost Report PUF row for *ccn*.
 
     Parameters
     ----------
@@ -113,6 +122,9 @@ async def load_cost_report_row(
         ``load_cost_report()`` coroutine returning a :class:`pandas.DataFrame`.
     ccn:
         The 6-character CMS Certification Number to look up.
+    year:
+        Optional fiscal/report year. When present, prefer rows whose fiscal
+        year or fiscal-year-end date matches this year.
 
     Returns
     -------
@@ -133,6 +145,21 @@ async def load_cost_report_row(
     matches = df[df[ccn_col].str.strip() == ccn.strip()]
     if matches.empty:
         return None, f"No cost report data found for CCN: {ccn}"
+
+    if year:
+        year_text = str(int(year))
+        year_matches = pd.DataFrame()
+        for candidate in (*_FY_CANDIDATES, *_FY_END_CANDIDATES):
+            col = cr_col(matches, candidate)
+            if not col:
+                continue
+            selected = matches[matches[col].astype(str).str.contains(year_text, regex=False, na=False)]
+            if not selected.empty:
+                year_matches = selected
+                break
+        if year_matches.empty:
+            return None, f"No cost report data found for CCN: {ccn} and year: {year}"
+        matches = year_matches
 
     # Prefer the most recent fiscal year when multiple rows exist.
     fy_col = cr_col(matches, *_FY_END_CANDIDATES)

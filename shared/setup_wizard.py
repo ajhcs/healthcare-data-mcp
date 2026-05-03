@@ -6,6 +6,7 @@ import argparse
 import asyncio
 import getpass
 import hashlib
+import json
 import re
 import secrets
 import shutil
@@ -13,6 +14,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from shared.utils.env_file import read_env_file, write_env_file
+from shared.state_health_data import acquire_sources
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -43,6 +45,16 @@ class ManualCacheItem:
     agent_prompt: str
     acquire_flag: str = ""
     unavailable_reason: str = ""
+
+
+@dataclass(frozen=True)
+class PublicCacheItem:
+    name: str
+    cache_paths: tuple[Path, ...]
+    tools: tuple[str, ...]
+    source_url: str
+    acquire_flag: str
+    instructions: str
 
 
 CONFIG_KEYS: tuple[ConfigKey, ...] = (
@@ -123,6 +135,72 @@ MANUAL_CACHE_ITEMS: tuple[ManualCacheItem, ...] = (
 )
 
 
+PUBLIC_CACHE_ITEMS: tuple[PublicCacheItem, ...] = (
+    PublicCacheItem(
+        name="PHC4 public reports",
+        cache_paths=(
+            Path("state-health-data") / "phc4" / "report_index.json",
+            Path("state-health-data") / "phc4" / "report_index.parquet",
+            Path("state-health-data") / "phc4" / "tables",
+        ),
+        tools=(
+            "public_records.search_phc4_public_reports",
+            "public_records.get_phc4_hospital_performance",
+            "public_records.get_phc4_financial_analysis",
+            "public_records.get_phc4_common_procedure_profile",
+        ),
+        source_url="https://www.phc4.org/reports-library/",
+        acquire_flag="--acquire-phc4-public-reports",
+        instructions="Index and cache public PHC4 report artifacts and extract supported tables.",
+    ),
+    PublicCacheItem(
+        name="AHRQ HFMD",
+        cache_paths=(
+            Path("state-health-data") / "ahrq-hfmd" / "hfmd.csv",
+            Path("state-health-data") / "ahrq-hfmd" / "hfmd.zip",
+            Path("state-health-data") / "ahrq-hfmd" / "csv",
+        ),
+        tools=("financial_intelligence.get_public_financial_health_profile",),
+        source_url="https://www.ahrq.gov/data/innovations/hfmd.html",
+        acquire_flag="--acquire-ahrq-hfmd",
+        instructions="Acquire the AHRQ Hospital Financial Measures Database CSV ZIP and normalized files.",
+    ),
+    PublicCacheItem(
+        name="PA hospital reports",
+        cache_paths=(
+            Path("state-health-data") / "pa-hospital-reports" / "artifact_index.json",
+            Path("state-health-data") / "pa-hospital-reports" / "artifact_metadata.csv",
+        ),
+        tools=("workforce_analytics.get_public_throughput_profile",),
+        source_url="https://www.pa.gov/agencies/health/health-statistics/health-facilities/hospital-reports.html",
+        acquire_flag="--acquire-pa-hospital-reports",
+        instructions="Index Pennsylvania DOH public hospital report artifacts and normalized metadata.",
+    ),
+    PublicCacheItem(
+        name="NJ hospital public data",
+        cache_paths=(
+            Path("state-health-data") / "nj-hospital-public-data" / "artifact_index.json",
+            Path("state-health-data") / "nj-hospital-public-data" / "artifact_metadata.csv",
+        ),
+        tools=("financial_intelligence.get_public_financial_health_profile",),
+        source_url="https://www.nj.gov/health/hcf/financial-reports/",
+        acquire_flag="--acquire-nj-hospital-public-data",
+        instructions="Index New Jersey financial, charity-care, and public hospital artifacts.",
+    ),
+    PublicCacheItem(
+        name="DE hospital discharge public data",
+        cache_paths=(
+            Path("state-health-data") / "de-hospital-discharge" / "artifact_index.json",
+            Path("state-health-data") / "de-hospital-discharge" / "artifact_metadata.csv",
+        ),
+        tools=("workforce_analytics.get_public_throughput_profile",),
+        source_url="https://dhss.delaware.gov/dph/hp/hosp_dis_data/",
+        acquire_flag="--acquire-de-hospital-discharge",
+        instructions="Index Delaware hospital discharge public artifacts and normalized metadata.",
+    ),
+)
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="hc-mcp-setup",
@@ -174,6 +252,12 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Fetch the public HHS OCR HIPAA breach table and store it as the breach CSV seed.",
     )
+    parser.add_argument("--acquire-340b-opais", action="store_true", help="Warm or report HRSA OPAIS 340B cache status.")
+    parser.add_argument("--acquire-pa-hospital-reports", action="store_true", help="Index public Pennsylvania hospital report artifacts.")
+    parser.add_argument("--acquire-nj-hospital-public-data", action="store_true", help="Index public New Jersey hospital financial and charity-care artifacts.")
+    parser.add_argument("--acquire-de-hospital-discharge", action="store_true", help="Index Delaware hospital discharge public data artifacts.")
+    parser.add_argument("--acquire-phc4-public-reports", action="store_true", help="Index and cache PHC4 public report library artifacts.")
+    parser.add_argument("--acquire-ahrq-hfmd", action="store_true", help="Acquire the AHRQ Hospital Financial Measures Database CSV ZIP.")
     parser.add_argument(
         "--acquire-provider-enrollment",
         action="store_true",
@@ -236,6 +320,25 @@ def main() -> None:
         provider_enrollment=args.acquire_public_caches or args.acquire_provider_enrollment,
         force=args.force_cache_refresh,
     )
+    state_sources: list[str] = []
+    if args.acquire_public_caches or args.acquire_340b_opais:
+        state_sources.append("340b_opais")
+    if args.acquire_public_caches or args.acquire_pa_hospital_reports:
+        state_sources.append("pa_hospital_reports")
+    if args.acquire_public_caches or args.acquire_nj_hospital_public_data:
+        state_sources.append("nj_hospital_public_data")
+    if args.acquire_public_caches or args.acquire_de_hospital_discharge:
+        state_sources.append("de_hospital_discharge")
+    if args.acquire_public_caches or args.acquire_phc4_public_reports:
+        state_sources.append("phc4_public_reports")
+    if args.acquire_public_caches or args.acquire_ahrq_hfmd:
+        state_sources.append("ahrq_hfmd")
+    if state_sources:
+        for status in asyncio.run(acquire_sources(state_sources, args.cache_root, force=args.force_cache_refresh)):
+            acquisition_results.append(
+                f"{status['source_id']}: {status['status']} -> {status.get('cache_path') or status.get('source_url')}"
+                + (f" ({status.get('reason')})" if status.get("reason") else "")
+            )
     for result in acquisition_results:
         print(result)
 
@@ -433,6 +536,17 @@ def print_cache_status(cache_root: Path) -> None:
                 print(f"  acquire: hc-mcp-setup {item.acquire_flag}")
             print(f"  import: hc-mcp-setup {item.import_flag} <downloaded-file>")
             print(f"  note: {item.automation_note}")
+    for item in PUBLIC_CACHE_ITEMS:
+        ready_paths = [root / path for path in item.cache_paths if _public_cache_path_ready(root / path)]
+        status = "READY" if ready_paths else "MISSING"
+        print(f"- {item.name}: {status}")
+        for path in item.cache_paths:
+            print(f"  cache: {root / path}")
+        if not ready_paths:
+            print(f"  affected tools: {', '.join(item.tools)}")
+            print(f"  next step: {item.instructions}")
+            print(f"  source: {item.source_url}")
+            print(f"  acquire: hc-mcp-setup {item.acquire_flag}")
 
 
 def print_cache_guide(cache_root: Path) -> None:
@@ -450,6 +564,13 @@ def print_cache_guide(cache_root: Path) -> None:
         print(f"  import: hc-mcp-setup {item.import_flag} /path/to/downloaded-file")
         print(f"  target seed: {root / item.seed_path}")
         print(f"  target cache: {root / item.parquet_path}")
+    for item in PUBLIC_CACHE_ITEMS:
+        print(f"\n{item.name}")
+        print(f"  source: {item.source_url}")
+        print(f"  acquire: hc-mcp-setup {item.acquire_flag}")
+        print(f"  expected output: {item.instructions}")
+        for path in item.cache_paths:
+            print(f"  cache: {root / path}")
 
 
 def print_agent_cache_instructions(cache_root: Path) -> None:
@@ -473,7 +594,31 @@ For each missing dataset:
         print(f"- {item.name}: {item.agent_prompt}")
         print(f"  Source: {item.source_url}")
         print(f"  Import command: hc-mcp-setup {item.import_flag} <downloaded-file>")
+    for item in PUBLIC_CACHE_ITEMS:
+        if any(_public_cache_path_ready(root / path) for path in item.cache_paths):
+            continue
+        print(f"- {item.name}: run hc-mcp-setup {item.acquire_flag}")
+        print(f"  Source: {item.source_url}")
     print("\nAfter imports, run: hc-mcp-setup --cache-status")
+
+
+def _public_cache_path_ready(path: Path) -> bool:
+    if not path.exists():
+        return False
+    if path.name == "artifact_index.json":
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            return False
+        return int(payload.get("artifact_count") or len(payload.get("artifacts") or [])) > 0
+    if path.name == "artifact_metadata.csv":
+        try:
+            return len(path.read_text(encoding="utf-8").splitlines()) > 1
+        except Exception:
+            return False
+    if path.is_dir():
+        return any(child.is_file() for child in path.rglob("*"))
+    return path.stat().st_size > 0
 
 
 def _copy_seed_file(source: Path, target: Path) -> None:

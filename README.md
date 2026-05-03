@@ -4,7 +4,7 @@
 [![MCP](https://img.shields.io/badge/MCP-stdio%20%7C%20streamable--http-0f766e)](https://modelcontextprotocol.io/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-Public healthcare market intelligence for AI agents: 18 local MCP servers covering hospitals, ownership, quality, claims, price transparency, workforce, finance, community health, research activity, web intelligence, and federal exclusion screening.
+Public healthcare market intelligence for AI agents: 18 local MCP servers covering hospitals, ownership, quality, claims, price transparency, workforce, finance, public state-health reporting, community health, research activity, web intelligence, and federal exclusion screening.
 
 ```bash
 git clone https://github.com/ajhcs/healthcare-data-mcp.git
@@ -76,12 +76,12 @@ docker compose up --build
 | `hospital-quality` | 8005 | CMS quality, readmission, and safety data |
 | `cms-facility` | 8006 | CMS facility master data and NPPES lookup |
 | `health-system-profiler` | 8007 | Health system discovery and facility enrichment |
-| `financial-intelligence` | 8008 | IRS 990, SEC EDGAR, and nonprofit finance intelligence |
+| `financial-intelligence` | 8008 | IRS 990, SEC EDGAR, HCRIS, HFMD, and public financial health intelligence |
 | `price-transparency` | 8009 | Hospital MRF and benchmark pricing |
 | `physician-referral-network` | 8010 | NPPES, physician mix, referral network, and leakage analysis |
-| `workforce-analytics` | 8011 | BLS and ACGME workforce analytics |
+| `workforce-analytics` | 8011 | BLS, ACGME, staffing, productivity, and public throughput analytics |
 | `claims-analytics` | 8012 | DRG, service-line, and claims analytics |
-| `public-records` | 8013 | USAspending, SAM.gov, CHPL, accreditation, 340B, HIPAA breaches, LEIE, and SAM Exclusions |
+| `public-records` | 8013 | USAspending, SAM.gov, CHPL, accreditation, 340B, PHC4 public reports, HIPAA breaches, cyber enrichment, LEIE, and SAM Exclusions |
 | `web-intelligence` | 8014 | Web search and health system OSINT |
 | `discovery` | 8015 | Dataset catalog resources, cache status, runbooks, and prompts |
 | `gateway` | 8016 | Remote-safe metadata gateway with `search` and `fetch` |
@@ -195,6 +195,12 @@ Some tools also depend on local cache files. The setup CLI fetches sources that 
 hc-mcp-setup --cache-status
 hc-mcp-setup --acquire-public-caches
 hc-mcp-setup --acquire-hipaa-breaches
+hc-mcp-setup --acquire-340b-opais
+hc-mcp-setup --acquire-phc4-public-reports
+hc-mcp-setup --acquire-ahrq-hfmd
+hc-mcp-setup --acquire-pa-hospital-reports
+hc-mcp-setup --acquire-nj-hospital-public-data
+hc-mcp-setup --acquire-de-hospital-discharge
 hc-mcp-setup --cache-guide
 hc-mcp-setup --import-340b-json /path/to/340b_covered_entities.json
 hc-mcp-setup --import-docgraph-csv /path/to/docgraph_shared_patients.csv
@@ -202,9 +208,9 @@ hc-mcp-setup --import-docgraph-csv /path/to/docgraph_shared_patients.csv
 hc-mcp-setup --import-docgraph-parquet /path/to/shared_patients.parquet
 ```
 
-The default cache root is `~/.healthcare-data-mcp/cache`. The affected tools are `public_records.get_340b_status`, `public_records.get_breach_history`, `physician_referral_network.map_referral_network`, and `physician_referral_network.detect_leakage`.
+The default cache root is `~/.healthcare-data-mcp/cache`. The affected tools include `public_records.get_340b_status`, `public_records.search_phc4_public_reports`, `public_records.get_breach_history`, `public_records.get_cyber_incident_profile`, `financial_intelligence.get_public_financial_health_profile`, `workforce_analytics.get_public_throughput_profile`, `workforce_analytics.compare_hospital_staffing_productivity`, `physician_referral_network.map_referral_network`, and `physician_referral_network.detect_leakage`.
 
-`hc-mcp-setup --acquire-public-caches` currently fetches the public HHS OCR HIPAA breach table. HRSA 340B still requires importing the OPAIS Covered Entity Daily Export JSON because the public reports page does not expose a stable unauthenticated file URL for the CLI. DocGraph/CareSet shared-patient data is separately licensed and is import-only.
+`hc-mcp-setup --acquire-public-caches` fetches or indexes public caches with stable unauthenticated acquisition paths, including OCR HIPAA breaches, PHC4 public reports, AHRQ HFMD when a direct public artifact is available, and PA/NJ/DE public hospital source indexes. HRSA 340B OPAIS is checked by `--acquire-340b-opais`; if the public reports page still does not expose a stable unauthenticated JSON endpoint, the command returns a precise `not_automatable` status and the covered-entity daily export remains importable with `--import-340b-json`. DocGraph/CareSet shared-patient data is separately licensed and is import-only.
 
 ## Command Reference
 
@@ -228,6 +234,12 @@ hc-mcp-setup --print-client-snippets
 hc-mcp-setup --cache-status
 hc-mcp-setup --acquire-public-caches
 hc-mcp-setup --acquire-hipaa-breaches
+hc-mcp-setup --acquire-340b-opais
+hc-mcp-setup --acquire-phc4-public-reports
+hc-mcp-setup --acquire-ahrq-hfmd
+hc-mcp-setup --acquire-pa-hospital-reports
+hc-mcp-setup --acquire-nj-hospital-public-data
+hc-mcp-setup --acquire-de-hospital-discharge
 hc-mcp-setup --cache-guide
 hc-mcp-setup --agent-cache-instructions
 hc-mcp-setup --import-340b-json /path/to/340b_covered_entities.json

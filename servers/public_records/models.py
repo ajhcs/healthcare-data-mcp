@@ -84,6 +84,13 @@ class CoveredEntity340B(BaseModel):
     state: str = ""
     zip_code: str = ""
     grant_number: str = ""
+    parent_entity_id: str = ""
+    parent_entity_name: str = ""
+    parent_child_relation: str = ""
+    participation_status: str = ""
+    effective_date: str = ""
+    termination_date: str = ""
+    source_report_date: str = ""
     participating: bool = True
     contract_pharmacy_count: int = 0
 
@@ -111,6 +118,11 @@ class BreachRecord(BaseModel):
     location_of_breached_info: str = ""
     business_associate_present: str = ""
     web_description: str = ""
+    entity_match_confidence: str = ""
+    incident_type_confidence: str = ""
+    timeline_disclosed: bool = False
+    timeline_inferred: bool = False
+    source_type: str = "hhs_ocr_breach_portal"
 
 
 class BreachHistoryResponse(BaseModel):
@@ -120,6 +132,56 @@ class BreachHistoryResponse(BaseModel):
     total_breaches: int = 0
     total_individuals_affected: int = 0
     breaches: list[BreachRecord] = Field(default_factory=list)
+
+
+# --- Cyber incident enrichment ---
+
+
+class CyberSourceStatus(BaseModel):
+    """Status for a public cyber enrichment source."""
+
+    source_name: str = ""
+    source_type: str = ""
+    status: str = ""
+    reason: str = ""
+    source_url: str = ""
+    next_step: str = ""
+
+
+class CyberIncidentRecord(BaseModel):
+    """Normalized cyber incident evidence from public records."""
+
+    entity_name: str = ""
+    state: str = ""
+    incident_type: str = ""
+    incident_date: str = ""
+    disclosure_date: str = ""
+    date: str = ""
+    accession: str = ""
+    accession_number: str = ""
+    title: str = ""
+    summary: str = ""
+    source_url: str = ""
+    source_type: str = ""
+    entity_match_confidence: str = ""
+    incident_type_confidence: str = ""
+    timeline_disclosed: bool = False
+    timeline_inferred: bool = False
+    confidence: str = ""
+
+
+class CISAKevContext(BaseModel):
+    """CISA KEV source status for context-only enrichment."""
+
+    source_name: str = "CISA Known Exploited Vulnerabilities Catalog"
+    source_type: str = "cisa_kev_context"
+    status: str = "context_only"
+    reason: str = (
+        "CISA KEV identifies exploited vulnerabilities, not victim organizations; "
+        "it must not be used to attribute an entity-specific incident."
+    )
+    attribution_used: bool = False
+    source_url: str = "https://www.cisa.gov/known-exploited-vulnerabilities-catalog"
 
 
 # --- Tool 5: get_accreditation ---

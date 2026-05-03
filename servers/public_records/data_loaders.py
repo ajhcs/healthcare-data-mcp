@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import duckdb
+from bs4 import BeautifulSoup
 from shared.utils.identity import (
     conservative_fuzzy_score,
     normalize_name,
@@ -56,6 +57,8 @@ _POS_PARQUET = _CACHE_DIR / "pos_q4_2025.parquet"
 _PI_PARQUET = _CACHE_DIR / "pi_hospital.parquet"
 _340B_PARQUET = _CACHE_DIR / "340b_covered_entities.parquet"
 _BREACH_PARQUET = _CACHE_DIR / "hipaa_breaches.parquet"
+_OCR_ENFORCEMENT_PARQUET = _CACHE_DIR / "ocr_enforcement_actions.parquet"
+_SEC_CYBER_DISCLOSURES_PARQUET = _CACHE_DIR / "sec_cyber_disclosures.parquet"
 _LEIE_PARQUET = _CACHE_DIR / "leie_current.parquet"
 _LEIE_META = _CACHE_DIR / "leie_current.meta.json"
 _LEIE_CSV = _CACHE_DIR / "leie_current.csv"
@@ -63,6 +66,8 @@ _LEIE_CSV = _CACHE_DIR / "leie_current.csv"
 # Manual-seed source files (user drops these into the cache dir)
 _340B_JSON = _CACHE_DIR / "340b_covered_entities.json"
 _BREACH_CSV = _CACHE_DIR / "hipaa_breaches.csv"
+_OCR_ENFORCEMENT_DIR = _CACHE_DIR / "ocr_enforcement_actions"
+_SEC_CYBER_DISCLOSURES_DIR = _CACHE_DIR / "sec_cyber_disclosures"
 
 # ---------------------------------------------------------------------------
 # HHS OIG LEIE source configuration
@@ -211,6 +216,10 @@ def _read_parquet_dataframe(path: Path) -> pd.DataFrame:
 
 def _normalized_key(value: object) -> str:
     return re.sub(r"[^a-z0-9]+", "_", str(value).strip().lower()).strip("_")
+
+
+def _normalize_columns(columns: list[object]) -> list[str]:
+    return [_normalized_key(column) for column in columns]
 
 
 def _has_sensitive_identifier_key(payload: dict) -> bool:
@@ -379,7 +388,7 @@ async def ensure_pos_cached() -> bool:
             csv_path, dtype=str, keep_default_na=False,
             low_memory=False, encoding_errors="replace",
         )
-        df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
+        df.columns = [re.sub(r"[^a-z0-9]+", "_", c.strip().lower()).strip("_") for c in df.columns]
         _write_dataframe_parquet(df, _POS_PARQUET, compression="zstd")
 
         csv_path.unlink(missing_ok=True)
@@ -410,7 +419,7 @@ async def ensure_pi_cached() -> bool:
             csv_path, dtype=str, keep_default_na=False,
             low_memory=False, encoding_errors="replace",
         )
-        df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
+        df.columns = [re.sub(r"[^a-z0-9]+", "_", c.strip().lower()).strip("_") for c in df.columns]
         _write_dataframe_parquet(df, _PI_PARQUET, compression="zstd")
 
         csv_path.unlink(missing_ok=True)
@@ -478,7 +487,7 @@ def ensure_340b_loaded() -> bool:
             return False
 
         df = pd.DataFrame(records).astype(str)
-        df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
+        df.columns = [re.sub(r"[^a-z0-9]+", "_", c.strip().lower()).strip("_") for c in df.columns]
         _write_dataframe_parquet(df, _340B_PARQUET, compression="zstd")
 
         logger.info("340B cached: %d records -> %s", len(df), _340B_PARQUET.name)
@@ -535,6 +544,418 @@ def ensure_breach_loaded() -> bool:
     except Exception as e:
         logger.warning("Failed to process HIPAA breach CSV: %s", e)
         return False
+
+
+# ============================================================
+# Cyber incident enrichment caches
+# ============================================================
+
+_CYBER_KEYWORDS = (
+    "ransomware",
+    "malware",
+    "phishing",
+    "hacking",
+    "network server",
+    "network",
+    "unauthorized access",
+    "cybersecurity",
+    "cyber security",
+    "data security incident",
+    "it incident",
+)
+
+
+def _source_status(
+    *,
+    source_name: str,
+    source_type: str,
+    status: str,
+    reason: str,
+    source_url: str = "",
+    next_step: str = "",
+    record_count: int = 0,
+) -> dict:
+    return {
+        "source_name": source_name,
+        "source_type": source_type,
+        "status": status,
+        "reason": reason,
+        "source_url": source_url,
+        "next_step": next_step,
+        "record_count": record_count,
+    }
+
+
+def _fixture_files(source_dir: Path) -> list[Path]:
+    if not source_dir.exists():
+        return []
+    allowed = {".csv", ".html", ".htm", ".json", ".jsonl", ".md", ".txt"}
+    return sorted(path for path in source_dir.rglob("*") if path.is_file() and path.suffix.lower() in allowed)
+
+
+def _first_value(payload: dict, candidates: tuple[str, ...]) -> str:
+    normalized = {_normalized_key(key): value for key, value in payload.items()}
+    for candidate in candidates:
+        value = normalized.get(candidate)
+        if value not in (None, ""):
+            return str(value).strip()
+    return ""
+
+
+def _plain_text_from_html(raw: str) -> tuple[str, str]:
+    soup = BeautifulSoup(raw, "html.parser")
+    title = soup.title.get_text(" ", strip=True) if soup.title else ""
+    for tag in soup(["script", "style", "noscript"]):
+        tag.decompose()
+    return title, soup.get_text(" ", strip=True)
+
+
+def _records_from_file(path: Path, source_type: str) -> list[dict]:
+    suffix = path.suffix.lower()
+    if suffix == ".csv":
+        df = pd.read_csv(path, dtype=str, keep_default_na=False, encoding_errors="replace")
+        df.columns = _normalize_columns(list(df.columns))
+        return [dict(row) | {"source_file": str(path), "source_type": source_type} for row in df.to_dict("records")]
+
+    if suffix == ".json":
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        rows = raw if isinstance(raw, list) else raw.get("records", []) if isinstance(raw, dict) else []
+        if isinstance(raw, dict) and not rows:
+            rows = [raw]
+        return [
+            _flatten_dict(row) | {"source_file": str(path), "source_type": source_type}
+            for row in rows
+            if isinstance(row, dict)
+        ]
+
+    if suffix == ".jsonl":
+        records = []
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            row = json.loads(line)
+            if isinstance(row, dict):
+                records.append(_flatten_dict(row) | {"source_file": str(path), "source_type": source_type})
+        return records
+
+    raw_text = path.read_text(encoding="utf-8", errors="replace")
+    title = path.stem
+    text = raw_text
+    if suffix in {".html", ".htm"}:
+        title, text = _plain_text_from_html(raw_text)
+    return [{
+        "title": title or path.stem,
+        "summary": text[:1000],
+        "text": text,
+        "source_file": str(path),
+        "source_type": source_type,
+    }]
+
+
+def _normalize_cyber_records(records: list[dict], source_type: str) -> pd.DataFrame:
+    normalized: list[dict[str, object]] = []
+    for record in records:
+        normalized_record = {_normalized_key(key): value for key, value in record.items()}
+        title = _first_value(normalized_record, ("title", "case_title", "filing_title", "document_title"))
+        entity_name = _first_value(normalized_record, ("entity_name", "company_name", "issuer_name", "covered_entity"))
+        summary = _first_value(normalized_record, ("summary", "description", "web_description", "text", "content"))
+        source_url = _first_value(normalized_record, ("source_url", "url", "document_url", "filing_url"))
+        date = _first_value(normalized_record, ("incident_date", "action_date", "filing_date", "date", "accepted_date"))
+        disclosure_date = _first_value(normalized_record, ("disclosure_date", "filing_date", "date", "accepted_date"))
+        normalized.append({
+            "entity_name": entity_name,
+            "state": _first_value(normalized_record, ("state", "state_code")),
+            "incident_type": _detect_incident_type(summary or title),
+            "incident_date": date,
+            "disclosure_date": disclosure_date,
+            "accession_number": _first_value(
+                normalized_record,
+                ("accession_number", "accession_no", "accession", "adsh"),
+            ),
+            "cik": _first_value(normalized_record, ("cik", "central_index_key")),
+            "form": _first_value(normalized_record, ("form", "form_type")),
+            "title": title or entity_name,
+            "summary": summary,
+            "text": _first_value(normalized_record, ("text", "content", "document_text")) or summary,
+            "source_url": source_url,
+            "source_file": _first_value(normalized_record, ("source_file",)),
+            "source_type": _first_value(normalized_record, ("source_type",)) or source_type,
+        })
+
+    df = pd.DataFrame(normalized).astype(str) if normalized else pd.DataFrame()
+    if not df.empty:
+        df.columns = _normalize_columns(list(df.columns))
+    return df
+
+
+def ensure_ocr_enforcement_actions_indexed(force_reindex: bool = False) -> dict:
+    """Index locally cached OCR enforcement action pages without auth/session scraping."""
+    if _OCR_ENFORCEMENT_PARQUET.exists() and not force_reindex:
+        try:
+            record_count = len(_read_parquet_dataframe(_OCR_ENFORCEMENT_PARQUET))
+        except Exception:
+            record_count = 0
+        return _source_status(
+            source_name="HHS OCR enforcement actions",
+            source_type="ocr_enforcement_action",
+            status="ready",
+            reason="Local public-page index is available; no authenticated OCR portal flow is used.",
+            source_url="https://www.hhs.gov/hipaa/for-professionals/compliance-enforcement/agreements/index.html",
+            record_count=record_count,
+        )
+
+    files = _fixture_files(_OCR_ENFORCEMENT_DIR)
+    if not files:
+        return _source_status(
+            source_name="HHS OCR enforcement actions",
+            source_type="ocr_enforcement_action",
+            status="not_searchable",
+            reason="No local public OCR enforcement action pages or fixture files are indexed.",
+            source_url="https://www.hhs.gov/hipaa/for-professionals/compliance-enforcement/agreements/index.html",
+            next_step=f"Place public OCR enforcement action HTML, text, JSON, JSONL, or CSV files under {_OCR_ENFORCEMENT_DIR}.",
+        )
+
+    records: list[dict] = []
+    for path in files:
+        records.extend(_records_from_file(path, "ocr_enforcement_action"))
+    df = _normalize_cyber_records(records, "ocr_enforcement_action")
+    if df.empty:
+        return _source_status(
+            source_name="HHS OCR enforcement actions",
+            source_type="ocr_enforcement_action",
+            status="not_searchable",
+            reason="OCR enforcement fixture files were present but did not produce searchable records.",
+            source_url="https://www.hhs.gov/hipaa/for-professionals/compliance-enforcement/agreements/index.html",
+        )
+
+    _write_dataframe_parquet(df, _OCR_ENFORCEMENT_PARQUET, compression="zstd")
+    return _source_status(
+        source_name="HHS OCR enforcement actions",
+        source_type="ocr_enforcement_action",
+        status="ready",
+        reason="Indexed local copies of public OCR enforcement action pages without brittle auth/session automation.",
+        source_url="https://www.hhs.gov/hipaa/for-professionals/compliance-enforcement/agreements/index.html",
+        record_count=len(df),
+    )
+
+
+def ensure_sec_cyber_disclosures_indexed(force_reindex: bool = False) -> dict:
+    """Index locally cached SEC cyber disclosure fixtures."""
+    if _SEC_CYBER_DISCLOSURES_PARQUET.exists() and not force_reindex:
+        try:
+            record_count = len(_read_parquet_dataframe(_SEC_CYBER_DISCLOSURES_PARQUET))
+        except Exception:
+            record_count = 0
+        return _source_status(
+            source_name="SEC EDGAR cyber disclosures",
+            source_type="sec_cyber_disclosure",
+            status="ready",
+            reason="Local SEC cyber disclosure index is available.",
+            source_url="https://www.sec.gov/edgar/search/",
+            record_count=record_count,
+        )
+
+    files = _fixture_files(_SEC_CYBER_DISCLOSURES_DIR)
+    if not files:
+        return _source_status(
+            source_name="SEC EDGAR cyber disclosures",
+            source_type="sec_cyber_disclosure",
+            status="not_searchable",
+            reason="No local SEC cyber disclosure fixture files are indexed.",
+            source_url="https://www.sec.gov/edgar/search/",
+            next_step=f"Place SEC cyber disclosure JSON, JSONL, CSV, HTML, or text fixtures under {_SEC_CYBER_DISCLOSURES_DIR}.",
+        )
+
+    records: list[dict] = []
+    for path in files:
+        records.extend(_records_from_file(path, "sec_cyber_disclosure"))
+    df = _normalize_cyber_records(records, "sec_cyber_disclosure")
+    if df.empty:
+        return _source_status(
+            source_name="SEC EDGAR cyber disclosures",
+            source_type="sec_cyber_disclosure",
+            status="not_searchable",
+            reason="SEC fixture files were present but did not produce searchable records.",
+            source_url="https://www.sec.gov/edgar/search/",
+        )
+
+    _write_dataframe_parquet(df, _SEC_CYBER_DISCLOSURES_PARQUET, compression="zstd")
+    return _source_status(
+        source_name="SEC EDGAR cyber disclosures",
+        source_type="sec_cyber_disclosure",
+        status="ready",
+        reason="Indexed local SEC cyber disclosure records. Live SEC access still requires SEC_USER_AGENT.",
+        source_url="https://www.sec.gov/edgar/search/",
+        record_count=len(df),
+    )
+
+
+def _detect_incident_type(text: str) -> str:
+    haystack = text.lower()
+    if "ransomware" in haystack:
+        return "ransomware"
+    if "malware" in haystack:
+        return "malware"
+    if "phishing" in haystack:
+        return "phishing"
+    if "unauthorized access" in haystack or "hacking" in haystack:
+        return "unauthorized_access"
+    if any(term in haystack for term in _CYBER_KEYWORDS):
+        return "cybersecurity_incident"
+    return ""
+
+
+def _incident_type_confidence(text: str) -> str:
+    incident_type = _detect_incident_type(text)
+    if incident_type in {"ransomware", "malware", "phishing", "unauthorized_access"}:
+        return "high"
+    if incident_type:
+        return "medium"
+    return "low"
+
+
+def _entity_confidence(query: str, entity_name: str, haystack: str) -> str:
+    if not query.strip():
+        return "not_requested"
+    norm_query = normalize_name(query, remove_legal_suffixes=True)
+    norm_entity = normalize_name(entity_name, remove_legal_suffixes=True)
+    if norm_query and norm_entity:
+        if norm_query == norm_entity or norm_query in norm_entity or norm_entity in norm_query:
+            return "high"
+        if conservative_fuzzy_score(norm_query, norm_entity) >= 82:
+            return "medium"
+    if query.lower() in haystack.lower():
+        return "medium"
+    return "low"
+
+
+def _timeline_disclosed(row: dict) -> bool:
+    return any(str(row.get(field, "")).strip() for field in ("incident_date", "disclosure_date", "filing_date", "date"))
+
+
+def _cyber_search_records(
+    parquet_path: Path,
+    *,
+    query: str = "",
+    entity_name: str = "",
+    state: str = "",
+    cik: str = "",
+    start_date: str = "",
+    end_date: str = "",
+    limit: int = 25,
+) -> list[dict]:
+    if not parquet_path.exists():
+        return []
+    df = _read_parquet_dataframe(parquet_path)
+    if df.empty:
+        return []
+    df = df.fillna("")
+
+    candidates: list[dict] = []
+    for _, row in df.iterrows():
+        raw = {key: str(value or "") for key, value in row.to_dict().items()}
+        haystack = " ".join(raw.values())
+        if query and query.lower() not in haystack.lower():
+            continue
+        if entity_name and entity_name.lower() not in haystack.lower():
+            confidence = _entity_confidence(entity_name, raw.get("entity_name", ""), haystack)
+            if confidence == "low":
+                continue
+        if state and raw.get("state", "").upper() != state.strip().upper():
+            continue
+        if cik and raw.get("cik", "").lstrip("0") != cik.strip().lstrip("0"):
+            continue
+        disclosed_date = raw.get("disclosure_date") or raw.get("incident_date")
+        if start_date and disclosed_date and disclosed_date < start_date:
+            continue
+        if end_date and disclosed_date and disclosed_date > end_date:
+            continue
+
+        entity_confidence = _entity_confidence(entity_name or query, raw.get("entity_name", ""), haystack)
+        incident_confidence = _incident_type_confidence(haystack)
+        score = {"high": 3, "medium": 2, "not_requested": 1, "low": 0}.get(entity_confidence, 0)
+        score += {"high": 3, "medium": 2, "low": 0}.get(incident_confidence, 0)
+        candidates.append({
+            "entity_name": raw.get("entity_name", ""),
+            "state": raw.get("state", ""),
+            "incident_type": raw.get("incident_type") or _detect_incident_type(haystack),
+            "incident_date": raw.get("incident_date", ""),
+            "disclosure_date": raw.get("disclosure_date", ""),
+            "date": raw.get("disclosure_date", "") or raw.get("incident_date", ""),
+            "accession": raw.get("accession_number", ""),
+            "accession_number": raw.get("accession_number", ""),
+            "cik": raw.get("cik", ""),
+            "form": raw.get("form", ""),
+            "title": raw.get("title", ""),
+            "summary": raw.get("summary", ""),
+            "source_url": raw.get("source_url", ""),
+            "source_file": raw.get("source_file", ""),
+            "source_type": raw.get("source_type", ""),
+            "entity_match_confidence": entity_confidence,
+            "incident_type_confidence": incident_confidence,
+            "timeline_disclosed": _timeline_disclosed(raw),
+            "timeline_inferred": False,
+            "confidence": _overall_cyber_confidence(entity_confidence, incident_confidence),
+            "_score": score,
+        })
+
+    candidates.sort(key=lambda item: (item["_score"], item.get("disclosure_date", "")), reverse=True)
+    bounded_limit = max(1, min(limit, 100))
+    return [{key: value for key, value in item.items() if key != "_score"} for item in candidates[:bounded_limit]]
+
+
+def _overall_cyber_confidence(entity_confidence: str, incident_confidence: str) -> str:
+    if entity_confidence == "high" and incident_confidence == "high":
+        return "high"
+    if entity_confidence in {"high", "medium", "not_requested"} and incident_confidence in {"high", "medium"}:
+        return "medium"
+    return "low"
+
+
+def search_ocr_enforcement_actions(
+    query: str = "",
+    entity_name: str = "",
+    state: str = "",
+    limit: int = 25,
+) -> dict:
+    source_status = ensure_ocr_enforcement_actions_indexed()
+    if source_status["status"] != "ready":
+        return {"source_status": source_status, "records": []}
+    return {
+        "source_status": source_status,
+        "records": _cyber_search_records(
+            _OCR_ENFORCEMENT_PARQUET,
+            query=query,
+            entity_name=entity_name,
+            state=state,
+            limit=limit,
+        ),
+    }
+
+
+def search_sec_cyber_disclosures(
+    entity_name: str = "",
+    cik: str = "",
+    query: str = "",
+    start_date: str = "",
+    end_date: str = "",
+    limit: int = 25,
+) -> dict:
+    source_status = ensure_sec_cyber_disclosures_indexed()
+    if source_status["status"] != "ready":
+        return {"source_status": source_status, "records": []}
+    return {
+        "source_status": source_status,
+        "records": _cyber_search_records(
+            _SEC_CYBER_DISCLOSURES_PARQUET,
+            query=query,
+            entity_name=entity_name,
+            cik=cik,
+            start_date=start_date,
+            end_date=end_date,
+            limit=limit,
+        ),
+    }
 
 
 # ============================================================
@@ -1059,6 +1480,13 @@ def query_340b(
             "contract_pharmacy_count", "pharmacy_count",
             "num_contract_pharmacies", "contract_pharmacies",
         ])
+        parent_id_col = _find_col(cols, ["parent_entity_id", "parent_340b_id", "parent_id", "parent_ce_id"])
+        parent_name_col = _find_col(cols, ["parent_entity_name", "parent_name", "parent_covered_entity_name"])
+        relation_col = _find_col(cols, ["parent_child_relation", "entity_relation", "relationship", "site_type"])
+        status_col = _find_col(cols, ["participation_status", "status", "record_status", "entity_status"])
+        effective_col = _find_col(cols, ["effective_date", "start_date", "participation_start_date", "enrollment_date"])
+        termination_col = _find_col(cols, ["termination_date", "term_date", "participation_termination_date"])
+        report_date_col = _find_col(cols, ["source_report_date", "report_date", "daily_report_date", "as_of_date"])
 
         where_parts: list[str] = []
         params: list[str] = []
@@ -1082,6 +1510,14 @@ def query_340b(
             r = row.to_dict()
             part_val = _s(r, participating_col).lower()
             is_participating = part_val not in ("false", "0", "no", "inactive", "n")
+            pharmacy_count = _i(r, pharmacy_col)
+            if pharmacy_count == 0 and pharmacy_col:
+                raw_pharmacies = _s(r, pharmacy_col)
+                if raw_pharmacies.startswith("["):
+                    try:
+                        pharmacy_count = len(json.loads(raw_pharmacies))
+                    except Exception:
+                        pharmacy_count = 0
 
             results.append({
                 "entity_id": _s(r, id_col),
@@ -1093,7 +1529,14 @@ def query_340b(
                 "zip_code": _s(r, zip_col),
                 "grant_number": _s(r, grant_col),
                 "participating": is_participating,
-                "contract_pharmacy_count": _i(r, pharmacy_col),
+                "contract_pharmacy_count": pharmacy_count,
+                "parent_entity_id": _s(r, parent_id_col),
+                "parent_entity_name": _s(r, parent_name_col),
+                "parent_child_relation": _s(r, relation_col),
+                "participation_status": _s(r, status_col) or ("active" if is_participating else "inactive"),
+                "effective_date": _s(r, effective_col),
+                "termination_date": _s(r, termination_col),
+                "source_report_date": _s(r, report_date_col),
             })
 
         return results

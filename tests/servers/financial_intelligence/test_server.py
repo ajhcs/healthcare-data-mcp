@@ -6,6 +6,8 @@ Uses monkeypatching to avoid live ProPublica/EDGAR API calls.
 from tests.helpers import parse_tool_result
 import os
 from unittest.mock import AsyncMock, patch
+from pathlib import Path
+import zipfile
 
 import pytest
 
@@ -14,6 +16,8 @@ import pytest
 os.environ.setdefault("SEC_USER_AGENT", "CI ci@example.com")
 
 from servers.financial_intelligence import audited_financial_pdf, server, propublica_client, edgar_client  # noqa: E402
+from servers.financial_intelligence.financial_health import load_ahrq_hfmd_profile  # noqa: E402
+from servers.financial_intelligence.irs990_parser import parse_990_xml  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -93,6 +97,23 @@ EDGAR_SEARCH_RESPONSE = {
         ],
     }
 }
+
+PROHIBITED_MAP_KPI_FIELDS = {
+    "clean_claim_rate",
+    "denial_rate",
+    "net_days_in_ar",
+    "cost_to_collect",
+    "dnfb",
+    "aged_ar",
+}
+
+
+def _payload_has_any_key(payload, prohibited: set[str]) -> bool:
+    if isinstance(payload, dict):
+        return any(key in prohibited or _payload_has_any_key(value, prohibited) for key, value in payload.items())
+    if isinstance(payload, list):
+        return any(_payload_has_any_key(item, prohibited) for item in payload)
+    return False
 
 
 # ---------------------------------------------------------------------------
@@ -287,6 +308,188 @@ def test_parse_audited_financial_pdf_extracts_jefferson_fy2025_golden_values(mon
     assert result["citations"]["operating_income_loss"]["page"] == 8
     assert result["page_anchors"]["balance_sheet"]["page"] == 7
     assert result["page_anchors"]["operations"]["page"] == 8
+
+
+def test_parse_990_xml_extracts_schedule_h_public_financial_fields(tmp_path: Path):
+    xml = tmp_path / "return.xml"
+    xml.write_text(
+        """
+        <Return>
+          <ReturnData>
+            <IRS990>
+              <CYTotalExpensesAmt>1000000</CYTotalExpensesAmt>
+            </IRS990>
+            <IRS990ScheduleH>
+              <TotalCommunityBenefitExpnsAmt>120000</TotalCommunityBenefitExpnsAmt>
+              <CharityCareAtCostAmt>50000</CharityCareAtCostAmt>
+              <BadDebtExpenseAmt>25000</BadDebtExpenseAmt>
+              <MedicareShortfallAmt>30000</MedicareShortfallAmt>
+              <MedicaidShortfallAmt>40000</MedicaidShortfallAmt>
+            </IRS990ScheduleH>
+          </ReturnData>
+        </Return>
+        """,
+        encoding="utf-8",
+    )
+
+    parsed = parse_990_xml(xml)
+
+    assert parsed["community_benefit_total"] == 120000
+    assert parsed["charity_care_cost"] == 50000
+    assert parsed["bad_debt_expense"] == 25000
+    assert parsed["medicare_shortfall"] == 30000
+    assert parsed["medicaid_shortfall"] == 40000
+    assert parsed["community_benefit_pct"] == 12.0
+
+
+@pytest.mark.asyncio
+async def test_hcris_s10_alias_mapping_uses_realistic_fixture_fields(monkeypatch):
+    async def fake_load_cost_report_row(_loaders, ccn: str):
+        return (
+            {
+                "Provider CCN": ccn,
+                "FY End Date": "2024-12-31",
+                "Hospital Beds": "250",
+                "Total Discharges": "12,345",
+                "Total Inpatient Days": "67,890",
+                "Net Patient Service Revenue": "987,654,321",
+                "Operating Margin %": "4.5",
+                "Total Margin %": "5.6",
+                "Worksheet S-10 Total Uncompensated Care Cost": "$12,000,000",
+                "S-10 Charity Care Cost": "$7,500,000",
+                "S-10 Bad Debt Expense": "$2,250,000",
+                "Medicaid Shortfall": "(1500000)",
+                "Medicare Shortfall": "3000000",
+            },
+            "",
+        )
+
+    monkeypatch.setattr(server, "load_cost_report_row", fake_load_cost_report_row)
+
+    result = await server._cost_report_public_metrics("390001")
+
+    assert result["ccn"] == "390001"
+    assert result["fiscal_year_end"] == "2024-12-31"
+    assert result["beds"] == 250
+    assert result["discharges"] == 12345
+    assert result["net_patient_revenue"] == 987_654_321
+    assert result["uncompensated_care_cost"] == 12_000_000
+    assert result["charity_care_cost"] == 7_500_000
+    assert result["bad_debt_expense"] == 2_250_000
+    assert result["medicaid_shortfall"] == -1_500_000
+    assert result["metrics"]["uncompensated_care_cost"]["confidence"] == "high_reported_hcris_field"
+    assert result["metrics"]["uncompensated_care_cost"]["source_field"] == "Worksheet S-10 Total Uncompensated Care Cost"
+    assert result["metric_confidence"]["bad_debt_expense"] == "high_reported_hcris_field"
+    assert not _payload_has_any_key(result, PROHIBITED_MAP_KPI_FIELDS)
+
+
+def test_ahrq_hfmd_zip_cache_parser_normalizes_and_filters_map_kpis(tmp_path: Path):
+    cache = tmp_path / "state-health-data" / "ahrq-hfmd"
+    cache.mkdir(parents=True)
+    zip_path = cache / "hfmd.zip"
+    csv_text = (
+        "Provider ID,Hospital Name,State,Fiscal Year,Operating Margin %,Total Margin %,"
+        "Net Patient Service Revenue,Days in Accounts Receivable,Net Days in AR,Denial Rate,"
+        "DNFB,Clean Claim Rate,Cost to Collect,Aged AR\n"
+        "390001,Jefferson Health,PA,2024,4.5,5.6,987654321,42,41,3.2,1000000,98.1,2.1,15\n"
+    )
+    with zipfile.ZipFile(zip_path, "w") as zf:
+        zf.writestr("HFMD_2024.csv", csv_text)
+
+    result = load_ahrq_hfmd_profile(ccn="390001", state="PA", cache_root=tmp_path)
+
+    assert result["source_status"] == "ready"
+    assert result["matched_count"] == 1
+    assert result["matched_on"] == "ccn"
+    assert result["join_keys"]["hfmd_provider_id"] == "390001"
+    assert result["metrics"]["operating_margin"]["value"] == 4.5
+    assert result["metrics"]["operating_margin"]["confidence"] == "high_reported_hfmd_ccn_match"
+    assert result["metrics"]["net_patient_revenue"]["value"] == 987_654_321
+    assert not _payload_has_any_key(result, PROHIBITED_MAP_KPI_FIELDS)
+
+
+def test_ahrq_hfmd_csv_cache_parser_supports_state_fallback(tmp_path: Path):
+    cache = tmp_path / "state-health-data" / "ahrq-hfmd"
+    cache.mkdir(parents=True)
+    (cache / "hfmd.csv").write_text(
+        (
+            "Medicare Provider Number,Hospital Name,State,Fiscal Year,Current Ratio,Days Cash on Hand\n"
+            "390002,Temple Health,PA,2024,1.8,143\n"
+        ),
+        encoding="utf-8",
+    )
+
+    result = load_ahrq_hfmd_profile(state="PA", cache_root=tmp_path)
+
+    assert result["source_status"] == "ready"
+    assert result["matched_count"] == 1
+    assert result["matched_on"] == "state"
+    assert result["metrics"]["current_ratio"]["value"] == 1.8
+    assert result["metrics"]["days_cash_on_hand"]["confidence"] == "medium_reported_hfmd_field"
+
+
+@pytest.mark.asyncio
+async def test_public_financial_health_profile_joins_sources_and_omits_map_kpis(monkeypatch):
+    async def fake_hcris(_ccn: str):
+        return {
+            "ccn": "390001",
+            "source_status": "ready",
+            "net_patient_revenue": 987_654_321,
+            "metrics": {
+                "net_patient_revenue": {
+                    "value": 987_654_321,
+                    "confidence": "high_reported_hcris_field",
+                    "source_field": "Net Patient Service Revenue",
+                }
+            },
+            "metric_confidence": {"net_patient_revenue": "high_reported_hcris_field"},
+        }
+
+    async def fake_form990(_ein: str):
+        return {
+            "ein": "231352166",
+            "source_status": "ready",
+            "community_benefit_total": 120_000_000,
+            "metrics": {
+                "community_benefit_total": {
+                    "value": 120_000_000,
+                    "confidence": "high_reported_irs_schedule_h_xml",
+                    "source_field": "TotalCommunityBenefitExpnsAmt",
+                }
+            },
+            "metric_confidence": {"community_benefit_total": "high_reported_irs_schedule_h_xml"},
+        }
+
+    def fake_hfmd(**_kwargs):
+        return {
+            "source_status": "ready",
+            "matched_on": "ccn",
+            "join_keys": {"hfmd_provider_id": "390001"},
+            "metrics": {
+                "operating_margin": {
+                    "value": 4.5,
+                    "confidence": "high_reported_hfmd_ccn_match",
+                    "source_field": "Operating Margin %",
+                }
+            },
+            "metric_confidence": {"operating_margin": "high_reported_hfmd_ccn_match"},
+        }
+
+    monkeypatch.setattr(server, "_cost_report_public_metrics", fake_hcris)
+    monkeypatch.setattr(server, "_latest_990_schedule_h", fake_form990)
+    monkeypatch.setattr(server, "load_ahrq_hfmd_profile", fake_hfmd)
+
+    result = parse_tool_result(
+        await server.get_public_financial_health_profile(ccn="390001", ein="231352166", state="PA")
+    )
+
+    assert result["join_summary"]["hcris_hfmd_joined"] is True
+    assert result["join_summary"]["joined_on"] == "ccn"
+    assert result["metric_confidence"]["hcris"]["net_patient_revenue"] == "high_reported_hcris_field"
+    assert result["metric_confidence"]["form990_schedule_h"]["community_benefit_total"] == "high_reported_irs_schedule_h_xml"
+    assert result["metric_confidence"]["ahrq_hfmd"]["operating_margin"] == "high_reported_hfmd_ccn_match"
+    assert "source_policy" in result
+    assert not _payload_has_any_key(result, PROHIBITED_MAP_KPI_FIELDS)
 
 
 @pytest.mark.asyncio

@@ -11,9 +11,11 @@ import os as _os
 
 from mcp.server.fastmcp import FastMCP
 from shared.utils.mcp_response import error_response, to_structured
+from shared.utils.cost_report import load_cost_report_row
 
 from . import edgar_client, propublica_client
 from .audited_financial_pdf import parse_audited_financial_pdf as _parse_audited_financial_pdf
+from .financial_health import load_ahrq_hfmd_profile, normalize_hcris_public_metrics
 from .irs990_parser import download_990_xml, lookup_xml_url, parse_990_xml
 from .models import (
     Form990Details,
@@ -24,6 +26,8 @@ from .models import (
     SecFiling,
     SecFilingDetail,
 )
+
+from servers.hospital_quality import data_loaders as hospital_quality_data_loaders
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +53,99 @@ def _first_present(*values):
         if value not in (None, ""):
             return value
     return None
+
+
+def _reported_metric(value: Any, confidence: str, source_field: str) -> dict[str, Any]:
+    return {
+        "value": value,
+        "confidence": confidence if value is not None else "not_available",
+        "source_field": source_field if value is not None else "",
+    }
+
+
+async def _latest_990_schedule_h(ein: str) -> dict[str, Any]:
+    if not ein:
+        return {}
+    org_data = await propublica_client.get_organization(ein)
+    filings = org_data.get("filings_with_data", []) if org_data else []
+    if not filings:
+        return {"ein": ein, "source_status": "no_990_filing_found"}
+    latest = filings[0]
+    tax_period = str(latest.get("tax_prd", latest.get("tax_prd_yr", "")))
+    xml_url = latest.get("xml_url", "") or await lookup_xml_url(ein, tax_period) or ""
+    parsed: dict[str, Any] = {}
+    if xml_url:
+        xml_path = await download_990_xml(xml_url, ein, tax_period)
+        if xml_path:
+            parsed = parse_990_xml(xml_path)
+    metrics = {
+        "charity_care_cost": _reported_metric(
+            parsed.get("charity_care_cost") or parsed.get("community_benefit_total"),
+            "high_reported_irs_schedule_h_xml" if parsed else "not_available",
+            "CharityCareAtCostAmt" if parsed.get("charity_care_cost") else "TotalCommunityBenefitExpnsAmt",
+        ),
+        "bad_debt_expense": _reported_metric(
+            parsed.get("bad_debt_expense"),
+            "high_reported_irs_schedule_h_xml" if parsed else "not_available",
+            "BadDebtExpenseAmt",
+        ),
+        "medicare_shortfall": _reported_metric(
+            parsed.get("medicare_shortfall"),
+            "high_reported_irs_schedule_h_xml" if parsed else "not_available",
+            "MedicareShortfallAmt",
+        ),
+        "medicaid_shortfall": _reported_metric(
+            parsed.get("medicaid_shortfall"),
+            "high_reported_irs_schedule_h_xml" if parsed else "not_available",
+            "MedicaidShortfallAmt",
+        ),
+        "community_benefit_total": _reported_metric(
+            parsed.get("community_benefit_total"),
+            "high_reported_irs_schedule_h_xml" if parsed else "not_available",
+            "TotalCommunityBenefitExpnsAmt",
+        ),
+        "community_benefit_pct": _reported_metric(
+            parsed.get("community_benefit_pct"),
+            "medium_derived_from_schedule_h_total_expenses" if parsed.get("community_benefit_pct") is not None else "not_available",
+            "TotalCommunityBenefitExpnsAmt / CYTotalExpensesAmt",
+        ),
+        "total_revenue": _reported_metric(
+            parsed.get("total_revenue") or _safe_float(latest.get("totrevenue")),
+            "high_reported_irs_xml_or_propublica_summary",
+            "TotalRevenueAmt or totrevenue",
+        ),
+        "total_expenses": _reported_metric(
+            parsed.get("total_expenses") or _safe_float(latest.get("totfuncexpns")),
+            "high_reported_irs_xml_or_propublica_summary",
+            "CYTotalExpensesAmt or totfuncexpns",
+        ),
+    }
+    return {
+        "ein": ein,
+        "tax_period": tax_period,
+        "source": "IRS Form 990 Schedule H XML" if parsed else "ProPublica Form 990 summary",
+        "xml_url": xml_url,
+        "charity_care": metrics["charity_care_cost"]["value"],
+        "bad_debt_expense": parsed.get("bad_debt_expense"),
+        "medicare_shortfall": parsed.get("medicare_shortfall"),
+        "medicaid_shortfall": parsed.get("medicaid_shortfall"),
+        "community_benefit_total": parsed.get("community_benefit_total"),
+        "community_benefit_pct": parsed.get("community_benefit_pct"),
+        "total_revenue": parsed.get("total_revenue") or _safe_float(latest.get("totrevenue")),
+        "total_expenses": parsed.get("total_expenses") or _safe_float(latest.get("totfuncexpns")),
+        "source_status": "ready" if parsed else "summary_only",
+        "metrics": metrics,
+        "metric_confidence": {name: metric["confidence"] for name, metric in metrics.items()},
+    }
+
+
+async def _cost_report_public_metrics(ccn: str) -> dict[str, Any]:
+    if not ccn:
+        return {}
+    row, error = await load_cost_report_row(hospital_quality_data_loaders, ccn)
+    if error:
+        return {"ccn": ccn, "source_status": "unavailable", "detail": error}
+    return normalize_hcris_public_metrics(row, requested_ccn=ccn)
 
 
 def _build_form990_summary(search_org: dict, org_data: dict | None) -> dict:
@@ -509,6 +606,135 @@ async def parse_audited_financial_pdf(url_or_path: str, entity_name: str, fiscal
     except Exception as e:
         logger.exception("parse_audited_financial_pdf failed")
         return error_response(f"parse_audited_financial_pdf failed: {e}")
+
+
+@mcp.tool(structured_output=True)
+async def get_public_financial_health_profile(ccn: str = "", ein: str = "", state: str = "") -> dict[str, Any]:
+    """Return high-confidence public financial health fields from HCRIS, 990 Schedule H, and HFMD.
+
+    This intentionally excludes HFMA MAP KPIs and public accounts-receivable proxies.
+    """
+    try:
+        hcris = await _cost_report_public_metrics(ccn)
+        form990 = await _latest_990_schedule_h(ein)
+        hfmd = load_ahrq_hfmd_profile(ccn=ccn, state=state)
+        joined_on = "ccn" if ccn and hfmd.get("matched_on") == "ccn" else ""
+        return to_structured(
+            {
+                "ccn": ccn,
+                "ein": ein,
+                "state": state.upper() if state else "",
+                "hcris": hcris,
+                "form990_schedule_h": form990,
+                "ahrq_hfmd": hfmd,
+                "join_summary": {
+                    "hcris_hfmd_joined": bool(joined_on),
+                    "joined_on": joined_on,
+                    "ccn": ccn,
+                    "hfmd_provider_id": hfmd.get("join_keys", {}).get("hfmd_provider_id", ""),
+                },
+                "metric_confidence": {
+                    "hcris": hcris.get("metric_confidence", {}),
+                    "form990_schedule_h": form990.get("metric_confidence", {}),
+                    "ahrq_hfmd": hfmd.get("metric_confidence", {}),
+                },
+                "source_policy": "reported_public_fields_only_no_revenue_cycle_map_kpi_derivations",
+            }
+        )
+    except Exception as e:
+        logger.exception("get_public_financial_health_profile failed")
+        return error_response(f"get_public_financial_health_profile failed: {e}")
+
+
+@mcp.tool(structured_output=True)
+async def get_uncompensated_care_profile(ccn: str = "", ein: str = "") -> dict[str, Any]:
+    """Return public uncompensated-care fields from CMS S-10/HCRIS and IRS Schedule H."""
+    try:
+        hcris = await _cost_report_public_metrics(ccn)
+        form990 = await _latest_990_schedule_h(ein)
+        return to_structured(
+            {
+                "ccn": ccn,
+                "ein": ein,
+                "uncompensated_care_cost": hcris.get("uncompensated_care_cost"),
+                "charity_care_cost": hcris.get("charity_care_cost") or form990.get("charity_care"),
+                "bad_debt_expense": hcris.get("bad_debt_expense"),
+                "medicare_shortfall": hcris.get("medicare_shortfall"),
+                "medicaid_shortfall": hcris.get("medicaid_shortfall"),
+                "sources": {"hcris": hcris, "form990_schedule_h": form990},
+                "metric_confidence": {
+                    "uncompensated_care_cost": hcris.get("metric_confidence", {}).get("uncompensated_care_cost", "not_available"),
+                    "charity_care_cost": (
+                        hcris.get("metric_confidence", {}).get("charity_care_cost")
+                        or form990.get("metric_confidence", {}).get("charity_care_cost")
+                        or "not_available"
+                    ),
+                    "bad_debt_expense": hcris.get("metric_confidence", {}).get("bad_debt_expense", "not_available"),
+                    "medicare_shortfall": hcris.get("metric_confidence", {}).get("medicare_shortfall", "not_available"),
+                    "medicaid_shortfall": hcris.get("metric_confidence", {}).get("medicaid_shortfall", "not_available"),
+                },
+                "confidence": "high_when_source_field_present",
+            }
+        )
+    except Exception as e:
+        logger.exception("get_uncompensated_care_profile failed")
+        return error_response(f"get_uncompensated_care_profile failed: {e}")
+
+
+@mcp.tool(structured_output=True)
+async def get_charity_care_profile(ein: str = "", ccn: str = "") -> dict[str, Any]:
+    """Return public charity-care fields without deriving revenue-cycle MAP KPIs."""
+    try:
+        hcris = await _cost_report_public_metrics(ccn)
+        form990 = await _latest_990_schedule_h(ein)
+        return to_structured(
+            {
+                "ein": ein,
+                "ccn": ccn,
+                "charity_care_cost": hcris.get("charity_care_cost") or form990.get("charity_care"),
+                "community_benefit_pct": form990.get("community_benefit_pct"),
+                "total_expenses": form990.get("total_expenses"),
+                "sources": {"hcris": hcris, "form990_schedule_h": form990},
+                "metric_confidence": {
+                    "charity_care_cost": (
+                        hcris.get("metric_confidence", {}).get("charity_care_cost")
+                        or form990.get("metric_confidence", {}).get("charity_care_cost")
+                        or "not_available"
+                    ),
+                    "community_benefit_pct": form990.get("metric_confidence", {}).get("community_benefit_pct", "not_available"),
+                    "total_expenses": form990.get("metric_confidence", {}).get("total_expenses", "not_available"),
+                },
+                "confidence": "high_when_schedule_h_or_s10_field_present",
+            }
+        )
+    except Exception as e:
+        logger.exception("get_charity_care_profile failed")
+        return error_response(f"get_charity_care_profile failed: {e}")
+
+
+@mcp.tool(structured_output=True)
+async def get_bad_debt_profile(ccn: str = "", ein: str = "") -> dict[str, Any]:
+    """Return public bad-debt disclosures from CMS S-10/HCRIS and 990 context."""
+    try:
+        hcris = await _cost_report_public_metrics(ccn)
+        form990 = await _latest_990_schedule_h(ein)
+        return to_structured(
+            {
+                "ccn": ccn,
+                "ein": ein,
+                "bad_debt_expense": hcris.get("bad_debt_expense"),
+                "uncompensated_care_cost": hcris.get("uncompensated_care_cost"),
+                "sources": {"hcris": hcris, "form990_schedule_h": form990},
+                "metric_confidence": {
+                    "bad_debt_expense": hcris.get("metric_confidence", {}).get("bad_debt_expense", "not_available"),
+                    "uncompensated_care_cost": hcris.get("metric_confidence", {}).get("uncompensated_care_cost", "not_available"),
+                },
+                "confidence": "high_when_source_field_present",
+            }
+        )
+    except Exception as e:
+        logger.exception("get_bad_debt_profile failed")
+        return error_response(f"get_bad_debt_profile failed: {e}")
 
 
 if __name__ == "__main__":

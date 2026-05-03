@@ -138,6 +138,8 @@ def test_cache_status_reports_missing_manual_data(tmp_path, capsys) -> None:
     assert "data_unavailable: licensed_source_missing" in output
     assert "public_records.get_340b_status" in output
     assert "hc-mcp-setup --acquire-hipaa-breaches" in output
+    assert "PHC4 public reports: MISSING" in output
+    assert "hc-mcp-setup --acquire-phc4-public-reports" in output
 
 
 def test_cache_status_requires_docgraph_parquet_for_ready(tmp_path, capsys) -> None:
@@ -172,6 +174,7 @@ def test_cache_guide_prints_source_and_import_commands(tmp_path, capsys) -> None
     assert "https://340bopais.hrsa.gov" in output
     assert "hc-mcp-setup --acquire-hipaa-breaches" in output
     assert "hc-mcp-setup --import-340b-json" in output
+    assert "hc-mcp-setup --acquire-ahrq-hfmd" in output
 
 
 def test_agent_cache_instructions_skip_ready_cache(tmp_path, capsys) -> None:
@@ -186,4 +189,5 @@ def test_agent_cache_instructions_skip_ready_cache(tmp_path, capsys) -> None:
     assert "340B covered entities" not in output
     assert "HIPAA breach reports" in output
     assert "hc-mcp-setup --acquire-hipaa-breaches" in output
+    assert "PHC4 public reports" in output
     assert "After imports" in output

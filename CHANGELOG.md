@@ -2,7 +2,27 @@
 
 ## Unreleased
 
-No unreleased changes.
+- Added public healthcare data cache acquisition and status coverage for PHC4,
+  AHRQ HFMD, PA hospital reports, NJ hospital public data, DE discharge data,
+  and HRSA 340B OPAIS automation status.
+- Added PHC4 public report indexing and extracted-table provenance for Hospital
+  Performance, Financial Analysis, Common Procedures, and special public
+  reports without using paid PHC4 datasets.
+- Added normalized PA/NJ/DE public state-health artifact models and query
+  helpers that feed public financial health, staffing, productivity, and
+  throughput profiles with confidence and source metadata.
+- Added high-confidence public financial health/community-benefit outputs from
+  HCRIS, IRS 990 Schedule H, and AHRQ HFMD while explicitly excluding HFMA MAP
+  revenue-cycle KPI derivations and HCRIS days-in-A/R proxies.
+- Added public staffing, productivity, throughput, ED volume, and procedure
+  volume tools with provider-year filtering, peer-group metadata, source
+  ranking, and PA admissions enhancement where public rows are available.
+- Added cyber incident enrichment from OCR enforcement actions, SEC disclosures,
+  searchable state breach notices, and CISA KEV vulnerability context with
+  explicit incident confidence fields.
+- Expanded regression coverage for new public caches, PHC4/report provenance,
+  financial metric confidence, MAP KPI exclusion, cyber enrichment, and
+  state-health normalization.
 
 ## v0.1.2 - Gateway and discovery hardening
 

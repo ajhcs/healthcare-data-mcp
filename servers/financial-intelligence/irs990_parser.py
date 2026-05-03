@@ -228,6 +228,31 @@ def parse_990_xml(xml_path: Path) -> dict:
             sched_h, "TotalCommunityBenefitExpnsAmt", "TotalCommunityBenefitsAmt",
             "CommunityBenefitTotalAmt",
         )
+        result["charity_care_cost"] = _find_float(
+            sched_h,
+            "FinancialAssistanceAtCostTyp",
+            "FinancialAssistanceAtCostAmt",
+            "CharityCareAtCostAmt",
+            "TotalFinancialAssistanceAmt",
+        )
+        result["bad_debt_expense"] = _find_float(
+            sched_h,
+            "BadDebtExpenseAmt",
+            "BadDebtExpenseAtCostAmt",
+            "TotalBadDebtExpenseAmt",
+        )
+        result["medicare_shortfall"] = _find_float(
+            sched_h,
+            "MedicareSurplusOrShortfallAmt",
+            "MedicareShortfallAmt",
+            "TotalMedicareShortfallAmt",
+        )
+        result["medicaid_shortfall"] = _find_float(
+            sched_h,
+            "MedicaidSurplusOrShortfallAmt",
+            "MedicaidShortfallAmt",
+            "TotalMedicaidShortfallAmt",
+        )
         total_exp = result.get("total_expenses")
         cb = result.get("community_benefit_total")
         if cb is not None and total_exp and total_exp > 0:

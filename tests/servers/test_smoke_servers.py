@@ -20,14 +20,14 @@ SERVER_SPECS = [
     ("drive-time", "servers.drive_time.server", 5),
     ("hospital-quality", "servers.hospital_quality.server", 6),
     ("health-system-profiler", "servers.health_system_profiler.server", 4),
-    ("financial-intelligence", "servers.financial_intelligence.server", 7),
+    ("financial-intelligence", "servers.financial_intelligence.server", 11),
     ("price-transparency", "servers.price_transparency.server", 5),
     ("physician-referral-network", "servers.physician_referral_network.server", 6),
-    ("workforce-analytics", "servers.workforce_analytics.server", 7),
+    ("workforce-analytics", "servers.workforce_analytics.server", 15),
     ("claims-analytics", "servers.claims_analytics.server", 5),
-    ("public-records", "servers.public_records.server", 16),
+    ("public-records", "servers.public_records.server", 27),
     ("web-intelligence", "servers.web_intelligence.server", 7),
-    ("live-gateway", "servers.live_gateway.server", 38),
+    ("live-gateway", "servers.live_gateway.server", 58),
 ]
 
 
