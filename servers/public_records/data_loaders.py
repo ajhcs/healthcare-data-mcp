@@ -59,6 +59,7 @@ _340B_PARQUET = _CACHE_DIR / "340b_covered_entities.parquet"
 _BREACH_PARQUET = _CACHE_DIR / "hipaa_breaches.parquet"
 _OCR_ENFORCEMENT_PARQUET = _CACHE_DIR / "ocr_enforcement_actions.parquet"
 _SEC_CYBER_DISCLOSURES_PARQUET = _CACHE_DIR / "sec_cyber_disclosures.parquet"
+_STATE_BREACH_NOTICES_PARQUET = _CACHE_DIR / "state_breach_notices.parquet"
 _LEIE_PARQUET = _CACHE_DIR / "leie_current.parquet"
 _LEIE_META = _CACHE_DIR / "leie_current.meta.json"
 _LEIE_CSV = _CACHE_DIR / "leie_current.csv"
@@ -68,6 +69,7 @@ _340B_JSON = _CACHE_DIR / "340b_covered_entities.json"
 _BREACH_CSV = _CACHE_DIR / "hipaa_breaches.csv"
 _OCR_ENFORCEMENT_DIR = _CACHE_DIR / "ocr_enforcement_actions"
 _SEC_CYBER_DISCLOSURES_DIR = _CACHE_DIR / "sec_cyber_disclosures"
+_STATE_BREACH_NOTICES_DIR = _CACHE_DIR / "state_breach_notices"
 
 # ---------------------------------------------------------------------------
 # HHS OIG LEIE source configuration
@@ -955,6 +957,143 @@ def search_sec_cyber_disclosures(
             end_date=end_date,
             limit=limit,
         ),
+    }
+
+
+def import_state_breach_notices(state: str, source_path: Path, *, source_url: str = "") -> dict:
+    """Import reviewed state breach notice rows into the local public-records index."""
+    normalized_state = state.strip().upper()
+    if not normalized_state:
+        raise ValueError("state is required")
+    if not source_path.exists():
+        raise FileNotFoundError(source_path)
+
+    df = pd.read_csv(source_path, dtype=str, keep_default_na=False)
+    df.columns = _normalize_columns(list(df.columns))
+    if "entity_name" not in df.columns:
+        raise ValueError("State breach notice imports require an entity_name column.")
+    if "state" not in df.columns:
+        df["state"] = normalized_state
+    else:
+        df["state"] = df["state"].fillna("").astype(str).str.upper().replace("", normalized_state)
+    if "source_url" not in df.columns:
+        df["source_url"] = source_url
+    elif source_url:
+        df["source_url"] = df["source_url"].replace("", source_url)
+    if df["source_url"].astype(str).str.strip().eq("").any():
+        raise ValueError("Every state breach notice row requires a source_url or import source_url.")
+    if "source_file" not in df.columns:
+        df["source_file"] = str(source_path)
+    if "source_type" not in df.columns:
+        df["source_type"] = "state_ag_breach_notice"
+    for column in (
+        "covered_entity_type",
+        "incident_date",
+        "disclosure_date",
+        "date",
+        "title",
+        "summary",
+        "individuals_affected",
+    ):
+        if column not in df.columns:
+            df[column] = ""
+
+    existing = _read_parquet_dataframe(_STATE_BREACH_NOTICES_PARQUET) if _STATE_BREACH_NOTICES_PARQUET.exists() else pd.DataFrame()
+    combined = pd.concat([existing, df], ignore_index=True) if not existing.empty else df
+    _STATE_BREACH_NOTICES_PARQUET.parent.mkdir(parents=True, exist_ok=True)
+    _write_dataframe_parquet(combined, _STATE_BREACH_NOTICES_PARQUET, compression="zstd")
+    return {
+        "status": "ready",
+        "state": normalized_state,
+        "rows_imported": int(len(df)),
+        "record_count": int(len(combined)),
+        "cache_path": str(_STATE_BREACH_NOTICES_PARQUET),
+    }
+
+
+def search_state_breach_notices(
+    *,
+    entity_name: str = "",
+    state: str = "",
+    start_date: str = "",
+    end_date: str = "",
+    limit: int = 25,
+) -> dict:
+    """Search locally indexed reviewed state breach notice rows."""
+    if not _STATE_BREACH_NOTICES_PARQUET.exists():
+        return {
+            "source_status": {
+                "status": "import_required",
+                "source_type": "state_ag_breach_notice",
+                "reason": "No reviewed state breach notice rows are indexed.",
+                "next_step": "Run hc-mcp-setup --import-state-breach-notices STATE /path/to/notices.csv.",
+                "cache_path": str(_STATE_BREACH_NOTICES_PARQUET),
+            },
+            "records": [],
+        }
+    df = _read_parquet_dataframe(_STATE_BREACH_NOTICES_PARQUET)
+    if state and "state" in df.columns:
+        df = df[df["state"].astype(str).str.upper() == state.strip().upper()]
+    if start_date and "date" in df.columns:
+        df = df[df["date"].astype(str) >= start_date]
+    if end_date and "date" in df.columns:
+        df = df[df["date"].astype(str) <= end_date]
+    if entity_name and "entity_name" in df.columns:
+        norm_query = normalize_name(entity_name)
+        df = df[
+            df["entity_name"].astype(str).map(
+                lambda value: norm_query in normalize_name(value) or normalize_name(value) in norm_query
+            )
+        ]
+
+    records: list[dict] = []
+    bounded_limit = max(1, min(int(limit or 25), 100))
+    for _, row in df.head(bounded_limit).iterrows():
+        r = {str(key): "" if value is None else str(value) for key, value in row.to_dict().items()}
+        entity_confidence = "not_requested"
+        if entity_name:
+            record_name = r.get("entity_name", "").strip()
+            if not record_name:
+                entity_confidence = "low"
+            elif normalize_name(entity_name) == normalize_name(record_name):
+                entity_confidence = "high"
+            elif normalize_name(entity_name) in normalize_name(record_name) or normalize_name(record_name) in normalize_name(entity_name):
+                entity_confidence = "medium"
+            else:
+                entity_confidence = "low"
+        records.append(
+            {
+                "entity_name": r.get("entity_name", ""),
+                "state": r.get("state", ""),
+                "covered_entity_type": r.get("covered_entity_type", ""),
+                "incident_date": r.get("incident_date", ""),
+                "disclosure_date": r.get("disclosure_date", "") or r.get("date", ""),
+                "date": r.get("date", "") or r.get("disclosure_date", ""),
+                "title": r.get("title", ""),
+                "summary": r.get("summary", ""),
+                "source_url": r.get("source_url", ""),
+                "source_type": "state_ag_breach_notice",
+                "entity_match_confidence": entity_confidence,
+                "confidence": "high" if entity_confidence == "high" and r.get("source_url") else "medium" if entity_confidence == "medium" else "low",
+                "match_basis": [
+                    basis
+                    for basis in (
+                        "entity_name" if entity_confidence in {"high", "medium"} else "",
+                        "state" if state and r.get("state", "").upper() == state.strip().upper() else "",
+                        "source_url" if r.get("source_url") else "",
+                    )
+                    if basis
+                ],
+            }
+        )
+    return {
+        "source_status": {
+            "status": "ready",
+            "source_type": "state_ag_breach_notice",
+            "record_count": int(len(df)),
+            "cache_path": str(_STATE_BREACH_NOTICES_PARQUET),
+        },
+        "records": records,
     }
 
 

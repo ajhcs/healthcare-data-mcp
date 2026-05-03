@@ -76,6 +76,7 @@ _QUALITY_MEASURE_ALIASES: dict[str, dict[str, Any]] = {
         "dataset": "hcahps",
         "measure_ids": ("H_COMP_1", "H-COMP-1"),
         "description": "HCAHPS communication with nurses",
+        "match_prefix": True,
     },
     "ami_30_day_mortality": {
         "dataset": "complications",
@@ -83,15 +84,18 @@ _QUALITY_MEASURE_ALIASES: dict[str, dict[str, Any]] = {
         "description": "CMS 30-day AMI mortality",
     },
     "hospital_wide_readmission": {
-        "dataset": "complications",
-        "measure_ids": ("READM_30_HOSP_WIDE", "READM-30-HOSP-WIDE", "READM_30_HOSP_WIDE_HRRP"),
+        "dataset": "unplanned_visits",
+        "measure_ids": ("READM_30_HOSP_WIDE", "READM-30-HOSP-WIDE"),
         "description": "CMS hospital-wide 30-day readmission",
-        "fallback_dataset": "hrrp",
+        "adjacent_tool": "get_readmission_data",
+        "adjacent_dataset": "hrrp",
     },
     "clabsi_sir": {
-        "dataset": "hac",
-        "measure_ids": ("HAI_1_SIR", "HAI-1", "CLABSI"),
+        "dataset": "hai",
+        "measure_ids": ("HAI_1_SIR", "HAI-1"),
         "description": "CMS CLABSI standardized infection ratio",
+        "adjacent_tool": "get_safety_scores",
+        "adjacent_dataset": "hac",
     },
 }
 
@@ -101,6 +105,8 @@ _QUALITY_DATASET_LOADERS = {
     "hac": "load_hac",
     "hcahps": "load_hcahps",
     "complications": "load_complications",
+    "hai": "load_hai",
+    "unplanned_visits": "load_unplanned_visits",
 }
 
 _QUALITY_DATASET_NAMES = {
@@ -109,6 +115,13 @@ _QUALITY_DATASET_NAMES = {
     "hac": "CMS Hospital-Acquired Condition Reduction Program",
     "hcahps": "CMS HCAHPS - Hospital",
     "complications": "CMS Complications and Deaths - Hospital",
+    "hai": "CMS Healthcare-Associated Infections - Hospital",
+    "unplanned_visits": "CMS Unplanned Hospital Visits - Hospital",
+}
+
+_QUALITY_DATASET_IDS = {
+    dataset: data_loaders.DATASETS.get(dataset, "")
+    for dataset in _QUALITY_DATASET_LOADERS
 }
 
 
@@ -144,7 +157,13 @@ async def _load_quality_dataset(dataset: str):
     return await loader()
 
 
-async def _quality_measure_rows_from_dataset(ccn: str, dataset: str, measure_ids: tuple[str, ...]) -> list[dict[str, Any]]:
+async def _quality_measure_rows_from_dataset(
+    ccn: str,
+    dataset: str,
+    measure_ids: tuple[str, ...],
+    *,
+    match_prefix: bool = False,
+) -> list[dict[str, Any]]:
     df = await _load_quality_dataset(dataset)
     if df is None or df.empty:
         return []
@@ -158,7 +177,7 @@ async def _quality_measure_rows_from_dataset(ccn: str, dataset: str, measure_ids
         rows = []
         for _, row in matches.iterrows():
             token = _clean_measure_token(row.get(measure_col, ""))
-            if any(token.startswith(candidate) or candidate in token for candidate in wanted):
+            if token in wanted or (match_prefix and any(token.startswith(f"{candidate}_") for candidate in wanted)):
                 rows.append(_quality_measure_result_row(row, dataset, measure_col))
         return rows
 
@@ -182,7 +201,14 @@ def _quality_measure_result_row(row, dataset: str, measure_col: str) -> dict[str
         "ccn": _row_value(row, "facility_id", "ccn", "provider_id", "provider_ccn"),
         "facility_name": _row_value(row, "facility_name", "hospital_name", "provider_name"),
         "dataset": dataset,
+        "dataset_id": _QUALITY_DATASET_IDS.get(dataset, ""),
         "source_name": _QUALITY_DATASET_NAMES.get(dataset, dataset),
+        "source_url": (
+            f"https://data.cms.gov/provider-data/api/1/datastore/query/"
+            f"{_QUALITY_DATASET_IDS.get(dataset, '')}/0/download?format=csv"
+            if _QUALITY_DATASET_IDS.get(dataset)
+            else ""
+        ),
         "measure_id": _row_value(row, measure_col) if measure_col else "",
         "measure_name": _row_value(row, "measure_name", "hcahps_question", "compared_to_national"),
         "score": _row_value(
@@ -198,6 +224,25 @@ def _quality_measure_result_row(row, dataset: str, measure_col: str) -> dict[str
         "start_date": _row_value(row, "start_date", "measure_start_date"),
         "end_date": _row_value(row, "end_date", "measure_end_date"),
         "raw": raw,
+    }
+
+
+async def _quality_dataset_shape(dataset: str) -> dict[str, Any]:
+    df = await _load_quality_dataset(dataset)
+    dataset_id = _QUALITY_DATASET_IDS.get(dataset, "")
+    columns = [str(column) for column in getattr(df, "columns", [])]
+    return {
+        "dataset": dataset,
+        "dataset_id": dataset_id,
+        "source_name": _QUALITY_DATASET_NAMES.get(dataset, dataset),
+        "source_url": (
+            f"https://data.cms.gov/provider-data/api/1/datastore/query/{dataset_id}/0/download?format=csv"
+            if dataset_id
+            else ""
+        ),
+        "row_count": 0 if df is None else int(len(df)),
+        "columns_sample": columns[:25],
+        "has_measure_column": bool(_find_measure_col(df)) if df is not None and not df.empty else False,
     }
 
 
@@ -668,38 +713,61 @@ async def get_quality_measure_rows(ccn: str, measure: str = "", measure_id: str 
         description = ""
         if alias:
             datasets = [str(alias["dataset"])]
-            if fallback := alias.get("fallback_dataset"):
-                datasets.append(str(fallback))
             measure_ids = tuple(str(value) for value in alias["measure_ids"])
             description = str(alias.get("description", ""))
+            match_prefix = bool(alias.get("match_prefix"))
         else:
             datasets = ["hcahps", "complications", "hrrp", "hac", "hospital_info"]
             measure_ids = (lookup,)
+            match_prefix = False
 
         rows: list[dict[str, Any]] = []
         checked: list[str] = []
         for dataset in datasets:
             checked.append(dataset)
-            rows.extend(await _quality_measure_rows_from_dataset(ccn, dataset, measure_ids))
+            rows.extend(
+                await _quality_measure_rows_from_dataset(
+                    ccn,
+                    dataset,
+                    measure_ids,
+                    match_prefix=match_prefix,
+                )
+            )
             if rows and alias:
                 break
 
         if not rows:
-            return error_response(
-                f"No CMS quality measure rows found for CCN {ccn} and measure {lookup}.",
-                code="not_found",
-                detail={
+            shapes = [await _quality_dataset_shape(dataset) for dataset in checked]
+            adjacent_dataset = str(alias.get("adjacent_dataset", "")) if alias else ""
+            adjacent_available = False
+            if adjacent_dataset:
+                adjacent_df = await _load_quality_dataset(adjacent_dataset)
+                adjacent_available = bool(adjacent_df is not None and not adjacent_df.empty)
+            measure_shape_problem = any(shape["row_count"] > 0 and not shape["has_measure_column"] for shape in shapes)
+            return to_structured(
+                {
+                    "status": "source_shape_error" if measure_shape_problem else "exact_measure_not_found",
                     "ccn": ccn,
+                    "exact_measure_found": False,
                     "measure": lookup,
                     "measure_ids": list(measure_ids),
                     "datasets_checked": checked,
+                    "dataset_shapes": shapes,
+                    "adjacent_available": adjacent_available,
+                    "adjacent_tool": str(alias.get("adjacent_tool", "")) if alias else "",
+                    "source_caveat": (
+                        "No adjacent public record has been promoted as the requested CMS measure. "
+                        "Use adjacent_tool only for separate summary context."
+                    ),
                     "next_step": "Verify the CCN and measure ID against the CMS Provider Data Catalog source file for the reporting period.",
-                },
+                }
             )
 
         return to_structured(
             {
                 "ccn": ccn,
+                "status": "ready",
+                "exact_measure_found": True,
                 "measure": measure or "",
                 "measure_id": measure_id or "",
                 "description": description,
@@ -708,6 +776,7 @@ async def get_quality_measure_rows(ccn: str, measure: str = "", measure_id: str 
                 "total_rows": len(rows),
                 "rows": rows,
                 "confidence": "high_for_exact_cms_measure_rows",
+                "source_caveat": "Exact row-level CMS Provider Data Catalog measure rows only; adjacent summaries are not substituted.",
             }
         )
     except Exception as e:

@@ -152,40 +152,35 @@ def _contains_sensitive_identifier_keys(payload: dict[str, Any]) -> bool:
 # Cyber incident enrichment helpers
 # ---------------------------------------------------------------------------
 
-_STATE_AG_BREACH_NOTICE_SOURCE_STATUSES: dict[str, CyberSourceStatus] = {
-    "PA": CyberSourceStatus(
-        source_name="Pennsylvania Office of Attorney General breach notices",
-        source_type="state_ag_breach_notice",
-        status="ready",
-        reason="Pennsylvania notices can be represented as public-page records in the local cyber index.",
-        source_url="https://www.attorneygeneral.gov/",
-        next_step="Seed public notice pages or structured fixture rows into the public-records cyber cache.",
-    ),
-    "NJ": CyberSourceStatus(
-        source_name="New Jersey Division of Consumer Affairs breach notices",
-        source_type="state_ag_breach_notice",
-        status="not_searchable",
-        reason="The public source does not expose a stable structured search/export endpoint for automated entity lookup.",
-        source_url="https://www.njconsumeraffairs.gov/",
-        next_step="Use manual source review or add curated public notice fixtures when available.",
-    ),
-    "DE": CyberSourceStatus(
-        source_name="Delaware Department of Justice breach notices",
-        source_type="state_ag_breach_notice",
-        status="not_automatable",
-        reason="The public source should not be automated without a stable unauthenticated index or documented export path.",
-        source_url="https://attorneygeneral.delaware.gov/",
-        next_step="Treat Delaware AG breach notices as manual-review evidence until a stable public feed exists.",
-    ),
-}
+_STATE_BREACH_SOURCE_CSV = Path(__file__).parent / "data" / "state_breach_notice_sources.csv"
+
+
+def _state_breach_notice_source_statuses() -> dict[str, CyberSourceStatus]:
+    statuses: dict[str, CyberSourceStatus] = {}
+    if _STATE_BREACH_SOURCE_CSV.exists():
+        with open(_STATE_BREACH_SOURCE_CSV, newline="", encoding="utf-8") as source_file:
+            for row in csv.DictReader(source_file):
+                state = str(row.get("state", "")).strip().upper()
+                if not state:
+                    continue
+                statuses[state] = CyberSourceStatus(
+                    source_name=str(row.get("source_name", "")),
+                    source_type="state_ag_breach_notice",
+                    status=str(row.get("status", "")),
+                    reason=str(row.get("reason", "")),
+                    source_url=str(row.get("source_url", "")),
+                    next_step=str(row.get("next_step", "")),
+                )
+    return statuses
 
 
 def _cyber_source_statuses(states: list[str] | None = None) -> dict[str, dict[str, Any]]:
     requested = [state.strip().upper() for state in states or [] if state.strip()]
     keys = requested or ["PA", "NJ", "DE"]
     statuses: dict[str, dict[str, Any]] = {}
+    configured = _state_breach_notice_source_statuses()
     for state in keys:
-        status = _STATE_AG_BREACH_NOTICE_SOURCE_STATUSES.get(
+        status = configured.get(
             state,
             CyberSourceStatus(
                 source_name=f"{state} state AG breach notices",
@@ -873,9 +868,73 @@ async def get_state_ag_breach_notice_sources(states: list[str] | None = None) ->
 
 
 @mcp.tool(structured_output=True)
+async def get_cyber_attestation_source_status() -> dict[str, Any]:
+    """Return public source status for broad cybersecurity attestation claims."""
+    return to_structured(
+        {
+            "status": "not_publicly_available",
+            "source_name": "CMS cybersecurity attestation public dataset",
+            "source_type": "cybersecurity_attestation",
+            "source_url": "https://www.cms.gov/data-research/cms-data/data-available-everyone",
+            "can_assert_attestation_status": False,
+            "reason": (
+                "No reviewed public CMS dataset/source field is configured that supports a broad "
+                "organization-level cybersecurity attestation status."
+            ),
+            "supported_adjacent_sources": [
+                {
+                    "source_type": "cms_promoting_interoperability",
+                    "supported_claim": "interoperability/EHR fields present in source rows",
+                    "unsupported_claim": "general cybersecurity attestation",
+                },
+                {"source_type": "hhs_ocr_breach_portal", "supported_claim": "large HIPAA breach reports"},
+                {"source_type": "ocr_enforcement_action", "supported_claim": "OCR enforcement action public pages"},
+                {"source_type": "sec_cyber_disclosure", "supported_claim": "SEC issuer cyber disclosures"},
+                {"source_type": "state_ag_breach_notice", "supported_claim": "reviewed state notice rows only"},
+                {"source_type": "cisa_kev_context", "supported_claim": "vulnerability context only"},
+            ],
+            "next_step": "Configure a reviewed public source with an explicit cybersecurity attestation field before asserting status.",
+        }
+    )
+
+
+@mcp.tool(structured_output=True)
 async def get_cisa_kev_context_status() -> dict[str, Any]:
     """Return CISA KEV context-only status; this source is not attribution evidence."""
     return to_structured(CISAKevContext().model_dump())
+
+
+@mcp.tool(structured_output=True)
+async def search_state_breach_notices(
+    entity_name: str = "",
+    state: str = "",
+    start_date: str = "",
+    end_date: str = "",
+    limit: int = 25,
+) -> dict[str, Any]:
+    """Search imported reviewed state AG breach notice rows."""
+    try:
+        result = data_loaders.search_state_breach_notices(
+            entity_name=entity_name,
+            state=state,
+            start_date=start_date,
+            end_date=end_date,
+            limit=limit,
+        )
+        records = result.get("records", [])
+        return to_structured(
+            {
+                "entity_name": entity_name,
+                "state": state.upper() if state else "",
+                "total_results": len(records),
+                "source_status": result.get("source_status", {}),
+                "records": records,
+                "source_caveat": "State breach notice search covers only reviewed imported rows; it is not a national breach cache.",
+            }
+        )
+    except Exception as e:
+        logger.exception("search_state_breach_notices failed")
+        return error_response(f"search_state_breach_notices failed: {e}")
 
 
 @mcp.tool(structured_output=True)
@@ -1070,7 +1129,14 @@ async def get_interop_status(
             total_results=len(records),
             records=records,
         )
-        return to_structured(response.model_dump())
+        payload = response.model_dump()
+        payload["source_note"] = (
+            "CMS Promoting Interoperability data supports interoperability/EHR fields present in the source. "
+            "It does not establish a general cybersecurity attestation unless such a source field is present."
+        )
+        payload["source_type"] = "cms_promoting_interoperability"
+        payload["can_assert_cybersecurity_attestation"] = False
+        return to_structured(payload)
     except Exception as e:
         logger.exception("get_interop_status failed")
         return error_response(f"get_interop_status failed: {e}")

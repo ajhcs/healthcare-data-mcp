@@ -282,6 +282,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--import-docgraph-parquet", type=Path, help="Copy an existing DocGraph shared-patients Parquet cache."
     )
+    parser.add_argument(
+        "--import-state-breach-notices",
+        nargs=2,
+        metavar=("STATE", "PATH"),
+        help="Import a reviewed state breach notice CSV into the public-records cache.",
+    )
+    parser.add_argument(
+        "--state-breach-source-url",
+        default="",
+        help="Source URL to apply to imported state breach notice rows that lack source_url.",
+    )
     return parser.parse_args()
 
 
@@ -348,6 +359,8 @@ def main() -> None:
         breach_csv=args.import_breach_csv,
         docgraph_csv=args.import_docgraph_csv,
         docgraph_parquet=args.import_docgraph_parquet,
+        state_breach_notices=args.import_state_breach_notices,
+        state_breach_source_url=args.state_breach_source_url,
     )
     for result in import_results:
         print(result)
@@ -447,6 +460,8 @@ def import_manual_caches(
     breach_csv: Path | None = None,
     docgraph_csv: Path | None = None,
     docgraph_parquet: Path | None = None,
+    state_breach_notices: list[str] | None = None,
+    state_breach_source_url: str = "",
 ) -> list[str]:
     """Import source files into the shared cache."""
     if docgraph_csv and docgraph_parquet:
@@ -472,6 +487,25 @@ def import_manual_caches(
     if docgraph_csv:
         rows = _convert_docgraph_csv(docgraph_csv, root / "docgraph" / "shared_patients.parquet")
         results.append(f"Imported DocGraph CSV -> {root / 'docgraph' / 'shared_patients.parquet'} ({rows} rows)")
+
+    if state_breach_notices:
+        from servers.public_records import data_loaders
+
+        state, path_text = state_breach_notices
+        target = root / "public-records" / "state_breach_notices.parquet"
+        original_parquet = data_loaders._STATE_BREACH_NOTICES_PARQUET
+        try:
+            data_loaders._STATE_BREACH_NOTICES_PARQUET = target
+            result = data_loaders.import_state_breach_notices(
+                state,
+                Path(path_text).expanduser(),
+                source_url=state_breach_source_url,
+            )
+        finally:
+            data_loaders._STATE_BREACH_NOTICES_PARQUET = original_parquet
+        results.append(
+            f"Imported {result['rows_imported']} {state.upper()} state breach notices -> {target}"
+        )
 
     return results
 

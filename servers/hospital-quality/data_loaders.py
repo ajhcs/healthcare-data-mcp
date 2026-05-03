@@ -25,6 +25,8 @@ DATASETS = {
     "hac": "yq43-i98g",
     "hcahps": "dgck-syfz",
     "complications": "ynj2-r877",
+    "hai": "77hc-ibv8",
+    "unplanned_visits": "632h-zaca",
 }
 
 # In-memory DataFrame cache to avoid re-reading CSV on every call
@@ -80,6 +82,16 @@ async def load_hcahps() -> pd.DataFrame:
 async def load_complications() -> pd.DataFrame:
     """Load the Complications and Deaths dataset (ynj2-r877)."""
     return await _load_dataset("complications")
+
+
+async def load_hai() -> pd.DataFrame:
+    """Load the Healthcare-Associated Infections dataset (6651-3486)."""
+    return await _load_dataset("hai")
+
+
+async def load_unplanned_visits() -> pd.DataFrame:
+    """Load the Unplanned Hospital Visits dataset (ecb7-cb46)."""
+    return await _load_dataset("unplanned_visits")
 
 
 async def load_cost_report() -> pd.DataFrame:

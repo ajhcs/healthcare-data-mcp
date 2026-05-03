@@ -7,6 +7,9 @@ for healthcare workforce analysis.
 import logging
 import os
 import zipfile
+import json
+import hashlib
+from datetime import datetime, timezone
 from pathlib import Path
 
 import duckdb
@@ -36,8 +39,14 @@ _CACHE_TTL_DAYS = 30
 _ACGME_DATA_DIR = Path(__file__).parent / "data"
 _ACGME_CSV = _ACGME_DATA_DIR / "acgme_programs.csv"
 _ACGME_CACHE_CSV = _CACHE_DIR / "acgme_programs.csv"
+_ACGME_CACHE_META = _CACHE_DIR / "acgme_programs.meta.json"
 _ACGME_ENV_VAR = "ACGME_PROGRAMS_CSV"
 _ACGME_SOURCE_URL = "https://acgmecloud.org/analytics/explore-public-data/program-search"
+_ACGME_SOURCE_URLS = [
+    "https://support.acgmecloud.org/hc/en-us/articles/36070312362391-Advance-Search-Feature",
+    "https://support.acgmecloud.org/hc/en-us/articles/31576594571927-Explore-Public-Data-Programs",
+    "https://apps.acgme-i.org/ads/Public/Request/GetDataDictionary",
+]
 _ACGME_IMPORT_HINT = (
     "Import a public ACGME Program Search export with "
     "python3 scripts/import_acgme_programs.py /path/to/acgme-program-search-export.csv. "
@@ -203,6 +212,13 @@ def normalize_acgme_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 
     for column in ("program_id", "specialty", "institution", "city", "state", "accreditation_status"):
         normalized[column] = normalized[column].fillna("").astype(str).str.strip()
+    normalized["program_id"] = normalized["program_id"].map(_normalize_acgme_program_id)
+    invalid_program_ids = [
+        value for value in normalized["program_id"].tolist()
+        if value and not (len(value) == 10 and value.isdigit())
+    ]
+    if invalid_program_ids:
+        raise ValueError("ACGME program_id must be a 10-digit string when present.")
 
     for column in ("total_positions", "filled_positions"):
         normalized[column] = pd.to_numeric(normalized[column], errors="coerce").fillna(0).astype(int)
@@ -214,6 +230,54 @@ def normalize_acgme_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     ].copy()
     normalized["state"] = normalized["state"].str.upper()
     return normalized[list(_ACGME_COLUMN_ALIASES)]
+
+
+def _normalize_acgme_program_id(value: object) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    if text.endswith(".0") and text[:-2].isdigit():
+        text = text[:-2]
+    return text.zfill(10) if text.isdigit() and len(text) < 10 else text
+
+
+def acgme_column_map(df: pd.DataFrame) -> dict[str, str]:
+    return {
+        canonical: source
+        for canonical, aliases in _ACGME_COLUMN_ALIASES.items()
+        if (source := _find_column(df.columns, aliases))
+    }
+
+
+def write_acgme_import_metadata(
+    *,
+    input_path: Path,
+    output_path: Path,
+    raw_df: pd.DataFrame,
+    normalized_df: pd.DataFrame,
+    source_url: str = _ACGME_SOURCE_URL,
+) -> dict[str, object]:
+    checksum = hashlib.sha256(output_path.read_bytes()).hexdigest() if output_path.exists() else ""
+    optional_missing = [
+        column
+        for column in ("program_id", "city", "total_positions", "filled_positions", "accreditation_status")
+        if column not in acgme_column_map(raw_df)
+    ]
+    meta = {
+        "input_filename": str(input_path),
+        "imported_at": datetime.now(timezone.utc).isoformat(),
+        "row_count": int(len(normalized_df)),
+        "normalized_column_map": acgme_column_map(raw_df),
+        "source_url": source_url,
+        "source_urls": _ACGME_SOURCE_URLS,
+        "checksum_sha256": checksum,
+        "optional_missing_columns": optional_missing,
+    }
+    meta_path = output_path.with_suffix(".meta.json")
+    meta_path.write_text(json.dumps(meta, indent=2, sort_keys=True), encoding="utf-8")
+    if output_path == _ACGME_CACHE_CSV and meta_path != _ACGME_CACHE_META:
+        _ACGME_CACHE_META.write_text(json.dumps(meta, indent=2, sort_keys=True), encoding="utf-8")
+    return meta
 
 
 def resolve_acgme_csv_path() -> Path | None:
@@ -235,6 +299,65 @@ def acgme_missing_data_error() -> str:
         f"ACGME data file not found. Checked {_ACGME_ENV_VAR}, {_ACGME_CACHE_CSV}, and {_ACGME_CSV}. "
         + _ACGME_IMPORT_HINT
     )
+
+
+def get_acgme_source_status() -> dict[str, object]:
+    acgme_csv = resolve_acgme_csv_path()
+    meta_path = acgme_csv.with_suffix(".meta.json") if acgme_csv else _ACGME_CACHE_META
+    meta: dict[str, object] = {}
+    if meta_path.exists():
+        try:
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
+        except Exception:
+            meta = {}
+    if acgme_csv is None:
+        status = "import_required"
+        row_count = 0
+    else:
+        try:
+            df = pd.read_csv(acgme_csv, dtype=str, keep_default_na=False)
+            normalize_acgme_dataframe(df)
+            status = "ready"
+            row_count = int(len(df))
+        except Exception as exc:
+            status = "invalid_import"
+            row_count = 0
+            meta["last_error"] = str(exc)
+    return {
+        "source_name": "ACGME Program Search public export",
+        "source_urls": _ACGME_SOURCE_URLS,
+        "cache_path": str(_ACGME_CACHE_CSV),
+        "active_csv_path": str(acgme_csv) if acgme_csv else "",
+        "metadata_path": str(meta_path),
+        "row_count": int(meta.get("row_count") or row_count),
+        "last_import_time": str(meta.get("imported_at", "")),
+        "required_columns": list(_ACGME_REQUIRED_COLUMNS),
+        "optional_columns": [
+            column for column in _ACGME_COLUMN_ALIASES if column not in _ACGME_REQUIRED_COLUMNS
+        ],
+        "status": status,
+        "next_step": _ACGME_IMPORT_HINT if status != "ready" else "",
+        "source_caveat": (
+            "This repo supports import of ACGME public Program Search exports unless/until "
+            "ACGME provides a stable documented unauthenticated API."
+        ),
+        "metadata": meta,
+    }
+
+
+def _acgme_result(row: pd.Series, match_basis: list[str] | None = None, confidence: str = "high") -> dict[str, object]:
+    return {
+        "program_id": str(row.get("program_id", "")),
+        "specialty": str(row.get("specialty", "")),
+        "institution": str(row.get("institution", "")),
+        "city": str(row.get("city", "")),
+        "state": str(row.get("state", "")),
+        "total_positions": int(row.get("total_positions", 0) or 0),
+        "filled_positions": int(row.get("filled_positions", 0) or 0),
+        "accreditation_status": str(row.get("accreditation_status", "")),
+        "match_basis": match_basis or [],
+        "confidence": confidence,
+    }
 
 
 def _is_cache_valid(path: Path, ttl_days: int = _CACHE_TTL_DAYS) -> bool:
@@ -691,21 +814,33 @@ def query_acgme_programs(
             mask = df["state"].str.upper() == state.upper()
             df = pd.DataFrame(df[mask])
 
+        match_basis = []
+        if institution:
+            match_basis.append("institution_contains")
+        if specialty:
+            match_basis.append("specialty_contains")
+        if state:
+            match_basis.append("state_exact")
         results = []
         for _, row in df.head(100).iterrows():
-            results.append({
-                "program_id": str(row.get("program_id", "")),
-                "specialty": str(row.get("specialty", "")),
-                "institution": str(row.get("institution", "")),
-                "city": str(row.get("city", "")),
-                "state": str(row.get("state", "")),
-                "total_positions": int(row.get("total_positions", 0) or 0),
-                "filled_positions": int(row.get("filled_positions", 0) or 0),
-                "accreditation_status": str(row.get("accreditation_status", "")),
-            })
+            results.append(_acgme_result(row, match_basis=match_basis, confidence="high" if match_basis else "not_requested"))
 
         return results
 
     except Exception as e:
         logger.warning("ACGME query failed: %s", e)
         return [{"error": f"ACGME query failed: {e}. {_ACGME_IMPORT_HINT}"}]
+
+
+def get_acgme_program(program_id: str) -> dict[str, object] | None:
+    normalized = _normalize_acgme_program_id(program_id)
+    if not (len(normalized) == 10 and normalized.isdigit()):
+        raise ValueError("program_id must be a 10-digit ACGME Program Code.")
+    acgme_csv = resolve_acgme_csv_path()
+    if acgme_csv is None:
+        return None
+    df = normalize_acgme_dataframe(pd.read_csv(acgme_csv, dtype=str, keep_default_na=False))
+    matches = df[df["program_id"] == normalized]
+    if matches.empty:
+        return None
+    return _acgme_result(matches.iloc[0], match_basis=["program_id_exact"], confidence="high")

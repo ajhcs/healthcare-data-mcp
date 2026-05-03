@@ -291,6 +291,70 @@ async def get_gme_profile(
 # Tool 4: get_residency_programs
 # ---------------------------------------------------------------------------
 @mcp.tool(structured_output=True)
+async def get_acgme_source_status() -> dict[str, Any]:
+    """Return ACGME public export/import status for residency program inventory."""
+    try:
+        return to_structured(workforce_data.get_acgme_source_status())
+    except Exception as e:
+        logger.exception("get_acgme_source_status failed")
+        return error_response(f"get_acgme_source_status failed: {e}")
+
+
+@mcp.tool(structured_output=True)
+async def get_acgme_program(program_id: str) -> dict[str, Any]:
+    """Return one exact ACGME program by 10-digit Program Code."""
+    try:
+        status = workforce_data.get_acgme_source_status()
+        if status["status"] != "ready":
+            return to_structured(status)
+        result = workforce_data.get_acgme_program(program_id)
+        if result is None:
+            return to_structured(
+                {
+                    "status": "exact_program_not_found",
+                    "program_id": program_id,
+                    "source_status": status,
+                    "next_step": "Verify the 10-digit ACGME Program Code against the imported public export.",
+                }
+            )
+        return to_structured(
+            {
+                "status": "ready",
+                "source_status": status,
+                "program": result,
+            }
+        )
+    except ValueError as e:
+        return error_response(str(e), code="invalid_params")
+    except Exception as e:
+        logger.exception("get_acgme_program failed")
+        return error_response(f"get_acgme_program failed: {e}")
+
+
+@mcp.tool(structured_output=True)
+async def search_acgme_programs(
+    institution: str = "", specialty: str = "", state: str = "",
+) -> dict[str, Any]:
+    """Search imported ACGME program inventory with explicit match-basis fields."""
+    try:
+        status = workforce_data.get_acgme_source_status()
+        if status["status"] != "ready":
+            return to_structured(status)
+        programs = workforce_data.query_acgme_programs(institution, specialty, state)
+        return to_structured(
+            {
+                "status": "ready",
+                "source_status": status,
+                "total_programs": len(programs),
+                "programs": programs,
+            }
+        )
+    except Exception as e:
+        logger.exception("search_acgme_programs failed")
+        return error_response(f"search_acgme_programs failed: {e}")
+
+
+@mcp.tool(structured_output=True)
 async def get_residency_programs(
     institution: str = "", specialty: str = "", state: str = "",
 ) -> dict[str, Any]:

@@ -203,14 +203,19 @@ hc-mcp-setup --acquire-nj-hospital-public-data
 hc-mcp-setup --acquire-de-hospital-discharge
 hc-mcp-setup --cache-guide
 hc-mcp-setup --import-340b-json /path/to/340b_covered_entities.json
+hc-mcp-setup --import-breach-csv /path/to/hipaa_breaches.csv
+hc-mcp-setup --import-state-breach-notices PA /path/to/state_notices.csv
 hc-mcp-setup --import-docgraph-csv /path/to/docgraph_shared_patients.csv
 # or, if already converted:
 hc-mcp-setup --import-docgraph-parquet /path/to/shared_patients.parquet
+python3 scripts/import_acgme_programs.py /path/to/acgme-program-search-export.csv
 ```
 
 The default cache root is `~/.healthcare-data-mcp/cache`. The affected tools include `public_records.get_340b_status`, `public_records.search_phc4_public_reports`, `public_records.get_breach_history`, `public_records.get_cyber_incident_profile`, `hospital_quality.get_quality_measure_rows`, `financial_intelligence.get_public_financial_health_profile`, `workforce_analytics.get_public_throughput_profile`, `workforce_analytics.compare_hospital_staffing_productivity`, `physician_referral_network.map_referral_network`, and `physician_referral_network.detect_leakage`.
 
 `hc-mcp-setup --acquire-public-caches` fetches or indexes public caches with stable unauthenticated acquisition paths, including OCR HIPAA breaches, PHC4 public reports, AHRQ HFMD when a direct public artifact is available, and PA/NJ/DE public hospital source indexes. HRSA 340B OPAIS is checked by `--acquire-340b-opais`; if the public reports page still does not expose a stable unauthenticated JSON endpoint, the command returns a precise `not_automatable` status and the covered-entity daily export remains importable with `--import-340b-json`. DocGraph/CareSet shared-patient data is separately licensed and is import-only.
+
+Exact-source tools do not substitute adjacent public records. Use `hospital_quality.get_quality_measure_rows` for exact CMS measure IDs such as `MORT_30_AMI`, `READM_30_HOSP_WIDE`, and `HAI_1_SIR`; use HRRP/HAC/PHC4 tools only as separate adjacent context. Use `workforce_analytics.get_acgme_source_status` before ACGME program ID lookup, `research_trials.inventory_clinical_trial_sponsors` or `inventory_clinical_trial_sites` for deduped ClinicalTrials.gov inventories, and `public_records.get_cyber_attestation_source_status` for unsupported broad cybersecurity-attestation claims. See `docs/SOURCE_CAPABILITY_LEDGER.md`.
 
 ## Command Reference
 

@@ -194,6 +194,51 @@ class ClinicalTrialDetailResponse(BaseModel):
     metadata: ClinicalTrialsMetadata = Field(default_factory=ClinicalTrialsMetadata)
 
 
+class TrialSponsorInventoryRecord(BaseModel):
+    normalized_sponsor_name: str = ""
+    display_names: list[str] = Field(default_factory=list)
+    role_counts: dict[str, int] = Field(default_factory=dict)
+    lead_sponsor_count: int = 0
+    collaborator_count: int = 0
+    org_full_name_count: int = 0
+    nct_ids: list[str] = Field(default_factory=list)
+    classes: list[str] = Field(default_factory=list)
+    first_study_date: str = ""
+    last_study_date: str = ""
+    active_recruiting_count: int = 0
+    match_basis: str = ""
+    match_confidence: str = ""
+
+
+class TrialSiteInventoryRecord(BaseModel):
+    normalized_facility_name: str = ""
+    display_names: list[str] = Field(default_factory=list)
+    city: str = ""
+    state: str = ""
+    country: str = ""
+    zip_code: str = ""
+    location_status_counts: dict[str, int] = Field(default_factory=dict)
+    nct_ids: list[str] = Field(default_factory=list)
+    first_update_date: str = ""
+    last_update_date: str = ""
+    match_basis: str = ""
+    match_confidence: str = ""
+
+
+class TrialInventoryResponse(BaseModel):
+    query: str = ""
+    filters: dict[str, Any] = Field(default_factory=dict)
+    metadata: ClinicalTrialsMetadata = Field(default_factory=ClinicalTrialsMetadata)
+    total_studies_scanned: int = 0
+    unique_sponsor_count: int = 0
+    unique_site_count: int = 0
+    records: list[dict[str, Any]] = Field(default_factory=list)
+    unresolved_location_count: int = 0
+    truncated: bool = False
+    next_page_token: str = ""
+    warnings: list[str] = Field(default_factory=list)
+
+
 class OrganizationMatchDecision(BaseModel):
     """Conservative organization matching decision."""
 
@@ -220,4 +265,3 @@ class ResearchActivityProfileResponse(BaseModel):
     trials: ClinicalTrialSearchResponse = Field(default_factory=ClinicalTrialSearchResponse)
     combined_summary: dict[str, Any] = Field(default_factory=dict)
     warnings: list[str] = Field(default_factory=list)
-

@@ -18,6 +18,8 @@ async def test_research_trials_server_imports_with_output_schemas() -> None:
         "profile_research_funding",
         "search_clinical_trials",
         "get_clinical_trial",
+        "inventory_clinical_trial_sponsors",
+        "inventory_clinical_trial_sites",
         "profile_research_activity",
     }
     assert all(tool.outputSchema for tool in tools)
@@ -96,6 +98,86 @@ async def test_get_clinical_trial_validates_nct_id() -> None:
 
     assert result["ok"] is False
     assert result["error"]["code"] == "invalid_params"
+
+
+@pytest.mark.asyncio
+async def test_inventory_clinical_trial_sponsors_separates_roles_and_counts() -> None:
+    raw = {
+        "_version": {"apiVersion": "2.0.5"},
+        "studies": [
+            {
+                "protocolSection": {
+                    "identificationModule": {
+                        "nctId": "NCT00000001",
+                        "organization": {"fullName": "Example Health"},
+                    },
+                    "statusModule": {
+                        "overallStatus": "RECRUITING",
+                        "startDateStruct": {"date": "2025-01-01"},
+                    },
+                    "sponsorCollaboratorsModule": {
+                        "leadSponsor": {"name": "Example Health", "class": "OTHER"},
+                        "collaborators": [{"name": "Example University", "class": "OTHER"}],
+                    },
+                }
+            },
+            {
+                "protocolSection": {
+                    "identificationModule": {"nctId": "NCT00000002"},
+                    "statusModule": {
+                        "overallStatus": "COMPLETED",
+                        "startDateStruct": {"date": "2024-01-01"},
+                    },
+                    "sponsorCollaboratorsModule": {
+                        "leadSponsor": {"name": "Example University", "class": "OTHER"},
+                        "collaborators": [{"name": "Example Health", "class": "OTHER"}],
+                    },
+                }
+            },
+        ],
+    }
+
+    with patch.object(server.clinical_trials_client, "search_studies", new_callable=AsyncMock, return_value=raw):
+        result = await server.inventory_clinical_trial_sponsors("Example", scan_limit=10)
+
+    records = {record["normalized_sponsor_name"]: record for record in result["records"]}
+    assert records["EXAMPLE HEALTH"]["lead_sponsor_count"] == 1
+    assert records["EXAMPLE HEALTH"]["collaborator_count"] == 1
+    assert records["EXAMPLE HEALTH"]["org_full_name_count"] == 1
+    assert records["EXAMPLE HEALTH"]["active_recruiting_count"] == 1
+    assert records["EXAMPLE UNIVERSITY"]["lead_sponsor_count"] == 1
+
+
+@pytest.mark.asyncio
+async def test_inventory_clinical_trial_sites_keys_facility_by_geography_and_unresolved_count() -> None:
+    raw = {
+        "_version": {"apiVersion": "2.0.5"},
+        "studies": [
+            {
+                "protocolSection": {
+                    "identificationModule": {"nctId": "NCT00000001"},
+                    "statusModule": {
+                        "overallStatus": "RECRUITING",
+                        "lastUpdatePostDateStruct": {"date": "2026-01-01"},
+                    },
+                    "contactsLocationsModule": {
+                        "locations": [
+                            {"facility": "Example Hospital", "city": "Philadelphia", "state": "PA", "country": "United States", "zip": "19107", "status": "RECRUITING"},
+                            {"facility": "Example Hospital", "city": "Camden", "state": "NJ", "country": "United States", "zip": "08103", "status": "RECRUITING"},
+                            {"city": "Philadelphia", "state": "PA", "country": "United States"},
+                        ]
+                    },
+                }
+            }
+        ],
+    }
+
+    with patch.object(server.clinical_trials_client, "search_studies", new_callable=AsyncMock, return_value=raw):
+        result = await server.inventory_clinical_trial_sites("Example Hospital", scan_limit=10)
+
+    assert result["unique_site_count"] == 2
+    assert result["unresolved_location_count"] == 1
+    assert {record["state"] for record in result["records"]} == {"PA", "NJ"}
 
 
 @pytest.mark.asyncio

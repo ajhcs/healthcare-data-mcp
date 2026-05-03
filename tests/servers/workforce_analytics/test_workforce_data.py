@@ -4,8 +4,18 @@ from pathlib import Path
 
 import pandas as pd
 import pytest
+import duckdb
 
 from servers.workforce_analytics import operations_data, server, workforce_data
+
+
+def _write_parquet(df: pd.DataFrame, path: Path) -> None:
+    con = duckdb.connect(":memory:")
+    try:
+        con.register("df", df)
+        con.execute("COPY df TO ? (FORMAT PARQUET, COMPRESSION ZSTD)", [str(path)])
+    finally:
+        con.close()
 
 
 def test_normalize_acgme_dataframe_maps_export_aliases():
@@ -44,6 +54,39 @@ def test_normalize_acgme_dataframe_maps_export_aliases():
     assert row["total_positions"] == 180
     assert row["filled_positions"] == 176
     assert row["accreditation_status"] == "Accredited"
+
+
+def test_normalize_acgme_dataframe_preserves_leading_zero_program_id():
+    raw = pd.DataFrame(
+        [
+            {
+                "Program ID": "0123456789",
+                "Specialty Name": "Internal Medicine",
+                "Sponsoring Institution": "Example Sponsor",
+                "State": "PA",
+            }
+        ]
+    )
+
+    normalized = workforce_data.normalize_acgme_dataframe(raw)
+
+    assert normalized.iloc[0]["program_id"] == "0123456789"
+
+
+def test_normalize_acgme_dataframe_rejects_invalid_program_id():
+    raw = pd.DataFrame(
+        [
+            {
+                "Program ID": "ABC123",
+                "Specialty Name": "Internal Medicine",
+                "Sponsoring Institution": "Example Sponsor",
+                "State": "PA",
+            }
+        ]
+    )
+
+    with pytest.raises(ValueError, match="10-digit"):
+        workforce_data.normalize_acgme_dataframe(raw)
 
 
 def test_query_acgme_programs_reads_env_configured_csv(tmp_path: Path, monkeypatch):
@@ -86,6 +129,7 @@ def test_query_acgme_programs_reads_env_configured_csv(tmp_path: Path, monkeypat
     assert len(results) == 1
     assert results[0]["program_id"] == "1403521487"
     assert results[0]["filled_positions"] == 176
+    assert set(results[0]["match_basis"]) == {"institution_contains", "specialty_contains", "state_exact"}
 
 
 def test_query_acgme_programs_returns_actionable_error_when_missing(monkeypatch, tmp_path: Path):
@@ -99,6 +143,51 @@ def test_query_acgme_programs_returns_actionable_error_when_missing(monkeypatch,
     assert "error" in results[0]
     assert "scripts/import_acgme_programs.py" in results[0]["error"]
     assert "acgmecloud.org/analytics/explore-public-data/program-search" in results[0]["error"]
+
+
+def test_get_acgme_source_status_missing_cache(monkeypatch, tmp_path: Path):
+    monkeypatch.delenv(workforce_data._ACGME_ENV_VAR, raising=False)
+    monkeypatch.setattr(workforce_data, "_ACGME_CACHE_CSV", tmp_path / "missing-cache.csv")
+    monkeypatch.setattr(workforce_data, "_ACGME_CACHE_META", tmp_path / "missing-cache.meta.json")
+    monkeypatch.setattr(workforce_data, "_ACGME_CSV", tmp_path / "missing-bundled.csv")
+
+    status = workforce_data.get_acgme_source_status()
+
+    assert status["status"] == "import_required"
+    assert "scripts/import_acgme_programs.py" in status["next_step"]
+
+
+def test_get_acgme_source_status_reads_valid_import_metadata(tmp_path: Path, monkeypatch):
+    csv_path = tmp_path / "acgme_programs.csv"
+    raw = pd.DataFrame(
+        [
+            {
+                "Program ID": "0123456789",
+                "Specialty Name": "Internal Medicine",
+                "Sponsoring Institution": "Example Sponsor",
+                "State": "PA",
+            }
+        ]
+    )
+    normalized = workforce_data.normalize_acgme_dataframe(raw)
+    normalized.to_csv(csv_path, index=False)
+    workforce_data.write_acgme_import_metadata(
+        input_path=tmp_path / "source.csv",
+        output_path=csv_path,
+        raw_df=raw,
+        normalized_df=normalized,
+    )
+    monkeypatch.setenv(workforce_data._ACGME_ENV_VAR, str(csv_path))
+    monkeypatch.setattr(workforce_data, "_ACGME_CACHE_CSV", tmp_path / "missing-cache.csv")
+    monkeypatch.setattr(workforce_data, "_ACGME_CSV", tmp_path / "missing-bundled.csv")
+
+    status = workforce_data.get_acgme_source_status()
+    result = workforce_data.get_acgme_program("0123456789")
+
+    assert status["status"] == "ready"
+    assert status["row_count"] == 1
+    assert result is not None
+    assert result["match_basis"] == ["program_id_exact"]
 
 
 @pytest.mark.asyncio
@@ -171,7 +260,7 @@ async def test_throughput_profile_computes_public_operations_metrics(monkeypatch
 
 def test_query_hcris_staffing_maps_s3_total_rn_lpn_aide_by_provider_year(tmp_path: Path, monkeypatch):
     hcris_cache = tmp_path / "hcris_staffing.parquet"
-    pd.DataFrame(
+    _write_parquet(pd.DataFrame(
         [
             {
                 "prvdr_num": "390001",
@@ -222,7 +311,7 @@ def test_query_hcris_staffing_maps_s3_total_rn_lpn_aide_by_provider_year(tmp_pat
                 "fy_end_dt": "2024-12-31",
             },
         ]
-    ).to_parquet(hcris_cache, index=False)
+    ), hcris_cache)
     monkeypatch.setattr(workforce_data, "_HCRIS_CACHE", hcris_cache)
 
     result = workforce_data.query_hcris_staffing("390001", year=2025)
@@ -240,7 +329,7 @@ def test_query_hcris_staffing_maps_s3_total_rn_lpn_aide_by_provider_year(tmp_pat
 
 def test_query_hcris_gme_filters_by_provider_year(tmp_path: Path, monkeypatch):
     hcris_cache = tmp_path / "hcris_staffing.parquet"
-    pd.DataFrame(
+    _write_parquet(pd.DataFrame(
         [
             {
                 "prvdr_num": "390001",
@@ -259,7 +348,7 @@ def test_query_hcris_gme_filters_by_provider_year(tmp_path: Path, monkeypatch):
                 "fy_end_dt": "2024-12-31",
             },
         ]
-    ).to_parquet(hcris_cache, index=False)
+    ), hcris_cache)
     monkeypatch.setattr(workforce_data, "_HCRIS_CACHE", hcris_cache)
 
     result = workforce_data.query_hcris_gme("390001", year=2025)

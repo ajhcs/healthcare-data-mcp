@@ -126,19 +126,23 @@ DATASET_CATALOG: dict[str, dict[str, Any]] = {
         "server": ["hospital-quality"],
         "category": "quality",
         "grain": "facility-measure rows",
-        "description": "Quality star ratings, HRRP readmissions, HAC safety scores, HCAHPS, and complications.",
+        "description": "Quality star ratings, adjacent HRRP/HAC summaries, and exact CMS row-level measure lookup for HCAHPS, complications, unplanned visits, and HAI.",
         "source_system": "CMS Provider Data Catalog",
         "source_urls": [
             "https://data.cms.gov/provider-data/api/1/datastore/query/9n3s-kdb3/0/download?format=csv",
             "https://data.cms.gov/provider-data/api/1/datastore/query/yq43-i98g/0/download?format=csv",
             "https://data.cms.gov/provider-data/api/1/datastore/query/dgck-syfz/0/download?format=csv",
             "https://data.cms.gov/provider-data/api/1/datastore/query/ynj2-r877/0/download?format=csv",
+            "https://data.cms.gov/provider-data/api/1/datastore/query/77hc-ibv8/0/download?format=csv",
+            "https://data.cms.gov/provider-data/api/1/datastore/query/632h-zaca/0/download?format=csv",
         ],
         "cache_files": [
             "hospital_quality_hrrp.csv",
             "hospital_quality_hac.csv",
             "hospital_quality_hcahps.csv",
             "hospital_quality_complications.csv",
+            "hospital_quality_hai.csv",
+            "hospital_quality_unplanned_visits.csv",
         ],
         "schema": {
             "identity_fields": ["facility_id", "provider_id", "measure_id"],
@@ -153,6 +157,13 @@ DATASET_CATALOG: dict[str, dict[str, Any]] = {
             "join_keys": ["facility_id", "ccn"],
         },
         "workflows": ["quality comparison", "readmission risk", "patient experience analysis"],
+        "supports_exact_inventory": True,
+        "source_status_tool": "hospital_quality.get_quality_measure_rows",
+        "unsupported_assertions": [
+            "PHC4 in-hospital mortality as CMS MORT_30_AMI",
+            "HRRP condition readmissions as READM_30_HOSP_WIDE",
+            "HAC totals as HAI_1_SIR",
+        ],
     },
     "cms_cost_report": {
         "title": "CMS Hospital Cost Report PUF",
@@ -367,7 +378,7 @@ DATASET_CATALOG: dict[str, dict[str, Any]] = {
         "server": ["public-records"],
         "category": "compliance_contracting",
         "grain": "entity, certification, contract, or breach records",
-        "description": "SAM.gov opportunities and exclusions, USAspending awards, CHPL certifications, 340B, HIPAA breaches, and HHS OIG LEIE screening.",
+        "description": "SAM.gov opportunities and exclusions, USAspending awards, CHPL certifications, 340B, HIPAA breaches, state notice source status, cyber source boundaries, and HHS OIG LEIE screening.",
         "source_system": "SAM.gov, USAspending, CHPL, HRSA, HHS OCR, HHS OIG",
         "source_urls": [
             "https://api.sam.gov/prod/opportunities/v2/search",
@@ -380,6 +391,7 @@ DATASET_CATALOG: dict[str, dict[str, Any]] = {
         "cache_files": [
             "public-records/340b_covered_entities.parquet",
             "public-records/hipaa_breaches.parquet",
+            "public-records/state_breach_notices.parquet",
             "public-records/340b_covered_entities.json",
             "public-records/hipaa_breaches.csv",
         ],
@@ -389,6 +401,52 @@ DATASET_CATALOG: dict[str, dict[str, Any]] = {
             "join_keys": ["entity_name", "ein", "uei", "ccn"],
         },
         "workflows": ["contracting scan", "compliance check", "public-records due diligence"],
+        "supports_exact_inventory": True,
+        "requires_import": ["hipaa_breaches.csv", "state_breach_notices.parquet"],
+        "source_status_tool": "public_records.get_cyber_attestation_source_status",
+        "unsupported_assertions": [
+            "CMS Promoting Interoperability rows as broad cybersecurity attestation",
+            "CISA KEV as victim attribution",
+            "state AG notice coverage as a national cache",
+        ],
+    },
+    "hrsa_340b_covered_entities": {
+        "title": "HRSA 340B OPAIS Covered Entities",
+        "server": ["public-records"],
+        "category": "compliance_340b",
+        "grain": "one HRSA OPAIS covered entity enrollment record",
+        "description": (
+            "340B Drug Pricing Program covered entity enrollment records from the HRSA "
+            "OPAIS Covered Entity Daily Export. The export is manually imported because "
+            "HRSA does not expose a stable unauthenticated public JSON URL."
+        ),
+        "source_system": "HRSA 340B OPAIS",
+        "source_urls": ["https://340bopais.hrsa.gov/Reports"],
+        "cache_files": [
+            "public-records/340b_covered_entities.json",
+            "public-records/340b_covered_entities.parquet",
+        ],
+        "schema": {
+            "identity_fields": ["entity_id", "340b_id", "covered_entity_id"],
+            "common_fields": [
+                "entity_name",
+                "entity_type",
+                "participation_status",
+                "participating",
+                "parent_entity_id",
+                "parent_entity_name",
+                "contract_pharmacy_count",
+                "source_report_date",
+            ],
+            "join_keys": ["entity_id", "340b_id", "covered_entity_id", "entity_name", "state"],
+        },
+        "workflows": ["340B enrollment lookup", "covered entity due diligence", "contract pharmacy context"],
+        "access_notes": (
+            "Use public_records.get_340b_status, check_340b_status, get_340b_profile, "
+            "or find_340b_entities_near_facility after importing the OPAIS JSON with "
+            "hc-mcp-setup --import-340b-json. Automated acquisition reports "
+            "not_automatable until HRSA publishes a stable direct export URL."
+        ),
     },
     "state_health_data": {
         "title": "State Public Hospital Data Acquisition Index",
@@ -796,7 +854,7 @@ DATASET_CATALOG: dict[str, dict[str, Any]] = {
         "server": ["research-trials"],
         "category": "research_activity",
         "grain": "one row per clinical study",
-        "description": "ClinicalTrials.gov v2 study search, detail, version, status, sponsor, condition, phase, and location metadata.",
+        "description": "ClinicalTrials.gov v2 study search/detail plus conservative sponsor and site inventories with role, geography, and ambiguity metadata.",
         "source_system": "ClinicalTrials.gov API v2",
         "source_urls": [
             "https://clinicaltrials.gov/data-api/api",
@@ -818,6 +876,12 @@ DATASET_CATALOG: dict[str, dict[str, Any]] = {
             "join_keys": ["nct_id", "sponsor", "org_name", "location"],
         },
         "workflows": ["trial search", "sponsor activity profile", "research-market scan"],
+        "supports_exact_inventory": True,
+        "source_status_tool": "research_trials.inventory_clinical_trial_sponsors",
+        "unsupported_assertions": [
+            "raw sponsor search results as deduped sponsor inventory",
+            "facility-name-only location aggregation across cities/states",
+        ],
     },
     "hhs_oig_leie": {
         "title": "HHS OIG List of Excluded Individuals/Entities",
@@ -901,17 +965,21 @@ DATASET_CATALOG: dict[str, dict[str, Any]] = {
         "server": ["workforce-analytics"],
         "category": "workforce",
         "grain": "shortage area, cost report staffing, residency program, or labor action",
-        "description": "HRSA HPSA, CMS PBJ/HCRIS staffing, ACGME programs, NLRB cases, and BLS stoppages.",
+        "description": "HRSA HPSA, CMS PBJ/HCRIS staffing, import-backed ACGME public program inventory, NLRB cases, and BLS stoppages.",
         "source_system": "HRSA, CMS, ACGME, NLRB, BLS",
         "source_urls": [
             "https://data.hrsa.gov/DataDownload/DD_Files/BCD_HPSA_FCT_DET_DH.csv",
             "https://data.cms.gov/data-api/v1/dataset/7e0d53ba-8f02-4c66-98a5-14a1c997c50d/data",
+            "https://support.acgmecloud.org/hc/en-us/articles/31576594571927-Explore-Public-Data-Programs",
+            "https://apps.acgme-i.org/ads/Public/Request/GetDataDictionary",
             "https://github.com/labordata/nlrb-data/releases/download/nightly/nlrb.db.zip",
             "https://download.bls.gov/pub/time.series/ws/ws.data.1.AllData",
         ],
         "cache_files": [
             "workforce/hpsa.parquet",
             "workforce/hcris_staffing.parquet",
+            "workforce/acgme_programs.csv",
+            "workforce/acgme_programs.meta.json",
             "workforce/nlrb.db",
             "workforce/work_stoppages.parquet",
         ],
@@ -921,6 +989,10 @@ DATASET_CATALOG: dict[str, dict[str, Any]] = {
             "join_keys": ["state", "county_fips", "provider_ccn"],
         },
         "workflows": ["shortage analysis", "labor risk scan", "residency pipeline", "staffing benchmark"],
+        "supports_exact_inventory": True,
+        "requires_import": ["workforce/acgme_programs.csv"],
+        "source_status_tool": "workforce_analytics.get_acgme_source_status",
+        "unsupported_assertions": ["complete live ACGME inventory without a ready imported public export"],
     },
 }
 
@@ -1008,6 +1080,10 @@ def dataset_catalog_payload() -> dict[str, Any]:
                 "grain": dataset["grain"],
                 "source_system": dataset["source_system"],
                 "workflows": dataset["workflows"],
+                "supports_exact_inventory": bool(dataset.get("supports_exact_inventory", False)),
+                "requires_import": dataset.get("requires_import", []),
+                "source_status_tool": dataset.get("source_status_tool", ""),
+                "unsupported_assertions": dataset.get("unsupported_assertions", []),
             }
         )
     return {
@@ -1052,6 +1128,9 @@ def dataset_source_payload(dataset_id: str) -> dict[str, Any]:
         "source_system": dataset["source_system"],
         "source_urls": dataset["source_urls"],
         "cache_files": dataset["cache_files"],
+        "requires_import": dataset.get("requires_import", []),
+        "source_status_tool": dataset.get("source_status_tool", ""),
+        "unsupported_assertions": dataset.get("unsupported_assertions", []),
     }
 
 

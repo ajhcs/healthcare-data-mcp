@@ -19,6 +19,7 @@ from . import clinical_trials_client, profiles, reporter_client
 from .models import (
     ClinicalTrialDetailResponse,
     ClinicalTrialSearchResponse,
+    TrialInventoryResponse,
     NIHProjectDetailResponse,
     NIHProjectSearchResponse,
 )
@@ -247,6 +248,52 @@ async def get_clinical_trial(nct_id: str) -> dict[str, Any]:
     except Exception as exc:
         logger.exception("get_clinical_trial failed")
         return error_response(f"get_clinical_trial failed: {exc}")
+
+
+@mcp.tool(structured_output=True)
+async def inventory_clinical_trial_sponsors(
+    sponsor: str,
+    status: str = "",
+    scan_limit: int = 500,
+) -> dict[str, Any]:
+    """Build a conservative ClinicalTrials.gov sponsor inventory with explicit role counts."""
+    try:
+        if not sponsor:
+            return error_response("sponsor is required.", code="invalid_params")
+        hard_max = int(_os.environ.get("CLINICAL_TRIALS_INVENTORY_HARD_MAX", "5000"))
+        response = await profiles.inventory_clinical_trial_sponsors(
+            sponsor=sponsor,
+            status=status,
+            scan_limit=max(1, min(int(scan_limit or 500), hard_max)),
+            hard_max=hard_max,
+        )
+        return to_structured(TrialInventoryResponse(**response).model_dump())
+    except Exception as exc:
+        logger.exception("inventory_clinical_trial_sponsors failed")
+        return error_response(f"inventory_clinical_trial_sponsors failed: {exc}")
+
+
+@mcp.tool(structured_output=True)
+async def inventory_clinical_trial_sites(
+    location: str,
+    status: str = "",
+    scan_limit: int = 500,
+) -> dict[str, Any]:
+    """Build a conservative ClinicalTrials.gov site inventory keyed by facility plus geography."""
+    try:
+        if not location:
+            return error_response("location is required.", code="invalid_params")
+        hard_max = int(_os.environ.get("CLINICAL_TRIALS_INVENTORY_HARD_MAX", "5000"))
+        response = await profiles.inventory_clinical_trial_sites(
+            location=location,
+            status=status,
+            scan_limit=max(1, min(int(scan_limit or 500), hard_max)),
+            hard_max=hard_max,
+        )
+        return to_structured(TrialInventoryResponse(**response).model_dump())
+    except Exception as exc:
+        logger.exception("inventory_clinical_trial_sites failed")
+        return error_response(f"inventory_clinical_trial_sites failed: {exc}")
 
 
 @mcp.tool(structured_output=True)

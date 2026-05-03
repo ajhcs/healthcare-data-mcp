@@ -53,6 +53,22 @@ unsupported MAP revenue-cycle KPI proxies.
 - Cyber outputs now distinguish entity-match confidence, incident-type
   confidence, disclosed timelines, source type, and vulnerability context from
   actual incident evidence.
+- Added `get_cyber_attestation_source_status` so broad CMS cybersecurity
+  attestation requests return `not_publicly_available` unless a reviewed public
+  attestation source is configured.
+
+## Exact Source Boundaries
+
+- Tightened `hospital_quality.get_quality_measure_rows` so AMI mortality,
+  hospital-wide readmission, and CLABSI SIR require exact CMS measure rows and
+  never substitute PHC4 mortality, HRRP condition readmissions, or HAC totals.
+- Added ACGME source-status and exact Program Code lookup tools backed by
+  imported public Program Search exports and adjacent metadata JSON.
+- Added ClinicalTrials.gov sponsor and site inventory tools with explicit
+  role/geography dedupe rules, unresolved location counts, truncation metadata,
+  and ambiguity warnings.
+- Added `docs/SOURCE_CAPABILITY_LEDGER.md` to document exact sources, caveats,
+  and unsupported substitutions.
 
 ## Verification
 

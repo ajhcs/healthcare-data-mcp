@@ -52,8 +52,17 @@ def main() -> int:
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     normalized.to_csv(output_path, index=False)
+    meta = workforce_data.write_acgme_import_metadata(
+        input_path=input_path,
+        output_path=output_path,
+        raw_df=df,
+        normalized_df=normalized,
+    )
 
     print(f"Imported {len(normalized)} ACGME program rows to {output_path}")
+    if meta.get("optional_missing_columns"):
+        print("Warning: optional ACGME fields missing from export: " + ", ".join(meta["optional_missing_columns"]))
+    print(f"Wrote import metadata to {output_path.with_suffix('.meta.json')}")
     return 0
 
 

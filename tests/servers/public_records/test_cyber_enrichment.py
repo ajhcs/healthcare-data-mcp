@@ -153,3 +153,76 @@ def test_blank_breach_entity_name_is_not_high_confidence_match() -> None:
     )
 
     assert confidence == "medium"
+
+
+@pytest.mark.asyncio
+async def test_cyber_attestation_source_status_is_unsupported() -> None:
+    response = await server.get_cyber_attestation_source_status()
+
+    assert response["status"] == "not_publicly_available"
+    assert response["can_assert_attestation_status"] is False
+    assert any(source["source_type"] == "cms_promoting_interoperability" for source in response["supported_adjacent_sources"])
+
+
+@pytest.mark.asyncio
+async def test_interop_status_does_not_assert_cybersecurity_attestation(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def fake_ensure_pi_cached():
+        return True
+
+    monkeypatch.setattr(server.data_loaders, "ensure_pi_cached", fake_ensure_pi_cached)
+    monkeypatch.setattr(
+        server.data_loaders,
+        "query_pi",
+        lambda **kwargs: [
+            {
+                "facility_name": "Example Hospital",
+                "ccn": "390001",
+                "state": "PA",
+                "meets_pi_criteria": "Y",
+                "cehrt_id": "ABC123",
+            }
+        ],
+    )
+
+    response = await server.get_interop_status(ccn="390001")
+
+    assert response["total_results"] == 1
+    assert response["can_assert_cybersecurity_attestation"] is False
+    assert "does not establish a general cybersecurity attestation" in response["source_note"]
+
+
+def test_state_breach_notice_import_and_search_requires_source_url(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    cache_path = tmp_path / "state_breach_notices.parquet"
+    csv_path = tmp_path / "pa_notices.csv"
+    csv_path.write_text(
+        "entity_name,state,date,title\nExample Health,PA,2026-01-01,Example Notice\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(data_loaders, "_STATE_BREACH_NOTICES_PARQUET", cache_path)
+
+    with pytest.raises(ValueError, match="source_url"):
+        data_loaders.import_state_breach_notices("PA", csv_path)
+
+    imported = data_loaders.import_state_breach_notices("PA", csv_path, source_url="https://example.test/notice")
+    result = data_loaders.search_state_breach_notices(entity_name="Example Health", state="PA")
+
+    assert imported["rows_imported"] == 1
+    assert result["source_status"]["status"] == "ready"
+    assert result["records"][0]["entity_match_confidence"] == "high"
+    assert result["records"][0]["confidence"] == "high"
+
+
+def test_state_breach_notice_blank_entity_downgrades_confidence(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    cache_path = tmp_path / "state_breach_notices.parquet"
+    csv_path = tmp_path / "pa_notices.csv"
+    csv_path.write_text(
+        "entity_name,state,date,source_url,title\n,PA,2026-01-01,https://example.test/notice,Example Notice\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(data_loaders, "_STATE_BREACH_NOTICES_PARQUET", cache_path)
+
+    data_loaders.import_state_breach_notices("PA", csv_path)
+    result = data_loaders.search_state_breach_notices(state="PA")
+
+    assert result["records"][0]["entity_match_confidence"] == "not_requested"
+    assert result["records"][0]["confidence"] == "low"
