@@ -429,6 +429,59 @@ def test_ahrq_hfmd_csv_cache_parser_supports_state_fallback(tmp_path: Path):
 
 
 @pytest.mark.asyncio
+async def test_uncompensated_care_profile_falls_back_to_schedule_h_fields(monkeypatch):
+    async def fake_cost_report_public_metrics(ccn: str):
+        return {"ccn": ccn, "source_status": "unavailable", "metric_confidence": {}}
+
+    async def fake_latest_990_schedule_h(ein: str):
+        return {
+            "ein": ein,
+            "charity_care": 50_000,
+            "bad_debt_expense": 25_000,
+            "medicare_shortfall": 30_000,
+            "medicaid_shortfall": 40_000,
+            "metric_confidence": {
+                "charity_care": "high_reported_irs_schedule_h_xml",
+                "bad_debt_expense": "high_reported_irs_schedule_h_xml",
+                "medicare_shortfall": "high_reported_irs_schedule_h_xml",
+                "medicaid_shortfall": "high_reported_irs_schedule_h_xml",
+            },
+        }
+
+    monkeypatch.setattr(server, "_cost_report_public_metrics", fake_cost_report_public_metrics)
+    monkeypatch.setattr(server, "_latest_990_schedule_h", fake_latest_990_schedule_h)
+
+    result = await server.get_uncompensated_care_profile(ccn="390001", ein="231352651")
+
+    assert result["charity_care_cost"] == 50_000
+    assert result["bad_debt_expense"] == 25_000
+    assert result["medicare_shortfall"] == 30_000
+    assert result["medicaid_shortfall"] == 40_000
+    assert result["metric_confidence"]["bad_debt_expense"] == "high_reported_irs_schedule_h_xml"
+
+
+@pytest.mark.asyncio
+async def test_bad_debt_profile_falls_back_to_schedule_h(monkeypatch):
+    async def fake_cost_report_public_metrics(ccn: str):
+        return {"ccn": ccn, "source_status": "unavailable", "metric_confidence": {}}
+
+    async def fake_latest_990_schedule_h(ein: str):
+        return {
+            "ein": ein,
+            "bad_debt_expense": 25_000,
+            "metric_confidence": {"bad_debt_expense": "high_reported_irs_schedule_h_xml"},
+        }
+
+    monkeypatch.setattr(server, "_cost_report_public_metrics", fake_cost_report_public_metrics)
+    monkeypatch.setattr(server, "_latest_990_schedule_h", fake_latest_990_schedule_h)
+
+    result = await server.get_bad_debt_profile(ccn="390001", ein="231352651")
+
+    assert result["bad_debt_expense"] == 25_000
+    assert result["metric_confidence"]["bad_debt_expense"] == "high_reported_irs_schedule_h_xml"
+
+
+@pytest.mark.asyncio
 async def test_public_financial_health_profile_joins_sources_and_omits_map_kpis(monkeypatch):
     async def fake_hcris(_ccn: str):
         return {

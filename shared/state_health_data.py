@@ -686,8 +686,8 @@ async def phc4_report_profile(
     fiscal_year: int = 0,
     cache_root: Path | None = None,
 ) -> dict[str, Any]:
-    query = procedure.strip()
     selected_year = str(year or fiscal_year or "")
+    query = ""
     results = await search_phc4_reports(query=query, year=selected_year, report_type=report_type, cache_root=cache_root)
     table_rows = _matching_phc4_table_rows(
         results["reports"],

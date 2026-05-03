@@ -71,6 +71,136 @@ def _filter_by_ccn(df, ccn: str):
     return df[df[ccn_col].str.strip() == ccn.strip()]
 
 
+_QUALITY_MEASURE_ALIASES: dict[str, dict[str, Any]] = {
+    "hcahps_communication_nurses": {
+        "dataset": "hcahps",
+        "measure_ids": ("H_COMP_1", "H-COMP-1"),
+        "description": "HCAHPS communication with nurses",
+    },
+    "ami_30_day_mortality": {
+        "dataset": "complications",
+        "measure_ids": ("MORT_30_AMI", "MORT-30-AMI"),
+        "description": "CMS 30-day AMI mortality",
+    },
+    "hospital_wide_readmission": {
+        "dataset": "complications",
+        "measure_ids": ("READM_30_HOSP_WIDE", "READM-30-HOSP-WIDE", "READM_30_HOSP_WIDE_HRRP"),
+        "description": "CMS hospital-wide 30-day readmission",
+        "fallback_dataset": "hrrp",
+    },
+    "clabsi_sir": {
+        "dataset": "hac",
+        "measure_ids": ("HAI_1_SIR", "HAI-1", "CLABSI"),
+        "description": "CMS CLABSI standardized infection ratio",
+    },
+}
+
+_QUALITY_DATASET_LOADERS = {
+    "hospital_info": "load_hospital_info",
+    "hrrp": "load_hrrp",
+    "hac": "load_hac",
+    "hcahps": "load_hcahps",
+    "complications": "load_complications",
+}
+
+_QUALITY_DATASET_NAMES = {
+    "hospital_info": "CMS Hospital General Information",
+    "hrrp": "CMS Hospital Readmissions Reduction Program",
+    "hac": "CMS Hospital-Acquired Condition Reduction Program",
+    "hcahps": "CMS HCAHPS - Hospital",
+    "complications": "CMS Complications and Deaths - Hospital",
+}
+
+
+def _clean_measure_token(value: Any) -> str:
+    return str(value or "").strip().upper().replace("-", "_")
+
+
+def _find_measure_col(df):
+    return _col(
+        df,
+        "measure_id",
+        "hcahps_measure_id",
+        "measure_name",
+        "hrrp_measure_id",
+        "measure",
+    )
+
+
+def _row_value(row, *candidates: str) -> str:
+    for key in candidates:
+        if key in row.index:
+            value = str(row.get(key, "")).strip()
+            if value:
+                return value
+    return ""
+
+
+async def _load_quality_dataset(dataset: str):
+    loader_name = _QUALITY_DATASET_LOADERS.get(dataset)
+    if not loader_name:
+        return None
+    loader = getattr(data_loaders, loader_name)
+    return await loader()
+
+
+async def _quality_measure_rows_from_dataset(ccn: str, dataset: str, measure_ids: tuple[str, ...]) -> list[dict[str, Any]]:
+    df = await _load_quality_dataset(dataset)
+    if df is None or df.empty:
+        return []
+    matches = _filter_by_ccn(df, ccn)
+    if matches.empty:
+        return []
+
+    wanted = tuple(_clean_measure_token(measure_id) for measure_id in measure_ids)
+    measure_col = _find_measure_col(matches)
+    if measure_col:
+        rows = []
+        for _, row in matches.iterrows():
+            token = _clean_measure_token(row.get(measure_col, ""))
+            if any(token.startswith(candidate) or candidate in token for candidate in wanted):
+                rows.append(_quality_measure_result_row(row, dataset, measure_col))
+        return rows
+
+    # Some CMS extracts are wide. If a direct measure column exists, expose it
+    # with the full source row rather than silently returning an aggregate.
+    rows = []
+    normalized_columns = {_clean_measure_token(column): column for column in matches.columns}
+    for candidate in wanted:
+        column = normalized_columns.get(candidate)
+        if column:
+            row = matches.iloc[0]
+            result = _quality_measure_result_row(row, dataset, "")
+            result.update({"measure_id": candidate, "score": _row_value(row, column)})
+            rows.append(result)
+    return rows
+
+
+def _quality_measure_result_row(row, dataset: str, measure_col: str) -> dict[str, Any]:
+    raw = {str(key): str(value).strip() for key, value in row.to_dict().items()}
+    return {
+        "ccn": _row_value(row, "facility_id", "ccn", "provider_id", "provider_ccn"),
+        "facility_name": _row_value(row, "facility_name", "hospital_name", "provider_name"),
+        "dataset": dataset,
+        "source_name": _QUALITY_DATASET_NAMES.get(dataset, dataset),
+        "measure_id": _row_value(row, measure_col) if measure_col else "",
+        "measure_name": _row_value(row, "measure_name", "hcahps_question", "compared_to_national"),
+        "score": _row_value(
+            row,
+            "score",
+            "denominator",
+            "patient_survey_star_rating",
+            "hcahps_answer_percent",
+            "rate",
+            "compared_to_national",
+            "excess_readmission_ratio",
+        ),
+        "start_date": _row_value(row, "start_date", "measure_start_date"),
+        "end_date": _row_value(row, "end_date", "measure_end_date"),
+        "raw": raw,
+    }
+
+
 def _error_message(response: dict[str, Any]) -> str | None:
     """Extract a user-facing message from structured helper error responses."""
     error = response.get("error")
@@ -507,6 +637,82 @@ async def get_financial_profile(ccn: str) -> dict[str, Any]:
         geographic_location=geo,
     )
     return to_structured(result.model_dump())
+
+
+@mcp.tool(structured_output=True)
+async def get_quality_measure_rows(ccn: str, measure: str = "", measure_id: str = "") -> dict[str, Any]:
+    """Return exact CMS quality measure rows for a hospital.
+
+    This is the row-level companion to the summary quality tools. It is intended
+    for report ledgers that must promote a specific CMS measure, such as HCAHPS
+    nurse communication, AMI mortality, hospital-wide readmission, or CLABSI SIR.
+
+    Args:
+        ccn: The 6-character CMS Certification Number.
+        measure: Canonical alias, for example ``hcahps_communication_nurses``,
+            ``ami_30_day_mortality``, ``hospital_wide_readmission``, or
+            ``clabsi_sir``.
+        measure_id: Raw CMS measure ID/prefix when a canonical alias is not
+            available.
+    """
+    try:
+        if not ccn:
+            return error_response("ccn is required.", code="invalid_params")
+        lookup = (measure or measure_id or "").strip()
+        if not lookup:
+            return error_response("measure or measure_id is required.", code="invalid_params")
+
+        alias = _QUALITY_MEASURE_ALIASES.get(lookup.lower())
+        datasets: list[str]
+        measure_ids: tuple[str, ...]
+        description = ""
+        if alias:
+            datasets = [str(alias["dataset"])]
+            if fallback := alias.get("fallback_dataset"):
+                datasets.append(str(fallback))
+            measure_ids = tuple(str(value) for value in alias["measure_ids"])
+            description = str(alias.get("description", ""))
+        else:
+            datasets = ["hcahps", "complications", "hrrp", "hac", "hospital_info"]
+            measure_ids = (lookup,)
+
+        rows: list[dict[str, Any]] = []
+        checked: list[str] = []
+        for dataset in datasets:
+            checked.append(dataset)
+            rows.extend(await _quality_measure_rows_from_dataset(ccn, dataset, measure_ids))
+            if rows and alias:
+                break
+
+        if not rows:
+            return error_response(
+                f"No CMS quality measure rows found for CCN {ccn} and measure {lookup}.",
+                code="not_found",
+                detail={
+                    "ccn": ccn,
+                    "measure": lookup,
+                    "measure_ids": list(measure_ids),
+                    "datasets_checked": checked,
+                    "next_step": "Verify the CCN and measure ID against the CMS Provider Data Catalog source file for the reporting period.",
+                },
+            )
+
+        return to_structured(
+            {
+                "ccn": ccn,
+                "measure": measure or "",
+                "measure_id": measure_id or "",
+                "description": description,
+                "measure_ids": list(measure_ids),
+                "datasets_checked": checked,
+                "total_rows": len(rows),
+                "rows": rows,
+                "confidence": "high_for_exact_cms_measure_rows",
+            }
+        )
+    except Exception as e:
+        logger.exception("get_quality_measure_rows failed")
+        return error_response(f"get_quality_measure_rows failed: {e}")
 
 
 # ---------------------------------------------------------------------------

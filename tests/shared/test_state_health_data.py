@@ -313,6 +313,43 @@ async def test_phc4_profile_returns_normalized_extracted_rows(tmp_path) -> None:
 
 
 @pytest.mark.asyncio
+async def test_phc4_common_procedure_profile_filters_extracted_rows_not_report_title(tmp_path) -> None:
+    cache = tmp_path / "state-health-data" / "phc4"
+    cache.mkdir(parents=True)
+    artifact = tmp_path / "common-procedures.csv"
+    artifact.write_text("hospital,procedure,volume\nExample Hospital,Knee Replacement,42\n", encoding="utf-8")
+    refs = state_health_data._extract_structured_tables(artifact, cache)
+    (cache / "report_index.json").write_text(
+        json.dumps(
+            [
+                {
+                    "title": "Common Procedures Fiscal Year 2024",
+                    "artifact_url": "https://www.phc4.org/common-procedures.csv",
+                    "url": "https://www.phc4.org/common-procedures.csv",
+                    "year": 2024,
+                    "report_type": "common_procedure",
+                    "table_references": refs,
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    result = await state_health_data.phc4_report_profile(
+        hospital_name="Example Hospital",
+        procedure="Knee Replacement",
+        year=2024,
+        report_type="common_procedure",
+        cache_root=tmp_path,
+    )
+
+    assert result["confidence"] == "high_extracted_table_row"
+    assert result["table_rows"][0]["procedure"] == "Knee Replacement"
+    assert result["table_rows"][0]["measure_name"] == "volume"
+    assert result["table_rows"][0]["measure_value"] == "42"
+
+
+@pytest.mark.asyncio
 async def test_load_cost_report_row_selects_requested_year() -> None:
     class Loaders:
         @staticmethod

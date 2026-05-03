@@ -224,12 +224,13 @@ def _breach_incident_type_confidence(breach: dict[str, Any]) -> str:
 
 
 def _breach_entity_match_confidence(entity_name: str, breach: dict[str, Any]) -> str:
-    breach_name = str(breach.get("entity_name", ""))
-    if not entity_name.strip():
+    query_name = entity_name.strip()
+    breach_name = str(breach.get("entity_name", "")).strip()
+    if not query_name:
         return "not_requested"
-    if entity_name.lower() in breach_name.lower() or breach_name.lower() in entity_name.lower():
+    if breach_name and (query_name.lower() in breach_name.lower() or breach_name.lower() in query_name.lower()):
         return "high"
-    if entity_name.lower() in json.dumps(breach).lower():
+    if query_name.lower() in json.dumps(breach).lower():
         return "medium"
     return "low"
 

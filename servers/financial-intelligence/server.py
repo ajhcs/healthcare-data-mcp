@@ -148,6 +148,25 @@ async def _cost_report_public_metrics(ccn: str) -> dict[str, Any]:
     return normalize_hcris_public_metrics(row, requested_ccn=ccn)
 
 
+def _metric_value(*sources: tuple[dict[str, Any], str]) -> Any:
+    for source, key in sources:
+        value = source.get(key)
+        if value not in (None, ""):
+            return value
+    return None
+
+
+def _metric_confidence(*sources: tuple[dict[str, Any], str]) -> str:
+    for source, key in sources:
+        value = source.get(key)
+        if value in (None, ""):
+            continue
+        confidence = source.get("metric_confidence", {}).get(key)
+        if confidence:
+            return confidence
+    return "not_available"
+
+
 def _build_form990_summary(search_org: dict, org_data: dict | None) -> dict:
     details = org_data or {}
     organization = details.get("organization", {})
@@ -657,21 +676,17 @@ async def get_uncompensated_care_profile(ccn: str = "", ein: str = "") -> dict[s
                 "ccn": ccn,
                 "ein": ein,
                 "uncompensated_care_cost": hcris.get("uncompensated_care_cost"),
-                "charity_care_cost": hcris.get("charity_care_cost") or form990.get("charity_care"),
-                "bad_debt_expense": hcris.get("bad_debt_expense"),
-                "medicare_shortfall": hcris.get("medicare_shortfall"),
-                "medicaid_shortfall": hcris.get("medicaid_shortfall"),
+                "charity_care_cost": _metric_value((hcris, "charity_care_cost"), (form990, "charity_care")),
+                "bad_debt_expense": _metric_value((hcris, "bad_debt_expense"), (form990, "bad_debt_expense")),
+                "medicare_shortfall": _metric_value((hcris, "medicare_shortfall"), (form990, "medicare_shortfall")),
+                "medicaid_shortfall": _metric_value((hcris, "medicaid_shortfall"), (form990, "medicaid_shortfall")),
                 "sources": {"hcris": hcris, "form990_schedule_h": form990},
                 "metric_confidence": {
                     "uncompensated_care_cost": hcris.get("metric_confidence", {}).get("uncompensated_care_cost", "not_available"),
-                    "charity_care_cost": (
-                        hcris.get("metric_confidence", {}).get("charity_care_cost")
-                        or form990.get("metric_confidence", {}).get("charity_care_cost")
-                        or "not_available"
-                    ),
-                    "bad_debt_expense": hcris.get("metric_confidence", {}).get("bad_debt_expense", "not_available"),
-                    "medicare_shortfall": hcris.get("metric_confidence", {}).get("medicare_shortfall", "not_available"),
-                    "medicaid_shortfall": hcris.get("metric_confidence", {}).get("medicaid_shortfall", "not_available"),
+                    "charity_care_cost": _metric_confidence((hcris, "charity_care_cost"), (form990, "charity_care")),
+                    "bad_debt_expense": _metric_confidence((hcris, "bad_debt_expense"), (form990, "bad_debt_expense")),
+                    "medicare_shortfall": _metric_confidence((hcris, "medicare_shortfall"), (form990, "medicare_shortfall")),
+                    "medicaid_shortfall": _metric_confidence((hcris, "medicaid_shortfall"), (form990, "medicaid_shortfall")),
                 },
                 "confidence": "high_when_source_field_present",
             }
@@ -691,16 +706,12 @@ async def get_charity_care_profile(ein: str = "", ccn: str = "") -> dict[str, An
             {
                 "ein": ein,
                 "ccn": ccn,
-                "charity_care_cost": hcris.get("charity_care_cost") or form990.get("charity_care"),
+                "charity_care_cost": _metric_value((hcris, "charity_care_cost"), (form990, "charity_care")),
                 "community_benefit_pct": form990.get("community_benefit_pct"),
                 "total_expenses": form990.get("total_expenses"),
                 "sources": {"hcris": hcris, "form990_schedule_h": form990},
                 "metric_confidence": {
-                    "charity_care_cost": (
-                        hcris.get("metric_confidence", {}).get("charity_care_cost")
-                        or form990.get("metric_confidence", {}).get("charity_care_cost")
-                        or "not_available"
-                    ),
+                    "charity_care_cost": _metric_confidence((hcris, "charity_care_cost"), (form990, "charity_care")),
                     "community_benefit_pct": form990.get("metric_confidence", {}).get("community_benefit_pct", "not_available"),
                     "total_expenses": form990.get("metric_confidence", {}).get("total_expenses", "not_available"),
                 },
@@ -722,11 +733,11 @@ async def get_bad_debt_profile(ccn: str = "", ein: str = "") -> dict[str, Any]:
             {
                 "ccn": ccn,
                 "ein": ein,
-                "bad_debt_expense": hcris.get("bad_debt_expense"),
+                "bad_debt_expense": _metric_value((hcris, "bad_debt_expense"), (form990, "bad_debt_expense")),
                 "uncompensated_care_cost": hcris.get("uncompensated_care_cost"),
                 "sources": {"hcris": hcris, "form990_schedule_h": form990},
                 "metric_confidence": {
-                    "bad_debt_expense": hcris.get("metric_confidence", {}).get("bad_debt_expense", "not_available"),
+                    "bad_debt_expense": _metric_confidence((hcris, "bad_debt_expense"), (form990, "bad_debt_expense")),
                     "uncompensated_care_cost": hcris.get("metric_confidence", {}).get("uncompensated_care_cost", "not_available"),
                 },
                 "confidence": "high_when_source_field_present",

@@ -144,3 +144,12 @@ async def test_cyber_incident_profile_includes_required_confidence_fields(
     assert incident["timeline_disclosed"] is True
     assert incident["timeline_inferred"] is False
     assert response["sources"]["cisa_kev"]["attribution_used"] is False
+
+
+def test_blank_breach_entity_name_is_not_high_confidence_match() -> None:
+    confidence = server._breach_entity_match_confidence(
+        "Example Health",
+        {"entity_name": "", "web_description": "Example Health disclosed a cyber incident."},
+    )
+
+    assert confidence == "medium"

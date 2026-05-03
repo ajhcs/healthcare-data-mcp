@@ -18,7 +18,7 @@ SERVER_SPECS = [
     ("service-area", "servers.service_area.server", 4),
     ("geo-demographics", "servers.geo_demographics.server", 6),
     ("drive-time", "servers.drive_time.server", 5),
-    ("hospital-quality", "servers.hospital_quality.server", 6),
+    ("hospital-quality", "servers.hospital_quality.server", 7),
     ("health-system-profiler", "servers.health_system_profiler.server", 4),
     ("financial-intelligence", "servers.financial_intelligence.server", 11),
     ("price-transparency", "servers.price_transparency.server", 5),
@@ -27,7 +27,7 @@ SERVER_SPECS = [
     ("claims-analytics", "servers.claims_analytics.server", 5),
     ("public-records", "servers.public_records.server", 27),
     ("web-intelligence", "servers.web_intelligence.server", 7),
-    ("live-gateway", "servers.live_gateway.server", 58),
+    ("live-gateway", "servers.live_gateway.server", 59),
 ]
 
 

@@ -43,6 +43,7 @@ LIVE_TOOL_SPECS: tuple[LiveToolSpec, ...] = (
     LiveToolSpec("hospital-quality", "servers.hospital-quality.server", "get_safety_scores", "hospital_quality"),
     LiveToolSpec("hospital-quality", "servers.hospital-quality.server", "get_patient_experience", "hospital_quality"),
     LiveToolSpec("hospital-quality", "servers.hospital-quality.server", "get_financial_profile", "hospital_quality"),
+    LiveToolSpec("hospital-quality", "servers.hospital-quality.server", "get_quality_measure_rows", "hospital_quality"),
     LiveToolSpec("hospital-quality", "servers.hospital-quality.server", "compare_hospitals", "hospital_quality"),
     # Claims analytics
     LiveToolSpec("claims-analytics", "servers.claims-analytics.server", "get_inpatient_volumes", "claims_analytics"),

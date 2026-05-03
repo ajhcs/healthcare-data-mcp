@@ -73,7 +73,7 @@ docker compose up --build
 | `service-area` | 8002 | CMS hospital service areas and market share |
 | `geo-demographics` | 8003 | Census, ZCTA, Medicare, and HUD geography |
 | `drive-time` | 8004 | Routing, drive-time matrices, and access scoring |
-| `hospital-quality` | 8005 | CMS quality, readmission, and safety data |
+| `hospital-quality` | 8005 | CMS quality, exact measure rows, readmission, and safety data |
 | `cms-facility` | 8006 | CMS facility master data and NPPES lookup |
 | `health-system-profiler` | 8007 | Health system discovery and facility enrichment |
 | `financial-intelligence` | 8008 | IRS 990, SEC EDGAR, HCRIS, HFMD, and public financial health intelligence |
@@ -208,7 +208,7 @@ hc-mcp-setup --import-docgraph-csv /path/to/docgraph_shared_patients.csv
 hc-mcp-setup --import-docgraph-parquet /path/to/shared_patients.parquet
 ```
 
-The default cache root is `~/.healthcare-data-mcp/cache`. The affected tools include `public_records.get_340b_status`, `public_records.search_phc4_public_reports`, `public_records.get_breach_history`, `public_records.get_cyber_incident_profile`, `financial_intelligence.get_public_financial_health_profile`, `workforce_analytics.get_public_throughput_profile`, `workforce_analytics.compare_hospital_staffing_productivity`, `physician_referral_network.map_referral_network`, and `physician_referral_network.detect_leakage`.
+The default cache root is `~/.healthcare-data-mcp/cache`. The affected tools include `public_records.get_340b_status`, `public_records.search_phc4_public_reports`, `public_records.get_breach_history`, `public_records.get_cyber_incident_profile`, `hospital_quality.get_quality_measure_rows`, `financial_intelligence.get_public_financial_health_profile`, `workforce_analytics.get_public_throughput_profile`, `workforce_analytics.compare_hospital_staffing_productivity`, `physician_referral_network.map_referral_network`, and `physician_referral_network.detect_leakage`.
 
 `hc-mcp-setup --acquire-public-caches` fetches or indexes public caches with stable unauthenticated acquisition paths, including OCR HIPAA breaches, PHC4 public reports, AHRQ HFMD when a direct public artifact is available, and PA/NJ/DE public hospital source indexes. HRSA 340B OPAIS is checked by `--acquire-340b-opais`; if the public reports page still does not expose a stable unauthenticated JSON endpoint, the command returns a precise `not_automatable` status and the covered-entity daily export remains importable with `--import-340b-json`. DocGraph/CareSet shared-patient data is separately licensed and is import-only.
 

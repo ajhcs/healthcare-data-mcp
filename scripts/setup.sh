@@ -342,7 +342,7 @@ report_server() {
 # Core servers (no keys needed)
 report_server "cms-facility" "READY" "5 tools, no keys required"
 report_server "service-area" "READY" "4 tools, no keys required"
-report_server "hospital-quality" "READY" "6 tools, no keys required"
+report_server "hospital-quality" "READY" "7 tools, no keys required"
 report_server "health-system-profiler" "READY" "3 tools, no keys required"
 report_server "claims-analytics" "READY" "5 tools, no keys required"
 report_server "price-transparency" "READY" "5 tools, no keys required"

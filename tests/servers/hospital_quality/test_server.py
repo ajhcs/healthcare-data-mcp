@@ -200,3 +200,68 @@ async def test_get_patient_experience_not_found(mock_hcahps_df):
     with patch.object(server.data_loaders, "load_hcahps", new_callable=AsyncMock, return_value=mock_hcahps_df):
         result = parse_tool_result(await server.get_patient_experience("000000"))
     assert "error" in result
+
+
+# ---------------------------------------------------------------------------
+# Tests: get_quality_measure_rows
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_get_quality_measure_rows_hcahps_alias(mock_hcahps_df):
+    with patch.object(server.data_loaders, "load_hcahps", new_callable=AsyncMock, return_value=mock_hcahps_df):
+        result = parse_tool_result(await server.get_quality_measure_rows("390223", measure="hcahps_communication_nurses"))
+    assert result["ccn"] == "390223"
+    assert result["confidence"] == "high_for_exact_cms_measure_rows"
+    assert result["total_rows"] == 2
+    assert {row["measure_id"] for row in result["rows"]} == {"H_COMP_1_STAR_RATING", "H_COMP_1_A_P"}
+    assert result["rows"][0]["source_name"] == "CMS HCAHPS - Hospital"
+
+
+@pytest.mark.asyncio
+async def test_get_quality_measure_rows_ami_mortality_alias():
+    complications = pd.DataFrame([
+        {
+            "facility_id": "390223",
+            "facility_name": "Thomas Jefferson University Hospital",
+            "measure_id": "MORT_30_AMI",
+            "measure_name": "Acute Myocardial Infarction (AMI) 30-Day Mortality Rate",
+            "score": "11.7",
+            "start_date": "2021-07-01",
+            "end_date": "2024-06-30",
+        },
+    ])
+    with patch.object(server.data_loaders, "load_complications", new_callable=AsyncMock, return_value=complications):
+        result = parse_tool_result(await server.get_quality_measure_rows("390223", measure="ami_30_day_mortality"))
+    assert result["total_rows"] == 1
+    assert result["rows"][0]["measure_id"] == "MORT_30_AMI"
+    assert result["rows"][0]["score"] == "11.7"
+
+
+@pytest.mark.asyncio
+async def test_get_quality_measure_rows_hospital_wide_readmission_falls_back_to_hrrp():
+    complications = pd.DataFrame()
+    hrrp = pd.DataFrame([
+        {
+            "facility_id": "390223",
+            "facility_name": "Thomas Jefferson University Hospital",
+            "measure_id": "READM-30-HOSP-WIDE-HRRP",
+            "excess_readmission_ratio": "1.0123",
+        },
+    ])
+    with (
+        patch.object(server.data_loaders, "load_complications", new_callable=AsyncMock, return_value=complications),
+        patch.object(server.data_loaders, "load_hrrp", new_callable=AsyncMock, return_value=hrrp),
+    ):
+        result = parse_tool_result(await server.get_quality_measure_rows("390223", measure="hospital_wide_readmission"))
+    assert result["datasets_checked"] == ["complications", "hrrp"]
+    assert result["rows"][0]["measure_id"] == "READM-30-HOSP-WIDE-HRRP"
+    assert result["rows"][0]["score"] == "1.0123"
+
+
+@pytest.mark.asyncio
+async def test_get_quality_measure_rows_clabsi_wide_layout(mock_hac_df):
+    with patch.object(server.data_loaders, "load_hac", new_callable=AsyncMock, return_value=mock_hac_df):
+        result = parse_tool_result(await server.get_quality_measure_rows("390223", measure="clabsi_sir"))
+    assert result["total_rows"] == 1
+    assert result["rows"][0]["measure_id"] == "CLABSI"
+    assert result["rows"][0]["score"] == "0.82"
