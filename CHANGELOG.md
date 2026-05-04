@@ -4,7 +4,7 @@
 
 - Added public healthcare data cache acquisition and status coverage for PHC4,
   AHRQ HFMD, PA hospital reports, NJ hospital public data, DE discharge data,
-  and HRSA 340B OPAIS automation status.
+  and public cyber/breach sources.
 - Added PHC4 public report indexing and extracted-table provenance for Hospital
   Performance, Financial Analysis, Common Procedures, and special public
   reports without using paid PHC4 datasets.

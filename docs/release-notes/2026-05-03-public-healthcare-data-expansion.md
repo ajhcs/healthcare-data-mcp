@@ -2,7 +2,7 @@
 
 Released: 2026-05-03
 
-This release expands public-source healthcare intelligence across 340B, PHC4,
+This release expands public-source healthcare intelligence across PHC4,
 PA/NJ/DE state hospital artifacts, public financial health, staffing,
 throughput, and cyber incident enrichment. It keeps the original boundary:
 public data only, no paid PHC4 discharge files, no internal imports, and no
@@ -14,11 +14,7 @@ unsupported MAP revenue-cycle KPI proxies.
   `phc4_public_reports`, `ahrq_hfmd`, `pa_hospital_reports`,
   `nj_hospital_public_data`, and `de_hospital_discharge`.
 - Added acquisition flags for PHC4 public reports, AHRQ HFMD, PA hospital
-  reports, NJ hospital public data, DE hospital discharge artifacts, and HRSA
-  340B OPAIS status checks.
-- HRSA 340B OPAIS automation now reports a precise `not_automatable` status
-  when the public reports page does not expose a stable unauthenticated JSON
-  export URL.
+  reports, NJ hospital public data, and DE hospital discharge artifacts.
 
 ## PHC4 and State Public Data
 

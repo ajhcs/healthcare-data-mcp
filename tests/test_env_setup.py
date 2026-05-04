@@ -70,22 +70,16 @@ def test_validate_env_reports_important_configuration_gaps() -> None:
 
 
 def test_import_manual_caches_copies_public_record_seeds(tmp_path) -> None:
-    source_340b = tmp_path / "340b.json"
     source_breach = tmp_path / "breaches.csv"
     cache_root = tmp_path / "cache"
-    source_340b.write_text('{"123": {"entity_name": "Example Hospital"}}', encoding="utf-8")
     source_breach.write_text("name,state\nExample Hospital,PA\n", encoding="utf-8")
 
     results = import_manual_caches(
         cache_root=cache_root,
-        opais_340b_json=source_340b,
         breach_csv=source_breach,
     )
 
-    assert len(results) == 2
-    assert (cache_root / "public-records" / "340b_covered_entities.json").read_text(
-        encoding="utf-8"
-    ) == source_340b.read_text(encoding="utf-8")
+    assert len(results) == 1
     assert (cache_root / "public-records" / "hipaa_breaches.csv").read_text(
         encoding="utf-8"
     ) == source_breach.read_text(encoding="utf-8")
@@ -133,10 +127,9 @@ def test_cache_status_reports_missing_manual_data(tmp_path, capsys) -> None:
     print_cache_status(tmp_path / "cache")
 
     output = capsys.readouterr().out
-    assert "340B covered entities: MISSING" in output
+    assert "340B covered entities" not in output
     assert "DocGraph shared patients: UNAVAILABLE" in output
     assert "data_unavailable: licensed_source_missing" in output
-    assert "public_records.get_340b_status" in output
     assert "hc-mcp-setup --acquire-hipaa-breaches" in output
     assert "PHC4 public reports: MISSING" in output
     assert "hc-mcp-setup --acquire-phc4-public-reports" in output
@@ -155,39 +148,24 @@ def test_cache_status_requires_docgraph_parquet_for_ready(tmp_path, capsys) -> N
     assert "DocGraph shared patients: READY" not in output
 
 
-def test_cache_status_reports_340b_ready(tmp_path, capsys) -> None:
-    ready = tmp_path / "cache" / "public-records" / "340b_covered_entities.json"
-    ready.parent.mkdir(parents=True)
-    ready.write_text("[]", encoding="utf-8")
-
-    print_cache_status(tmp_path / "cache")
-
-    output = capsys.readouterr().out
-    assert "340B covered entities: READY" in output
-
-
 def test_cache_guide_prints_source_and_import_commands(tmp_path, capsys) -> None:
     print_cache_guide(tmp_path / "cache")
 
     output = capsys.readouterr().out
     assert "Data acquisition guide" in output
-    assert "https://340bopais.hrsa.gov" in output
     assert "hc-mcp-setup --acquire-hipaa-breaches" in output
-    assert "hc-mcp-setup --import-340b-json" in output
     assert "hc-mcp-setup --acquire-ahrq-hfmd" in output
 
 
 def test_agent_cache_instructions_skip_ready_cache(tmp_path, capsys) -> None:
     cache_root = tmp_path / "cache"
-    ready = cache_root / "public-records" / "340b_covered_entities.json"
+    ready = cache_root / "public-records" / "hipaa_breaches.csv"
     ready.parent.mkdir(parents=True)
-    ready.write_text("[]", encoding="utf-8")
+    ready.write_text("name,state\nExample Hospital,PA\n", encoding="utf-8")
 
     print_agent_cache_instructions(cache_root)
 
     output = capsys.readouterr().out
-    assert "340B covered entities" not in output
-    assert "HIPAA breach reports" in output
-    assert "hc-mcp-setup --acquire-hipaa-breaches" in output
+    assert "HIPAA breach reports" not in output
     assert "PHC4 public reports" in output
     assert "After imports" in output

@@ -229,15 +229,11 @@ DATASETS: tuple[DatasetDocument, ...] = (
     DatasetDocument(
         id="public-records",
         title="Public Records Intelligence",
-        description="SAM.gov, USAspending, accreditation, 340B, PHC4 public reports, cyber incidents, and public contracting metadata.",
+        description="SAM.gov, USAspending, accreditation, PHC4 public reports, cyber incidents, and public contracting metadata.",
         server="public-records",
         tools=(
             "search_usaspending",
             "search_sam_gov",
-            "get_340b_status",
-            "check_340b_status",
-            "get_340b_profile",
-            "find_340b_entities_near_facility",
             "get_breach_history",
             "search_phc4_public_reports",
             "get_phc4_hospital_performance",
@@ -261,7 +257,7 @@ DATASETS: tuple[DatasetDocument, ...] = (
             "get_sam_exclusions_metadata",
         ),
         tags=("sam", "usaspending", "chpl", "accreditation", "contracts", "340b", "phc4", "cyber"),
-        source="US government public records APIs, HRSA OPAIS cache, PHC4 public reports, OCR breaches, and bundled accreditation references",
+        source="US government public records APIs, PHC4 public reports, OCR breaches, and bundled accreditation references",
         access_notes="Cybersecurity attestation status is unsupported unless a reviewed public attestation source is configured; adjacent OCR/SEC/state/CISA sources are labeled separately.",
     ),
     DatasetDocument(

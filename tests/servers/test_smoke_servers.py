@@ -25,9 +25,9 @@ SERVER_SPECS = [
     ("physician-referral-network", "servers.physician_referral_network.server", 6),
     ("workforce-analytics", "servers.workforce_analytics.server", 15),
     ("claims-analytics", "servers.claims_analytics.server", 5),
-    ("public-records", "servers.public_records.server", 27),
+    ("public-records", "servers.public_records.server", 25),
     ("web-intelligence", "servers.web_intelligence.server", 7),
-    ("live-gateway", "servers.live_gateway.server", 59),
+    ("live-gateway", "servers.live_gateway.server", 56),
 ]
 
 

@@ -146,6 +146,7 @@ HFMD_METRIC_ALIASES: dict[str, tuple[str, ...]] = {
         "total_margin",
         "total_margin_percent",
         "total_margin_percentage",
+        "hfmd05",
     ),
     "net_patient_revenue": (
         "net_patient_revenue",
@@ -166,12 +167,21 @@ HFMD_METRIC_ALIASES: dict[str, tuple[str, ...]] = {
     ),
     "total_assets": ("total_assets",),
     "total_liabilities": ("total_liabilities",),
-    "current_ratio": ("current_ratio",),
+    "quick_ratio": ("quick_ratio", "hfmd09"),
     "days_cash_on_hand": ("days_cash_on_hand", "cash_on_hand_days"),
     "debt_service_coverage_ratio": (
         "debt_service_coverage_ratio",
         "debt_service_coverage",
     ),
+    "net_revenue_margin_to_total_cost": ("hfmd01",),
+    "net_revenue_margin_to_patient_revenue": ("hfmd02",),
+    "net_income_to_equity": ("hfmd03",),
+    "net_income_to_total_fixed_assets": ("hfmd04",),
+    "average_age_of_plant": ("hfmd06",),
+    "debt_burden_to_total_assets": ("hfmd07",),
+    "current_ratio": ("current_ratio", "hfmd08"),
+    "uncompensated_care_burden_to_total_cost": ("hfmd10",),
+    "unreimbursed_and_uncompensated_care_burden_to_total_cost": ("hfmd11",),
 }
 
 CCN_ALIASES = (
@@ -268,6 +278,10 @@ def load_ahrq_hfmd_profile(
         }
 
     df = pd.concat(frames, ignore_index=True)
+    source_columns = [column for column in df.columns if column.startswith("_hfmd_source")]
+    dedupe_columns = [column for column in df.columns if column not in source_columns]
+    if dedupe_columns:
+        df = df.drop_duplicates(subset=dedupe_columns, keep="first")
     matches = _filter_hfmd_rows(df, ccn=ccn, state=state)
     records = [
         _normalize_hfmd_row(row, requested_ccn=ccn, state=state)

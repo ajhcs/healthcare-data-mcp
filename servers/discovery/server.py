@@ -378,8 +378,8 @@ DATASET_CATALOG: dict[str, dict[str, Any]] = {
         "server": ["public-records"],
         "category": "compliance_contracting",
         "grain": "entity, certification, contract, or breach records",
-        "description": "SAM.gov opportunities and exclusions, USAspending awards, CHPL certifications, 340B, HIPAA breaches, state notice source status, cyber source boundaries, and HHS OIG LEIE screening.",
-        "source_system": "SAM.gov, USAspending, CHPL, HRSA, HHS OCR, HHS OIG",
+        "description": "SAM.gov opportunities and exclusions, USAspending awards, CHPL certifications, HIPAA breaches, state notice source status, cyber source boundaries, and HHS OIG LEIE screening.",
+        "source_system": "SAM.gov, USAspending, CHPL, HHS OCR, HHS OIG",
         "source_urls": [
             "https://api.sam.gov/prod/opportunities/v2/search",
             "https://open.gsa.gov/api/exclusions-api/",
@@ -389,10 +389,8 @@ DATASET_CATALOG: dict[str, dict[str, Any]] = {
             "https://oig.hhs.gov/exclusions/exclusions_list.asp",
         ],
         "cache_files": [
-            "public-records/340b_covered_entities.parquet",
             "public-records/hipaa_breaches.parquet",
             "public-records/state_breach_notices.parquet",
-            "public-records/340b_covered_entities.json",
             "public-records/hipaa_breaches.csv",
         ],
         "schema": {
@@ -409,44 +407,6 @@ DATASET_CATALOG: dict[str, dict[str, Any]] = {
             "CISA KEV as victim attribution",
             "state AG notice coverage as a national cache",
         ],
-    },
-    "hrsa_340b_covered_entities": {
-        "title": "HRSA 340B OPAIS Covered Entities",
-        "server": ["public-records"],
-        "category": "compliance_340b",
-        "grain": "one HRSA OPAIS covered entity enrollment record",
-        "description": (
-            "340B Drug Pricing Program covered entity enrollment records from the HRSA "
-            "OPAIS Covered Entity Daily Export. The export is manually imported because "
-            "HRSA does not expose a stable unauthenticated public JSON URL."
-        ),
-        "source_system": "HRSA 340B OPAIS",
-        "source_urls": ["https://340bopais.hrsa.gov/Reports"],
-        "cache_files": [
-            "public-records/340b_covered_entities.json",
-            "public-records/340b_covered_entities.parquet",
-        ],
-        "schema": {
-            "identity_fields": ["entity_id", "340b_id", "covered_entity_id"],
-            "common_fields": [
-                "entity_name",
-                "entity_type",
-                "participation_status",
-                "participating",
-                "parent_entity_id",
-                "parent_entity_name",
-                "contract_pharmacy_count",
-                "source_report_date",
-            ],
-            "join_keys": ["entity_id", "340b_id", "covered_entity_id", "entity_name", "state"],
-        },
-        "workflows": ["340B enrollment lookup", "covered entity due diligence", "contract pharmacy context"],
-        "access_notes": (
-            "Use public_records.get_340b_status, check_340b_status, get_340b_profile, "
-            "or find_340b_entities_near_facility after importing the OPAIS JSON with "
-            "hc-mcp-setup --import-340b-json. Automated acquisition reports "
-            "not_automatable until HRSA publishes a stable direct export URL."
-        ),
     },
     "state_health_data": {
         "title": "State Public Hospital Data Acquisition Index",
@@ -1030,12 +990,10 @@ RUNBOOKS: dict[str, dict[str, Any]] = {
         "purpose": "Enable datasets that cannot be fetched automatically.",
         "steps": [
             "Download DocGraph from CareSet and load it through the physician-referral-network loader.",
-            "Place 340b_covered_entities.json under public-records cache before 340B lookups.",
             "Place hipaa_breaches.csv under public-records cache before breach lookups.",
             "Run healthcare-data://cache/status to confirm the converted Parquet files exist.",
         ],
         "manual_seed_files": [
-            "public-records/340b_covered_entities.json",
             "public-records/hipaa_breaches.csv",
             "docgraph/shared_patients.parquet",
         ],
@@ -1448,7 +1406,7 @@ def public_records_due_diligence(entity_name: str, ein: str = "", uei: str = "")
     return (
         f"Plan public-records due diligence for {entity_name}{id_hint}. "
         "Use financial-intelligence, public-records, CMS facility identity, CHPL, SAM.gov, "
-        "USAspending, 340B, HIPAA breach, and web-intelligence resources. Return source URLs, "
+        "USAspending, HIPAA breach, and web-intelligence resources. Return source URLs, "
         "API key requirements, manually seeded files, and cache status checks."
     )
 

@@ -3,12 +3,11 @@
 Covers public-records tools:
   1. search_usaspending   — USAspending federal award data
   2. search_sam_gov        — SAM.gov contract opportunities
-  3. get_340b_status       — 340B Drug Pricing Program covered entities
-  4. get_breach_history    — HHS HIPAA breach portal
-  5. get_accreditation     — CMS Provider-of-Services accreditation
-  6. get_interop_status    — CMS Promoting Interoperability attestation
-  7. LEIE screening tools  — HHS OIG current exclusions
-  8. SAM Exclusions tools  — SAM.gov active federal exclusions
+  3. get_breach_history    — HHS HIPAA breach portal
+  4. get_accreditation     — CMS Provider-of-Services accreditation
+  5. get_interop_status    — CMS Promoting Interoperability attestation
+  6. LEIE screening tools  — HHS OIG current exclusions
+  7. SAM Exclusions tools  — SAM.gov active federal exclusions
 """
 
 from pydantic import BaseModel, Field
@@ -70,40 +69,7 @@ class SAMResponse(BaseModel):
     opportunities: list[SAMOpportunity] = Field(default_factory=list)
 
 
-# --- Tool 3: get_340b_status ---
-
-
-class CoveredEntity340B(BaseModel):
-    """A single 340B Drug Pricing Program covered entity."""
-
-    entity_id: str = ""
-    entity_name: str = ""
-    entity_type: str = ""
-    address: str = ""
-    city: str = ""
-    state: str = ""
-    zip_code: str = ""
-    grant_number: str = ""
-    parent_entity_id: str = ""
-    parent_entity_name: str = ""
-    parent_child_relation: str = ""
-    participation_status: str = ""
-    effective_date: str = ""
-    termination_date: str = ""
-    source_report_date: str = ""
-    participating: bool = True
-    contract_pharmacy_count: int = 0
-
-
-class Status340BResponse(BaseModel):
-    """Response from get_340b_status."""
-
-    search_term: str = ""
-    total_results: int = 0
-    entities: list[CoveredEntity340B] = Field(default_factory=list)
-
-
-# --- Tool 4: get_breach_history ---
+# --- Tool 3: get_breach_history ---
 
 
 class BreachRecord(BaseModel):

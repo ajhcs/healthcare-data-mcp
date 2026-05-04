@@ -84,23 +84,6 @@ CONFIG_KEYS: tuple[ConfigKey, ...] = (
 
 MANUAL_CACHE_ITEMS: tuple[ManualCacheItem, ...] = (
     ManualCacheItem(
-        name="340B covered entities",
-        seed_path=Path("public-records") / "340b_covered_entities.json",
-        parquet_path=Path("public-records") / "340b_covered_entities.parquet",
-        tools=("public_records.get_340b_status",),
-        source_url="https://340bopais.hrsa.gov",
-        import_flag="--import-340b-json",
-        instructions="Download the HRSA OPAIS Covered Entity Daily Export JSON.",
-        automation_note=(
-            "HRSA exposes the JSON export through the OPAIS reports UI, but the public page does "
-            "not currently expose a stable unauthenticated file URL for this CLI to call."
-        ),
-        agent_prompt=(
-            "Open HRSA 340B OPAIS, download the Covered Entity Daily Export in JSON format, "
-            "then run hc-mcp-setup --import-340b-json with the downloaded file path."
-        ),
-    ),
-    ManualCacheItem(
         name="HIPAA breach reports",
         seed_path=Path("public-records") / "hipaa_breaches.csv",
         parquet_path=Path("public-records") / "hipaa_breaches.parquet",
@@ -252,7 +235,6 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Fetch the public HHS OCR HIPAA breach table and store it as the breach CSV seed.",
     )
-    parser.add_argument("--acquire-340b-opais", action="store_true", help="Warm or report HRSA OPAIS 340B cache status.")
     parser.add_argument("--acquire-pa-hospital-reports", action="store_true", help="Index public Pennsylvania hospital report artifacts.")
     parser.add_argument("--acquire-nj-hospital-public-data", action="store_true", help="Index public New Jersey hospital financial and charity-care artifacts.")
     parser.add_argument("--acquire-de-hospital-discharge", action="store_true", help="Index Delaware hospital discharge public data artifacts.")
@@ -267,9 +249,6 @@ def parse_args() -> argparse.Namespace:
         "--force-cache-refresh",
         action="store_true",
         help="Overwrite existing acquired public cache files.",
-    )
-    parser.add_argument(
-        "--import-340b-json", type=Path, help="Copy a HRSA OPAIS 340B JSON export into the public-records cache."
     )
     parser.add_argument(
         "--import-breach-csv", type=Path, help="Copy a HHS OCR breach CSV export into the public-records cache."
@@ -332,8 +311,6 @@ def main() -> None:
         force=args.force_cache_refresh,
     )
     state_sources: list[str] = []
-    if args.acquire_public_caches or args.acquire_340b_opais:
-        state_sources.append("340b_opais")
     if args.acquire_public_caches or args.acquire_pa_hospital_reports:
         state_sources.append("pa_hospital_reports")
     if args.acquire_public_caches or args.acquire_nj_hospital_public_data:
@@ -355,7 +332,6 @@ def main() -> None:
 
     import_results = import_manual_caches(
         cache_root=args.cache_root,
-        opais_340b_json=args.import_340b_json,
         breach_csv=args.import_breach_csv,
         docgraph_csv=args.import_docgraph_csv,
         docgraph_parquet=args.import_docgraph_parquet,
@@ -456,7 +432,6 @@ Claude Desktop stdio JSON:
 def import_manual_caches(
     *,
     cache_root: Path,
-    opais_340b_json: Path | None = None,
     breach_csv: Path | None = None,
     docgraph_csv: Path | None = None,
     docgraph_parquet: Path | None = None,
@@ -469,11 +444,6 @@ def import_manual_caches(
 
     root = cache_root.expanduser()
     results: list[str] = []
-    if opais_340b_json:
-        target = root / "public-records" / "340b_covered_entities.json"
-        _copy_seed_file(opais_340b_json, target)
-        results.append(f"Imported 340B JSON -> {target}")
-
     if breach_csv:
         target = root / "public-records" / "hipaa_breaches.csv"
         _copy_seed_file(breach_csv, target)

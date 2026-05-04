@@ -11,15 +11,6 @@ from shared.utils.cost_report import load_cost_report_row
 
 
 @pytest.mark.asyncio
-async def test_acquire_340b_opais_reports_not_automatable_without_seed(tmp_path) -> None:
-    status = await state_health_data.acquire_340b_opais(tmp_path)
-
-    assert status.status == "not_automatable"
-    assert status.reason == "public_reports_page_does_not_expose_stable_direct_json_url"
-    assert "340b_covered_entities.json" in status.cache_path
-
-
-@pytest.mark.asyncio
 async def test_search_phc4_reports_uses_cached_index(tmp_path) -> None:
     cache = tmp_path / "state-health-data" / "phc4"
     cache.mkdir(parents=True)

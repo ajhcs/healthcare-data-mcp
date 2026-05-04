@@ -61,10 +61,7 @@ LIVE_TOOL_SPECS: tuple[LiveToolSpec, ...] = (
     LiveToolSpec("public-records", "servers.public_records.server", "check_sam_exclusion_identifier", "exclusions"),
     LiveToolSpec("public-records", "servers.public_records.server", "screen_sam_exclusions_batch", "exclusions"),
     LiveToolSpec("public-records", "servers.public_records.server", "get_sam_exclusions_metadata", "exclusions"),
-    # Public state-health records, PHC4, 340B, and cyber enrichment
-    LiveToolSpec("public-records", "servers.public_records.server", "get_340b_status", "public_records"),
-    LiveToolSpec("public-records", "servers.public_records.server", "get_340b_profile", "public_records"),
-    LiveToolSpec("public-records", "servers.public_records.server", "find_340b_entities_near_facility", "public_records"),
+    # Public state-health records, PHC4, and cyber enrichment
     LiveToolSpec("public-records", "servers.public_records.server", "search_phc4_public_reports", "public_records"),
     LiveToolSpec("public-records", "servers.public_records.server", "get_phc4_hospital_performance", "public_records"),
     LiveToolSpec("public-records", "servers.public_records.server", "get_phc4_financial_analysis", "public_records"),
