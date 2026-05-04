@@ -1,6 +1,6 @@
 """Public Records & Regulatory MCP Server.
 
-Provides tools for federal spending, 340B status, HIPAA breaches,
+Provides tools for federal spending, HIPAA breaches,
 accreditation, and interoperability data. Port 8013.
 """
 
@@ -27,11 +27,9 @@ from .models import (
     USAspendingResponse,
     SAMOpportunity,
     SAMResponse,
-    CoveredEntity340B,
     CISAKevContext,
     CyberIncidentRecord,
     CyberSourceStatus,
-    Status340BResponse,
     BreachRecord,
     BreachHistoryResponse,
     AccreditationRecord,
@@ -538,133 +536,7 @@ async def search_sam_gov(
 
 
 # ---------------------------------------------------------------------------
-# Tool 3: get_340b_status
-# ---------------------------------------------------------------------------
-@mcp.tool(structured_output=True)
-async def get_340b_status(
-    entity_name: str = "", entity_id: str = "", state: str = "",
-) -> dict[str, Any]:
-    """Look up 340B Drug Pricing Program enrollment and contract pharmacy data.
-
-    Uses the cached HRSA 340B OPAIS daily JSON export when available. If the
-    public reports page does not expose a stable direct JSON URL, the response
-    includes a not_automatable source status with precise next steps.
-
-    Args:
-        entity_name: Search by covered entity name.
-        entity_id: Search by 340B ID.
-        state: Filter by state abbreviation (e.g. "PA").
-    """
-    try:
-        if not entity_name and not entity_id:
-            return error_response("At least one of entity_name or entity_id is required.")
-
-        if not data_loaders.ensure_340b_loaded():
-            source_status = await state_health_data.acquire_340b_opais()
-            return error_response(
-                "340B data not available",
-                code="source_not_automatable" if source_status.status == "not_automatable" else "source_unavailable",
-                instructions=(
-                    source_status.next_step
-                    or f"Download the HRSA 340B OPAIS daily JSON export and place it at: {data_loaders._340B_JSON}"
-                ),
-                source_status=source_status.to_dict(),
-            )
-
-        rows = data_loaders.query_340b(
-            entity_name=entity_name, entity_id=entity_id, state=state,
-        )
-
-        entities: list[CoveredEntity340B] = []
-        for r in rows:
-            entities.append(CoveredEntity340B(
-                **{k: v for k, v in r.items() if k in CoveredEntity340B.model_fields},
-            ))
-
-        search_term = entity_name or entity_id
-        response = Status340BResponse(
-            search_term=search_term,
-            total_results=len(entities),
-            entities=entities,
-        )
-        return to_structured(response.model_dump())
-    except Exception as e:
-        logger.exception("get_340b_status failed")
-        return error_response(f"get_340b_status failed: {e}")
-
-
-@mcp.tool(structured_output=True)
-async def check_340b_status(entity_name: str = "", entity_id: str = "", state: str = "") -> dict[str, Any]:
-    """Alias for get_340b_status."""
-    return await get_340b_status(entity_name=entity_name, entity_id=entity_id, state=state)
-
-
-@mcp.tool(structured_output=True)
-async def get_340b_profile(entity_name: str = "", entity_id: str = "", state: str = "") -> dict[str, Any]:
-    """Return a normalized 340B profile with parent/child and pharmacy context."""
-    result = await get_340b_status(entity_name=entity_name, entity_id=entity_id, state=state)
-    if result.get("ok") is False:
-        return result
-    entities = result.get("entities", [])
-    if not entities:
-        return to_structured({"search_term": entity_name or entity_id, "total_results": 0, "profiles": []})
-    profiles = []
-    for entity in entities:
-        profiles.append(
-            {
-                "entity_id": entity.get("entity_id", ""),
-                "entity_name": entity.get("entity_name", ""),
-                "entity_type": entity.get("entity_type", ""),
-                "parent_child_relation": entity.get("parent_child_relation", ""),
-                "parent_entity_id": entity.get("parent_entity_id", ""),
-                "parent_entity_name": entity.get("parent_entity_name", ""),
-                "contract_pharmacy_count": entity.get("contract_pharmacy_count", 0),
-                "participation_status": entity.get("participation_status", ""),
-                "participating": entity.get("participating", True),
-                "effective_date": entity.get("effective_date", ""),
-                "termination_date": entity.get("termination_date", ""),
-                "source_report_date": entity.get("source_report_date", ""),
-                "address": entity.get("address", ""),
-                "city": entity.get("city", ""),
-                "state": entity.get("state", ""),
-                "zip_code": entity.get("zip_code", ""),
-            }
-        )
-    return to_structured({"search_term": entity_name or entity_id, "total_results": len(profiles), "profiles": profiles})
-
-
-@mcp.tool(structured_output=True)
-async def find_340b_entities_near_facility(
-    facility_name: str = "",
-    state: str = "",
-    city: str = "",
-    limit: int = 25,
-) -> dict[str, Any]:
-    """Find 340B covered entities by facility/city/state public-record proximity filters.
-
-    This is textual proximity only; it does not infer geographic radius unless
-    coordinates are present in the OPAIS cache.
-    """
-    result = await get_340b_status(entity_name=facility_name, state=state)
-    if result.get("ok") is False:
-        return result
-    entities = result.get("entities", [])
-    if city:
-        entities = [entity for entity in entities if str(entity.get("city", "")).lower() == city.lower()]
-    return to_structured(
-        {
-            "facility_name": facility_name,
-            "state": state.upper() if state else "",
-            "city": city,
-            "match_method": "opais_name_city_state_text_filter",
-            "total_results": min(len(entities), max(1, min(limit, 100))),
-            "entities": entities[: max(1, min(limit, 100))],
-        }
-    )
-
-
-# ---------------------------------------------------------------------------
-# Tool 4: get_breach_history
+# Tool 3: get_breach_history
 # ---------------------------------------------------------------------------
 @mcp.tool(structured_output=True)
 async def get_breach_history(

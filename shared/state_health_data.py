@@ -28,13 +28,21 @@ STATE_HEALTH_CACHE = DEFAULT_CACHE_ROOT / "state-health-data"
 PHC4_CACHE = STATE_HEALTH_CACHE / "phc4"
 PUBLIC_RECORDS_CACHE = DEFAULT_CACHE_ROOT / "public-records"
 
-OPAIS_REPORTS_URL = "https://340bopais.hrsa.gov/Reports"
 PA_HOSPITAL_REPORTS_URL = "https://www.pa.gov/agencies/health/health-statistics/health-facilities/hospital-reports.html"
 NJ_HOSPITAL_FINANCIAL_URL = "https://www.nj.gov/health/hcf/financial-reports/"
 NJ_CHARITY_CARE_URL = "https://www.nj.gov/health/charitycare/subsidy-reports/"
 DE_HOSPITAL_DISCHARGE_URL = "https://dhss.delaware.gov/dph/hp/hosp_dis_data/"
 PHC4_REPORT_LIBRARY_URL = "https://www.phc4.org/reports-library/"
 AHRQ_HFMD_URL = "https://www.ahrq.gov/data/innovations/hfmd.html"
+AHRQ_HFMD_CSV_ZIP_URL = "https://www.ahrq.gov/sites/default/files/wysiwyg/data/hfmd_2016_2019_puf_csv.zip"
+
+_PUBLIC_WEB_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+    ),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+}
 
 
 @dataclass(frozen=True)
@@ -182,42 +190,15 @@ async def _download(url: str, target: Path, *, force: bool = False) -> bool:
     if target.exists() and not force:
         return False
     target.parent.mkdir(parents=True, exist_ok=True)
-    resp = await resilient_request("GET", url, timeout=300.0, follow_redirects=True)
+    resp = await resilient_request(
+        "GET",
+        url,
+        timeout=300.0,
+        follow_redirects=True,
+        headers=_PUBLIC_WEB_HEADERS,
+    )
     target.write_bytes(resp.content)
     return True
-
-
-async def acquire_340b_opais(cache_root: Path | None = None, *, force: bool = False) -> SourceStatus:  # noqa: ARG001
-    """Return OPAIS acquisition status.
-
-    HRSA documents a JSON daily export for public users, but the current Blazor
-    reports page does not expose a stable unauthenticated file URL in static
-    markup. We therefore keep manual imports supported and return a precise
-    source status instead of scraping an unstable circuit endpoint.
-    """
-    # Acquisition decision: keep this browser-driven until a stable public JSON
-    # URL is intentionally coded here. The Reports page is the source of truth,
-    # but its interactive app endpoint is not a durable automation contract.
-    target = _cache_root(cache_root) / "public-records" / "340b_covered_entities.json"
-    if target.exists():
-        return SourceStatus(
-            source_id="340b_opais",
-            source_name="HRSA 340B OPAIS Covered Entity Daily Export",
-            source_url=OPAIS_REPORTS_URL,
-            status="ready",
-            cache_path=str(target),
-            acquired_at=_now(),
-        )
-    return SourceStatus(
-        source_id="340b_opais",
-        source_name="HRSA 340B OPAIS Covered Entity Daily Export",
-        source_url=OPAIS_REPORTS_URL,
-        status="not_automatable",
-        reason="public_reports_page_does_not_expose_stable_direct_json_url",
-        next_step="Use the OPAIS Reports page to download Covered Entity Daily Export (JSON), then run --import-340b-json.",
-        cache_path=str(target),
-        acquired_at=_now(),
-    )
 
 
 async def _scrape_artifact_links(
@@ -233,7 +214,13 @@ async def _scrape_artifact_links(
     html_path = cache_dir / "source.html"
 
     try:
-        resp = await resilient_request("GET", source_url, timeout=60.0, follow_redirects=True)
+        resp = await resilient_request(
+            "GET",
+            source_url,
+            timeout=60.0,
+            follow_redirects=True,
+            headers=_PUBLIC_WEB_HEADERS,
+        )
     except Exception as exc:
         index_path = _write_artifact_indexes(
             cache_dir,
@@ -268,6 +255,20 @@ async def _scrape_artifact_links(
             continue
         if source_id.startswith("pa_") and "hospital" not in lower_url + lower_label:
             continue
+        if source_id == "de_hospital_discharge":
+            discharge_tokens = (
+                "porigin",
+                "change",
+                "mshare",
+                "distrn",
+                "utilization",
+                "hospital",
+                "discharge",
+            )
+            if not any(token in lower_url + lower_label for token in discharge_tokens):
+                continue
+            if absolute.rstrip("/") == source_url.rstrip("/"):
+                continue
         artifacts.append(
             _normalized_artifact_record(
                 source_id=source_id,
@@ -288,7 +289,8 @@ async def _scrape_artifact_links(
         seen.add(artifact["artifact_url"])
         if cache_artifacts:
             suffix = Path(artifact["artifact_url"].split("?", 1)[0]).suffix or ".html"
-            target = cache_dir / "artifacts" / f"{_slug(artifact['title'])}{suffix}"
+            url_stem = Path(artifact["artifact_url"].split("?", 1)[0]).stem
+            target = cache_dir / "artifacts" / f"{_slug(artifact['title'])}-{_slug(url_stem)}{suffix}"
             try:
                 await _download(artifact["artifact_url"], target, force=force)
                 artifact["cached_path"] = str(target)
@@ -375,19 +377,37 @@ async def acquire_de_hospital_discharge(cache_root: Path | None = None, *, force
 async def acquire_ahrq_hfmd(cache_root: Path | None = None, *, force: bool = False) -> SourceStatus:
     root = _cache_root(cache_root) / "state-health-data" / "ahrq-hfmd"
     root.mkdir(parents=True, exist_ok=True)
-    page = await resilient_request("GET", AHRQ_HFMD_URL, timeout=60.0, follow_redirects=True)
+    page = await resilient_request(
+        "GET",
+        AHRQ_HFMD_URL,
+        timeout=60.0,
+        follow_redirects=True,
+        headers=_PUBLIC_WEB_HEADERS,
+    )
     soup = BeautifulSoup(page.text, "html.parser")
     csv_url = ""
     for link in soup.find_all("a"):
         href = _text(link.get("href"))
         label = link.get_text(" ", strip=True).lower()
-        if "hfmd" in label and "csv" in label and href:
+        lower_href = href.lower()
+        if "hfmd" in f"{label} {lower_href}" and "csv" in f"{label} {lower_href}" and lower_href.endswith(".zip"):
             csv_url = urljoin(AHRQ_HFMD_URL, href)
             break
     if not csv_url:
-        return SourceStatus("ahrq_hfmd", "AHRQ HFMD", AHRQ_HFMD_URL, "not_automatable", reason="csv_zip_link_not_found", acquired_at=_now())
-    target = root / Path(csv_url).name
+        csv_url = AHRQ_HFMD_CSV_ZIP_URL
+    target = root / "hfmd.zip"
     await _download(csv_url, target, force=force)
+    if not zipfile.is_zipfile(target):
+        target.unlink(missing_ok=True)
+        return SourceStatus(
+            "ahrq_hfmd",
+            "AHRQ Hospital Financial Measures Database",
+            csv_url,
+            "not_automatable",
+            reason="ahrq_cloudfront_waf_challenge_for_direct_download",
+            next_step="Download HFMD_2016_2019csv.zip from the AHRQ page in a browser, then place it at the cache path or add a non-WAF mirror.",
+            acquired_at=_now(),
+        )
     record_count = 0
     if target.suffix.lower() == ".zip":
         extracted_dir = root / "csv"
@@ -628,7 +648,6 @@ def _parse_table_like_lines(lines: list[str]) -> list[dict[str, str]]:
 
 async def acquire_source(source_id: str, cache_root: Path | None = None, *, force: bool = False) -> SourceStatus:
     dispatch = {
-        "340b_opais": acquire_340b_opais,
         "pa_hospital_reports": acquire_pa_hospital_reports,
         "nj_hospital_public_data": acquire_nj_hospital_public_data,
         "de_hospital_discharge": acquire_de_hospital_discharge,

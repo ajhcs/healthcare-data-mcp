@@ -2,7 +2,7 @@
 
 Downloads CMS Provider-of-Services and Promoting Interoperability CSVs,
 converts to Parquet with zstd compression, and queries with DuckDB.
-Also handles manually-seeded 340B covered-entity JSON and HIPAA breach CSV.
+Also handles manually-seeded HIPAA breach CSV and reviewed public-record caches.
 """
 
 import hashlib
@@ -55,7 +55,6 @@ PI_URL = (
 # Parquet cache paths
 _POS_PARQUET = _CACHE_DIR / "pos_q4_2025.parquet"
 _PI_PARQUET = _CACHE_DIR / "pi_hospital.parquet"
-_340B_PARQUET = _CACHE_DIR / "340b_covered_entities.parquet"
 _BREACH_PARQUET = _CACHE_DIR / "hipaa_breaches.parquet"
 _OCR_ENFORCEMENT_PARQUET = _CACHE_DIR / "ocr_enforcement_actions.parquet"
 _SEC_CYBER_DISCLOSURES_PARQUET = _CACHE_DIR / "sec_cyber_disclosures.parquet"
@@ -65,7 +64,6 @@ _LEIE_META = _CACHE_DIR / "leie_current.meta.json"
 _LEIE_CSV = _CACHE_DIR / "leie_current.csv"
 
 # Manual-seed source files (user drops these into the cache dir)
-_340B_JSON = _CACHE_DIR / "340b_covered_entities.json"
 _BREACH_CSV = _CACHE_DIR / "hipaa_breaches.csv"
 _OCR_ENFORCEMENT_DIR = _CACHE_DIR / "ocr_enforcement_actions"
 _SEC_CYBER_DISCLOSURES_DIR = _CACHE_DIR / "sec_cyber_disclosures"
@@ -436,69 +434,6 @@ async def ensure_pi_cached() -> bool:
 # ============================================================
 # Manual-seed file handlers
 # ============================================================
-
-def ensure_340b_loaded() -> bool:
-    """Check for 340b_covered_entities.json in cache dir, convert to Parquet.
-
-    The JSON is nested (all data per 340B ID grouped together), so we
-    flatten to records before saving.
-
-    Returns True if the Parquet file is available for queries.
-    """
-    if _is_cache_valid(_340B_PARQUET, _BULK_TTL_DAYS):
-        return True
-
-    if not _340B_JSON.exists():
-        logger.warning(
-            "340B seed file not found at %s — place the JSON file there "
-            "to enable get_340b_status queries.",
-            _340B_JSON,
-        )
-        return False
-
-    logger.info("Converting 340B JSON to Parquet ...")
-    try:
-        with open(_340B_JSON, encoding="utf-8") as f:
-            raw = json.load(f)
-
-        # Flatten nested structure to list of flat records
-        records: list[dict] = []
-        if isinstance(raw, list):
-            # Already a list of records
-            for item in raw:
-                if isinstance(item, dict):
-                    records.append(_flatten_dict(item))
-        elif isinstance(raw, dict):
-            # Keyed by entity ID — flatten each entry
-            for _key, value in raw.items():
-                if isinstance(value, dict):
-                    flat = _flatten_dict(value)
-                    if "entity_id" not in flat or not flat["entity_id"]:
-                        flat["entity_id"] = str(_key)
-                    records.append(flat)
-                elif isinstance(value, list):
-                    for sub in value:
-                        if isinstance(sub, dict):
-                            flat = _flatten_dict(sub)
-                            if "entity_id" not in flat or not flat["entity_id"]:
-                                flat["entity_id"] = str(_key)
-                            records.append(flat)
-
-        if not records:
-            logger.warning("340B JSON produced zero records after flattening")
-            return False
-
-        df = pd.DataFrame(records).astype(str)
-        df.columns = [re.sub(r"[^a-z0-9]+", "_", c.strip().lower()).strip("_") for c in df.columns]
-        _write_dataframe_parquet(df, _340B_PARQUET, compression="zstd")
-
-        logger.info("340B cached: %d records -> %s", len(df), _340B_PARQUET.name)
-        return True
-
-    except Exception as e:
-        logger.warning("Failed to process 340B JSON: %s", e)
-        return False
-
 
 def _flatten_dict(d: dict, parent_key: str = "", sep: str = "_") -> dict:
     """Recursively flatten a nested dict into a single-level dict."""
@@ -1583,105 +1518,6 @@ def query_pi(
 
     except Exception as e:
         logger.warning("PI query failed: %s", e)
-        return []
-    finally:
-        con.close()
-
-
-def query_340b(
-    entity_name: str = "",
-    entity_id: str = "",
-    state: str = "",
-) -> list[dict]:
-    """Query the 340B covered-entities Parquet.
-
-    Uses dynamic column detection since the JSON schema may vary.
-    """
-    con = _get_con(_340B_PARQUET, "data")
-    if con is None:
-        return []
-
-    try:
-        cols = _detect_columns(con)
-
-        id_col = _find_col(cols, ["entity_id", "id", "340b_id", "covered_entity_id", "covered_entity_id_number"])
-        name_col = _find_col(cols, [
-            "entity_name", "name", "covered_entity_name", "organization_name", "name_of_covered_entity",
-        ])
-        state_col = _find_col(cols, ["state", "state_code", "entity_state", "covered_entity_state"])
-        type_col = _find_col(cols, ["entity_type", "type", "covered_entity_type"])
-        addr_col = _find_col(cols, ["address", "street_address", "address_line_1", "covered_entity_street_address"])
-        city_col = _find_col(cols, ["city", "entity_city", "covered_entity_city"])
-        zip_col = _find_col(cols, ["zip_code", "zip", "postal_code", "covered_entity_zip_code"])
-        grant_col = _find_col(cols, ["grant_number", "grant_num", "grant_id", "340b_id"])
-        participating_col = _find_col(cols, ["participating", "active", "status"])
-        pharmacy_col = _find_col(cols, [
-            "contract_pharmacy_count", "pharmacy_count",
-            "num_contract_pharmacies", "contract_pharmacies",
-        ])
-        parent_id_col = _find_col(cols, ["parent_entity_id", "parent_340b_id", "parent_id", "parent_ce_id"])
-        parent_name_col = _find_col(cols, ["parent_entity_name", "parent_name", "parent_covered_entity_name"])
-        relation_col = _find_col(cols, ["parent_child_relation", "entity_relation", "relationship", "site_type"])
-        status_col = _find_col(cols, ["participation_status", "status", "record_status", "entity_status"])
-        effective_col = _find_col(cols, ["effective_date", "start_date", "participation_start_date", "enrollment_date"])
-        termination_col = _find_col(cols, ["termination_date", "term_date", "participation_termination_date"])
-        report_date_col = _find_col(cols, ["source_report_date", "report_date", "daily_report_date", "as_of_date"])
-
-        where_parts: list[str] = []
-        params: list[str] = []
-
-        if entity_id and id_col:
-            where_parts.append(f"TRIM({id_col}) = ?")
-            params.append(entity_id.strip())
-        if entity_name and name_col:
-            where_parts.append(f"{name_col} ILIKE ?")
-            params.append(f"%{entity_name.strip()}%")
-        if state and state_col:
-            where_parts.append(f"UPPER(TRIM({state_col})) = ?")
-            params.append(state.strip().upper())
-
-        where = " AND ".join(where_parts) if where_parts else "1=1"
-        sql = f"SELECT * FROM data WHERE {where} LIMIT 500"
-        rows = con.execute(sql, params).fetchdf()
-
-        results: list[dict] = []
-        for _, row in rows.iterrows():
-            r = row.to_dict()
-            part_val = _s(r, participating_col).lower()
-            is_participating = part_val not in ("false", "0", "no", "inactive", "n")
-            pharmacy_count = _i(r, pharmacy_col)
-            if pharmacy_count == 0 and pharmacy_col:
-                raw_pharmacies = _s(r, pharmacy_col)
-                if raw_pharmacies.startswith("["):
-                    try:
-                        pharmacy_count = len(json.loads(raw_pharmacies))
-                    except Exception:
-                        pharmacy_count = 0
-
-            results.append({
-                "entity_id": _s(r, id_col),
-                "entity_name": _s(r, name_col),
-                "entity_type": _s(r, type_col),
-                "address": _s(r, addr_col),
-                "city": _s(r, city_col),
-                "state": _s(r, state_col),
-                "zip_code": _s(r, zip_col),
-                "grant_number": _s(r, grant_col),
-                "participating": is_participating,
-                "contract_pharmacy_count": pharmacy_count,
-                "parent_entity_id": _s(r, parent_id_col),
-                "parent_entity_name": _s(r, parent_name_col),
-                "parent_child_relation": _s(r, relation_col),
-                "participation_status": _s(r, status_col) or ("active" if is_participating else "inactive"),
-                "effective_date": _s(r, effective_col),
-                "termination_date": _s(r, termination_col),
-                "source_report_date": _s(r, report_date_col),
-            })
-
-        return results
-
-    except Exception as e:
-        logger.warning("340B query failed: %s", e)
         return []
     finally:
         con.close()
