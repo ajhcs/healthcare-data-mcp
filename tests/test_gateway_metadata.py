@@ -64,8 +64,10 @@ async def test_gateway_advertises_only_registered_server_tools(monkeypatch: pyte
 
 def test_gateway_includes_april_2026_servers() -> None:
     dataset_ids = {dataset.id for dataset in server.DATASETS}
+    workforce_dataset = next(dataset for dataset in server.DATASETS if dataset.id == "workforce-analytics")
 
     assert "service-area" in dataset_ids
     assert "provider-enrollment" in dataset_ids
     assert "community-health" in dataset_ids
     assert "research-trials" in dataset_ids
+    assert "resolve_hospital_beds" in workforce_dataset.tools

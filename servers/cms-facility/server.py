@@ -12,6 +12,7 @@ from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 from shared.utils.mcp_response import error_response, to_structured
+from shared.utils.bed_resolver import resolve_hospital_bed_source
 
 # Support running both as a package and as a standalone script
 try:
@@ -246,10 +247,12 @@ async def get_facility_financials(ccn: str) -> dict[str, Any]:
         v = num(col_name, *alts)
         return int(v) if v is not None else None
 
+    bed_source = resolve_hospital_bed_source(ccn=ccn, hcris_row=row, target_scope="ccn")
     profile = FinancialProfile(
         ccn=ccn,
         fiscal_year_end=str(row.get(fy_col, "")) if fy_col else "",
-        total_beds=intval("total_bed_days_available", "beds", "total_beds", "bed_size"),
+        total_beds=bed_source.get("selected_bed_count"),
+        total_bed_source=bed_source,
         total_discharges=intval("total_discharges", "discharges", "tot_dschrgs"),
         total_patient_days=intval("total_days", "total_patient_days", "patient_days", "ip_days"),
         net_patient_revenue=num("net_patient_revenue", "net_revenue", "net_pat_rev"),

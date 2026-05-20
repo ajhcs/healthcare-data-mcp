@@ -3,6 +3,7 @@
 import logging
 
 import pandas as pd
+from shared.utils.bed_resolver import resolve_hospital_bed_source
 
 from .models import (
     BedBreakdown,
@@ -88,8 +89,9 @@ def enrich_facility(ccn: str, pos_df: pd.DataFrame) -> FacilitySummary | None:
     county_col = _find(pos_df, _COUNTY_COLS) or ""
     phone_col = _find(pos_df, _PHONE_COLS) or ""
 
+    bed_source = resolve_hospital_bed_source(ccn=ccn, pos_row=row, target_scope="ccn")
     beds = BedBreakdown(
-        total=_safe_int(row, "BED_CNT"),
+        total=int(bed_source["selected_bed_count"] or 0),
         certified=_safe_int(row, "CRTFD_BED_CNT"),
         psychiatric=_safe_int(row, "PSYCH_UNIT_BED_CNT"),
         rehabilitation=_safe_int(row, "REHAB_UNIT_BED_CNT"),
@@ -144,6 +146,7 @@ def enrich_facility(ccn: str, pos_df: pd.DataFrame) -> FacilitySummary | None:
         county=str(row.get(county_col, "") or "").strip() if county_col else "",
         phone=str(row.get(phone_col, "") or "").strip() if phone_col else "",
         beds=beds,
+        bed_source=bed_source,
         services=services,
         staffing=staffing,
     )

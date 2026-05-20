@@ -115,6 +115,8 @@ def test_cache_status_includes_public_state_health_caches(tmp_path) -> None:
     assert paths["state-health-data/phc4/report_index.json"]["dataset_id"] == "phc4_public_reports"
     assert paths["state-health-data/pa-hospital-reports/artifact_index.json"]["status"] == "missing"
     assert paths["state-health-data/pa-hospital-reports/artifact_metadata.csv"]["dataset_id"] == "pa_hospital_reports"
+    assert paths["state-health-data/pa-doh-hospital-extract/normalized.parquet"]["dataset_id"] == "pa_hospital_reports"
+    assert paths["state-health-data/pa-doh-hospital-extract/normalized.meta.json"]["status"] == "missing"
     assert paths["state-health-data/nj-hospital-public-data/artifact_index.json"]["dataset_id"] == "nj_hospital_public_data"
     assert paths["state-health-data/de-hospital-discharge/artifact_index.json"]["dataset_id"] == "de_hospital_discharge"
 

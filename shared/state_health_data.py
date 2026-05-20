@@ -26,6 +26,7 @@ from shared.utils.http_client import resilient_request
 DEFAULT_CACHE_ROOT = Path.home() / ".healthcare-data-mcp" / "cache"
 STATE_HEALTH_CACHE = DEFAULT_CACHE_ROOT / "state-health-data"
 PHC4_CACHE = STATE_HEALTH_CACHE / "phc4"
+PA_DOH_EXTRACT_CACHE = STATE_HEALTH_CACHE / "pa-doh-hospital-extract"
 PUBLIC_RECORDS_CACHE = DEFAULT_CACHE_ROOT / "public-records"
 
 PA_HOSPITAL_REPORTS_URL = "https://www.pa.gov/agencies/health/health-statistics/health-facilities/hospital-reports.html"
@@ -318,13 +319,199 @@ async def _scrape_artifact_links(
 
 
 async def acquire_pa_hospital_reports(cache_root: Path | None = None, *, force: bool = False) -> SourceStatus:  # noqa: ARG001
-    return await _scrape_artifact_links(
+    status = await _scrape_artifact_links(
         "pa_hospital_reports",
         "Pennsylvania DOH Hospital Reports",
         PA_HOSPITAL_REPORTS_URL,
         _cache_root(cache_root) / "state-health-data" / "pa-hospital-reports",
         force=force,
     )
+    normalized_count = normalize_pa_doh_hospital_extract(cache_root)
+    status_dict = status.to_dict()
+    status_dict["record_count"] = normalized_count
+    return SourceStatus(**{key: status_dict[key] for key in SourceStatus.__dataclass_fields__ if key in status_dict})
+
+
+def _pa_doh_extract_cache(cache_root: Path | None = None) -> Path:
+    return _cache_root(cache_root) / "state-health-data" / "pa-doh-hospital-extract"
+
+
+def normalize_pa_doh_hospital_extract(cache_root: Path | None = None) -> int:
+    """Normalize PA DOH Hospital Reports record-level public extracts when cached."""
+
+    root = _cache_root(cache_root)
+    reports_cache = root / "state-health-data" / "pa-hospital-reports"
+    index_path = reports_cache / "artifact_index.json"
+    if not index_path.exists():
+        return 0
+    try:
+        payload = json.loads(index_path.read_text(encoding="utf-8"))
+    except Exception:
+        return 0
+    artifacts = payload.get("artifacts") if isinstance(payload, dict) else []
+    if not isinstance(artifacts, list):
+        return 0
+
+    normalized_rows: list[dict[str, Any]] = []
+    for artifact in artifacts:
+        if not isinstance(artifact, dict):
+            continue
+        path = Path(_text(artifact.get("cached_path")))
+        if not path.exists():
+            continue
+        title_url = f"{artifact.get('title', '')} {artifact.get('artifact_url', '')}".lower()
+        suffix = path.suffix.lower()
+        if suffix == ".csv" and _is_pa_record_level_extract(title_url):
+            try:
+                df = pd.read_csv(path, dtype=str, keep_default_na=False, low_memory=False)
+            except Exception:
+                continue
+            normalized_rows.extend(_normalize_pa_doh_extract_dataframe(df, artifact))
+        elif suffix in {".xlsx", ".xls"} and _is_pa_excel_report_fallback(title_url):
+            try:
+                sheets = pd.read_excel(path, sheet_name=None, dtype=str)
+            except Exception:
+                continue
+            for sheet_name, df in sheets.items():
+                sheet_artifact = {**artifact, "sheet_name": str(sheet_name)}
+                normalized_rows.extend(_normalize_pa_doh_extract_dataframe(df.fillna(""), sheet_artifact))
+
+    output_cache = _pa_doh_extract_cache(cache_root)
+    output_cache.mkdir(parents=True, exist_ok=True)
+    output_path = output_cache / "normalized.parquet"
+    csv_path = output_cache / "normalized.csv"
+    metadata_path = output_cache / "normalized.meta.json"
+    normalized = pd.DataFrame(normalized_rows)
+    if normalized.empty:
+        metadata_path.write_text(json.dumps({"record_count": 0, "source_url": PA_HOSPITAL_REPORTS_URL}, indent=2), encoding="utf-8")
+        return 0
+    try:
+        normalized.to_parquet(output_path, compression="zstd", index=False)
+    except Exception:
+        normalized.to_csv(csv_path, index=False)
+    metadata_path.write_text(
+        json.dumps(
+            {
+                "source_id": "pa_doh_hospital_extract",
+                "source_name": "Pennsylvania DOH Hospital Reports record-level extract",
+                "source_url": PA_HOSPITAL_REPORTS_URL,
+                "record_count": len(normalized),
+                "generated_at": _now(),
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    return int(len(normalized))
+
+
+def _normalize_pa_doh_extract_dataframe(df: pd.DataFrame, artifact: dict[str, Any]) -> list[dict[str, Any]]:
+    columns = [str(col) for col in df.columns]
+    facility_col = find_matching_columns(columns, ["facility_name", "hospital_name", "facility", "hospital"])
+    ccn_col = find_matching_columns(columns, ["ccn", "provider_number", "cms_certification_number", "medicare_provider_number"])
+    state_id_col = find_matching_columns(columns, ["state_facility_id", "facility_id", "license_id", "licensure_id", "pa_id"])
+    year_col = find_matching_columns(columns, ["report_year", "year", "calendar_year", "fiscal_year"])
+    campus_col = find_matching_columns(columns, ["campus", "campus_name", "location"])
+    report_year = _infer_publication_year(f"{artifact.get('title', '')} {artifact.get('artifact_url', '')}") or artifact.get("year")
+    rows: list[dict[str, Any]] = []
+    for _, raw in df.iterrows():
+        facility_name = _text(raw.get(facility_col)) if facility_col else ""
+        row_ccn = _text(raw.get(ccn_col)) if ccn_col else ""
+        state_facility_id = _text(raw.get(state_id_col)) if state_id_col else ""
+        row_year = _text(raw.get(year_col)) if year_col else str(report_year or "")
+        row_scope = "ccn" if row_ccn else ("campus" if campus_col and _text(raw.get(campus_col)) else "license")
+        for column in columns:
+            metric_name = _pa_doh_bed_metric_name(column)
+            if not metric_name:
+                continue
+            metric_value = _text(raw.get(column))
+            if not metric_value:
+                continue
+            rows.append(
+                {
+                    "state": "PA",
+                    "source": "Pennsylvania Department of Health Hospital Reports",
+                    "source_url": PA_HOSPITAL_REPORTS_URL,
+                    "source_artifact": _text(artifact.get("artifact_url") or artifact.get("url")),
+                    "source_artifact_path": _text(artifact.get("cached_path")),
+                    "source_sheet": _text(artifact.get("sheet_name")),
+                    "report_year": row_year,
+                    "facility_name": facility_name,
+                    "state_facility_id": state_facility_id,
+                    "ccn": row_ccn.zfill(6) if row_ccn else "",
+                    "row_scope": row_scope,
+                    "metric_name": metric_name,
+                    "metric_value": metric_value,
+                    "raw_column": column,
+                    "confidence": "high_structured_state_extract" if row_ccn else "medium_structured_state_extract",
+                }
+            )
+    return rows
+
+
+def _is_pa_record_level_extract(title_url: str) -> bool:
+    return "hospital extract" in title_url or "record level data" in title_url
+
+
+def _is_pa_excel_report_fallback(title_url: str) -> bool:
+    if "record format" in title_url or "data dictionary" in title_url:
+        return False
+    if "hospital" not in title_url:
+        return False
+    return any(token in title_url for token in ("report", "annual", "financial", "statistical", "survey"))
+
+
+def _pa_doh_bed_metric_name(column: str) -> str:
+    normalized = re.sub(r"[^a-z0-9]+", "_", column.lower()).strip("_")
+    if "bed_day" in normalized or ("beds" in normalized and "available" in normalized and "day" in normalized):
+        return "bed_days_available"
+    bed_tokens = ("licensed_beds", "approved_beds", "beds_set_up", "set_up_and_staffed", "staffed_beds")
+    if any(token in normalized for token in bed_tokens):
+        return "beds"
+    if normalized in {"beds", "bed_count", "total_beds"}:
+        return "beds"
+    return ""
+
+
+def load_pa_doh_bed_candidates(
+    *,
+    ccn: str = "",
+    state_facility_id: str = "",
+    facility_name: str = "",
+    year: int = 0,
+    cache_root: Path | None = None,
+) -> list[dict[str, Any]]:
+    """Load normalized PA DOH bed metric rows from cache."""
+
+    cache = _pa_doh_extract_cache(cache_root)
+    parquet = cache / "normalized.parquet"
+    csv_path = cache / "normalized.csv"
+    if parquet.exists():
+        try:
+            df = pd.read_parquet(parquet)
+        except Exception:
+            df = pd.DataFrame()
+    elif csv_path.exists():
+        try:
+            df = pd.read_csv(csv_path, dtype=str, keep_default_na=False)
+        except Exception:
+            df = pd.DataFrame()
+    else:
+        return []
+    if df.empty:
+        return []
+    mask = df.index >= 0
+    if ccn and "ccn" in df.columns:
+        mask = mask & (df["ccn"].astype(str).str.zfill(6) == str(ccn).zfill(6))
+    if state_facility_id and "state_facility_id" in df.columns:
+        mask = mask & (df["state_facility_id"].astype(str) == str(state_facility_id))
+    if facility_name and "facility_name" in df.columns:
+        mask = mask & df["facility_name"].astype(str).str.contains(facility_name, case=False, na=False, regex=False)
+    if year and "report_year" in df.columns:
+        mask = mask & df["report_year"].astype(str).str.contains(str(int(year)), regex=False, na=False)
+    if "metric_name" in df.columns:
+        mask = mask & df["metric_name"].astype(str).isin(["beds", "bed_days_available"])
+    return df[mask].head(200).to_dict(orient="records")
 
 
 async def acquire_nj_hospital_public_data(cache_root: Path | None = None, *, force: bool = False) -> SourceStatus:  # noqa: ARG001

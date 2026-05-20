@@ -197,6 +197,7 @@ DATASETS: tuple[DatasetDocument, ...] = (
             "search_union_activity",
             "get_staffing_benchmarks",
             "get_cost_report_staffing",
+            "resolve_hospital_beds",
             "get_hospital_staffing_productivity",
             "compare_hospital_staffing_productivity",
             "get_snf_nursing_hprd",
@@ -207,7 +208,7 @@ DATASETS: tuple[DatasetDocument, ...] = (
             "get_or_procedure_volume_profile",
         ),
         tags=("bls", "acgme", "workforce", "labor", "occupation", "hcris", "pbj", "throughput"),
-        source="BLS public labor datasets, ACGME public training references, CMS HCRIS, CMS PBJ, and AHRQ linkage",
+        source="BLS public labor datasets, ACGME public training references, CMS HCRIS, CMS POS, CMS PBJ, PA DOH public hospital reports, and AHRQ linkage",
         access_notes="ACGME program inventory requires a ready imported public export; check get_acgme_source_status before asserting completeness.",
     ),
     DatasetDocument(

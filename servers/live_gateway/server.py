@@ -73,6 +73,7 @@ LIVE_TOOL_SPECS: tuple[LiveToolSpec, ...] = (
     LiveToolSpec("financial-intelligence", "servers.financial_intelligence.server", "get_charity_care_profile", "financial_intelligence"),
     LiveToolSpec("financial-intelligence", "servers.financial_intelligence.server", "get_bad_debt_profile", "financial_intelligence"),
     # Staffing productivity and public throughput
+    LiveToolSpec("workforce-analytics", "servers.workforce_analytics.server", "resolve_hospital_beds", "operations"),
     LiveToolSpec("workforce-analytics", "servers.workforce_analytics.server", "get_hospital_staffing_productivity", "workforce"),
     LiveToolSpec("workforce-analytics", "servers.workforce_analytics.server", "compare_hospital_staffing_productivity", "workforce"),
     LiveToolSpec("workforce-analytics", "servers.workforce_analytics.server", "get_snf_nursing_hprd", "workforce"),

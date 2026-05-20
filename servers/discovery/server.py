@@ -485,13 +485,16 @@ DATASET_CATALOG: dict[str, dict[str, Any]] = {
         "cache_files": [
             "state-health-data/pa-hospital-reports/artifact_index.json",
             "state-health-data/pa-hospital-reports/artifact_metadata.csv",
+            "state-health-data/pa-doh-hospital-extract/normalized.parquet",
+            "state-health-data/pa-doh-hospital-extract/normalized.csv",
+            "state-health-data/pa-doh-hospital-extract/normalized.meta.json",
         ],
         "schema": {
             "identity_fields": ["facility_name", "state_facility_id", "ccn"],
-            "common_fields": ["report_year", "metric_name", "metric_value", "page", "table", "confidence"],
+            "common_fields": ["report_year", "metric_name", "metric_value", "raw_column", "row_scope", "confidence"],
             "join_keys": ["ccn", "facility_name", "state_facility_id"],
         },
-        "workflows": ["PA throughput profile", "PA staffing productivity enhancement"],
+        "workflows": ["PA throughput profile", "PA staffing productivity enhancement", "hospital bed-source resolution"],
     },
     "nj_hospital_public_data": {
         "title": "New Jersey Hospital Public Data",
@@ -925,8 +928,8 @@ DATASET_CATALOG: dict[str, dict[str, Any]] = {
         "server": ["workforce-analytics"],
         "category": "workforce",
         "grain": "shortage area, cost report staffing, residency program, or labor action",
-        "description": "HRSA HPSA, CMS PBJ/HCRIS staffing, import-backed ACGME public program inventory, NLRB cases, and BLS stoppages.",
-        "source_system": "HRSA, CMS, ACGME, NLRB, BLS",
+        "description": "HRSA HPSA, CMS PBJ/HCRIS staffing, CMS POS/HCRIS bed resolution, import-backed ACGME public program inventory, NLRB cases, and BLS stoppages.",
+        "source_system": "HRSA, CMS, PA DOH, ACGME, NLRB, BLS",
         "source_urls": [
             "https://data.hrsa.gov/DataDownload/DD_Files/BCD_HPSA_FCT_DET_DH.csv",
             "https://data.cms.gov/data-api/v1/dataset/7e0d53ba-8f02-4c66-98a5-14a1c997c50d/data",
