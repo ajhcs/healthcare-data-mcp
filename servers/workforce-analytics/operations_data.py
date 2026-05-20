@@ -8,11 +8,13 @@ import json
 from pathlib import Path
 from typing import Any
 
+from shared.utils.bed_resolver import resolve_hospital_bed_source
 from shared.utils.cost_report import cr_safe_float
 
 
 HospitalRowLoader = Callable[[str], Awaitable[dict[str, Any]]]
 CostReportRowLoader = Callable[[str, int], Awaitable[Any | None]]
+PosRowLoader = Callable[[str], Awaitable[Any | None]]
 
 
 def ratio(num: float | None, den: float | None) -> float | None:
@@ -78,15 +80,21 @@ def _source_rankings() -> list[dict[str, Any]]:
         },
         {
             "rank": 2,
+            "source": "CMS Provider of Services",
+            "confidence": "high_for_reported_provider_location_fields",
+            "fields": ["BED_CNT", "CRTFD_BED_CNT"],
+        },
+        {
+            "rank": 3,
             "source": "AHRQ Compendium hospital linkage",
             "confidence": "medium_high_for_linked_facility_attributes",
             "fields": ["beds", "discharges", "hospital_name", "state"],
         },
         {
-            "rank": 3,
+            "rank": 4,
             "source": "public state health normalized extracts",
             "confidence": "high_when_structured_table_row_matches_facility",
-            "fields": ["inpatient_admissions_from_ed", "ed_visits", "procedure_volumes"],
+            "fields": ["beds", "bed_days_available", "inpatient_admissions_from_ed", "ed_visits", "procedure_volumes"],
         },
     ]
 
@@ -99,11 +107,13 @@ async def throughput_profile(
     year: int = 0,
     hospital_row_loader: HospitalRowLoader,
     cost_report_row_loader: CostReportRowLoader,
+    pos_row_loader: PosRowLoader | None = None,
 ) -> dict[str, Any]:
     """Build public throughput metrics with source provenance and confidence metadata."""
     selected_ccn = ccn or state_facility_id
     row = await hospital_row_loader(selected_ccn)
     cost_row = await cost_report_row_loader(selected_ccn, year)
+    pos_row = await pos_row_loader(selected_ccn) if pos_row_loader else None
 
     bed_days_available, bed_days_available_meta = _series_value(
         cost_row,
@@ -112,23 +122,26 @@ async def throughput_profile(
         "bed_days_available",
         "total_bed_days_available",
     )
-    beds, beds_meta = _first_metric(
-        _series_value(
-            cost_row,
-            "CMS Hospital Cost Report PUF / HCRIS-derived public file",
-            "high_for_reported_provider_year_field",
-            "beds",
-            "total_beds",
+    state_code = state.upper() if state else str(row.get("hosp_state", "") or row.get("state", "")).upper()
+    bed_source = resolve_hospital_bed_source(
+        ccn=ccn,
+        state_facility_id=state_facility_id,
+        state=state_code,
+        year=year,
+        target_scope="ccn" if ccn else "license",
+        pos_row=pos_row,
+        hcris_row=cost_row,
+        ahrq_row=row,
+        pa_rows=_pa_bed_rows(
+            state=state_code,
+            ccn=ccn,
+            state_facility_id=state_facility_id,
+            hospital_name=str(row.get("hospital_name", "")),
+            year=year,
         ),
-        _dict_value(row, "AHRQ Compendium hospital linkage", "medium_high_for_linked_attribute", "hos_beds", "beds"),
     )
-    if beds is None and bed_days_available is not None:
-        beds = ratio(bed_days_available, 365)
-        beds_meta = {
-            "source": "CMS Hospital Cost Report PUF / HCRIS-derived public file",
-            "source_field": bed_days_available_meta.get("source_field", "bed_days_available"),
-            "confidence": "medium_derived_from_bed_days_available",
-        }
+    beds = bed_source.get("selected_bed_count")
+    beds_meta = _bed_source_metric_confidence(bed_source)
 
     discharges, discharges_meta = _first_metric(
         _series_value(
@@ -156,7 +169,6 @@ async def throughput_profile(
     )
     bed_days = bed_days_available or (beds * 365 if beds else None)
 
-    state_code = state.upper() if state else str(row.get("hosp_state", "") or row.get("state", "")).upper()
     admissions_enhancement = await _pa_admissions_enhancement(
         state=state_code,
         hospital_name=str(row.get("hospital_name", "")),
@@ -238,6 +250,8 @@ async def throughput_profile(
         "average_length_of_stay": ratio(patient_days, discharges),
         "bed_turnover_rate": ratio(discharges, beds),
         "discharges_per_staffed_bed": ratio(discharges, beds),
+        "beds": beds,
+        "bed_source": bed_source,
         "ed_visits": ed_visits,
         "inpatient_admissions_from_ed": inpatient_admissions_from_ed,
         "or_procedure_volumes": or_procedure_volumes,
@@ -267,6 +281,33 @@ def _derived_metric_confidence(metric: str, *inputs: dict[str, str]) -> dict[str
             "confidence": confidence,
         }
     return _metric_confidence(metric, {})
+
+
+def _bed_source_metric_confidence(bed_source: dict[str, Any]) -> dict[str, str]:
+    if bed_source.get("selected_bed_count") is None:
+        return {}
+    return {
+        "source": str(bed_source.get("selected_source", "")),
+        "source_field": str(bed_source.get("selected_source_field", "")),
+        "confidence": str(bed_source.get("confidence", "")),
+    }
+
+
+def _pa_bed_rows(*, state: str, ccn: str, state_facility_id: str, hospital_name: str, year: int) -> list[dict[str, Any]]:
+    if state != "PA":
+        return []
+    state_health_data = _load_state_health_data()
+    if state_health_data is None or not hasattr(state_health_data, "load_pa_doh_bed_candidates"):
+        return []
+    try:
+        return state_health_data.load_pa_doh_bed_candidates(
+            ccn=ccn,
+            state_facility_id=state_facility_id,
+            facility_name=hospital_name,
+            year=year,
+        )
+    except Exception:
+        return []
 
 
 async def _pa_admissions_enhancement(*, state: str, hospital_name: str, year: int) -> dict[str, Any] | None:

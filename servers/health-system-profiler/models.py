@@ -81,6 +81,7 @@ class FacilitySummary(BaseModel):
     ownership: str = ""
     teaching_status: str = ""
     beds: BedBreakdown = Field(default_factory=BedBreakdown)
+    bed_source: dict = Field(default_factory=dict)
     services: ServiceCapabilities = Field(default_factory=ServiceCapabilities)
     staffing: StaffingCounts = Field(default_factory=StaffingCounts)
     overall_quality_rating: str = ""

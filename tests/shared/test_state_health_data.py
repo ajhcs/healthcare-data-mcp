@@ -114,6 +114,62 @@ async def test_nj_public_data_combines_financial_and_charity_artifacts_without_n
     assert set(metadata["artifact_type"]) == {"xlsx", "pdf"}
 
 
+@pytest.mark.asyncio
+async def test_pa_hospital_reports_normalizes_record_level_bed_rows(tmp_path, monkeypatch) -> None:
+    async def fake_request(method: str, url: str, **kwargs):  # noqa: ARG001
+        if url == state_health_data.PA_HOSPITAL_REPORTS_URL:
+            html = """
+            <a href="/content/dam/health/hospitalreports/documents/hospital%20extract%202024.csv">record level data</a>
+            <a href="/content/dam/health/hospitalreports/documents/Hospital%20Record%20Format%20-%202020%20to%20current.xlsx">record format</a>
+            <a href="/content/dam/health/hospitalreports/documents/hospital-annual-report-2024.xlsx">annual report</a>
+            """
+            return SimpleNamespace(text=html, content=html.encode())
+        if url.endswith("hospital%20extract%202024.csv"):
+            csv = "Facility Name,License ID,Calendar Year,Beds Set Up and Staffed,Bed Days Available\nExample Hospital,LIC123,2024,120,43800\n"
+            return SimpleNamespace(text=csv, content=csv.encode())
+        return SimpleNamespace(text="workbook", content=b"workbook")
+
+    monkeypatch.setattr(state_health_data, "resilient_request", fake_request)
+    read_excel_paths: list[str] = []
+
+    def fake_read_excel(path, sheet_name=None, dtype=str):  # noqa: ANN001, ARG001
+        read_excel_paths.append(str(path))
+        return {
+            "Beds": pd.DataFrame(
+                {
+                    "Facility Name": ["Annual Hospital"],
+                    "License ID": ["LIC999"],
+                    "Report Year": ["2024"],
+                    "Licensed Beds": ["42"],
+                }
+            )
+        }
+
+    monkeypatch.setattr(state_health_data.pd, "read_excel", fake_read_excel)
+
+    status = await state_health_data.acquire_pa_hospital_reports(tmp_path)
+    rows = state_health_data.load_pa_doh_bed_candidates(
+        state_facility_id="LIC123",
+        year=2024,
+        cache_root=tmp_path,
+    )
+
+    assert status.status == "ready"
+    excel_rows = state_health_data.load_pa_doh_bed_candidates(
+        state_facility_id="LIC999",
+        year=2024,
+        cache_root=tmp_path,
+    )
+
+    assert status.record_count == 3
+    assert {row["metric_name"] for row in rows} == {"beds", "bed_days_available"}
+    assert {row["row_scope"] for row in rows} == {"license"}
+    assert excel_rows[0]["metric_value"] == "42"
+    assert excel_rows[0]["source_sheet"] == "Beds"
+    assert not any("record-format" in path.lower() for path in read_excel_paths)
+    assert (tmp_path / "state-health-data" / "pa-doh-hospital-extract" / "normalized.meta.json").exists()
+
+
 def test_normalize_phc4_csv_facility_year_rows(tmp_path) -> None:
     artifact = tmp_path / "financial-analysis.csv"
     artifact.write_text(

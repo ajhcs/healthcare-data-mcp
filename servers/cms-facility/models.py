@@ -45,6 +45,7 @@ class FinancialProfile(BaseModel):
     ccn: str = Field(description="CMS Certification Number")
     fiscal_year_end: str = ""
     total_beds: int | None = None
+    total_bed_source: dict = Field(default_factory=dict)
     total_discharges: int | None = None
     total_patient_days: int | None = None
     net_patient_revenue: float | None = None

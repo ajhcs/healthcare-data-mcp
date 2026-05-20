@@ -192,6 +192,9 @@ def test_get_acgme_source_status_reads_valid_import_metadata(tmp_path: Path, mon
 
 @pytest.mark.asyncio
 async def test_productivity_profile_computes_public_ratios(monkeypatch):
+    async def fake_pos_row(ccn: str):
+        return None
+
     async def fake_ensure_hcris_cached():
         return True
 
@@ -216,6 +219,7 @@ async def test_productivity_profile_computes_public_ratios(monkeypatch):
     monkeypatch.setattr(server.workforce_data, "query_hcris_gme", lambda ccn, year=0: {"total_resident_ftes": 25.0})
     monkeypatch.setattr(server, "_ahrq_hospital_row", fake_ahrq_hospital_row)
     monkeypatch.setattr(server, "_cost_report_row", fake_cost_report_row)
+    monkeypatch.setattr(server, "_pos_row", fake_pos_row)
 
     profile = await server._productivity_profile("390001", year=2025)
 
@@ -231,6 +235,9 @@ async def test_productivity_profile_computes_public_ratios(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_throughput_profile_computes_public_operations_metrics(monkeypatch):
+    async def fake_pos_row(ccn: str):
+        return None
+
     async def fake_ahrq_hospital_row(ccn: str):
         return {"hospital_name": "Example Hospital", "hosp_state": "PA"}
 
@@ -245,6 +252,7 @@ async def test_throughput_profile_computes_public_operations_metrics(monkeypatch
 
     monkeypatch.setattr(server, "_ahrq_hospital_row", fake_ahrq_hospital_row)
     monkeypatch.setattr(server, "_cost_report_row", fake_cost_report_row)
+    monkeypatch.setattr(server, "_pos_row", fake_pos_row)
     monkeypatch.setattr(operations_data, "_load_state_health_data", lambda: None)
 
     profile = await server._throughput_profile(ccn="390001")
@@ -254,8 +262,39 @@ async def test_throughput_profile_computes_public_operations_metrics(monkeypatch
     assert profile["average_length_of_stay"] == 5.0
     assert profile["bed_turnover_rate"] == 50.0
     assert profile["source_rankings"][0]["rank"] == 1
+    assert profile["beds"] == 100
+    assert profile["bed_source"]["selected_source_field"] == "beds"
     assert profile["metric_confidence"]["discharges"]["confidence"] == "high_for_reported_provider_year_field"
     assert profile["pa_admissions_enhancement"] is None
+
+
+@pytest.mark.asyncio
+async def test_throughput_profile_rejects_impossible_direct_beds_and_uses_bed_days(monkeypatch):
+    async def fake_ahrq_hospital_row(ccn: str):
+        return {"hospital_name": "Example Hospital", "hosp_state": "PA"}
+
+    async def fake_cost_report_row(ccn: str, year: int = 0):
+        return pd.Series(
+            {
+                "beds": "36500",
+                "total_bed_days_available": "36500",
+                "total_discharges": "5000",
+                "total_inpatient_days": "25000",
+            }
+        )
+
+    profile = await operations_data.throughput_profile(
+        ccn="390001",
+        state="PA",
+        year=2025,
+        hospital_row_loader=fake_ahrq_hospital_row,
+        cost_report_row_loader=fake_cost_report_row,
+    )
+
+    assert profile["beds"] == 100.0
+    assert profile["bed_turnover_rate"] == 50.0
+    rejected = {row["source_field"]: row["rejection_reason"] for row in profile["bed_source"]["rejected_candidates"]}
+    assert rejected["beds"] == "bed_value_above_ccn_ceiling_5000"
 
 
 def test_query_hcris_staffing_maps_s3_total_rn_lpn_aide_by_provider_year(tmp_path: Path, monkeypatch):

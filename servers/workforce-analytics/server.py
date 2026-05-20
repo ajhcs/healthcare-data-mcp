@@ -11,6 +11,7 @@ import os as _os
 from mcp.server.fastmcp import FastMCP
 from shared.utils.mcp_response import error_response, to_structured
 from shared.utils import ahrq_data
+from shared.utils.bed_resolver import resolve_hospital_bed_source
 from shared.utils.cost_report import load_cost_report_row
 
 from . import bls_client, labor_data, operations_data, workforce_data  # pyright: ignore[reportAttributeAccessIssue]
@@ -66,6 +67,25 @@ async def _cost_report_row(ccn: str, year: int = 0) -> Any | None:
     return row
 
 
+async def _pos_row(ccn: str) -> Any | None:
+    if not ccn:
+        return None
+    try:
+        df = await ahrq_data.load_pos()
+        if df.empty:
+            return None
+        ccn_col = next((col for col in ("PRVDR_NUM", "PROVIDER_NUMBER", "CCN") if col in df.columns), "")
+        if not ccn_col:
+            return None
+        matches = df[df[ccn_col].astype(str).str.strip().str.zfill(6) == ccn.strip().zfill(6)]
+        if matches.empty:
+            return None
+        return matches.iloc[0]
+    except Exception:
+        logger.debug("POS lookup failed for %s", ccn, exc_info=True)
+        return None
+
+
 async def _productivity_profile(ccn: str, year: int = 0) -> dict[str, Any]:
     await workforce_data.ensure_hcris_cached()
     staffing = workforce_data.query_hcris_staffing(ccn, year=year) or {}
@@ -73,14 +93,24 @@ async def _productivity_profile(ccn: str, year: int = 0) -> dict[str, Any]:
     ahrq_row = await _ahrq_hospital_row(ccn)
     cost_row = await _cost_report_row(ccn, year=year)
     total_ftes = operations_data.dict_float(staffing, "total_ftes")
-    bed_days_available = operations_data.series_float(cost_row, "bed_days_available", "total_bed_days_available")
-    beds = operations_data.dict_float(ahrq_row, "hos_beds", "beds") or operations_data.series_float(
-        cost_row,
-        "beds",
-        "total_beds",
+    state_code = str(ahrq_row.get("hosp_state", "") or ahrq_row.get("state", "")).upper()
+    bed_source = resolve_hospital_bed_source(
+        ccn=ccn,
+        state=state_code,
+        year=year,
+        target_scope="ccn",
+        pos_row=await _pos_row(ccn),
+        hcris_row=cost_row,
+        ahrq_row=ahrq_row,
+        pa_rows=operations_data._pa_bed_rows(
+            state=state_code,
+            ccn=ccn,
+            state_facility_id="",
+            hospital_name=str(ahrq_row.get("hospital_name", "")),
+            year=year,
+        ),
     )
-    if beds is None and bed_days_available is not None:
-        beds = operations_data.ratio(bed_days_available, 365)
+    beds = bed_source.get("selected_bed_count")
     discharges = operations_data.dict_float(ahrq_row, "hos_dsch", "discharges") or operations_data.series_float(
         cost_row,
         "total_discharges",
@@ -108,6 +138,7 @@ async def _productivity_profile(ccn: str, year: int = 0) -> dict[str, Any]:
         "source_confidence": "high_for_reported_hcris_fields",
         "total_ftes": total_ftes,
         "beds": beds,
+        "bed_source": bed_source,
         "discharges": discharges,
         "patient_days": patient_days,
         "occupied_beds": occupied_beds,
@@ -133,6 +164,7 @@ async def _throughput_profile(ccn: str = "", state_facility_id: str = "", state:
         year=year,
         hospital_row_loader=_ahrq_hospital_row,
         cost_report_row_loader=_cost_report_row,
+        pos_row_loader=_pos_row,
     )
 
 
@@ -534,6 +566,48 @@ async def get_cost_report_staffing(ccn: str, year: int = 0) -> dict[str, Any]:
 
 
 @mcp.tool(structured_output=True)
+async def resolve_hospital_beds(
+    ccn: str = "",
+    state_facility_id: str = "",
+    state: str = "",
+    year: int = 0,
+    target_scope: str = "ccn",
+) -> dict[str, Any]:
+    """Resolve hospital bed count from POS, HCRIS, and public state sources with provenance."""
+    try:
+        if not ccn and not state_facility_id:
+            return error_response("ccn or state_facility_id is required.", code="invalid_params")
+        selected_ccn = ccn or state_facility_id
+        ahrq_row = await _ahrq_hospital_row(selected_ccn)
+        state_code = state.upper() if state else str(ahrq_row.get("hosp_state", "") or ahrq_row.get("state", "")).upper()
+        cost_row = await _cost_report_row(selected_ccn, year) if ccn else None
+        pos_row = await _pos_row(ccn) if ccn else None
+        pa_rows = operations_data._pa_bed_rows(
+            state=state_code,
+            ccn=ccn,
+            state_facility_id=state_facility_id,
+            hospital_name=str(ahrq_row.get("hospital_name", "")),
+            year=year,
+        )
+        return to_structured(
+            resolve_hospital_bed_source(
+                ccn=ccn,
+                state_facility_id=state_facility_id,
+                state=state_code,
+                year=year,
+                target_scope=target_scope,
+                pos_row=pos_row,
+                hcris_row=cost_row,
+                ahrq_row=ahrq_row,
+                pa_rows=pa_rows,
+            )
+        )
+    except Exception as e:
+        logger.exception("resolve_hospital_beds failed")
+        return error_response(f"resolve_hospital_beds failed: {e}")
+
+
+@mcp.tool(structured_output=True)
 async def get_hospital_staffing_productivity(ccn: str, year: int = 0) -> dict[str, Any]:
     """Get high-confidence hospital staffing productivity metrics from public HCRIS/PBJ-adjacent sources."""
     try:
@@ -626,6 +700,7 @@ async def get_teaching_intensity(ccn: str, year: int = 0) -> dict[str, Any]:
                 "teaching_status": "Teaching" if (profile.get("resident_fte") or 0) > 0 else "Non-Teaching",
                 "resident_fte": profile.get("resident_fte"),
                 "beds": profile.get("beds"),
+                "bed_source": profile.get("bed_source"),
                 "resident_to_bed_ratio": profile.get("resident_to_bed_ratio"),
                 "source": "CMS HCRIS Worksheet S-2",
                 "confidence": "high_for_reported_hcris_fields",

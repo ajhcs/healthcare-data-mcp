@@ -12,6 +12,7 @@ from typing import Any
 import zipfile
 
 import pandas as pd
+from shared.utils.bed_resolver import resolve_hospital_bed_source
 
 
 DEFAULT_CACHE_ROOT = Path.home() / ".healthcare-data-mcp" / "cache"
@@ -216,11 +217,16 @@ def normalize_hcris_public_metrics(row: Any, requested_ccn: str = "") -> dict[st
         for metric_name, aliases in HCRIS_METRIC_ALIASES.items()
     }
 
-    if metrics["beds"]["value"] is None and metrics["bed_days_available"]["value"] is not None:
+    bed_source = resolve_hospital_bed_source(
+        ccn=_first_text(normalized, CCN_ALIASES) or requested_ccn,
+        hcris_row=normalized,
+        target_scope="ccn",
+    )
+    if bed_source["selected_bed_count"] is not None:
         metrics["beds"] = {
-            "value": int(round(float(metrics["bed_days_available"]["value"]) / 365)),
-            "confidence": "medium_derived_from_bed_days_available",
-            "source_field": metrics["bed_days_available"]["source_field"],
+            "value": bed_source["selected_bed_count"],
+            "confidence": bed_source["confidence"],
+            "source_field": bed_source["selected_source_field"],
         }
 
     fiscal_year_end = _first_text(normalized, FY_END_ALIASES)
@@ -231,6 +237,7 @@ def normalize_hcris_public_metrics(row: Any, requested_ccn: str = "") -> dict[st
         "source_status": "ready",
         "fiscal_year_end": fiscal_year_end,
         "metrics": metrics,
+        "bed_source": bed_source,
         "metric_confidence": {name: metric["confidence"] for name, metric in metrics.items()},
     }
     for name, metric in metrics.items():

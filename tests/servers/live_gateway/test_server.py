@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import os
+
 import pytest
+
+os.environ.setdefault("SEC_USER_AGENT", "healthcare-data-mcp tests@example.com")
 
 from shared.utils.gateway_auth import GatewayAuthError, load_gateway_security_config
 from servers.live_gateway import server
@@ -30,6 +34,7 @@ async def test_list_live_tools_returns_inventory() -> None:
     assert "search_provider_enrollment" in names
     assert "search_clinical_trials" in names
     assert "search_sam_exclusions" in names
+    assert "resolve_hospital_beds" in names
 
 
 def test_live_gateway_http_env_requires_credentials() -> None:
