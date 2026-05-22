@@ -20,6 +20,90 @@ jobs:
       - name: Ruff
         run: ruff check .
 
+  product-readiness:
+    runs-on: ubuntu-latest
+    env:
+      SEC_USER_AGENT: "CI ci@example.com"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgeos-dev libgdal-dev libproj-dev
+      - name: Install package
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+          python -m pip install detect-secrets pip-audit
+      - name: Shell syntax
+        run: bash -n install.sh scripts/register-codex.sh scripts/setup.sh scripts/mcp_inspector_smoke.sh
+      - name: Installer dry run
+        run: |
+          bash install.sh --dry-run --no-register
+          bash scripts/register-codex.sh --dry-run --http
+          bash scripts/setup.sh --help
+      - name: Secret scan
+        run: |
+          git ls-files -z | xargs -0 detect-secrets-hook --baseline .secrets.baseline --exclude-files '(^\.git/|^\.venv/|^build/|^dist/|^\.pytest_cache/|^\.ruff_cache/|^\.secrets\.baseline$)'
+          python scripts/security_gate.py --baseline .secrets.baseline
+      - name: Dependency audit
+        run: pip-audit . --strict
+      - name: Import compile check
+        run: python -m compileall -q servers shared scripts tests
+      - name: Registry-rendered artifact checks
+        run: |
+          python scripts/render_registry_docs.py server-catalog --check
+          python scripts/render_registry_docs.py preset-catalog --check
+          python scripts/render_registry_docs.py workflow-catalog --check
+          python scripts/render_registry_docs.py live-gateway-catalog --check
+          python scripts/render_registry_docs.py source-ledger-registry --check
+          python scripts/render_registry_docs.py http-client-catalog --check
+          python scripts/render_registry_docs.py env-catalog --check
+          python scripts/render_env_example.py --check
+          python scripts/render_compose.py full --check
+          python scripts/render_compose.py zero-config --check
+          python scripts/render_client_configs.py codex --check
+          python scripts/render_client_configs.py http-clients --check
+          python scripts/render_client_configs.py project-mcp --check
+          python scripts/render_client_configs.py claude-desktop-stdio --check
+          python scripts/render_client_configs.py claude-desktop --check
+      - name: Product metadata gates
+        run: pytest tests/test_client_packaging.py tests/test_distribution_artifacts.py tests/test_discovery_metadata.py tests/test_doctor.py tests/test_workflows.py tests/test_presets.py tests/test_gateway_auth.py tests/test_gateway_metadata.py tests/test_gateway_http_integration.py tests/servers/live_gateway/test_server.py -q
+      - name: Read-only CLI readiness smoke
+        run: |
+          hc-mcp --version >/tmp/hc-mcp-version.txt
+          hc-mcp --list >/tmp/hc-mcp-list.txt
+          hc-mcp doctor --check --json >/tmp/hc-mcp-doctor.json
+          hc-mcp workflow quality_measure_lookup --json >/tmp/hc-mcp-workflow.json
+          hc-mcp preset metadata-only --json >/tmp/hc-mcp-preset.json
+      - name: MCP protocol smoke
+        run: |
+          python scripts/mcp_smoke.py --server discovery --expect-tool list_workflows --expect-resource healthcare-data://workflows/catalog --call-tool list_workflows --expect-structured-path-all workflows[].identity_join_keys --expect-structured-path-all workflows[].source_resolution
+          python scripts/mcp_smoke.py --server discovery --expect-tool get_workflow_plan --call-tool get_workflow_plan --tool-args '{"workflow_id":"quality_measure_lookup","inputs":{"ccn":"390223","measure":"clabsi_sir"}}' --expect-structured-key workflow_id --expect-structured-key steps --expect-structured-key report_ingest_contract --expect-structured-path identity_map.join_keys --expect-structured-path-all steps[].identity_contract --expect-structured-path-all report_ingest_contract.fact_rows[].evidence_path --expect-structured-path-all report_ingest_contract.fact_rows[].source_metadata_path --expect-structured-path-all report_ingest_contract.fact_rows[].identity_path --expect-structured-path-all report_ingest_contract.fact_rows[].identity_map_path
+          python scripts/mcp_smoke.py --server discovery --expect-tool get_workflow_plan --call-tool get_workflow_plan --tool-args '{"workflow_id":"system_reconciliation","inputs":{"query":"Jefferson Health","system_slug":"jefferson-health"}}' --expect-structured-key workflow_id --expect-structured-key identity_map --expect-structured-key steps --expect-structured-key report_ingest_contract --expect-structured-path identity_map.join_keys --expect-structured-path-all identity_map.resolution_plan[].qualified_tool --expect-structured-path-all identity_map.resolution_plan[].merge_action --expect-structured-path-all steps[].identity_contract --expect-structured-path-all steps[].source_resolution --expect-structured-path-all report_ingest_contract.fact_rows[].evidence_path --expect-structured-path-all report_ingest_contract.fact_rows[].identity_map_path
+          python scripts/mcp_smoke.py --server discovery --expect-tool list_presets --expect-resource healthcare-data://presets/catalog --call-tool list_presets --expect-structured-key presets
+          python scripts/mcp_smoke.py --server discovery --expect-tool get_preset_plan --call-tool get_preset_plan --tool-args '{"preset_id":"market-strategy"}' --expect-structured-key preset_id --expect-structured-key workflow_summaries --expect-structured-path-all workflow_summaries[].identity_join_keys --expect-structured-path-all workflow_summaries[].source_resolution
+          python scripts/mcp_smoke.py --server gateway --expect-tool search --expect-tool fetch
+          python scripts/mcp_smoke.py --server live-gateway --expect-tool list_live_tools --call-tool list_live_tools --expect-structured-key tools --expect-structured-path-all tools[].allowed_scopes --expect-structured-path-all tools[].request_size_limit_bytes --expect-structured-path-all tools[].result_size_limit_bytes --expect-structured-path-all tools[].rate_limit_class --expect-structured-path-all tools[].source_caveat_class --expect-structured-path-all tools[].requires_provenance
+      - name: MCP Inspector smoke
+        run: scripts/mcp_inspector_smoke.sh
+      - name: Docker Compose zero-config validation
+        run: docker compose -f docker-compose.zero-config.yml config >/tmp/zero-config.compose.yml
+      - name: MCPB manifest registry check
+        run: python scripts/build_mcpb.py --check
+      - name: MCPB skeleton build
+        run: python scripts/build_mcpb.py --skip-dependency-install --force --output dist/healthcare-data-mcp-ci.mcpb
+      - name: Python distribution metadata check
+        run: |
+          python -m build --sdist --wheel --outdir dist/python-package
+          python -m twine check dist/python-package/*
+
   typecheck:
     runs-on: ubuntu-latest
     env:
@@ -83,4 +167,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Docker build
-        run: docker build -t healthcare-data-mcp .
+        run: docker build $(python3 scripts/docker_image_tags.py --format docker-build-args --image healthcare-data-mcp) .
+      - name: Docker image metadata
+        run: |
+          VERSION="$(python3 scripts/docker_image_tags.py --format version)"
+          IMAGE="healthcare-data-mcp:${VERSION}"
+          test "$(docker image inspect "$IMAGE" --format '{{ index .Config.Labels "org.opencontainers.image.version" }}')" = "$VERSION"
+          test "$(docker image inspect "$IMAGE" --format '{{ index .Config.Labels "org.opencontainers.image.source" }}')" = "https://github.com/ajhcs/healthcare-data-mcp"
+      - name: Docker CLI smoke
+        run: |
+          VERSION="$(python3 scripts/docker_image_tags.py --format version)"
+          docker run --rm "healthcare-data-mcp:${VERSION}" hc-mcp --list
+      - name: Docker zero-config startup
+        run: |
+          docker compose -f docker-compose.zero-config.yml up -d --build --wait
+          docker compose -f docker-compose.zero-config.yml ps
+      - name: Docker zero-config cleanup
+        if: always()
+        run: docker compose -f docker-compose.zero-config.yml down -v

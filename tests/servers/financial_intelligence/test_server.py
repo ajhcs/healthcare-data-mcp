@@ -18,6 +18,7 @@ os.environ.setdefault("SEC_USER_AGENT", "CI ci@example.com")
 from servers.financial_intelligence import audited_financial_pdf, server, propublica_client, edgar_client  # noqa: E402
 from servers.financial_intelligence.financial_health import load_ahrq_hfmd_profile  # noqa: E402
 from servers.financial_intelligence.irs990_parser import parse_990_xml  # noqa: E402
+from shared.utils.mcp_response import validate_evidence_receipt  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -137,6 +138,21 @@ async def test_search_form990_returns_results():
     assert "name" in org
     assert "total_revenue" in org
     assert org["total_revenue"] > 0
+    _assert_financial_evidence(org["evidence"], dataset_id="irs_form_990_search")
+    assert org["evidence"]["match_basis"] == "form990_organization_search_row"
+    assert org["evidence"]["source_url"].endswith("/231352166")
+    _assert_financial_evidence(result["evidence"], dataset_id="irs_form_990_search")
+    _assert_financial_source_metadata(result)
+    assert result["evidence"]["match_basis"] == "organization_name_or_ein_search"
+    _assert_financial_identity_map(
+        result["identity_map"],
+        expected_ein="231352166",
+        expected_name="THOMAS JEFFERSON UNIVERSITY",
+        expected_state="PA",
+        expected_sources={"irs_form_990_search"},
+    )
+    claim = _financial_source_claim(result["identity_map"], "irs_form_990_search")
+    assert claim["row_evidence_paths"] == ["organizations[].evidence"]
 
 
 @pytest.mark.asyncio
@@ -148,6 +164,68 @@ async def test_search_form990_empty_results():
         result = parse_tool_result(await server.search_form990("zzznonexistent"))
     assert result["total_results"] == 0
     assert result["organizations"] == []
+    _assert_financial_evidence(result["evidence"], dataset_id="irs_form_990_search")
+    _assert_financial_source_metadata(result)
+    assert result["evidence"]["match_basis"] == "organization_name_or_ein_search_no_match"
+    assert result["evidence"]["confidence"] == "no_matching_public_form990_records_returned"
+    _assert_financial_identity_map(
+        result["identity_map"],
+        expected_name="ZZZNONEXISTENT",
+        expected_sources={"irs_form_990_search"},
+    )
+
+
+@pytest.mark.asyncio
+async def test_get_form990_details_not_found_has_evidence():
+    with patch.object(propublica_client, "get_organization", new_callable=AsyncMock, return_value=None):
+        result = await server.get_form990_details("999999999")
+
+    assert result["ok"] is False
+    assert result["error"]["code"] == "not_found"
+    _assert_financial_evidence(result["evidence"], dataset_id="irs_form_990_detail")
+    _assert_financial_source_metadata(result)
+    assert result["evidence"]["match_basis"] == "ein_exact_no_form990_organization_match"
+    assert result["identity"]["unresolved_identifiers"] == [{"type": "ein", "value": "999999999"}]
+    _assert_financial_identity_map(result["identity_map"], expected_ein="999999999")
+
+
+@pytest.mark.asyncio
+async def test_get_form990_details_no_filings_has_evidence():
+    with patch.object(
+        propublica_client,
+        "get_organization",
+        new_callable=AsyncMock,
+        return_value={"organization": {"ein": "231352166", "name": "Example Health"}, "filings_with_data": []},
+    ):
+        result = await server.get_form990_details("231352166")
+
+    assert result["ok"] is False
+    assert result["error"]["code"] == "not_found"
+    _assert_financial_evidence(result["evidence"], dataset_id="irs_form_990_detail")
+    _assert_financial_source_metadata(result)
+    assert result["evidence"]["match_basis"] == "ein_exact_no_form990_filings_with_data"
+    assert result["identity"]["canonical_name"] == "EXAMPLE HEALTH"
+    _assert_financial_identity_map(result["identity_map"], expected_ein="231352166", expected_name="EXAMPLE HEALTH")
+
+
+@pytest.mark.asyncio
+async def test_get_form990_details_summary_success_has_identity_map():
+    with (
+        patch.object(propublica_client, "get_organization", new_callable=AsyncMock, return_value=PROPUBLICA_ORG_DETAIL),
+        patch.object(server, "lookup_xml_url", new_callable=AsyncMock, return_value=""),
+    ):
+        result = parse_tool_result(await server.get_form990_details("231352166"))
+
+    assert result["source"] == "propublica"
+    _assert_financial_evidence(result["evidence"], dataset_id="propublica_form_990_summary")
+    _assert_financial_source_metadata(result)
+    assert result["identity"]["canonical_name"] == "THOMAS JEFFERSON UNIVERSITY"
+    _assert_financial_identity_map(
+        result["identity_map"],
+        expected_ein="231352166",
+        expected_name="THOMAS JEFFERSON UNIVERSITY",
+        expected_sources={"propublica_form_990_summary"},
+    )
 
 
 @pytest.mark.asyncio
@@ -192,6 +270,18 @@ async def test_search_sec_filings_returns_results():
     assert filing["form_type"] == "10-K"
     assert "filing_url" in filing
     assert filing["filing_url"].startswith("https://www.sec.gov/")
+    _assert_financial_evidence(filing["evidence"], dataset_id="sec_edgar_filings_search")
+    assert filing["evidence"]["match_basis"] == "sec_filing_search_row"
+    assert filing["evidence"]["source_url"] == filing["filing_url"]
+    _assert_financial_evidence(result["evidence"], dataset_id="sec_edgar_filings_search")
+    _assert_financial_source_metadata(result)
+    assert result["evidence"]["match_basis"] == "edgar_full_text_search"
+    _assert_financial_identity_map(
+        result["identity_map"],
+        expected_cik="860730",
+        expected_accession="0001234567-24-000001",
+        expected_sources={"sec_edgar_filings_search"},
+    )
 
 
 @pytest.mark.asyncio
@@ -246,6 +336,70 @@ async def test_search_sec_filings_empty_hits():
         result = parse_tool_result(await server.search_sec_filings("NonexistentCorpXYZ"))
     assert result["total_results"] == 0
     assert result["filings"] == []
+    _assert_financial_evidence(result["evidence"], dataset_id="sec_edgar_filings_search")
+    _assert_financial_source_metadata(result)
+    assert result["evidence"]["match_basis"] == "edgar_full_text_search_no_match"
+    assert result["evidence"]["confidence"] == "no_matching_sec_filings_returned"
+    _assert_financial_identity_map(
+        result["identity_map"],
+        expected_name="NONEXISTENTCORPXYZ",
+        expected_sources={"sec_edgar_filings_search"},
+    )
+
+
+@pytest.mark.asyncio
+async def test_get_sec_filing_no_cik_has_evidence():
+    with patch.object(edgar_client, "get_cik_from_accession", new_callable=AsyncMock, return_value=""):
+        result = await server.get_sec_filing("0000000000-24-000001")
+
+    assert result["ok"] is False
+    assert result["error"]["code"] == "not_found"
+    _assert_financial_evidence(result["evidence"], dataset_id="sec_edgar_filing_detail")
+    _assert_financial_source_metadata(result)
+    assert result["evidence"]["match_basis"] == "accession_number_no_cik_match"
+    _assert_financial_identity_map(
+        result["identity_map"],
+        expected_accession="0000000000-24-000001",
+        expected_sources={"sec_edgar_filing_detail"},
+    )
+
+
+@pytest.mark.asyncio
+async def test_get_sec_filing_success_has_identity_map():
+    accession = "0001234567-24-000001"
+    with (
+        patch.object(edgar_client, "get_cik_from_accession", new_callable=AsyncMock, return_value="0000860730"),
+        patch.object(
+            edgar_client,
+            "get_company_submissions",
+            new_callable=AsyncMock,
+            return_value={
+                "name": "HCA Healthcare Inc",
+                "filings": {
+                    "recent": {
+                        "accessionNumber": [accession],
+                        "form": ["10-K"],
+                        "filingDate": ["2024-02-15"],
+                    }
+                },
+            },
+        ),
+        patch.object(edgar_client, "get_company_facts", new_callable=AsyncMock, return_value={}),
+        patch.object(edgar_client, "extract_financials", return_value={"revenue": 1_000_000}),
+    ):
+        result = parse_tool_result(await server.get_sec_filing(accession, sections=["financials"]))
+
+    _assert_financial_evidence(result["evidence"], dataset_id="sec_edgar_filing_detail")
+    _assert_financial_source_metadata(result)
+    assert result["company_name"] == "HCA Healthcare Inc"
+    _assert_financial_identity_map(
+        result["identity_map"],
+        expected_cik="860730",
+        expected_accession=accession,
+        expected_name="HCA HEALTHCARE",
+        expected_source_url=result["evidence"]["source_url"],
+        expected_sources={"sec_edgar_filing_detail"},
+    )
 
 
 def test_parse_audited_financial_pdf_extracts_jefferson_fy2025_golden_values(monkeypatch):
@@ -308,6 +462,38 @@ def test_parse_audited_financial_pdf_extracts_jefferson_fy2025_golden_values(mon
     assert result["citations"]["operating_income_loss"]["page"] == 8
     assert result["page_anchors"]["balance_sheet"]["page"] == 7
     assert result["page_anchors"]["operations"]["page"] == 8
+
+
+@pytest.mark.asyncio
+async def test_parse_audited_financial_pdf_tool_adds_evidence_and_identity_map(monkeypatch):
+    def fake_parse(url_or_path: str, entity_name: str, fiscal_year: int | str):
+        return {
+            "entity_name": entity_name,
+            "fiscal_year": str(fiscal_year),
+            "source_url": url_or_path,
+            "metrics": {"total_assets": 18_291_623_000},
+            "citations": {"total_assets": {"page": 7}},
+        }
+
+    monkeypatch.setattr(server, "_parse_audited_financial_pdf", fake_parse)
+
+    result = parse_tool_result(
+        await server.parse_audited_financial_pdf(
+            "https://example.org/tju-audited-financials-2025.pdf",
+            "Thomas Jefferson University",
+            2025,
+        )
+    )
+
+    _assert_financial_evidence(result["evidence"], dataset_id="audited_financial_statement_pdf")
+    _assert_financial_source_metadata(result)
+    assert result["identity"]["canonical_name"] == "THOMAS JEFFERSON UNIVERSITY"
+    _assert_financial_identity_map(
+        result["identity_map"],
+        expected_name="THOMAS JEFFERSON UNIVERSITY",
+        expected_source_url="https://example.org/tju-audited-financials-2025.pdf",
+        expected_sources={"audited_financial_statement_pdf"},
+    )
 
 
 def test_parse_990_xml_extracts_schedule_h_public_financial_fields(tmp_path: Path):
@@ -436,10 +622,25 @@ async def test_uncompensated_care_profile_falls_back_to_schedule_h_fields(monkey
     async def fake_latest_990_schedule_h(ein: str):
         return {
             "ein": ein,
+            "source_status": "ready",
+            "tax_period": "2023",
+            "xml_url": "https://example.org/form990.xml",
             "charity_care": 50_000,
             "bad_debt_expense": 25_000,
             "medicare_shortfall": 30_000,
             "medicaid_shortfall": 40_000,
+            "metrics": {
+                "charity_care_cost": {
+                    "value": 50_000,
+                    "confidence": "high_reported_irs_schedule_h_xml",
+                    "source_field": "CharityCareAtCostAmt",
+                },
+                "bad_debt_expense": {
+                    "value": 25_000,
+                    "confidence": "high_reported_irs_schedule_h_xml",
+                    "source_field": "BadDebtExpenseAmt",
+                },
+            },
             "metric_confidence": {
                 "charity_care": "high_reported_irs_schedule_h_xml",
                 "bad_debt_expense": "high_reported_irs_schedule_h_xml",
@@ -458,6 +659,93 @@ async def test_uncompensated_care_profile_falls_back_to_schedule_h_fields(monkey
     assert result["medicare_shortfall"] == 30_000
     assert result["medicaid_shortfall"] == 40_000
     assert result["metric_confidence"]["bad_debt_expense"] == "high_reported_irs_schedule_h_xml"
+    _assert_financial_evidence(result["evidence"], dataset_id="public_financial_health_profile")
+    _assert_financial_source_metadata(result)
+    assert set(result["metric_evidence"]) == {"charity_care_cost", "bad_debt_expense"}
+    _assert_financial_evidence(result["metric_evidence"]["charity_care_cost"], dataset_id="irs_form_990_schedule_h")
+    assert result["metric_evidence"]["charity_care_cost"]["query"]["promoted_metric_name"] == "charity_care_cost"
+    assert result["metric_evidence"]["charity_care_cost"]["query"]["selected_source_metric"] == "charity_care"
+    _assert_financial_evidence(result["metric_evidence"]["bad_debt_expense"], dataset_id="irs_form_990_schedule_h")
+    assert result["identity"]["ccn"] == "390001"
+    assert {"type": "ein", "value": "231352651"} in result["identity"]["unresolved_identifiers"]
+    _assert_financial_source_block(
+        result["sources"]["hcris"],
+        dataset_id="cms_hcris_public_cost_report",
+        match_basis="ccn_hcris_public_cost_report_unavailable",
+    )
+    _assert_financial_source_block(
+        result["sources"]["form990_schedule_h"],
+        dataset_id="irs_form_990_schedule_h",
+        match_basis="ein_exact_irs_schedule_h_xml",
+    )
+    _assert_financial_identity_map(result["identity_map"], expected_ccn="390001", expected_ein="231352651")
+    selected_claim = _financial_source_claim(result["identity_map"], "selected_public_financial_metrics")
+    assert selected_claim["metric_evidence_paths"] == ["metric_evidence.*"]
+
+
+@pytest.mark.asyncio
+async def test_charity_care_profile_exposes_nested_source_receipts(monkeypatch):
+    async def fake_cost_report_public_metrics(ccn: str):
+        return {
+            "ccn": ccn,
+            "source_status": "ready",
+            "charity_care_cost": 75_000,
+            "metric_confidence": {"charity_care_cost": "high_reported_hcris_field"},
+            "metrics": {
+                "charity_care_cost": {
+                    "value": 75_000,
+                    "confidence": "high_reported_hcris_field",
+                    "source_field": "S-10 Charity Care Cost",
+                }
+            },
+        }
+
+    async def fake_latest_990_schedule_h(ein: str):
+        return {
+            "ein": ein,
+            "source_status": "ready",
+            "tax_period": "2023",
+            "xml_url": "https://example.org/form990.xml",
+            "community_benefit_pct": 12.5,
+            "total_expenses": 1_000_000,
+            "metric_confidence": {
+                "community_benefit_pct": "medium_derived_from_schedule_h_total_expenses",
+                "total_expenses": "high_reported_irs_xml_or_propublica_summary",
+            },
+            "metrics": {
+                "community_benefit_pct": {
+                    "value": 12.5,
+                    "confidence": "medium_derived_from_schedule_h_total_expenses",
+                    "source_field": "TotalCommunityBenefitExpnsAmt / CYTotalExpensesAmt",
+                }
+            },
+        }
+
+    monkeypatch.setattr(server, "_cost_report_public_metrics", fake_cost_report_public_metrics)
+    monkeypatch.setattr(server, "_latest_990_schedule_h", fake_latest_990_schedule_h)
+
+    result = await server.get_charity_care_profile(ccn="390001", ein="231352651")
+
+    assert result["charity_care_cost"] == 75_000
+    assert result["community_benefit_pct"] == 12.5
+    _assert_financial_evidence(result["evidence"], dataset_id="public_financial_health_profile")
+    _assert_financial_source_metadata(result)
+    assert set(result["metric_evidence"]) == {"charity_care_cost", "community_benefit_pct"}
+    _assert_financial_evidence(result["metric_evidence"]["charity_care_cost"], dataset_id="cms_hcris_public_cost_report")
+    assert result["metric_evidence"]["charity_care_cost"]["query"]["promoted_metric_name"] == "charity_care_cost"
+    assert result["metric_evidence"]["charity_care_cost"]["query"]["selected_source_metric"] == "charity_care_cost"
+    _assert_financial_evidence(result["metric_evidence"]["community_benefit_pct"], dataset_id="irs_form_990_schedule_h")
+    _assert_financial_source_block(
+        result["sources"]["hcris"],
+        dataset_id="cms_hcris_public_cost_report",
+        match_basis="ccn_exact_hcris_public_cost_report",
+    )
+    _assert_financial_source_block(
+        result["sources"]["form990_schedule_h"],
+        dataset_id="irs_form_990_schedule_h",
+        match_basis="ein_exact_irs_schedule_h_xml",
+    )
+    _assert_financial_identity_map(result["identity_map"], expected_ccn="390001", expected_ein="231352651")
 
 
 @pytest.mark.asyncio
@@ -468,7 +756,17 @@ async def test_bad_debt_profile_falls_back_to_schedule_h(monkeypatch):
     async def fake_latest_990_schedule_h(ein: str):
         return {
             "ein": ein,
+            "source_status": "ready",
+            "tax_period": "2023",
+            "xml_url": "https://example.org/form990.xml",
             "bad_debt_expense": 25_000,
+            "metrics": {
+                "bad_debt_expense": {
+                    "value": 25_000,
+                    "confidence": "high_reported_irs_schedule_h_xml",
+                    "source_field": "BadDebtExpenseAmt",
+                }
+            },
             "metric_confidence": {"bad_debt_expense": "high_reported_irs_schedule_h_xml"},
         }
 
@@ -479,6 +777,25 @@ async def test_bad_debt_profile_falls_back_to_schedule_h(monkeypatch):
 
     assert result["bad_debt_expense"] == 25_000
     assert result["metric_confidence"]["bad_debt_expense"] == "high_reported_irs_schedule_h_xml"
+    _assert_financial_evidence(result["evidence"], dataset_id="public_financial_health_profile")
+    _assert_financial_source_metadata(result)
+    assert set(result["metric_evidence"]) == {"bad_debt_expense"}
+    _assert_financial_evidence(result["metric_evidence"]["bad_debt_expense"], dataset_id="irs_form_990_schedule_h")
+    assert result["metric_evidence"]["bad_debt_expense"]["query"]["promoted_metric_name"] == "bad_debt_expense"
+    assert result["metric_evidence"]["bad_debt_expense"]["query"]["selected_source_metric"] == "bad_debt_expense"
+    assert result["identity"]["ccn"] == "390001"
+    assert result["identity"]["match_decisions"][0]["basis"] == "ccn_or_ein_public_source_lookup"
+    _assert_financial_source_block(
+        result["sources"]["hcris"],
+        dataset_id="cms_hcris_public_cost_report",
+        match_basis="ccn_hcris_public_cost_report_unavailable",
+    )
+    _assert_financial_source_block(
+        result["sources"]["form990_schedule_h"],
+        dataset_id="irs_form_990_schedule_h",
+        match_basis="ein_exact_irs_schedule_h_xml",
+    )
+    _assert_financial_identity_map(result["identity_map"], expected_ccn="390001", expected_ein="231352651")
 
 
 @pytest.mark.asyncio
@@ -517,6 +834,7 @@ async def test_public_financial_health_profile_joins_sources_and_omits_map_kpis(
         return {
             "source_status": "ready",
             "matched_on": "ccn",
+            "facility_name": "Example Hospital LLC",
             "join_keys": {"hfmd_provider_id": "390001"},
             "metrics": {
                 "operating_margin": {
@@ -542,7 +860,90 @@ async def test_public_financial_health_profile_joins_sources_and_omits_map_kpis(
     assert result["metric_confidence"]["form990_schedule_h"]["community_benefit_total"] == "high_reported_irs_schedule_h_xml"
     assert result["metric_confidence"]["ahrq_hfmd"]["operating_margin"] == "high_reported_hfmd_ccn_match"
     assert "source_policy" in result
+    _assert_financial_evidence(result["evidence"], dataset_id="public_financial_health_profile")
+    _assert_financial_source_metadata(result)
+    assert result["evidence"]["match_basis"] == "ccn_ein_public_source_join"
+    _assert_financial_evidence(result["hcris"]["evidence"], dataset_id="cms_hcris_public_cost_report")
+    assert result["hcris"]["evidence"]["match_basis"] == "ccn_exact_hcris_public_cost_report"
+    assert result["hcris"]["source_metadata"]["dataset_id"] == "cms_hcris_public_cost_report"
+    _assert_financial_metric_evidence(
+        result["hcris"],
+        metric_name="net_patient_revenue",
+        dataset_id="cms_hcris_public_cost_report",
+        match_basis="ccn_exact_hcris_public_cost_report_metric_net_patient_revenue",
+    )
+    _assert_financial_evidence(result["form990_schedule_h"]["evidence"], dataset_id="irs_form_990_schedule_h")
+    assert result["form990_schedule_h"]["evidence"]["match_basis"] == "ein_exact_irs_schedule_h_xml"
+    _assert_financial_metric_evidence(
+        result["form990_schedule_h"],
+        metric_name="community_benefit_total",
+        dataset_id="irs_form_990_schedule_h",
+        match_basis="ein_exact_irs_schedule_h_xml_metric_community_benefit_total",
+    )
+    _assert_financial_evidence(result["ahrq_hfmd"]["evidence"], dataset_id="ahrq_hfmd")
+    assert result["ahrq_hfmd"]["evidence"]["match_basis"] == "ccn_exact_ahrq_hfmd_profile"
+    _assert_financial_metric_evidence(
+        result["ahrq_hfmd"],
+        metric_name="operating_margin",
+        dataset_id="ahrq_hfmd",
+        match_basis="ccn_exact_ahrq_hfmd_profile_metric_operating_margin",
+    )
+    assert result["identity"]["ccn"] == "390001"
+    assert result["identity"]["canonical_name"] == "EXAMPLE HOSPITAL"
+    assert result["identity"]["match_decisions"][0]["basis"] == "ccn_ein_public_source_join"
+    assert {"type": "ein", "value": "231352166"} in result["identity"]["unresolved_identifiers"]
+    _assert_financial_identity_map(
+        result["identity_map"],
+        expected_ccn="390001",
+        expected_ein="231352166",
+        expected_name="EXAMPLE HOSPITAL",
+        expected_sources={"hcris", "form990_schedule_h", "ahrq_hfmd"},
+    )
+    source_claims = {claim["collection"]: claim for claim in result["identity_map"]["source_claims"]}
+    assert "hcris.metric_evidence.*" in source_claims["hcris"]["metric_evidence_paths"]
+    assert "form990_schedule_h.metric_evidence.*" in source_claims["form990_schedule_h"]["metric_evidence_paths"]
+    assert "ahrq_hfmd.metric_evidence.*" in source_claims["ahrq_hfmd"]["metric_evidence_paths"]
     assert not _payload_has_any_key(result, PROHIBITED_MAP_KPI_FIELDS)
+
+
+@pytest.mark.asyncio
+async def test_public_financial_health_profile_nested_no_match_sources_have_evidence(monkeypatch):
+    async def fake_hcris(_ccn: str):
+        return {"ccn": "390999", "source_status": "unavailable", "detail": "No cost-report row found"}
+
+    async def fake_form990(_ein: str):
+        return {"ein": "999999999", "source_status": "no_990_filing_found"}
+
+    def fake_hfmd(**_kwargs):
+        return {
+            "source_id": "ahrq_hfmd",
+            "source_name": "AHRQ Hospital Financial Measures Database",
+            "source_url": "https://www.ahrq.gov/data/innovations/hfmd.html",
+            "source_status": "no_match",
+            "cache_path": "/tmp/hfmd",
+            "record_count": 10,
+            "matched_count": 0,
+            "metrics": {},
+            "metric_confidence": {},
+            "records": [],
+        }
+
+    monkeypatch.setattr(server, "_cost_report_public_metrics", fake_hcris)
+    monkeypatch.setattr(server, "_latest_990_schedule_h", fake_form990)
+    monkeypatch.setattr(server, "load_ahrq_hfmd_profile", fake_hfmd)
+
+    result = parse_tool_result(
+        await server.get_public_financial_health_profile(ccn="390999", ein="999999999", state="PA")
+    )
+
+    assert result["hcris"]["source_status"] == "unavailable"
+    assert result["hcris"]["evidence"]["match_basis"] == "ccn_hcris_public_cost_report_unavailable"
+    assert result["hcris"]["evidence"]["confidence"] == "not_evaluated_or_no_reported_hcris_fields"
+    _assert_financial_evidence(result["hcris"]["evidence"], dataset_id="cms_hcris_public_cost_report")
+    assert result["form990_schedule_h"]["evidence"]["match_basis"] == "ein_no_form990_filing_found"
+    _assert_financial_evidence(result["form990_schedule_h"]["evidence"], dataset_id="irs_form_990_schedule_h")
+    assert result["ahrq_hfmd"]["evidence"]["match_basis"] == "ahrq_hfmd_no_match"
+    _assert_financial_evidence(result["ahrq_hfmd"]["evidence"], dataset_id="ahrq_hfmd")
 
 
 @pytest.mark.asyncio
@@ -571,6 +972,42 @@ async def test_search_muni_bonds_includes_source_urls():
     assert bond["accession_number"] == "0001193125-25-123456"
     assert bond["source_url"] == bond["filing_url"]
     assert bond["source_url"].startswith("https://www.sec.gov/Archives/edgar/data/")
+    _assert_financial_evidence(bond["evidence"], dataset_id="sec_edgar_municipal_bond_search")
+    assert bond["evidence"]["match_basis"] == "municipal_bond_search_row"
+    assert bond["evidence"]["source_url"] == bond["source_url"]
+    _assert_financial_evidence(result["evidence"], dataset_id="sec_edgar_municipal_bond_search")
+    _assert_financial_source_metadata(result)
+    _assert_financial_identity_map(
+        result["identity_map"],
+        expected_cik="1193125",
+        expected_accession="0001193125-25-123456",
+        expected_source_url=bond["source_url"],
+        expected_state="PA",
+        expected_sources={"sec_edgar_municipal_bond_search"},
+    )
+
+
+@pytest.mark.asyncio
+async def test_search_muni_bonds_empty_results_have_no_match_evidence():
+    with patch.object(
+        edgar_client,
+        "search_filings",
+        new_callable=AsyncMock,
+        return_value={"hits": {"total": {"value": 0}, "hits": []}},
+    ):
+        result = await server.search_muni_bonds("No Such Obligated Group")
+
+    assert result["total_results"] == 0
+    assert result["bonds"] == []
+    _assert_financial_evidence(result["evidence"], dataset_id="sec_edgar_municipal_bond_search")
+    _assert_financial_source_metadata(result)
+    assert result["evidence"]["match_basis"] == "edgar_official_statement_search_no_match"
+    assert result["evidence"]["confidence"] == "no_matching_municipal_bond_filings_returned"
+    _assert_financial_identity_map(
+        result["identity_map"],
+        expected_name="NO SUCH OBLIGATED GROUP",
+        expected_sources={"sec_edgar_municipal_bond_search"},
+    )
 
 
 @pytest.mark.asyncio
@@ -603,6 +1040,13 @@ async def test_get_muni_bond_details_bounds_disclosures_and_rejects_html_only():
 
     assert html_only["ok"] is False
     assert html_only["error"]["code"] == "source_unparsed"
+    _assert_financial_evidence(html_only["evidence"], dataset_id="sec_edgar_municipal_bond_detail")
+    assert html_only["evidence"]["match_basis"] == "accession_number_exact_no_parseable_disclosure_documents"
+    _assert_financial_identity_map(
+        html_only["identity_map"],
+        expected_accession="0001193125-25-123456",
+        expected_sources={"sec_edgar_municipal_bond_detail"},
+    )
 
     docs = [
         {"name": f"doc-{idx}.pdf", "url": f"https://www.sec.gov/doc-{idx}.pdf", "type": "PDF"}
@@ -637,3 +1081,135 @@ async def test_get_muni_bond_details_bounds_disclosures_and_rejects_html_only():
     assert len(result["documents"]) == 25
     assert result["official_statement_url"] == "https://www.sec.gov/doc-0.pdf"
     assert all(doc["source_url"] for doc in result["documents"])
+    _assert_financial_evidence(result["documents"][0]["evidence"], dataset_id="sec_edgar_municipal_bond_detail")
+    assert result["documents"][0]["evidence"]["match_basis"] == "municipal_disclosure_document_row"
+    assert result["documents"][0]["evidence"]["source_url"] == "https://www.sec.gov/doc-0.pdf"
+    _assert_financial_evidence(result["evidence"], dataset_id="sec_edgar_municipal_bond_detail")
+    _assert_financial_source_metadata(result)
+    assert result["evidence"]["source_url"].endswith("-index.htm")
+    _assert_financial_identity_map(
+        result["identity_map"],
+        expected_accession="0001193125-25-123456",
+        expected_source_url=result["source_url"],
+        expected_sources={"sec_edgar_municipal_bond_detail"},
+    )
+    claim = _financial_source_claim(result["identity_map"], "sec_edgar_municipal_bond_detail")
+    assert claim["row_evidence_paths"] == ["documents[].evidence"]
+
+
+def _assert_financial_evidence(evidence: dict, *, dataset_id: str) -> None:
+    validate_evidence_receipt(evidence, require_content=True)
+    assert evidence["dataset_id"] == dataset_id
+    assert evidence["source_name"]
+    assert evidence["source_url"]
+    assert evidence["source_period"]
+    assert evidence["retrieved_at"]
+    assert evidence["cache_status"]
+    assert evidence["cache_freshness"]
+    assert evidence["entity_scope"] == "facility_or_nonprofit_finance"
+    assert evidence["match_basis"]
+    assert evidence["confidence"]
+    assert evidence["caveat"]
+    assert evidence["next_step"]
+
+
+def _assert_financial_source_metadata(result: dict) -> None:
+    metadata = result["source_metadata"]
+    evidence = result["evidence"]
+
+    assert metadata["source_name"] == evidence["source_name"]
+    assert metadata["source_url"] == evidence["source_url"]
+    assert metadata["dataset_id"] == evidence["dataset_id"]
+    assert metadata["source_period"] == evidence["source_period"]
+    assert metadata["landing_page"] == evidence["landing_page"]
+    assert metadata["retrieved_at"] == evidence["retrieved_at"]
+    assert metadata["source_modified"] == evidence["source_modified"]
+    assert metadata["cache_status"] == evidence["cache_status"]
+    assert metadata["cache_freshness"] == evidence["cache_freshness"]
+    assert metadata["entity_scope"] == evidence["entity_scope"]
+    assert metadata["query"] == evidence["query"]
+    assert metadata["cache_key"] == evidence["cache_key"]
+    assert metadata["source_type"] == "public_financial_source"
+
+
+def _assert_financial_source_block(source: dict, *, dataset_id: str, match_basis: str) -> None:
+    assert source["source_metadata"]["dataset_id"] == dataset_id
+    assert source["source_metadata"]["source_name"]
+    assert source["source_metadata"]["source_status"]
+    _assert_financial_evidence(source["evidence"], dataset_id=dataset_id)
+    assert source["evidence"]["match_basis"] == match_basis
+    assert source["evidence"]["query"]["source_status"] == source["source_metadata"]["source_status"]
+    assert "metric_evidence" in source
+    metrics = source.get("metrics") if isinstance(source.get("metrics"), dict) else {}
+    assert set(source["metric_evidence"]) == set(metrics)
+    for metric_name in metrics:
+        _assert_financial_metric_evidence(
+            source,
+            metric_name=metric_name,
+            dataset_id=dataset_id,
+            match_basis=f"{match_basis}_metric_{metric_name}",
+        )
+
+
+def _assert_financial_metric_evidence(
+    source: dict,
+    *,
+    metric_name: str,
+    dataset_id: str,
+    match_basis: str,
+) -> None:
+    evidence = source["metric_evidence"][metric_name]
+    _assert_financial_evidence(evidence, dataset_id=dataset_id)
+    assert evidence["match_basis"] == match_basis
+    assert evidence["query"]["metric_name"] == metric_name
+    assert evidence["query"]["metric_source"]
+    assert "metric_value_present" in evidence["query"]
+    assert evidence["query"]["metric_confidence"]
+    assert "source_field" in evidence["query"]
+    assert "missing fields are not zero values" in evidence["caveat"]
+
+
+def _assert_financial_identity_map(
+    identity_map: dict,
+    *,
+    expected_ccn: str = "",
+    expected_ein: str = "",
+    expected_name: str = "",
+    expected_state: str = "",
+    expected_cik: str = "",
+    expected_accession: str = "",
+    expected_source_url: str = "",
+    expected_sources: set[str] | None = None,
+) -> None:
+    by_field = {entry["field"]: entry for entry in identity_map["join_keys"]}
+
+    assert identity_map["entity_scope"] == "facility_or_nonprofit_finance"
+    assert identity_map["source_claims"]
+    assert identity_map["conflict_policy"]
+    assert identity_map["missing_data_policy"].startswith("No-match or missing financial-source responses")
+    if expected_ccn:
+        assert expected_ccn in by_field["ccn"]["values"]
+        assert by_field["ccn"]["status"] == "provided"
+    if expected_ein:
+        assert expected_ein in by_field["ein"]["values"]
+        assert by_field["ein"]["status"] == "provided"
+    if expected_name:
+        assert expected_name in by_field["canonical_name"]["values"]
+    if expected_state:
+        assert expected_state in by_field["state"]["values"]
+    if expected_cik:
+        assert expected_cik in by_field["cik"]["values"]
+        assert by_field["cik"]["status"] == "provided"
+    if expected_accession:
+        assert expected_accession in by_field["accession_number"]["values"]
+        assert by_field["accession_number"]["status"] == "provided"
+    if expected_source_url:
+        assert expected_source_url in by_field["source_url"]["values"]
+        assert by_field["source_url"]["status"] == "provided"
+    if expected_sources:
+        assert {claim["collection"] for claim in identity_map["source_claims"]} >= expected_sources
+
+
+def _financial_source_claim(identity_map: dict, collection: str) -> dict:
+    claims = {claim["collection"]: claim for claim in identity_map["source_claims"]}
+    return claims[collection]

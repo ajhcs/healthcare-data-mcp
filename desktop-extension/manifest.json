@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "healthcare-data-mcp",
   "display_name": "Healthcare Data MCP",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Local MCP access to public healthcare market intelligence: facilities, ownership, quality, claims, workforce, research, and compliance screening.",
   "long_description": "Runs one selected healthcare-data-mcp server over stdio for Claude Desktop. Choose from focused servers for CMS facilities, service areas, demographics, drive times, quality, health systems, finance, price transparency, referrals, workforce, claims, public records, web intelligence, provider enrollment, community health, and research trials. Optional API keys can be entered through the desktop extension configuration UI.",
   "author": {
@@ -32,16 +32,52 @@
       ],
       "env": {
         "PYTHONPATH": "${__dirname}/server/lib",
-        "SAM_GOV_API_KEY": "${user_config.SAM_GOV_API_KEY}",
-        "CHPL_API_KEY": "${user_config.CHPL_API_KEY}",
-        "SEC_USER_AGENT": "${user_config.SEC_USER_AGENT}",
-        "CENSUS_API_KEY": "${user_config.CENSUS_API_KEY}",
-        "HUD_API_TOKEN": "${user_config.HUD_API_TOKEN}",
-        "ORS_API_KEY": "${user_config.ORS_API_KEY}",
+        "ACGME_PROGRAMS_CSV": "${user_config.ACGME_PROGRAMS_CSV}",
         "BLS_API_KEY": "${user_config.BLS_API_KEY}",
+        "CENSUS_API_KEY": "${user_config.CENSUS_API_KEY}",
+        "CHPL_API_KEY": "${user_config.CHPL_API_KEY}",
+        "CLINICAL_TRIALS_INVENTORY_HARD_MAX": "${user_config.CLINICAL_TRIALS_INVENTORY_HARD_MAX}",
+        "DOCGRAPH_CSV_PATH": "${user_config.DOCGRAPH_CSV_PATH}",
         "GOOGLE_CSE_API_KEY": "${user_config.GOOGLE_CSE_API_KEY}",
+        "GOOGLE_CSE_CACHE_TTL_SECONDS": "${user_config.GOOGLE_CSE_CACHE_TTL_SECONDS}",
+        "GOOGLE_CSE_DAILY_LIMIT": "${user_config.GOOGLE_CSE_DAILY_LIMIT}",
         "GOOGLE_CSE_ID": "${user_config.GOOGLE_CSE_ID}",
-        "PROXYCURL_API_KEY": "${user_config.PROXYCURL_API_KEY}"
+        "GOOGLE_CSE_SESSION_LIMIT": "${user_config.GOOGLE_CSE_SESSION_LIMIT}",
+        "HUD_API_TOKEN": "${user_config.HUD_API_TOKEN}",
+        "MCP_GATEWAY_ALLOWED_HOSTS": "${user_config.MCP_GATEWAY_ALLOWED_HOSTS}",
+        "MCP_GATEWAY_ALLOWED_ORIGINS": "${user_config.MCP_GATEWAY_ALLOWED_ORIGINS}",
+        "MCP_GATEWAY_AUTH_REQUIRED": "${user_config.MCP_GATEWAY_AUTH_REQUIRED}",
+        "MCP_GATEWAY_BEARER_TOKEN": "${user_config.MCP_GATEWAY_BEARER_TOKEN}",
+        "MCP_GATEWAY_BEARER_TOKENS": "${user_config.MCP_GATEWAY_BEARER_TOKENS}",
+        "MCP_GATEWAY_BEARER_TOKEN_SHA256": "${user_config.MCP_GATEWAY_BEARER_TOKEN_SHA256}",
+        "MCP_GATEWAY_BEARER_TOKEN_SHA256_LIST": "${user_config.MCP_GATEWAY_BEARER_TOKEN_SHA256_LIST}",
+        "MCP_GATEWAY_ISSUER_URL": "${user_config.MCP_GATEWAY_ISSUER_URL}",
+        "MCP_GATEWAY_PUBLIC_URL": "${user_config.MCP_GATEWAY_PUBLIC_URL}",
+        "MCP_GATEWAY_REQUIRED_SCOPES": "${user_config.MCP_GATEWAY_REQUIRED_SCOPES}",
+        "MCP_GATEWAY_TOKEN_SCOPES": "${user_config.MCP_GATEWAY_TOKEN_SCOPES}",
+        "MCP_LIVE_GATEWAY_ALLOWED_HOSTS": "${user_config.MCP_LIVE_GATEWAY_ALLOWED_HOSTS}",
+        "MCP_LIVE_GATEWAY_ALLOWED_ORIGINS": "${user_config.MCP_LIVE_GATEWAY_ALLOWED_ORIGINS}",
+        "MCP_LIVE_GATEWAY_ALLOW_GLOBAL_BULK_SCOPE": "${user_config.MCP_LIVE_GATEWAY_ALLOW_GLOBAL_BULK_SCOPE}",
+        "MCP_LIVE_GATEWAY_ALLOW_NETWORK_BIND": "${user_config.MCP_LIVE_GATEWAY_ALLOW_NETWORK_BIND}",
+        "MCP_LIVE_GATEWAY_AUDIT_LOG_PATH": "${user_config.MCP_LIVE_GATEWAY_AUDIT_LOG_PATH}",
+        "MCP_LIVE_GATEWAY_AUTH_REQUIRED": "${user_config.MCP_LIVE_GATEWAY_AUTH_REQUIRED}",
+        "MCP_LIVE_GATEWAY_BEARER_TOKEN": "${user_config.MCP_LIVE_GATEWAY_BEARER_TOKEN}",
+        "MCP_LIVE_GATEWAY_BEARER_TOKENS": "${user_config.MCP_LIVE_GATEWAY_BEARER_TOKENS}",
+        "MCP_LIVE_GATEWAY_BEARER_TOKEN_SHA256": "${user_config.MCP_LIVE_GATEWAY_BEARER_TOKEN_SHA256}",
+        "MCP_LIVE_GATEWAY_BEARER_TOKEN_SHA256_LIST": "${user_config.MCP_LIVE_GATEWAY_BEARER_TOKEN_SHA256_LIST}",
+        "MCP_LIVE_GATEWAY_ISSUER_URL": "${user_config.MCP_LIVE_GATEWAY_ISSUER_URL}",
+        "MCP_LIVE_GATEWAY_PUBLIC_URL": "${user_config.MCP_LIVE_GATEWAY_PUBLIC_URL}",
+        "MCP_LIVE_GATEWAY_REQUIRED_SCOPES": "${user_config.MCP_LIVE_GATEWAY_REQUIRED_SCOPES}",
+        "MCP_LIVE_GATEWAY_TOKEN_SCOPES": "${user_config.MCP_LIVE_GATEWAY_TOKEN_SCOPES}",
+        "MRF_DOWNLOAD_PROGRESS_INTERVAL_BYTES": "${user_config.MRF_DOWNLOAD_PROGRESS_INTERVAL_BYTES}",
+        "MRF_MAX_DOWNLOAD_BYTES": "${user_config.MRF_MAX_DOWNLOAD_BYTES}",
+        "MRF_MIN_FREE_BYTES": "${user_config.MRF_MIN_FREE_BYTES}",
+        "ORS_API_KEY": "${user_config.ORS_API_KEY}",
+        "OSRM_BASE_URL": "${user_config.OSRM_BASE_URL}",
+        "PLACES_CACHE_DIR": "${user_config.PLACES_CACHE_DIR}",
+        "PROXYCURL_API_KEY": "${user_config.PROXYCURL_API_KEY}",
+        "SAM_GOV_API_KEY": "${user_config.SAM_GOV_API_KEY}",
+        "SEC_USER_AGENT": "${user_config.SEC_USER_AGENT}"
       },
       "platform_overrides": {
         "win32": {
@@ -53,16 +89,52 @@
           ],
           "env": {
             "PYTHONPATH": "${__dirname}/server/lib",
-            "SAM_GOV_API_KEY": "${user_config.SAM_GOV_API_KEY}",
-            "CHPL_API_KEY": "${user_config.CHPL_API_KEY}",
-            "SEC_USER_AGENT": "${user_config.SEC_USER_AGENT}",
-            "CENSUS_API_KEY": "${user_config.CENSUS_API_KEY}",
-            "HUD_API_TOKEN": "${user_config.HUD_API_TOKEN}",
-            "ORS_API_KEY": "${user_config.ORS_API_KEY}",
+            "ACGME_PROGRAMS_CSV": "${user_config.ACGME_PROGRAMS_CSV}",
             "BLS_API_KEY": "${user_config.BLS_API_KEY}",
+            "CENSUS_API_KEY": "${user_config.CENSUS_API_KEY}",
+            "CHPL_API_KEY": "${user_config.CHPL_API_KEY}",
+            "CLINICAL_TRIALS_INVENTORY_HARD_MAX": "${user_config.CLINICAL_TRIALS_INVENTORY_HARD_MAX}",
+            "DOCGRAPH_CSV_PATH": "${user_config.DOCGRAPH_CSV_PATH}",
             "GOOGLE_CSE_API_KEY": "${user_config.GOOGLE_CSE_API_KEY}",
+            "GOOGLE_CSE_CACHE_TTL_SECONDS": "${user_config.GOOGLE_CSE_CACHE_TTL_SECONDS}",
+            "GOOGLE_CSE_DAILY_LIMIT": "${user_config.GOOGLE_CSE_DAILY_LIMIT}",
             "GOOGLE_CSE_ID": "${user_config.GOOGLE_CSE_ID}",
-            "PROXYCURL_API_KEY": "${user_config.PROXYCURL_API_KEY}"
+            "GOOGLE_CSE_SESSION_LIMIT": "${user_config.GOOGLE_CSE_SESSION_LIMIT}",
+            "HUD_API_TOKEN": "${user_config.HUD_API_TOKEN}",
+            "MCP_GATEWAY_ALLOWED_HOSTS": "${user_config.MCP_GATEWAY_ALLOWED_HOSTS}",
+            "MCP_GATEWAY_ALLOWED_ORIGINS": "${user_config.MCP_GATEWAY_ALLOWED_ORIGINS}",
+            "MCP_GATEWAY_AUTH_REQUIRED": "${user_config.MCP_GATEWAY_AUTH_REQUIRED}",
+            "MCP_GATEWAY_BEARER_TOKEN": "${user_config.MCP_GATEWAY_BEARER_TOKEN}",
+            "MCP_GATEWAY_BEARER_TOKENS": "${user_config.MCP_GATEWAY_BEARER_TOKENS}",
+            "MCP_GATEWAY_BEARER_TOKEN_SHA256": "${user_config.MCP_GATEWAY_BEARER_TOKEN_SHA256}",
+            "MCP_GATEWAY_BEARER_TOKEN_SHA256_LIST": "${user_config.MCP_GATEWAY_BEARER_TOKEN_SHA256_LIST}",
+            "MCP_GATEWAY_ISSUER_URL": "${user_config.MCP_GATEWAY_ISSUER_URL}",
+            "MCP_GATEWAY_PUBLIC_URL": "${user_config.MCP_GATEWAY_PUBLIC_URL}",
+            "MCP_GATEWAY_REQUIRED_SCOPES": "${user_config.MCP_GATEWAY_REQUIRED_SCOPES}",
+            "MCP_GATEWAY_TOKEN_SCOPES": "${user_config.MCP_GATEWAY_TOKEN_SCOPES}",
+            "MCP_LIVE_GATEWAY_ALLOWED_HOSTS": "${user_config.MCP_LIVE_GATEWAY_ALLOWED_HOSTS}",
+            "MCP_LIVE_GATEWAY_ALLOWED_ORIGINS": "${user_config.MCP_LIVE_GATEWAY_ALLOWED_ORIGINS}",
+            "MCP_LIVE_GATEWAY_ALLOW_GLOBAL_BULK_SCOPE": "${user_config.MCP_LIVE_GATEWAY_ALLOW_GLOBAL_BULK_SCOPE}",
+            "MCP_LIVE_GATEWAY_ALLOW_NETWORK_BIND": "${user_config.MCP_LIVE_GATEWAY_ALLOW_NETWORK_BIND}",
+            "MCP_LIVE_GATEWAY_AUDIT_LOG_PATH": "${user_config.MCP_LIVE_GATEWAY_AUDIT_LOG_PATH}",
+            "MCP_LIVE_GATEWAY_AUTH_REQUIRED": "${user_config.MCP_LIVE_GATEWAY_AUTH_REQUIRED}",
+            "MCP_LIVE_GATEWAY_BEARER_TOKEN": "${user_config.MCP_LIVE_GATEWAY_BEARER_TOKEN}",
+            "MCP_LIVE_GATEWAY_BEARER_TOKENS": "${user_config.MCP_LIVE_GATEWAY_BEARER_TOKENS}",
+            "MCP_LIVE_GATEWAY_BEARER_TOKEN_SHA256": "${user_config.MCP_LIVE_GATEWAY_BEARER_TOKEN_SHA256}",
+            "MCP_LIVE_GATEWAY_BEARER_TOKEN_SHA256_LIST": "${user_config.MCP_LIVE_GATEWAY_BEARER_TOKEN_SHA256_LIST}",
+            "MCP_LIVE_GATEWAY_ISSUER_URL": "${user_config.MCP_LIVE_GATEWAY_ISSUER_URL}",
+            "MCP_LIVE_GATEWAY_PUBLIC_URL": "${user_config.MCP_LIVE_GATEWAY_PUBLIC_URL}",
+            "MCP_LIVE_GATEWAY_REQUIRED_SCOPES": "${user_config.MCP_LIVE_GATEWAY_REQUIRED_SCOPES}",
+            "MCP_LIVE_GATEWAY_TOKEN_SCOPES": "${user_config.MCP_LIVE_GATEWAY_TOKEN_SCOPES}",
+            "MRF_DOWNLOAD_PROGRESS_INTERVAL_BYTES": "${user_config.MRF_DOWNLOAD_PROGRESS_INTERVAL_BYTES}",
+            "MRF_MAX_DOWNLOAD_BYTES": "${user_config.MRF_MAX_DOWNLOAD_BYTES}",
+            "MRF_MIN_FREE_BYTES": "${user_config.MRF_MIN_FREE_BYTES}",
+            "ORS_API_KEY": "${user_config.ORS_API_KEY}",
+            "OSRM_BASE_URL": "${user_config.OSRM_BASE_URL}",
+            "PLACES_CACHE_DIR": "${user_config.PLACES_CACHE_DIR}",
+            "PROXYCURL_API_KEY": "${user_config.PROXYCURL_API_KEY}",
+            "SAM_GOV_API_KEY": "${user_config.SAM_GOV_API_KEY}",
+            "SEC_USER_AGENT": "${user_config.SEC_USER_AGENT}"
           }
         }
       }
@@ -84,87 +156,370 @@
     "server_name": {
       "type": "string",
       "title": "Healthcare Data MCP server",
-      "description": "Server to run: cms-facility, service-area, geo-demographics, drive-time, hospital-quality, health-system-profiler, financial-intelligence, price-transparency, physician-referral-network, workforce-analytics, claims-analytics, public-records, web-intelligence, discovery, gateway, live-gateway, provider-enrollment, community-health, or research-trials.",
+      "description": "Registry-backed server to run. Choices: service-area: CMS hospital service areas and market share; geo-demographics: Census, ZCTA, Medicare, and HUD geography; drive-time: Routing, drive-time matrices, and access scoring; hospital-quality: CMS quality, readmission, and safety data; cms-facility: CMS facility master data and NPPES lookup; health-system-profiler: Health system discovery and facility enrichment; financial-intelligence: IRS 990, SEC EDGAR, and nonprofit finance intelligence; price-transparency: Hospital MRF and benchmark pricing; physician-referral-network: NPPES, physician mix, referral network, and leakage analysis; workforce-analytics: BLS and ACGME workforce analytics; claims-analytics: DRG, service-line, and claims analytics; public-records: SAM.gov, USAspending, CHPL, accreditation, and exclusion screening; web-intelligence: Web search and health system OSINT; discovery: Dataset catalog resources, cache status, and prompts; gateway: Remote-safe metadata gateway with search/fetch; provider-enrollment: CMS PECOS-derived provider enrollment, ownership, and CHOW; community-health: CDC PLACES community-health estimates for counties, places, tracts, and ZCTAs; research-trials: NIH RePORTER funding and ClinicalTrials.gov study activity; live-gateway: Authenticated live router for approved provider, quality, claims, compliance, community, and research tools.",
       "required": true,
-      "default": "cms-facility"
+      "default": "cms-facility",
+      "enum": [
+        "service-area",
+        "geo-demographics",
+        "drive-time",
+        "hospital-quality",
+        "cms-facility",
+        "health-system-profiler",
+        "financial-intelligence",
+        "price-transparency",
+        "physician-referral-network",
+        "workforce-analytics",
+        "claims-analytics",
+        "public-records",
+        "web-intelligence",
+        "discovery",
+        "gateway",
+        "provider-enrollment",
+        "community-health",
+        "research-trials",
+        "live-gateway"
+      ]
     },
     "SAM_GOV_API_KEY": {
       "type": "string",
       "title": "SAM.gov API key",
-      "description": "Required for SAM.gov Exclusions and opportunity tools. Leave blank to use tools that do not require SAM.gov.",
+      "description": "Required for SAM.gov opportunity and Exclusions API tools.",
       "required": false,
-      "sensitive": true,
-      "default": ""
+      "default": "",
+      "sensitive": true
     },
     "CHPL_API_KEY": {
       "type": "string",
       "title": "ONC CHPL API key",
-      "description": "Optional enrichment for public-records EHR certification lookups.",
+      "description": "Optional ONC CHPL enrichment key.",
       "required": false,
-      "sensitive": true,
-      "default": ""
+      "default": "",
+      "sensitive": true
     },
     "SEC_USER_AGENT": {
       "type": "string",
       "title": "SEC EDGAR User-Agent",
-      "description": "Required for financial-intelligence SEC EDGAR tools. Use an app name and real contact email.",
+      "description": "Required for SEC EDGAR-backed tools.",
       "required": false,
       "default": ""
     },
     "CENSUS_API_KEY": {
       "type": "string",
       "title": "Census API key",
-      "description": "Optional key for Census-backed geo-demographics tools.",
+      "description": "Optional Census key for higher API limits.",
       "required": false,
-      "sensitive": true,
-      "default": ""
+      "default": "",
+      "sensitive": true
     },
     "HUD_API_TOKEN": {
       "type": "string",
       "title": "HUD API token",
-      "description": "Optional token for HUD ZIP crosswalk tools.",
+      "description": "Optional HUD USPS ZIP crosswalk API token.",
       "required": false,
-      "sensitive": true,
-      "default": ""
+      "default": "",
+      "sensitive": true
     },
     "ORS_API_KEY": {
       "type": "string",
       "title": "OpenRouteService API key",
-      "description": "Optional key for drive-time isochrones.",
+      "description": "Optional OpenRouteService key for isochrones.",
       "required": false,
-      "sensitive": true,
-      "default": ""
+      "default": "",
+      "sensitive": true
     },
     "BLS_API_KEY": {
       "type": "string",
       "title": "BLS API key",
-      "description": "Optional key for workforce analytics rate limits.",
+      "description": "Optional BLS key for higher API limits.",
       "required": false,
-      "sensitive": true,
-      "default": ""
+      "default": "",
+      "sensitive": true
     },
     "GOOGLE_CSE_API_KEY": {
       "type": "string",
       "title": "Google Custom Search API key",
-      "description": "Optional key for web-intelligence search.",
+      "description": "Optional Google Custom Search API key.",
       "required": false,
-      "sensitive": true,
-      "default": ""
+      "default": "",
+      "sensitive": true
     },
     "GOOGLE_CSE_ID": {
       "type": "string",
       "title": "Google Custom Search Engine ID",
-      "description": "Optional CSE ID used with GOOGLE_CSE_API_KEY.",
+      "description": "Optional Google Custom Search Engine ID.",
       "required": false,
       "default": ""
     },
     "PROXYCURL_API_KEY": {
       "type": "string",
       "title": "Proxycurl API key",
-      "description": "Optional key for web-intelligence enrichment.",
+      "description": "Optional Proxycurl enrichment key.",
       "required": false,
-      "sensitive": true,
+      "default": "",
+      "sensitive": true
+    },
+    "ACGME_PROGRAMS_CSV": {
+      "type": "string",
+      "title": "ACGME Programs CSV path",
+      "description": "Optional normalized ACGME Program Search export path.",
+      "required": false,
       "default": ""
+    },
+    "DOCGRAPH_CSV_PATH": {
+      "type": "string",
+      "title": "DocGraph CSV path",
+      "description": "Optional licensed CareSet DocGraph import path.",
+      "required": false,
+      "default": ""
+    },
+    "MCP_GATEWAY_BEARER_TOKEN": {
+      "type": "string",
+      "title": "Metadata gateway bearer token",
+      "description": "Optional local bearer token.",
+      "required": false,
+      "default": "",
+      "sensitive": true
+    },
+    "MCP_GATEWAY_BEARER_TOKEN_SHA256": {
+      "type": "string",
+      "title": "Metadata gateway bearer token SHA-256",
+      "description": "Recommended token hash for remote deployments.",
+      "required": false,
+      "default": "",
+      "sensitive": true
+    },
+    "MCP_LIVE_GATEWAY_BEARER_TOKEN": {
+      "type": "string",
+      "title": "Live gateway bearer token",
+      "description": "Bearer token for live HTTP/SSE deployments.",
+      "required": false,
+      "default": "",
+      "sensitive": true
+    },
+    "MCP_LIVE_GATEWAY_BEARER_TOKEN_SHA256": {
+      "type": "string",
+      "title": "Live gateway bearer token SHA-256",
+      "description": "Recommended token hash for live HTTP/SSE deployments.",
+      "required": false,
+      "default": "",
+      "sensitive": true
+    },
+    "MCP_LIVE_GATEWAY_ALLOW_GLOBAL_BULK_SCOPE": {
+      "type": "string",
+      "title": "Live gateway global bulk scope opt-in",
+      "description": "Explicit opt-in to grant mcp:bulk to every valid live-gateway token.",
+      "required": false,
+      "default": ""
+    },
+    "MCP_LIVE_GATEWAY_REQUIRED_SCOPES": {
+      "type": "string",
+      "title": "Live gateway required scopes",
+      "description": "Required auth scopes; defaults to mcp:read.",
+      "required": false,
+      "default": ""
+    },
+    "OSRM_BASE_URL": {
+      "type": "string",
+      "title": "OSRM base URL",
+      "description": "Optional OSRM endpoint; defaults to the public demo server.",
+      "required": false,
+      "default": ""
+    },
+    "CLINICAL_TRIALS_INVENTORY_HARD_MAX": {
+      "type": "string",
+      "title": "Clinical Trials Inventory Hard Max",
+      "description": "Maximum ClinicalTrials.gov records scanned by inventory tools.",
+      "required": false,
+      "default": ""
+    },
+    "GOOGLE_CSE_CACHE_TTL_SECONDS": {
+      "type": "string",
+      "title": "Google Cse Cache Ttl Seconds",
+      "description": "Google Custom Search cache TTL in seconds.",
+      "required": false,
+      "default": ""
+    },
+    "GOOGLE_CSE_DAILY_LIMIT": {
+      "type": "string",
+      "title": "Google Cse Daily Limit",
+      "description": "Google Custom Search daily request guardrail.",
+      "required": false,
+      "default": ""
+    },
+    "GOOGLE_CSE_SESSION_LIMIT": {
+      "type": "string",
+      "title": "Google Cse Session Limit",
+      "description": "Google Custom Search per-session request guardrail.",
+      "required": false,
+      "default": ""
+    },
+    "MCP_GATEWAY_ALLOWED_HOSTS": {
+      "type": "string",
+      "title": "Mcp Gateway Allowed Hosts",
+      "description": "Allowed Host headers for metadata gateway HTTP/SSE.",
+      "required": false,
+      "default": ""
+    },
+    "MCP_GATEWAY_ALLOWED_ORIGINS": {
+      "type": "string",
+      "title": "Mcp Gateway Allowed Origins",
+      "description": "Allowed Origin headers for metadata gateway HTTP/SSE.",
+      "required": false,
+      "default": ""
+    },
+    "MCP_GATEWAY_AUTH_REQUIRED": {
+      "type": "string",
+      "title": "Mcp Gateway Auth Required",
+      "description": "Whether metadata gateway HTTP/SSE auth is required.",
+      "required": false,
+      "default": ""
+    },
+    "MCP_GATEWAY_BEARER_TOKENS": {
+      "type": "string",
+      "title": "Mcp Gateway Bearer Tokens",
+      "description": "Comma-separated metadata gateway bearer tokens.",
+      "required": false,
+      "default": "",
+      "sensitive": true
+    },
+    "MCP_GATEWAY_BEARER_TOKEN_SHA256_LIST": {
+      "type": "string",
+      "title": "Mcp Gateway Bearer Token Sha256 List",
+      "description": "Comma-separated metadata gateway bearer token SHA-256 hashes.",
+      "required": false,
+      "default": "",
+      "sensitive": true
+    },
+    "MCP_GATEWAY_ISSUER_URL": {
+      "type": "string",
+      "title": "Mcp Gateway Issuer Url",
+      "description": "OAuth/OIDC issuer URL advertised by the metadata gateway.",
+      "required": false,
+      "default": ""
+    },
+    "MCP_GATEWAY_PUBLIC_URL": {
+      "type": "string",
+      "title": "Mcp Gateway Public Url",
+      "description": "Public HTTPS MCP URL for metadata gateway deployments.",
+      "required": false,
+      "default": ""
+    },
+    "MCP_GATEWAY_REQUIRED_SCOPES": {
+      "type": "string",
+      "title": "Mcp Gateway Required Scopes",
+      "description": "Required metadata gateway auth scopes; defaults to mcp:read.",
+      "required": false,
+      "default": ""
+    },
+    "MCP_LIVE_GATEWAY_ALLOWED_HOSTS": {
+      "type": "string",
+      "title": "Mcp Live Gateway Allowed Hosts",
+      "description": "Allowed Host headers for live-gateway HTTP/SSE.",
+      "required": false,
+      "default": ""
+    },
+    "MCP_LIVE_GATEWAY_ALLOWED_ORIGINS": {
+      "type": "string",
+      "title": "Mcp Live Gateway Allowed Origins",
+      "description": "Allowed Origin headers for live-gateway HTTP/SSE.",
+      "required": false,
+      "default": ""
+    },
+    "MCP_LIVE_GATEWAY_ALLOW_NETWORK_BIND": {
+      "type": "string",
+      "title": "Mcp Live Gateway Allow Network Bind",
+      "description": "Explicit opt-in for live-gateway wildcard network binds behind HTTPS and locked allow-lists.",
+      "required": false,
+      "default": ""
+    },
+    "MCP_LIVE_GATEWAY_AUTH_REQUIRED": {
+      "type": "string",
+      "title": "Mcp Live Gateway Auth Required",
+      "description": "Whether live-gateway HTTP/SSE auth is required; cannot disable remote auth.",
+      "required": false,
+      "default": ""
+    },
+    "MCP_LIVE_GATEWAY_BEARER_TOKENS": {
+      "type": "string",
+      "title": "Mcp Live Gateway Bearer Tokens",
+      "description": "Comma-separated live-gateway bearer tokens.",
+      "required": false,
+      "default": "",
+      "sensitive": true
+    },
+    "MCP_LIVE_GATEWAY_BEARER_TOKEN_SHA256_LIST": {
+      "type": "string",
+      "title": "Mcp Live Gateway Bearer Token Sha256 List",
+      "description": "Comma-separated live-gateway bearer token SHA-256 hashes.",
+      "required": false,
+      "default": "",
+      "sensitive": true
+    },
+    "MCP_LIVE_GATEWAY_ISSUER_URL": {
+      "type": "string",
+      "title": "Mcp Live Gateway Issuer Url",
+      "description": "OAuth/OIDC issuer URL advertised by live-gateway.",
+      "required": false,
+      "default": ""
+    },
+    "MCP_LIVE_GATEWAY_PUBLIC_URL": {
+      "type": "string",
+      "title": "Mcp Live Gateway Public Url",
+      "description": "Public HTTPS MCP URL for live-gateway deployments.",
+      "required": false,
+      "default": ""
+    },
+    "MRF_DOWNLOAD_PROGRESS_INTERVAL_BYTES": {
+      "type": "string",
+      "title": "Mrf Download Progress Interval Bytes",
+      "description": "Progress logging interval for large MRF downloads.",
+      "required": false,
+      "default": ""
+    },
+    "MRF_MAX_DOWNLOAD_BYTES": {
+      "type": "string",
+      "title": "Mrf Max Download Bytes",
+      "description": "Maximum hospital MRF download size in bytes.",
+      "required": false,
+      "default": ""
+    },
+    "MRF_MIN_FREE_BYTES": {
+      "type": "string",
+      "title": "Mrf Min Free Bytes",
+      "description": "Minimum free disk bytes required before MRF downloads.",
+      "required": false,
+      "default": ""
+    },
+    "PLACES_CACHE_DIR": {
+      "type": "string",
+      "title": "Places Cache Dir",
+      "description": "Optional CDC PLACES cache directory override.",
+      "required": false,
+      "default": ""
+    },
+    "MCP_LIVE_GATEWAY_AUDIT_LOG_PATH": {
+      "type": "string",
+      "title": "Mcp Live Gateway Audit Log Path",
+      "description": "Optional JSONL file path for non-secret live-gateway audit events.",
+      "required": false,
+      "default": ""
+    },
+    "MCP_GATEWAY_TOKEN_SCOPES": {
+      "type": "string",
+      "title": "Mcp Gateway Token Scopes",
+      "description": "Optional semicolon-separated SHA-256 token-hash scope overrides.",
+      "required": false,
+      "default": "",
+      "sensitive": true
+    },
+    "MCP_LIVE_GATEWAY_TOKEN_SCOPES": {
+      "type": "string",
+      "title": "Mcp Live Gateway Token Scopes",
+      "description": "Optional semicolon-separated SHA-256 token-hash scope overrides; use this to grant mcp:bulk to selected tokens.",
+      "required": false,
+      "default": "",
+      "sensitive": true
     }
   }
 }

@@ -11,6 +11,7 @@ from servers.health_system_profiler.jefferson_resolver import (
     reconcile_system_facilities,
     resolve_combined_system_slug,
 )
+from shared.utils.mcp_response import validate_evidence_receipt
 
 
 def test_alias_ledger_resolves_legacy_systems_to_jefferson():
@@ -75,6 +76,8 @@ async def test_get_system_profile_uses_combined_jefferson_resolver_without_ahrq_
         "2024-08-01",
         "2025-07-30",
     }
+    _assert_system_evidence(result["evidence"])
+    _assert_system_source_metadata(result)
 
 
 @pytest.mark.asyncio
@@ -83,6 +86,8 @@ async def test_reconcile_system_facilities_tool_returns_jefferson_ledger():
 
     assert result["system_slug"] == JEFFERSON_SLUG
     assert result["facility_count"] == 32
+    _assert_system_evidence(result["evidence"])
+    _assert_system_source_metadata(result)
 
 
 def test_reconcile_system_facilities_can_mark_external_source_matches():
@@ -108,3 +113,30 @@ def test_reconcile_system_facilities_can_mark_external_source_matches():
     assert "ahrq_row" in by_name["Jefferson Einstein Philadelphia Hospital"]["source_refs"]
     assert "cms_hgi_row" in by_name["Lehigh Valley Hospital - Cedar Crest"]["source_refs"]
     assert "provider_enrollment_row" in by_name["Jefferson Einstein Montgomery Hospital"]["source_refs"]
+
+
+def _assert_system_evidence(evidence: dict) -> None:
+    validate_evidence_receipt(evidence, require_content=True)
+    assert evidence["dataset_id"] == "ahrq_health_system_compendium"
+    assert evidence["source_period"]
+    assert evidence["cache_status"] == "mixed_public_cache"
+    assert evidence["cache_freshness"]
+    assert evidence["entity_scope"] == "health_system_facility_identity"
+    assert evidence["match_basis"]
+    assert evidence["confidence"]
+    assert evidence["caveat"]
+    assert evidence["next_step"]
+
+
+def _assert_system_source_metadata(result: dict) -> None:
+    metadata = result["source_metadata"]
+    evidence = result["evidence"]
+
+    assert metadata["source_name"] == evidence["source_name"]
+    assert metadata["dataset_id"] == evidence["dataset_id"]
+    assert metadata["source_period"] == evidence["source_period"]
+    assert metadata["cache_status"] == evidence["cache_status"]
+    assert metadata["cache_freshness"] == evidence["cache_freshness"]
+    assert metadata["entity_scope"] == evidence["entity_scope"]
+    assert metadata["query"] == evidence["query"]
+    assert metadata["source_type"] == "ahrq_cms_nppes_health_system_public_sources"

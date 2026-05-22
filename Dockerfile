@@ -1,5 +1,17 @@
 FROM python:3.12-slim
 
+ARG VERSION=0.2.0
+ARG VCS_REF=unknown
+ARG BUILD_DATE=unknown
+
+LABEL org.opencontainers.image.title="Healthcare Data MCP" \
+      org.opencontainers.image.description="Public healthcare data MCP servers for local agents and controlled gateways" \
+      org.opencontainers.image.version="$VERSION" \
+      org.opencontainers.image.revision="$VCS_REF" \
+      org.opencontainers.image.created="$BUILD_DATE" \
+      org.opencontainers.image.source="https://github.com/ajhcs/healthcare-data-mcp" \
+      org.opencontainers.image.licenses="MIT"
+
 WORKDIR /app
 
 # Install system deps for geopandas (GEOS, GDAL, PROJ)

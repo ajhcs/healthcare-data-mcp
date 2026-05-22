@@ -1,38 +1,22 @@
-# Healthcare Data MCP — Zero-Config Docker Compose
-# Runs the 7 servers that need no external keys.
+# Healthcare Data MCP - Zero-Config Docker Compose
+# Registry-backed local profile for servers that do not require API keys.
 #
 # Usage:
 #   docker compose -f docker-compose.zero-config.yml up -d
 #
-# All servers expose streamable-http on their assigned ports.
-# Point your MCP client at http://localhost:PORT/mcp
+# Host ports bind to 127.0.0.1. Put a gateway behind HTTPS/auth for remote access.
 
 services:
-  cms-facility:
-    build: .
-    command: python -m servers.cms_facility.server
-    ports:
-      - "8006:8006"
-    environment:
-      - MCP_TRANSPORT=streamable-http
-      - MCP_PORT=8006
-    volumes:
-      - healthcare-cache:/root/.healthcare-data-mcp/cache
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost',8006),5); s.close()"]
-      interval: 60s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
-
   service-area:
     build: .
+    image: "${HC_MCP_IMAGE:-healthcare-data-mcp:0.2.0}"
+    pull_policy: missing
     command: python -m servers.service_area.server
     ports:
-      - "8002:8002"
+      - "127.0.0.1:8002:8002"
     environment:
       - MCP_TRANSPORT=streamable-http
+      - MCP_HOST=0.0.0.0
       - MCP_PORT=8002
     volumes:
       - healthcare-cache:/root/.healthcare-data-mcp/cache
@@ -44,13 +28,62 @@ services:
       retries: 3
       start_period: 30s
 
-  hospital-quality:
+  geo-demographics:
     build: .
-    command: python -m servers.hospital_quality.server
+    image: "${HC_MCP_IMAGE:-healthcare-data-mcp:0.2.0}"
+    pull_policy: missing
+    command: python -m servers.geo_demographics.server
     ports:
-      - "8005:8005"
+      - "127.0.0.1:8003:8003"
     environment:
       - MCP_TRANSPORT=streamable-http
+      - MCP_HOST=0.0.0.0
+      - MCP_PORT=8003
+      - CENSUS_API_KEY=${CENSUS_API_KEY:-}
+      - HUD_API_TOKEN=${HUD_API_TOKEN:-}
+    volumes:
+      - healthcare-cache:/root/.healthcare-data-mcp/cache
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost',8003),5); s.close()"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  drive-time:
+    build: .
+    image: "${HC_MCP_IMAGE:-healthcare-data-mcp:0.2.0}"
+    pull_policy: missing
+    command: python -m servers.drive_time.server
+    ports:
+      - "127.0.0.1:8004:8004"
+    environment:
+      - MCP_TRANSPORT=streamable-http
+      - MCP_HOST=0.0.0.0
+      - MCP_PORT=8004
+      - ORS_API_KEY=${ORS_API_KEY:-}
+      - OSRM_BASE_URL=${OSRM_BASE_URL:-http://router.project-osrm.org}
+    volumes:
+      - healthcare-cache:/root/.healthcare-data-mcp/cache
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost',8004),5); s.close()"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  hospital-quality:
+    build: .
+    image: "${HC_MCP_IMAGE:-healthcare-data-mcp:0.2.0}"
+    pull_policy: missing
+    command: python -m servers.hospital_quality.server
+    ports:
+      - "127.0.0.1:8005:8005"
+    environment:
+      - MCP_TRANSPORT=streamable-http
+      - MCP_HOST=0.0.0.0
       - MCP_PORT=8005
     volumes:
       - healthcare-cache:/root/.healthcare-data-mcp/cache
@@ -62,13 +95,37 @@ services:
       retries: 3
       start_period: 30s
 
-  health-system-profiler:
+  cms-facility:
     build: .
-    command: python -m servers.health_system_profiler.server
+    image: "${HC_MCP_IMAGE:-healthcare-data-mcp:0.2.0}"
+    pull_policy: missing
+    command: python -m servers.cms_facility.server
     ports:
-      - "8007:8007"
+      - "127.0.0.1:8006:8006"
     environment:
       - MCP_TRANSPORT=streamable-http
+      - MCP_HOST=0.0.0.0
+      - MCP_PORT=8006
+    volumes:
+      - healthcare-cache:/root/.healthcare-data-mcp/cache
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost',8006),5); s.close()"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  health-system-profiler:
+    build: .
+    image: "${HC_MCP_IMAGE:-healthcare-data-mcp:0.2.0}"
+    pull_policy: missing
+    command: python -m servers.health_system_profiler.server
+    ports:
+      - "127.0.0.1:8007:8007"
+    environment:
+      - MCP_TRANSPORT=streamable-http
+      - MCP_HOST=0.0.0.0
       - MCP_PORT=8007
     volumes:
       - healthcare-cache:/root/.healthcare-data-mcp/cache
@@ -82,12 +139,18 @@ services:
 
   price-transparency:
     build: .
+    image: "${HC_MCP_IMAGE:-healthcare-data-mcp:0.2.0}"
+    pull_policy: missing
     command: python -m servers.price_transparency.server
     ports:
-      - "8009:8009"
+      - "127.0.0.1:8009:8009"
     environment:
       - MCP_TRANSPORT=streamable-http
+      - MCP_HOST=0.0.0.0
       - MCP_PORT=8009
+      - MRF_MAX_DOWNLOAD_BYTES=${MRF_MAX_DOWNLOAD_BYTES:-}
+      - MRF_MIN_FREE_BYTES=${MRF_MIN_FREE_BYTES:-}
+      - MRF_DOWNLOAD_PROGRESS_INTERVAL_BYTES=${MRF_DOWNLOAD_PROGRESS_INTERVAL_BYTES:-}
     volumes:
       - healthcare-cache:/root/.healthcare-data-mcp/cache
     restart: unless-stopped
@@ -100,12 +163,16 @@ services:
 
   physician-referral-network:
     build: .
+    image: "${HC_MCP_IMAGE:-healthcare-data-mcp:0.2.0}"
+    pull_policy: missing
     command: python -m servers.physician_referral_network.server
     ports:
-      - "8010:8010"
+      - "127.0.0.1:8010:8010"
     environment:
       - MCP_TRANSPORT=streamable-http
+      - MCP_HOST=0.0.0.0
       - MCP_PORT=8010
+      - DOCGRAPH_CSV_PATH=${DOCGRAPH_CSV_PATH:-}
     volumes:
       - healthcare-cache:/root/.healthcare-data-mcp/cache
     restart: unless-stopped
@@ -116,19 +183,186 @@ services:
       retries: 3
       start_period: 30s
 
-  claims-analytics:
+  workforce-analytics:
     build: .
-    command: python -m servers.claims_analytics.server
+    image: "${HC_MCP_IMAGE:-healthcare-data-mcp:0.2.0}"
+    pull_policy: missing
+    command: python -m servers.workforce_analytics.server
     ports:
-      - "8012:8012"
+      - "127.0.0.1:8011:8011"
     environment:
       - MCP_TRANSPORT=streamable-http
+      - MCP_HOST=0.0.0.0
+      - MCP_PORT=8011
+      - BLS_API_KEY=${BLS_API_KEY:-}
+      - ACGME_PROGRAMS_CSV=${ACGME_PROGRAMS_CSV:-}
+    volumes:
+      - healthcare-cache:/root/.healthcare-data-mcp/cache
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost',8011),5); s.close()"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  claims-analytics:
+    build: .
+    image: "${HC_MCP_IMAGE:-healthcare-data-mcp:0.2.0}"
+    pull_policy: missing
+    command: python -m servers.claims_analytics.server
+    ports:
+      - "127.0.0.1:8012:8012"
+    environment:
+      - MCP_TRANSPORT=streamable-http
+      - MCP_HOST=0.0.0.0
       - MCP_PORT=8012
     volumes:
       - healthcare-cache:/root/.healthcare-data-mcp/cache
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost',8012),5); s.close()"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  public-records:
+    build: .
+    image: "${HC_MCP_IMAGE:-healthcare-data-mcp:0.2.0}"
+    pull_policy: missing
+    command: python -m servers.public_records.server
+    ports:
+      - "127.0.0.1:8013:8013"
+    environment:
+      - MCP_TRANSPORT=streamable-http
+      - MCP_HOST=0.0.0.0
+      - MCP_PORT=8013
+      - SAM_GOV_API_KEY=${SAM_GOV_API_KEY:-}
+      - CHPL_API_KEY=${CHPL_API_KEY:-}
+    volumes:
+      - healthcare-cache:/root/.healthcare-data-mcp/cache
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost',8013),5); s.close()"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  discovery:
+    build: .
+    image: "${HC_MCP_IMAGE:-healthcare-data-mcp:0.2.0}"
+    pull_policy: missing
+    command: python -m servers.discovery.server
+    ports:
+      - "127.0.0.1:8015:8015"
+    environment:
+      - MCP_TRANSPORT=streamable-http
+      - MCP_HOST=0.0.0.0
+      - MCP_PORT=8015
+    volumes:
+      - healthcare-cache:/root/.healthcare-data-mcp/cache
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost',8015),5); s.close()"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  gateway:
+    build: .
+    image: "${HC_MCP_IMAGE:-healthcare-data-mcp:0.2.0}"
+    pull_policy: missing
+    command: python -m servers.gateway.server
+    ports:
+      - "127.0.0.1:8016:8016"
+    environment:
+      - MCP_TRANSPORT=streamable-http
+      - MCP_HOST=0.0.0.0
+      - MCP_PORT=8016
+      - MCP_GATEWAY_AUTH_REQUIRED=${MCP_GATEWAY_AUTH_REQUIRED:-false}
+      - MCP_GATEWAY_BEARER_TOKEN=${MCP_GATEWAY_BEARER_TOKEN:-}
+      - MCP_GATEWAY_BEARER_TOKENS=${MCP_GATEWAY_BEARER_TOKENS:-}
+      - MCP_GATEWAY_BEARER_TOKEN_SHA256=${MCP_GATEWAY_BEARER_TOKEN_SHA256:-}
+      - MCP_GATEWAY_BEARER_TOKEN_SHA256_LIST=${MCP_GATEWAY_BEARER_TOKEN_SHA256_LIST:-}
+      - MCP_GATEWAY_REQUIRED_SCOPES=${MCP_GATEWAY_REQUIRED_SCOPES:-mcp:read}
+      - MCP_GATEWAY_TOKEN_SCOPES=${MCP_GATEWAY_TOKEN_SCOPES:-}
+      - MCP_GATEWAY_ALLOWED_HOSTS=${MCP_GATEWAY_ALLOWED_HOSTS:-localhost:8016,127.0.0.1:8016}
+      - MCP_GATEWAY_ALLOWED_ORIGINS=${MCP_GATEWAY_ALLOWED_ORIGINS:-http://localhost:*,http://127.0.0.1:*}
+      - MCP_GATEWAY_PUBLIC_URL=${MCP_GATEWAY_PUBLIC_URL:-}
+      - MCP_GATEWAY_ISSUER_URL=${MCP_GATEWAY_ISSUER_URL:-}
+    volumes:
+      - healthcare-cache:/root/.healthcare-data-mcp/cache
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost',8016),5); s.close()"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  provider-enrollment:
+    build: .
+    image: "${HC_MCP_IMAGE:-healthcare-data-mcp:0.2.0}"
+    pull_policy: missing
+    command: python -m servers.provider_enrollment.server
+    ports:
+      - "127.0.0.1:8017:8017"
+    environment:
+      - MCP_TRANSPORT=streamable-http
+      - MCP_HOST=0.0.0.0
+      - MCP_PORT=8017
+    volumes:
+      - healthcare-cache:/root/.healthcare-data-mcp/cache
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost',8017),5); s.close()"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  community-health:
+    build: .
+    image: "${HC_MCP_IMAGE:-healthcare-data-mcp:0.2.0}"
+    pull_policy: missing
+    command: python -m servers.community_health.server
+    ports:
+      - "127.0.0.1:8018:8018"
+    environment:
+      - MCP_TRANSPORT=streamable-http
+      - MCP_HOST=0.0.0.0
+      - MCP_PORT=8018
+      - PLACES_CACHE_DIR=${PLACES_CACHE_DIR:-}
+    volumes:
+      - healthcare-cache:/root/.healthcare-data-mcp/cache
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost',8018),5); s.close()"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  research-trials:
+    build: .
+    image: "${HC_MCP_IMAGE:-healthcare-data-mcp:0.2.0}"
+    pull_policy: missing
+    command: python -m servers.research_trials.server
+    ports:
+      - "127.0.0.1:8019:8019"
+    environment:
+      - MCP_TRANSPORT=streamable-http
+      - MCP_HOST=0.0.0.0
+      - MCP_PORT=8019
+      - CLINICAL_TRIALS_INVENTORY_HARD_MAX=${CLINICAL_TRIALS_INVENTORY_HARD_MAX:-}
+    volumes:
+      - healthcare-cache:/root/.healthcare-data-mcp/cache
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost',8019),5); s.close()"]
       interval: 60s
       timeout: 10s
       retries: 3

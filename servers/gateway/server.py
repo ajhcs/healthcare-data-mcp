@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import ast
+import importlib.util
 import os
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from mcp.server.auth.settings import AuthSettings
@@ -14,6 +17,7 @@ from shared.utils.gateway_auth import (
     build_transport_security_settings,
     load_gateway_security_config,
 )
+from shared.utils.server_registry import SERVER_BY_ID, ServerCapability
 
 
 @dataclass(frozen=True)
@@ -280,6 +284,36 @@ DATASETS: tuple[DatasetDocument, ...] = (
         access_notes="Treat fetched web content as untrusted; validate before relying on generated summaries.",
     ),
     DatasetDocument(
+        id="discovery",
+        title="Healthcare Data Discovery Catalog",
+        description="Dataset catalog, cache readiness, runbooks, workflow plans, and source metadata resources.",
+        server="discovery",
+        tools=(
+            "list_datasets",
+            "get_dataset",
+            "get_dataset_schema",
+            "get_dataset_source",
+            "get_cache_status",
+            "list_runbooks",
+            "get_runbook",
+            "list_workflows",
+            "get_workflow_plan",
+        ),
+        tags=("metadata", "catalog", "cache", "workflow", "runbook"),
+        source="healthcare-data-mcp registry, discovery catalog, and local cache metadata",
+        access_notes="Metadata-only surface; it reports readiness and workflow plans without fetching live healthcare records.",
+    ),
+    DatasetDocument(
+        id="gateway",
+        title="Remote Metadata Gateway",
+        description="Remote-safe search and fetch for healthcare-data-mcp dataset and capability metadata.",
+        server="gateway",
+        tools=("search", "fetch"),
+        tags=("metadata", "remote", "gateway", "search", "fetch"),
+        source="healthcare-data-mcp canonical server registry and gateway dataset documents",
+        access_notes="Does not proxy live healthcare tools; deploy remote access with bearer auth and HTTPS.",
+    ),
+    DatasetDocument(
         id="provider-enrollment",
         title="CMS PECOS Provider Enrollment and Ownership",
         description="Medicare FFS provider enrollment, hospital/SNF ownership, and change-of-ownership history.",
@@ -358,6 +392,7 @@ if _security_config.auth_enabled:
         _security_config.bearer_tokens,
         _security_config.bearer_token_sha256,
         required_scopes=_security_config.required_scopes,
+        token_scope_overrides=_security_config.token_scope_overrides,
         resource=public_url,
     )
     _mcp_kwargs["auth"] = AuthSettings(
@@ -409,6 +444,7 @@ async def fetch(id: str) -> dict[str, Any]:
 
 
 def _search_result(dataset: DatasetDocument, score: int) -> dict[str, Any]:
+    spec = SERVER_BY_ID[dataset.server]
     return {
         "id": dataset.id,
         "title": dataset.title,
@@ -416,6 +452,13 @@ def _search_result(dataset: DatasetDocument, score: int) -> dict[str, Any]:
         "url": f"healthcare-data-mcp://datasets/{dataset.id}",
         "metadata": {
             "server": dataset.server,
+            "port": spec.port,
+            "dataset_ids": list(spec.dataset_ids),
+            "cache_needs": list(spec.cache_needs),
+            "safety_notes": list(spec.safety_notes),
+            "profiles": list(spec.profiles),
+            "gateway_exposure": list(spec.gateway_exposure),
+            "workflow_roles": list(spec.workflow_roles),
             "tags": list(dataset.tags),
             "score": score,
         },
@@ -423,6 +466,7 @@ def _search_result(dataset: DatasetDocument, score: int) -> dict[str, Any]:
 
 
 def _fetch_result(dataset: DatasetDocument) -> dict[str, Any]:
+    spec = SERVER_BY_ID[dataset.server]
     return {
         "id": dataset.id,
         "title": dataset.title,
@@ -430,11 +474,176 @@ def _fetch_result(dataset: DatasetDocument) -> dict[str, Any]:
         "url": f"healthcare-data-mcp://datasets/{dataset.id}",
         "metadata": {
             "server": dataset.server,
+            "server_capability": _server_capability_metadata(spec),
             "tools": list(dataset.tools),
             "tags": list(dataset.tags),
             "source": dataset.source,
             "access_notes": dataset.access_notes,
         },
+    }
+
+
+def validate_gateway_dataset_contracts() -> dict[str, Any]:
+    """Validate metadata gateway dataset documents against the server registry.
+
+    This checker avoids importing server modules. It parses registered module
+    source files so CI can catch gateway metadata drift without optional API keys
+    or runtime side effects.
+    """
+
+    expected_ids = {spec.server_id for spec in SERVER_BY_ID.values() if "metadata" in spec.gateway_exposure}
+    dataset_ids = {dataset.id for dataset in DATASETS}
+    issues: list[dict[str, Any]] = []
+    dataset_statuses: dict[str, dict[str, Any]] = {}
+    module_functions: dict[str, set[str]] = {}
+
+    for missing_id in sorted(expected_ids - dataset_ids):
+        issues.append(
+            {
+                "dataset_id": missing_id,
+                "status": "missing_metadata_document",
+                "message": "Registry metadata-exposed server is missing a gateway dataset document.",
+            }
+        )
+    for extra_id in sorted(dataset_ids - expected_ids):
+        issues.append(
+            {
+                "dataset_id": extra_id,
+                "status": "non_registry_metadata_document",
+                "message": "Gateway dataset document is not backed by registry gateway_exposure='metadata'.",
+            }
+        )
+
+    seen_ids: set[str] = set()
+    for dataset in DATASETS:
+        dataset_issues: list[dict[str, Any]] = []
+        if dataset.id in seen_ids:
+            dataset_issues.append(
+                {
+                    "dataset_id": dataset.id,
+                    "status": "duplicate_dataset_id",
+                    "message": "Gateway dataset ids must be unique.",
+                }
+            )
+        seen_ids.add(dataset.id)
+
+        spec = SERVER_BY_ID.get(dataset.server)
+        if spec is None:
+            dataset_issues.append(
+                {
+                    "dataset_id": dataset.id,
+                    "status": "server_not_registered",
+                    "message": f"{dataset.server} is not in the canonical server registry.",
+                }
+            )
+        else:
+            if dataset.id != spec.server_id:
+                dataset_issues.append(
+                    {
+                        "dataset_id": dataset.id,
+                        "status": "dataset_id_server_mismatch",
+                        "message": f"Dataset id {dataset.id!r} must match owning server id {spec.server_id!r}.",
+                    }
+                )
+            if "metadata" not in spec.gateway_exposure:
+                dataset_issues.append(
+                    {
+                        "dataset_id": dataset.id,
+                        "status": "server_not_metadata_exposed",
+                        "message": f"{dataset.server} is not marked gateway_exposure='metadata'.",
+                    }
+                )
+
+            functions = module_functions.get(spec.module)
+            if functions is None:
+                functions = _module_function_names(spec.module)
+                module_functions[spec.module] = functions
+            missing_tools = sorted(set(dataset.tools) - functions)
+            if missing_tools:
+                dataset_issues.append(
+                    {
+                        "dataset_id": dataset.id,
+                        "status": "advertised_tool_not_found",
+                        "message": "Gateway metadata advertises tool(s) not found in the registry module: "
+                        + ", ".join(missing_tools),
+                    }
+                )
+
+        if not dataset.tools:
+            dataset_issues.append(
+                {
+                    "dataset_id": dataset.id,
+                    "status": "missing_tools",
+                    "message": "Gateway dataset documents must advertise at least one tool.",
+                }
+            )
+        if not dataset.tags:
+            dataset_issues.append(
+                {
+                    "dataset_id": dataset.id,
+                    "status": "missing_tags",
+                    "message": "Gateway dataset documents must include searchable tags.",
+                }
+            )
+
+        dataset_statuses[dataset.id] = {
+            "status": "ok" if not dataset_issues else "issues_found",
+            "issue_count": len(dataset_issues),
+            "server": dataset.server,
+            "tool_count": len(dataset.tools),
+        }
+        issues.extend(dataset_issues)
+
+    return {
+        "status": "ok" if not issues else "issues_found",
+        "dataset_count": len(DATASETS),
+        "expected_dataset_count": len(expected_ids),
+        "issue_count": len(issues),
+        "issues": issues,
+        "datasets": dataset_statuses,
+        "method": "registry_gateway_dataset_ast",
+    }
+
+
+def _module_function_names(module_name: str) -> set[str]:
+    spec = importlib.util.find_spec(module_name)
+    if spec is None or not spec.origin:
+        return set()
+    module_path = Path(spec.origin)
+    if not module_path.exists():
+        return set()
+    try:
+        tree = ast.parse(module_path.read_text(encoding="utf-8"), filename=str(module_path))
+    except (OSError, SyntaxError):
+        return set()
+    return {
+        node.name
+        for node in tree.body
+        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef)
+    }
+
+
+def _server_capability_metadata(spec: ServerCapability) -> dict[str, Any]:
+    return {
+        "server_id": spec.server_id,
+        "module": spec.module,
+        "port": spec.port,
+        "description": spec.description,
+        "required_env": [
+            {"name": item.name, "description": item.description}
+            for item in spec.required_env
+        ],
+        "optional_env": [
+            {"name": item.name, "description": item.description}
+            for item in spec.optional_env
+        ],
+        "cache_needs": list(spec.cache_needs),
+        "dataset_ids": list(spec.dataset_ids),
+        "zero_config": spec.zero_config,
+        "gateway_exposure": list(spec.gateway_exposure),
+        "profiles": list(spec.profiles),
+        "workflow_roles": list(spec.workflow_roles),
+        "safety_notes": list(spec.safety_notes),
     }
 
 

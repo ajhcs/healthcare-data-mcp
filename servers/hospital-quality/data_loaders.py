@@ -14,7 +14,7 @@ _project_root = Path(__file__).resolve().parent.parent.parent
 if str(_project_root) not in sys.path:
     sys.path.insert(0, str(_project_root))
 
-from shared.utils.cms_client import CMS_API_BASE, cms_download_csv  # noqa: E402
+from shared.utils.cms_client import CMS_API_BASE, cms_download_csv, get_cache_path  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +29,12 @@ DATASETS = {
     "unplanned_visits": "632h-zaca",
 }
 
+COST_REPORT_DATASET_ID = "cms_cost_report"
+COST_REPORT_URL = (
+    "https://data.cms.gov/sites/default/files/2026-01/"
+    "3c39f483-c7e0-4025-8396-4df76942e10f/CostReport_2023_Final.csv"
+)
+
 # In-memory DataFrame cache to avoid re-reading CSV on every call
 _df_cache: dict[str, pd.DataFrame] = {}
 
@@ -36,6 +42,39 @@ _df_cache: dict[str, pd.DataFrame] = {}
 def _csv_url(dataset_id: str) -> str:
     """Build the CSV download URL for a CMS Provider Data Catalog dataset."""
     return f"{CMS_API_BASE}/provider-data/api/1/datastore/query/{dataset_id}/0/download?format=csv"
+
+
+def dataset_cache_metadata(key: str) -> dict[str, object]:
+    """Return cache/source metadata for one hospital-quality dataset."""
+
+    if key == "cost_report":
+        dataset_id = COST_REPORT_DATASET_ID
+        url = COST_REPORT_URL
+        cache_key = "hospital_quality_cost_report"
+    else:
+        dataset_id = DATASETS.get(key, "")
+        url = _csv_url(dataset_id) if dataset_id else ""
+        cache_key = f"hospital_quality_{key}"
+
+    cache_path = get_cache_path(cache_key, suffix=".csv")
+    status = "ready" if cache_path.exists() else "memory_only" if key in _df_cache and not _df_cache[key].empty else "missing"
+    metadata: dict[str, object] = {
+        "source_url": url,
+        "dataset_id": dataset_id,
+        "cache_key": cache_key,
+        "cache_path": str(cache_path),
+        "cache_status": status,
+        "source_period": "latest cached CMS public file at query time",
+    }
+    if cache_path.exists():
+        stat = cache_path.stat()
+        metadata["retrieved_at"] = pd.Timestamp(stat.st_mtime, unit="s", tz="UTC").isoformat()
+        metadata["cache_freshness"] = f"ready; cache_mtime={metadata['retrieved_at']}; bytes={stat.st_size}"
+    elif status == "memory_only":
+        metadata["cache_freshness"] = "loaded from in-memory DataFrame without a persisted CSV cache"
+    else:
+        metadata["cache_freshness"] = "CMS CSV cache file is not present; loader will download on first live use"
+    return metadata
 
 
 async def _load_dataset(key: str) -> pd.DataFrame:
@@ -104,12 +143,8 @@ async def load_cost_report() -> pd.DataFrame:
     if key in _df_cache:
         return _df_cache[key]
 
-    url = (
-        "https://data.cms.gov/sites/default/files/2026-01/"
-        "3c39f483-c7e0-4025-8396-4df76942e10f/CostReport_2023_Final.csv"
-    )
     try:
-        path = await cms_download_csv(url, cache_key="hospital_quality_cost_report")
+        path = await cms_download_csv(COST_REPORT_URL, cache_key="hospital_quality_cost_report")
         df = pd.read_csv(path, dtype=str, keep_default_na=False)
         df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
         _df_cache[key] = df

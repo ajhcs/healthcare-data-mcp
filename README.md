@@ -4,7 +4,7 @@
 [![MCP](https://img.shields.io/badge/MCP-stdio%20%7C%20streamable--http-0f766e)](https://modelcontextprotocol.io/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-Public healthcare market intelligence for AI agents: 18 local MCP servers covering hospitals, ownership, quality, claims, price transparency, workforce, finance, public state-health reporting, community health, research activity, web intelligence, and federal exclusion screening.
+Public healthcare market intelligence for AI agents: 19 local MCP servers covering hospitals, ownership, quality, claims, price transparency, workforce, finance, public state-health reporting, community health, research activity, web intelligence, and federal exclusion screening.
 
 ```bash
 git clone https://github.com/ajhcs/healthcare-data-mcp.git
@@ -12,7 +12,9 @@ cd healthcare-data-mcp
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -e ".[dev]"
+hc-mcp --version
 hc-mcp-setup --interactive
+hc-mcp doctor
 hc-mcp --list
 ```
 
@@ -25,6 +27,8 @@ curl -fsSL https://raw.githubusercontent.com/ajhcs/healthcare-data-mcp/main/inst
 ## TL;DR
 
 Healthcare data is public, but it is scattered across CMS, CDC, NIH, HHS OIG, SAM.gov, Census, HUD, SEC, IRS, hospital MRFs, and other systems. Healthcare Data MCP turns those sources into focused MCP tools with local caches, structured responses, source metadata, and client-friendly server discovery.
+
+Latest release: `v0.2.0` productizes the toolkit around operator-ready readiness checks, task-first workflows, registry-driven packaging, evidence receipts, identity-map handoffs, and safe gateway deployment defaults. See [v0.2.0 release notes](docs/release-notes/2026-05-22-v0.2.0-operator-ready-productization.md).
 
 | If your agent needs to... | Use these servers |
 | --- | --- |
@@ -45,6 +49,20 @@ hc-mcp-setup --interactive
 # See every available server and its default HTTP port
 hc-mcp --list
 
+# Check install, importability, API keys, cache status, ports, and workflows
+hc-mcp doctor
+hc-mcp doctor --check --json
+
+# Show task-first plans an operator or agent can run
+hc-mcp workflow
+hc-mcp workflow compliance_exclusion_screening
+hc-mcp workflow quality_measure_lookup --input ccn=390223 --inputs-json '{"measure":"clabsi_sir"}' --json
+hc-mcp workflow system_reconciliation --input query="Jefferson Health" --input system_slug=jefferson-health --json
+
+# Show curated install/use presets by job family
+hc-mcp preset
+hc-mcp preset market-strategy
+
 # Run one server over stdio for Claude Desktop, Claude Code, Codex, or another local MCP client
 hc-mcp public-records
 
@@ -54,6 +72,23 @@ hc-mcp public-records --transport streamable-http --port 8013
 # Start all HTTP servers in containers
 docker compose up --build
 ```
+
+Workflow plans are read-only and include concrete MCP call templates,
+registry-backed source/API-key readiness, identity-map handoff rules, caveats,
+and report fact-row templates.
+
+## Preset Catalog
+
+Curated presets group registry-backed servers and workflows for common operator
+jobs. They are inspectable with `hc-mcp preset <preset-id> --json` and are
+used by setup, docs, and distribution checks.
+
+| Preset | Servers | Workflows |
+| --- | ---: | --- |
+| `compliance` | 4 | `compliance_exclusion_screening`, `ownership_chow_trace` |
+| `market-strategy` | 10 | `facility_profile`, `quality_profile`, `finance_profile`, `hospital_competitive_profile`, `system_reconciliation`, `market_community_health_scan`, `referral_leakage_readiness` |
+| `metadata-only` | 2 | `quality_measure_lookup` |
+| `research` | 3 | `research_trials_activity_profile` |
 
 ## Why Use It?
 
@@ -68,33 +103,64 @@ docker compose up --build
 
 ## Server Catalog
 
-| Server | Port | Domain |
-| --- | ---: | --- |
-| `service-area` | 8002 | CMS hospital service areas and market share |
-| `geo-demographics` | 8003 | Census, ZCTA, Medicare, and HUD geography |
-| `drive-time` | 8004 | Routing, drive-time matrices, and access scoring |
-| `hospital-quality` | 8005 | CMS quality, exact measure rows, readmission, and safety data |
-| `cms-facility` | 8006 | CMS facility master data and NPPES lookup |
-| `health-system-profiler` | 8007 | Health system discovery and facility enrichment |
-| `financial-intelligence` | 8008 | IRS 990, SEC EDGAR, HCRIS, HFMD, and public financial health intelligence |
-| `price-transparency` | 8009 | Hospital MRF and benchmark pricing |
-| `physician-referral-network` | 8010 | NPPES, physician mix, referral network, and leakage analysis |
-| `workforce-analytics` | 8011 | BLS, ACGME, staffing, productivity, and public throughput analytics |
-| `claims-analytics` | 8012 | DRG, service-line, and claims analytics |
-| `public-records` | 8013 | USAspending, SAM.gov, CHPL, accreditation, PHC4 public reports, HIPAA breaches, cyber enrichment, LEIE, and SAM Exclusions |
-| `web-intelligence` | 8014 | Web search and health system OSINT |
-| `discovery` | 8015 | Dataset catalog resources, cache status, runbooks, and prompts |
-| `gateway` | 8016 | Remote-safe metadata gateway with `search` and `fetch` |
-| `provider-enrollment` | 8017 | CMS PECOS-derived enrollment, ownership graph, and CHOW history |
-| `community-health` | 8018 | CDC PLACES county, place, tract, and ZCTA estimates |
-| `research-trials` | 8019 | NIH RePORTER funding and ClinicalTrials.gov study activity |
-| `live-gateway` | 8020 | Authenticated live router for approved provider, quality, claims, compliance, community, and research tools |
+| Server | Port | Domain | Dataset IDs |
+| --- | ---: | --- | --- |
+| `service-area` | 8002 | CMS hospital service areas and market share | `cms_hospital_general_info`, `cms_hsaf`, `dartmouth_hsa_hrr` |
+| `geo-demographics` | 8003 | Census, ZCTA, Medicare, and HUD geography | `census_acs`, `cms_geographic_variation` |
+| `drive-time` | 8004 | Routing, drive-time matrices, and access scoring | `cms_hospital_general_info` |
+| `hospital-quality` | 8005 | CMS quality, readmission, and safety data | `cms_cost_report`, `cms_hospital_general_info`, `cms_hospital_quality` |
+| `cms-facility` | 8006 | CMS facility master data and NPPES lookup | `cms_hospital_general_info`, `cms_provider_of_services`, `nppes_registry` |
+| `health-system-profiler` | 8007 | Health system discovery and facility enrichment | `ahrq_health_system_compendium`, `cms_provider_of_services`, `nppes_registry` |
+| `financial-intelligence` | 8008 | IRS 990, SEC EDGAR, and nonprofit finance intelligence | `ahrq_hfmd`, `nj_hospital_public_data`, `state_health_data` |
+| `price-transparency` | 8009 | Hospital MRF and benchmark pricing | `cms_price_transparency_mrf` |
+| `physician-referral-network` | 8010 | NPPES, physician mix, referral network, and leakage analysis | `dartmouth_hsa_hrr`, `docgraph_referrals`, `nppes_registry`, `physician_compare_utilization` |
+| `workforce-analytics` | 8011 | BLS and ACGME workforce analytics | `cms_cost_report`, `de_hospital_discharge`, `nj_hospital_public_data`, `pa_hospital_reports`, `state_health_data`, `workforce_labor` |
+| `claims-analytics` | 8012 | DRG, service-line, and claims analytics | `cms_medicare_claims_pufs` |
+| `public-records` | 8013 | SAM.gov, USAspending, CHPL, accreditation, and exclusion screening | `cms_provider_of_services`, `hhs_oig_leie`, `phc4_public_reports`, `public_records`, `sam_gov_exclusions`, `state_health_data` |
+| `web-intelligence` | 8014 | Web search and health system OSINT | `web_intelligence` |
+| `discovery` | 8015 | Dataset catalog resources, cache status, and prompts | `mcp_metadata_surfaces` |
+| `gateway` | 8016 | Remote-safe metadata gateway with search/fetch | `mcp_metadata_surfaces` |
+| `provider-enrollment` | 8017 | CMS PECOS-derived provider enrollment, ownership, and CHOW | `cms_pecos_hospital_chow`, `cms_pecos_hospital_enrollments`, `cms_pecos_hospital_owners`, `cms_pecos_public_provider_enrollment`, `cms_pecos_snf_chow`, `cms_pecos_snf_enrollments`, `cms_pecos_snf_owners` |
+| `community-health` | 8018 | CDC PLACES community-health estimates for counties, places, tracts, and ZCTAs | `cdc_places` |
+| `research-trials` | 8019 | NIH RePORTER funding and ClinicalTrials.gov study activity | `clinicaltrials_gov`, `nih_reporter_projects` |
+| `live-gateway` | 8020 | Authenticated live router for approved provider, quality, claims, compliance, community, and research tools | none |
 
 HTTP servers bind to `127.0.0.1` by default. Use `MCP_HOST=0.0.0.0` only in containers or behind a trusted reverse proxy with authentication.
 
 ## Installation
 
-### Local Python
+### Versioned Python Tools
+
+For tagged releases, prefer an isolated tool install once packages are published:
+
+```bash
+pipx install healthcare-data-mcp
+hc-mcp --version
+hc-mcp doctor
+# or for one-off execution with uv:
+uvx --from healthcare-data-mcp hc-mcp doctor
+```
+
+Until PyPI publishing is enabled, install from a tagged Git URL:
+
+```bash
+pipx install git+https://github.com/ajhcs/healthcare-data-mcp@<tag>
+```
+
+`hc-mcp --version` should match the tagged release or container image label you
+intend to run. After installing, use the read-only doctor first, then run the
+setup wizard only when you are ready to write a local `.env` or acquire caches:
+
+```bash
+hc-mcp doctor
+hc-mcp-setup --interactive
+hc-mcp --list
+```
+
+### Local Python Development
+
+Use an editable install when developing the package or validating unpublished
+changes locally:
 
 ```bash
 git clone https://github.com/ajhcs/healthcare-data-mcp.git
@@ -102,8 +168,7 @@ cd healthcare-data-mcp
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -e ".[dev]"
-hc-mcp-setup --interactive
-hc-mcp --list
+hc-mcp doctor
 ```
 
 ### Docker Compose
@@ -115,7 +180,22 @@ cp .env.example .env
 docker compose up --build
 ```
 
-Each server is exposed at `http://localhost:<port>/mcp`.
+Each server is exposed at `http://localhost:<port>/mcp`. Compose publishes ports on `127.0.0.1` by default.
+
+Generated Compose files assign the local build a package-versioned image tag
+such as `healthcare-data-mcp:0.2.0`. To run a published image instead of
+building locally, set `HC_MCP_IMAGE` to the trusted image reference before
+starting Compose; Compose uses `pull_policy: missing` so normal startup can
+reuse or pull the tagged image unless you explicitly pass `--build`.
+
+For release builds, tag images from the package version:
+
+```bash
+docker build $(python3 scripts/docker_image_tags.py --format docker-build-args --image ghcr.io/ajhcs/healthcare-data-mcp) .
+```
+
+Published tagged images and Compose defaults should use the same package
+version shown by `hc-mcp doctor`.
 
 ### Universal Installer
 
@@ -124,6 +204,12 @@ curl -fsSL https://raw.githubusercontent.com/ajhcs/healthcare-data-mcp/main/inst
 ```
 
 The installer detects common MCP clients and can install via local Python or Docker.
+Its server list, zero-config selection, port hints, and environment-key prompts
+come from the canonical registry so installer behavior stays aligned with
+`hc-mcp --list`, Compose files, client configs, and MCPB packaging.
+Use `bash install.sh --dry-run --no-register` for a read-only preview of the
+registry entry count, zero-config server IDs, and environment-key names; unknown
+options fail before prerequisite checks or any write-capable setup path.
 
 ## MCP Client Setup
 
@@ -139,11 +225,14 @@ The installer detects common MCP clients and can install via local Python or Doc
 Local stdio examples:
 
 ```bash
+scripts/register-codex.sh --dry-run
 codex mcp add cmsFacility -- hc-mcp cms-facility
 codex mcp add publicRecords --env HC_MCP_ENV_FILE=/absolute/path/to/.env -- hc-mcp public-records
 
 claude mcp add provider-enrollment --env HC_MCP_ENV_FILE=/absolute/path/to/.env -- hc-mcp provider-enrollment
 ```
+
+`scripts/register-codex.sh --dry-run --http` previews registry-backed Docker/HTTP Codex registrations without writing client config.
 
 Local HTTP examples:
 
@@ -158,6 +247,8 @@ More detail:
 - [Client packaging and MCPB](docs/CLIENT_PACKAGING.md)
 - [Remote gateway](docs/REMOTE_GATEWAY.md)
 - [Structured MCP results](docs/STRUCTURED_RESULTS.md)
+- [Task-first workflows](docs/TASK_WORKFLOWS.md)
+- [Source capability ledger](docs/SOURCE_CAPABILITY_LEDGER.md)
 
 ## Configuration
 
@@ -188,6 +279,9 @@ hc-mcp-setup --agent-cache-instructions
 | `PROXYCURL_API_KEY` | Web intelligence enrichment | Optional |
 
 No key is required for HHS OIG LEIE, CMS PECOS/provider enrollment, CDC PLACES, NIH RePORTER, or ClinicalTrials.gov.
+
+Run `hc-mcp doctor` after setup. It is read-only and reports package/version, Python environment, server importability, port conflicts, key configuration, cache readiness, source freshness where known, client config hints, gateway posture, workflow readiness from the same planner used by `hc-mcp workflow <name> --json`, workflow planner validation status for report contracts/tool references, priority evidence-contract readiness for the major healthcare and workflow surfaces, registry-rendered artifact drift for checked-in Compose/env/MCPB/Desktop Extension/client config/docs-table surfaces, and distribution readiness for package metadata, console entry points, wheel module aliases, and versioned container metadata.
+Use `hc-mcp doctor --check --json` when a release script or operator runbook should fail fast unless the readiness status is `ready`.
 
 Some tools also depend on local cache files. The setup CLI fetches sources that expose a stable unauthenticated acquisition path and leaves the rest as explicit imports:
 
@@ -221,6 +315,11 @@ Exact-source tools do not substitute adjacent public records. Use `hospital_qual
 # List available servers
 hc-mcp --list
 
+# Read-only readiness check
+hc-mcp doctor
+hc-mcp doctor --json
+hc-mcp doctor --check --json
+
 # Start a server over stdio
 hc-mcp cms-facility
 
@@ -248,6 +347,7 @@ hc-mcp-setup --import-breach-csv /path/to/hipaa_breaches.csv
 hc-mcp-setup --import-docgraph-csv /path/to/docgraph_shared_patients.csv
 
 # Build the Claude Desktop extension package
+python3 scripts/build_mcpb.py --check
 python3 scripts/build_mcpb.py
 ```
 
@@ -261,16 +361,17 @@ MCP clients
           │
           ▼
 Healthcare Data MCP launch layer
-  ├─ server registry in servers/_launcher.py
+  ├─ canonical server registry in shared/utils/server_registry.py
   ├─ dotenv loading through HC_MCP_ENV_FILE or --env-file
+  ├─ read-only readiness checks through hc-mcp doctor
   └─ stdio, SSE, or Streamable HTTP transport
           │
           ▼
 Focused FastMCP servers
   ├─ structured_output=True tools
   ├─ shared HTTP retry/client helpers
-  ├─ source catalog and identity normalization helpers
-  └─ bounded responses with source metadata
+  ├─ source catalog, evidence receipt, and identity-map helpers
+  └─ bounded responses with source metadata and caveats
           │
           ▼
 Public sources + local cache
@@ -297,7 +398,9 @@ LEIE stores `public-records/leie_current.csv`, `leie_current.parquet`, and `leie
 
 The remote `gateway` is intentionally metadata-only. It exposes dataset search/fetch records for remote MCP clients and does not proxy live exclusion screening, provider-enrollment queries, PLACES queries, RePORTER, or ClinicalTrials.gov.
 
-Use `live-gateway` when a client needs one allowlisted endpoint for live provider enrollment, quality, claims, LEIE/SAM, PLACES, NIH, or ClinicalTrials.gov calls. HTTP/SSE live-gateway deployments require bearer-token or token-hash configuration through `MCP_LIVE_GATEWAY_*` environment variables; local stdio use does not.
+Use `live-gateway` when a client needs one allowlisted endpoint for live provider enrollment, quality, claims, LEIE/SAM, PLACES, NIH, or ClinicalTrials.gov calls. HTTP/SSE live-gateway deployments require bearer-token or token-hash configuration through `MCP_LIVE_GATEWAY_*` environment variables; local stdio use does not. Live-gateway calls preserve owning-tool evidence/source metadata, then add policy metadata with request/result bounds, per-tool scopes, rate-limit classes, source caveat classes, registry dataset IDs/cache needs/safety notes, provenance status, malformed or content-empty top-level/nested row evidence-receipt blocking, sensitive SSN/EIN/TIN-style argument-key rejection, non-secret audit events, optional JSONL audit retention through `MCP_LIVE_GATEWAY_AUDIT_LOG_PATH`, and wildcard network-bind guards. The live allowlist is validated against canonical registry `gateway_exposure="live"` metadata at startup. Batch exclusion screening requires `mcp:bulk` in addition to `mcp:read`; prefer `MCP_LIVE_GATEWAY_TOKEN_SCOPES=<sha256>=mcp:read+mcp:bulk` for selected bulk-screening tokens. HTTP/SSE startup still rejects global `mcp:bulk` unless `MCP_LIVE_GATEWAY_ALLOW_GLOBAL_BULK_SCOPE=true`.
+
+Docker Compose is local-first. Host ports bind to `127.0.0.1`; if you need remote access, keep `MCP_HOST=127.0.0.1` at the process level and put `gateway` or `live-gateway` behind a trusted HTTPS reverse proxy with auth. The generated `live-gateway` service also inherits registry-defined environment keys for every live-routed server, including `SEC_USER_AGENT`, `SAM_GOV_API_KEY`, optional BLS/CHPL keys, PLACES cache overrides, and ClinicalTrials.gov inventory limits.
 
 ## Development
 
@@ -305,10 +408,41 @@ Use `live-gateway` when a client needs one allowlisted endpoint for live provide
 python -m pip install -e ".[dev]"
 ruff check .
 pytest -q
+pip-audit . --strict
+git ls-files -z | xargs -0 detect-secrets-hook --baseline .secrets.baseline --exclude-files '(^\\.git/|^\\.venv/|^build/|^dist/|^\\.pytest_cache/|^\\.ruff_cache/|^\\.secrets\\.baseline$)'
 python3 -m compileall -q servers shared scripts tests smoke_test.py
 ```
 
+CI also treats product-readiness as a first-class gate: installer and Codex
+registration dry-runs, registry-rendered artifact checks, `hc-mcp doctor --check`,
+workflow/preset smoke commands, MCP protocol and Inspector smoke, MCPB skeleton
+build, Python package metadata checks, dependency audit, secret scanning, and
+Docker zero-config startup must stay green.
+
 Manual live-data smoke tests are in `smoke_test.py`. They call public APIs and may require environment variables from `.env.example`; they are intentionally excluded from normal pytest discovery.
+
+Registry-backed docs and distribution checks:
+
+```bash
+python scripts/render_registry_docs.py server-catalog
+python scripts/render_registry_docs.py env-catalog
+python scripts/render_registry_docs.py server-catalog --check
+python scripts/render_registry_docs.py preset-catalog --check
+python scripts/render_registry_docs.py workflow-catalog --check
+python scripts/render_registry_docs.py env-catalog --check
+python scripts/render_env_example.py --check
+python scripts/render_compose.py full --check
+python scripts/render_compose.py zero-config --check
+python scripts/render_client_configs.py codex --check
+python scripts/render_client_configs.py http-clients --check
+python scripts/render_client_configs.py project-mcp --check
+python scripts/render_client_configs.py claude-desktop-stdio --check
+python scripts/render_client_configs.py claude-desktop --check
+python -m build --sdist --wheel --outdir dist/python-package
+python -m twine check dist/python-package/*
+python -m pytest tests/test_distribution_artifacts.py -q  # includes wheel install + hc-mcp smoke
+python scripts/docker_image_tags.py --format json --image ghcr.io/ajhcs/healthcare-data-mcp
+```
 
 ```bash
 HC_MCP_LIVE_EXPANSION=1 HC_MCP_LIVE_LEIE=1 SAM_GOV_API_KEY=... python smoke_test.py
@@ -338,6 +472,7 @@ The script requires a clean worktree and an authenticated `gh` CLI. It enables b
 | Claude Code ignores project config | Approve the project `.mcp.json`, or add servers with `claude mcp add --scope local ...` |
 | Codex does not see a server | Check `~/.codex/config.toml` or `.codex/config.toml`; Codex CLI and IDE share that config |
 | Remote MCP client cannot use localhost | Deploy `gateway` or `live-gateway` behind HTTPS/auth; stdio and localhost HTTP are local-only |
+| Need a protocol smoke check | Run `scripts/mcp_inspector_smoke.sh` for MCP Inspector, or use `python scripts/mcp_smoke.py --server discovery --expect-tool get_workflow_plan --call-tool get_workflow_plan --tool-args '{"workflow_id":"quality_measure_lookup","inputs":{"ccn":"390223","measure":"clabsi_sir"}}' --expect-structured-key workflow_id` to verify executable workflow plans |
 
 ## Limitations
 
@@ -355,6 +490,58 @@ No. The project is built around public datasets and local cache files. Do not pu
 
 **Do I need API keys?**
 Not for every server. Many tools work with public downloads or unauthenticated public APIs, but SAM.gov, SEC EDGAR, Census, HUD, ORS, BLS, Google CSE, CHPL, and Proxycurl features may need keys or contact metadata.
+
+Registry-backed environment key catalog:
+
+| Key | Required | Servers | Purpose |
+| --- | ---: | --- | --- |
+| `ACGME_PROGRAMS_CSV` | no | `workforce-analytics` | Optional normalized ACGME Program Search export path. |
+| `BLS_API_KEY` | no | `workforce-analytics` | Optional BLS key for higher API limits. |
+| `CENSUS_API_KEY` | no | `geo-demographics` | Optional Census key for higher API limits. |
+| `CHPL_API_KEY` | no | `public-records` | Optional ONC CHPL enrichment key. |
+| `CLINICAL_TRIALS_INVENTORY_HARD_MAX` | no | `research-trials` | Maximum ClinicalTrials.gov records scanned by inventory tools. |
+| `DOCGRAPH_CSV_PATH` | no | `physician-referral-network` | Optional licensed CareSet DocGraph import path. |
+| `GOOGLE_CSE_API_KEY` | no | `web-intelligence` | Optional Google Custom Search API key. |
+| `GOOGLE_CSE_CACHE_TTL_SECONDS` | no | `web-intelligence` | Google Custom Search cache TTL in seconds. |
+| `GOOGLE_CSE_DAILY_LIMIT` | no | `web-intelligence` | Google Custom Search daily request guardrail. |
+| `GOOGLE_CSE_ID` | no | `web-intelligence` | Optional Google Custom Search Engine ID. |
+| `GOOGLE_CSE_SESSION_LIMIT` | no | `web-intelligence` | Google Custom Search per-session request guardrail. |
+| `HUD_API_TOKEN` | no | `geo-demographics` | Optional HUD USPS ZIP crosswalk API token. |
+| `MCP_GATEWAY_ALLOWED_HOSTS` | no | `gateway` | Allowed Host headers for metadata gateway HTTP/SSE. |
+| `MCP_GATEWAY_ALLOWED_ORIGINS` | no | `gateway` | Allowed Origin headers for metadata gateway HTTP/SSE. |
+| `MCP_GATEWAY_AUTH_REQUIRED` | no | `gateway` | Whether metadata gateway HTTP/SSE auth is required. |
+| `MCP_GATEWAY_BEARER_TOKEN` | no | `gateway` | Optional local bearer token. |
+| `MCP_GATEWAY_BEARER_TOKENS` | no | `gateway` | Comma-separated metadata gateway bearer tokens. |
+| `MCP_GATEWAY_BEARER_TOKEN_SHA256` | no | `gateway` | Recommended token hash for remote deployments. |
+| `MCP_GATEWAY_BEARER_TOKEN_SHA256_LIST` | no | `gateway` | Comma-separated metadata gateway bearer token SHA-256 hashes. |
+| `MCP_GATEWAY_ISSUER_URL` | no | `gateway` | OAuth/OIDC issuer URL advertised by the metadata gateway. |
+| `MCP_GATEWAY_PUBLIC_URL` | no | `gateway` | Public HTTPS MCP URL for metadata gateway deployments. |
+| `MCP_GATEWAY_REQUIRED_SCOPES` | no | `gateway` | Required metadata gateway auth scopes; defaults to mcp:read. |
+| `MCP_GATEWAY_TOKEN_SCOPES` | no | `gateway` | Optional semicolon-separated SHA-256 token-hash scope overrides. |
+| `MCP_LIVE_GATEWAY_ALLOWED_HOSTS` | no | `live-gateway` | Allowed Host headers for live-gateway HTTP/SSE. |
+| `MCP_LIVE_GATEWAY_ALLOWED_ORIGINS` | no | `live-gateway` | Allowed Origin headers for live-gateway HTTP/SSE. |
+| `MCP_LIVE_GATEWAY_ALLOW_GLOBAL_BULK_SCOPE` | no | `live-gateway` | Explicit opt-in to grant mcp:bulk to every valid live-gateway token. |
+| `MCP_LIVE_GATEWAY_ALLOW_NETWORK_BIND` | no | `live-gateway` | Explicit opt-in for live-gateway wildcard network binds behind HTTPS and locked allow-lists. |
+| `MCP_LIVE_GATEWAY_AUDIT_LOG_PATH` | no | `live-gateway` | Optional JSONL file path for non-secret live-gateway audit events. |
+| `MCP_LIVE_GATEWAY_AUTH_REQUIRED` | no | `live-gateway` | Whether live-gateway HTTP/SSE auth is required; cannot disable remote auth. |
+| `MCP_LIVE_GATEWAY_BEARER_TOKEN` | no | `live-gateway` | Bearer token for live HTTP/SSE deployments. |
+| `MCP_LIVE_GATEWAY_BEARER_TOKENS` | no | `live-gateway` | Comma-separated live-gateway bearer tokens. |
+| `MCP_LIVE_GATEWAY_BEARER_TOKEN_SHA256` | no | `live-gateway` | Recommended token hash for live HTTP/SSE deployments. |
+| `MCP_LIVE_GATEWAY_BEARER_TOKEN_SHA256_LIST` | no | `live-gateway` | Comma-separated live-gateway bearer token SHA-256 hashes. |
+| `MCP_LIVE_GATEWAY_CONTAINER_LOCAL_BIND` | no | `live-gateway` | Docker-only marker for container wildcard binds published to localhost. |
+| `MCP_LIVE_GATEWAY_ISSUER_URL` | no | `live-gateway` | OAuth/OIDC issuer URL advertised by live-gateway. |
+| `MCP_LIVE_GATEWAY_PUBLIC_URL` | no | `live-gateway` | Public HTTPS MCP URL for live-gateway deployments. |
+| `MCP_LIVE_GATEWAY_REQUIRED_SCOPES` | no | `live-gateway` | Required auth scopes; defaults to mcp:read. |
+| `MCP_LIVE_GATEWAY_TOKEN_SCOPES` | no | `live-gateway` | Optional semicolon-separated SHA-256 token-hash scope overrides; use this to grant mcp:bulk to selected tokens. |
+| `MRF_DOWNLOAD_PROGRESS_INTERVAL_BYTES` | no | `price-transparency` | Progress logging interval for large MRF downloads. |
+| `MRF_MAX_DOWNLOAD_BYTES` | no | `price-transparency` | Maximum hospital MRF download size in bytes. |
+| `MRF_MIN_FREE_BYTES` | no | `price-transparency` | Minimum free disk bytes required before MRF downloads. |
+| `ORS_API_KEY` | no | `drive-time` | Optional OpenRouteService key for isochrones. |
+| `OSRM_BASE_URL` | no | `drive-time` | Optional OSRM endpoint; defaults to the public demo server. |
+| `PLACES_CACHE_DIR` | no | `community-health` | Optional CDC PLACES cache directory override. |
+| `PROXYCURL_API_KEY` | no | `web-intelligence` | Optional Proxycurl enrichment key. |
+| `SAM_GOV_API_KEY` | no | `public-records` | Required for SAM.gov opportunity and Exclusions API tools. |
+| `SEC_USER_AGENT` | yes | `financial-intelligence` | Required for SEC EDGAR-backed tools. |
 
 **Should I use stdio or HTTP?**
 Use stdio for local desktop/CLI agents. Use local Streamable HTTP when Docker is already running or when multiple local clients share the same server process. Use the HTTPS `gateway` for remote metadata integrations and HTTPS `live-gateway` only when live-tool auth is configured.

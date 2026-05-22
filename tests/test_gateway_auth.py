@@ -13,6 +13,7 @@ from shared.utils.gateway_auth import (
     is_host_allowed,
     is_origin_allowed,
     load_gateway_security_config,
+    parse_token_scope_overrides,
     token_sha256,
 )
 
@@ -45,6 +46,44 @@ async def test_static_bearer_token_verifier_accepts_plain_or_hashed_token() -> N
     assert auth_info is not None
     assert auth_info.client_id == "healthcare-data-mcp-gateway"
     assert await verifier.verify_token("wrong-token") is None
+
+
+@pytest.mark.asyncio
+async def test_static_bearer_token_verifier_applies_token_scope_overrides() -> None:
+    read_token = "read-only-live-token-12345"
+    bulk_token = "bulk-live-token-123456789"
+    verifier = StaticBearerTokenVerifier(
+        (read_token, bulk_token),
+        (),
+        required_scopes=("mcp:read",),
+        token_scope_overrides={token_sha256(bulk_token): ("mcp:read", "mcp:bulk")},
+    )
+
+    read_auth = await verifier.verify_token(read_token)
+    bulk_auth = await verifier.verify_token(bulk_token)
+
+    assert read_auth is not None
+    assert bulk_auth is not None
+    assert read_auth.scopes == ["mcp:read"]
+    assert bulk_auth.scopes == ["mcp:read", "mcp:bulk"]
+
+
+def test_gateway_config_parses_token_scope_overrides() -> None:
+    token_hash = token_sha256("bulk-live-token-123456789")
+    config = load_gateway_security_config(
+        {
+            "MCP_GATEWAY_BEARER_TOKEN_SHA256": token_hash,
+            "MCP_GATEWAY_TOKEN_SCOPES": f"{token_hash}=mcp:read+mcp:bulk",
+        }
+    )
+
+    assert config.token_scope_overrides == {token_hash: ("mcp:read", "mcp:bulk")}
+
+
+@pytest.mark.parametrize("value", ["not-a-hash=mcp:read", f"{token_sha256('token-with-empty-scope')}="])
+def test_token_scope_overrides_reject_invalid_entries(value: str) -> None:
+    with pytest.raises(GatewayAuthError):
+        parse_token_scope_overrides(value)
 
 
 def test_extract_bearer_token_is_case_insensitive() -> None:

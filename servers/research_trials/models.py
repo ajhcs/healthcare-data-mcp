@@ -79,6 +79,7 @@ class NIHProject(BaseModel):
     principal_investigators: list[NIHPrincipalInvestigator] = Field(default_factory=list)
     institute_fundings: list[NIHFundingInstitute] = Field(default_factory=list)
     terms: list[str] = Field(default_factory=list)
+    evidence: dict[str, Any] = Field(default_factory=dict)
 
 
 class NIHPublication(BaseModel):
@@ -90,6 +91,7 @@ class NIHPublication(BaseModel):
     publication_year: str = ""
     core_project_num: str = ""
     appl_id: str = ""
+    evidence: dict[str, Any] = Field(default_factory=dict)
 
 
 class NIHProjectSearchResponse(BaseModel):
@@ -177,6 +179,7 @@ class ClinicalTrial(BaseModel):
     enrollment: int | None = None
     version_holder: str = ""
     url: str = ""
+    evidence: dict[str, Any] = Field(default_factory=dict)
 
 
 class ClinicalTrialSearchResponse(BaseModel):

@@ -8,6 +8,7 @@ import pytest
 from servers.health_system_profiler import server
 from servers.health_system_profiler.generic_reconciliation import reconcile_generic_system_facilities
 from servers.health_system_profiler.jefferson_resolver import JEFFERSON_SLUG
+from shared.utils.mcp_response import validate_evidence_receipt
 
 
 @pytest.fixture
@@ -207,6 +208,17 @@ async def test_reconcile_system_facilities_tool_uses_generic_path_without_stale_
     assert result["discrepancy_closure"] is None
     assert "not a curated merger ledger" in result["source_evidence"]["note"]
     assert all({"npi", "subsystem", "legacy_system"} <= facility.keys() for facility in result["facilities"])
+    _assert_system_row_evidence(
+        result["facilities"][0]["evidence"],
+        dataset_id="ahrq_health_system_compendium",
+        match_basis="health_system_facility_reconciliation_row",
+    )
+    _assert_system_evidence(result["evidence"])
+    _assert_system_source_metadata(result)
+    _assert_identity_map(result["identity_map"], expected_system_id="SYS_999", expected_ccns={"390901", "390902"})
+    claim = _source_claim(result["identity_map"], "facilities")
+    assert "facilities[].evidence" in claim["row_evidence_paths"]
+    assert "merger_evidence[].evidence" in claim["row_evidence_paths"]
 
 
 @pytest.mark.asyncio
@@ -243,6 +255,22 @@ async def test_get_system_profile_includes_generic_facility_reconciliation(
     assert ledger["discrepancy_closure"] is None
     assert "not a curated merger ledger" in ledger["method_note"]
     assert {facility["ccn"] for facility in ledger["facilities"]} == {"390901", "390902"}
+    _assert_system_row_evidence(
+        result["inpatient_facilities"][0]["evidence"],
+        dataset_id="ahrq_health_system_compendium",
+        match_basis="inpatient_facility_source_row",
+    )
+    _assert_system_row_evidence(
+        ledger["facilities"][0]["evidence"],
+        dataset_id="ahrq_health_system_compendium",
+        match_basis="health_system_facility_reconciliation_row",
+    )
+    _assert_system_evidence(result["evidence"])
+    _assert_system_source_metadata(result)
+    _assert_identity_map(result["identity_map"], expected_system_id="SYS_999", expected_ccns={"390901", "390902"})
+    claim = _source_claim(result["identity_map"], "facilities")
+    assert "inpatient_facilities[].evidence" in claim["row_evidence_paths"]
+    assert "facility_reconciliation.facilities[].evidence" in claim["row_evidence_paths"]
 
 
 @pytest.mark.asyncio
@@ -260,3 +288,68 @@ async def test_reconcile_system_facilities_tool_keeps_jefferson_special_case_unc
     assert result["system_slug"] == JEFFERSON_SLUG
     assert result["facility_count"] == 32
     assert len(result["merger_evidence"]) >= 4
+    _assert_system_row_evidence(
+        result["facilities"][0]["evidence"],
+        dataset_id="ahrq_health_system_compendium",
+        match_basis="health_system_facility_reconciliation_row",
+    )
+    _assert_system_row_evidence(
+        result["merger_evidence"][0]["evidence"],
+        dataset_id="reviewed_jefferson_merger_evidence",
+        match_basis="reviewed_merger_evidence_row",
+    )
+    _assert_system_evidence(result["evidence"])
+    _assert_identity_map(result["identity_map"], expected_system_id=JEFFERSON_SLUG)
+
+
+def _assert_system_evidence(evidence: dict) -> None:
+    validate_evidence_receipt(evidence, require_content=True)
+    assert evidence["dataset_id"] == "ahrq_health_system_compendium"
+    assert evidence["source_period"]
+    assert evidence["cache_status"] == "mixed_public_cache"
+    assert evidence["cache_freshness"]
+    assert evidence["entity_scope"] == "health_system_facility_identity"
+    assert evidence["match_basis"]
+    assert evidence["confidence"]
+    assert evidence["caveat"]
+    assert evidence["next_step"]
+
+
+def _assert_system_row_evidence(evidence: dict, *, dataset_id: str, match_basis: str) -> None:
+    validate_evidence_receipt(evidence, require_content=True)
+    assert evidence["dataset_id"] == dataset_id
+    assert evidence["match_basis"] == match_basis
+    assert evidence["entity_scope"] == "health_system_facility_identity"
+    assert evidence["query"]["row_kind"]
+    assert evidence["confidence"]
+    assert evidence["caveat"]
+    assert evidence["next_step"]
+
+
+def _assert_system_source_metadata(result: dict) -> None:
+    metadata = result["source_metadata"]
+    evidence = result["evidence"]
+
+    assert metadata["source_name"] == evidence["source_name"]
+    assert metadata["dataset_id"] == evidence["dataset_id"]
+    assert metadata["source_period"] == evidence["source_period"]
+    assert metadata["cache_status"] == evidence["cache_status"]
+    assert metadata["cache_freshness"] == evidence["cache_freshness"]
+    assert metadata["entity_scope"] == evidence["entity_scope"]
+    assert metadata["query"] == evidence["query"]
+    assert metadata["source_type"] == "ahrq_cms_nppes_health_system_public_sources"
+
+
+def _assert_identity_map(identity_map: dict, *, expected_system_id: str, expected_ccns: set[str] | None = None) -> None:
+    by_field = {entry["field"]: entry for entry in identity_map["join_keys"]}
+
+    assert expected_system_id in by_field["ahrq_system_id"]["values"]
+    if expected_ccns:
+        assert set(by_field["ccn"]["values"]) >= expected_ccns
+    assert {claim["collection"] for claim in identity_map["source_claims"]} >= {"facilities", "system"}
+    assert identity_map["conflict_policy"]
+
+
+def _source_claim(identity_map: dict, collection: str) -> dict:
+    claims = {claim["collection"]: claim for claim in identity_map["source_claims"]}
+    return claims[collection]

@@ -8,8 +8,10 @@ All data sourced from CMS Medicare Provider Utilization PUFs.
 from typing import Any
 import logging
 import os as _os
+from datetime import datetime, timezone
 from mcp.server.fastmcp import FastMCP
-from shared.utils.mcp_response import error_response, to_structured
+from shared.utils.healthcare_identity import identity_from_public_record
+from shared.utils.mcp_response import error_response, evidence_receipt, to_structured
 
 from . import data_loaders, service_lines  # pyright: ignore[reportAttributeAccessIssue]
 from .models import (
@@ -45,6 +47,164 @@ def _validate_year(year: str) -> dict[str, Any] | None:
     if year and year not in data_loaders.AVAILABLE_YEARS:
         return error_response(f"Invalid year: {year}. Available: {data_loaders.AVAILABLE_YEARS}")
     return None
+
+
+def _claims_source_metadata(dataset: str, year: str) -> dict[str, Any]:
+    """Return source/cache metadata for CMS Medicare Provider Utilization PUFs."""
+
+    if dataset == "inpatient":
+        source_name = "CMS Medicare Inpatient Hospitals by Provider and Service PUF"
+        source_url = data_loaders.INPATIENT_URLS.get(year, "")
+        dataset_id = "cms_medicare_inpatient_puf"
+        cache_paths = [data_loaders._cache_path("inpatient", year)]
+    elif dataset == "outpatient":
+        source_name = "CMS Medicare Outpatient Hospitals by Provider and Service PUF"
+        source_url = data_loaders.OUTPATIENT_URLS.get(year, "")
+        dataset_id = "cms_medicare_outpatient_puf"
+        cache_paths = [data_loaders._cache_path("outpatient", year)]
+    else:
+        source_name = "CMS Medicare Provider Utilization PUF"
+        source_url = "; ".join(
+            value
+            for value in (
+                data_loaders.INPATIENT_URLS.get(year, ""),
+                data_loaders.OUTPATIENT_URLS.get(year, ""),
+            )
+            if value
+        )
+        dataset_id = "cms_medicare_provider_utilization_puf"
+        cache_paths = [data_loaders._cache_path("inpatient", year), data_loaders._cache_path("outpatient", year)]
+
+    metadata: dict[str, Any] = {
+        "source_name": source_name,
+        "source_url": source_url,
+        "dataset_id": dataset_id,
+        "source_period": year,
+        "landing_page": "https://data.cms.gov/provider-summary-by-type-of-service/medicare-inpatient-hospitals",
+        "cache_status": "missing",
+        "cache_freshness": "missing",
+        "cache_key": "; ".join(str(path) for path in cache_paths),
+    }
+    existing = [path for path in cache_paths if path.exists()]
+    if existing:
+        newest = max(datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc) for path in existing)
+        age_days = (datetime.now(timezone.utc) - newest).total_seconds() / 86400
+        metadata.update(
+            {
+                "cache_status": "ready" if len(existing) == len(cache_paths) else "partial",
+                "cache_freshness": f"ready; age_days={age_days:.1f}" if len(existing) == len(cache_paths) else f"partial; age_days={age_days:.1f}",
+                "source_modified": newest.isoformat(),
+                "cache_age_days": round(age_days, 1),
+            }
+        )
+    return metadata
+
+
+def _claims_evidence(
+    *,
+    dataset: str,
+    year: str,
+    query: dict[str, Any],
+    match_basis: str,
+    confidence: str,
+    next_step: str,
+) -> dict[str, Any]:
+    metadata = _claims_source_metadata(dataset, year)
+    return evidence_receipt(
+        source_metadata=metadata,
+        entity_scope="claims_public_aggregate",
+        query=query,
+        match_basis=match_basis,
+        confidence=confidence,
+        caveat=(
+            "CMS Medicare Provider Utilization PUF data is public aggregate provider/service data. "
+            "It is not patient-level data, not PHI, and may lag current operations."
+        ),
+        next_step=next_step,
+    )
+
+
+def _claims_row_evidence(
+    *,
+    dataset: str,
+    year: str,
+    parent_query: dict[str, Any],
+    row: dict[str, Any],
+    row_kind: str,
+    match_basis: str,
+    confidence: str = "source_row_aggregate",
+    next_step: str = "Preserve this row receipt with the parent claims evidence before citing the aggregate fact.",
+) -> dict[str, Any]:
+    row_query = {
+        **parent_query,
+        "row_kind": row_kind,
+        "row_ccn": row.get("ccn") or parent_query.get("ccn") or "",
+        "row_provider_name": row.get("provider_name") or "",
+        "row_state": row.get("state") or "",
+        "row_service_line": row.get("service_line") or "",
+        "row_drg_code": row.get("drg_code") or "",
+        "row_apc_code": row.get("apc_code") or "",
+        "row_top_provider_ccn": row.get("top_provider_ccn") or "",
+    }
+    return _claims_evidence(
+        dataset=dataset,
+        year=year,
+        query=row_query,
+        match_basis=match_basis,
+        confidence=confidence,
+        next_step=next_step,
+    )
+
+
+def _facility_identity(ccn: str, provider_name: str = "", state: str = "") -> dict[str, Any]:
+    return identity_from_public_record(
+        name=provider_name,
+        entity_type="facility",
+        ccn=ccn,
+        source_name="CMS Medicare Provider Utilization PUF",
+    ).to_dict() | ({"state": state} if state else {})
+
+
+def _attach_claims_context(
+    payload: dict[str, Any],
+    *,
+    dataset: str,
+    year: str,
+    query: dict[str, Any],
+    match_basis: str,
+    confidence: str,
+    next_step: str,
+    provider_rows: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    payload["source_metadata"] = _claims_source_metadata(dataset, year)
+    payload["evidence"] = _claims_evidence(
+        dataset=dataset,
+        year=year,
+        query=query,
+        match_basis=match_basis,
+        confidence=confidence,
+        next_step=next_step,
+    )
+    if payload.get("ccn"):
+        payload["identity"] = _facility_identity(
+            str(payload.get("ccn") or ""),
+            str(payload.get("provider_name") or ""),
+            str(payload.get("state") or ""),
+        )
+    if provider_rows is not None:
+        payload["identity_map"] = {
+            "entities": [
+                _facility_identity(
+                    str(row.get("ccn") or ""),
+                    str(row.get("provider_name") or ""),
+                    str(row.get("state") or ""),
+                )
+                for row in provider_rows
+            ],
+            "match_basis": "ccn_exact_provider_set",
+            "conflict_policy": "Do not merge providers by name alone; use CCN as the market-share entity key.",
+        }
+    return payload
 
 
 # ---------------------------------------------------------------------------
@@ -131,7 +291,34 @@ async def get_inpatient_volumes(
             service_line_summary=sl_summary,
             drg_details=sorted(drg_details, key=lambda d: d.discharges, reverse=True),
         )
-        return to_structured(response.model_dump())
+        payload = _attach_claims_context(
+            response.model_dump(),
+            dataset="inpatient",
+            year=yr,
+            query={"ccn": ccn, "drg_code": drg_code, "service_line": service_line, "year": yr},
+            match_basis="ccn_exact_inpatient_provider_service_rows",
+            confidence="high_for_public_cms_provider_service_aggregate",
+            next_step="Preserve DRG/service-line filters and this evidence receipt when citing inpatient aggregate volumes.",
+        )
+        for summary in payload["service_line_summary"]:
+            summary["evidence"] = _claims_row_evidence(
+                dataset="inpatient",
+                year=yr,
+                parent_query=payload["evidence"]["query"],
+                row=summary,
+                row_kind="inpatient_service_line_summary",
+                match_basis="inpatient_service_line_summary_row",
+            )
+        for detail in payload["drg_details"]:
+            detail["evidence"] = _claims_row_evidence(
+                dataset="inpatient",
+                year=yr,
+                parent_query=payload["evidence"]["query"],
+                row=detail,
+                row_kind="inpatient_drg_detail",
+                match_basis="inpatient_drg_detail_row",
+            )
+        return to_structured(payload)
 
     except Exception as e:
         logger.exception("get_inpatient_volumes failed")
@@ -187,7 +374,25 @@ async def get_outpatient_volumes(
             total_apcs=len(apc_details),
             apc_details=sorted(apc_details, key=lambda a: a.services, reverse=True),
         )
-        return to_structured(response.model_dump())
+        payload = _attach_claims_context(
+            response.model_dump(),
+            dataset="outpatient",
+            year=yr,
+            query={"ccn": ccn, "apc_code": apc_code, "year": yr},
+            match_basis="ccn_exact_outpatient_provider_service_rows",
+            confidence="high_for_public_cms_provider_service_aggregate",
+            next_step="Preserve APC filters and this evidence receipt when citing outpatient aggregate volumes.",
+        )
+        for detail in payload["apc_details"]:
+            detail["evidence"] = _claims_row_evidence(
+                dataset="outpatient",
+                year=yr,
+                parent_query=payload["evidence"]["query"],
+                row=detail,
+                row_kind="outpatient_apc_detail",
+                match_basis="outpatient_apc_detail_row",
+            )
+        return to_structured(payload)
 
     except Exception as e:
         logger.exception("get_outpatient_volumes failed")
@@ -309,7 +514,36 @@ async def trend_service_lines(
                 if outpatient_trends else None
             ),
         )
-        return to_structured(response.model_dump())
+        payload = _attach_claims_context(
+            response.model_dump(),
+            dataset="combined" if include_outpatient else "inpatient",
+            year=years_sorted[-1] if years_sorted else data_loaders.LATEST_YEAR,
+            query={"ccn": ccn, "service_line": service_line, "include_outpatient": include_outpatient},
+            match_basis="ccn_exact_multi_year_provider_service_rows",
+            confidence="high_for_public_cms_provider_service_aggregate",
+            next_step="Use the years field and evidence receipt when citing trends; do not compare against nonmatching periods.",
+        )
+        trend_dataset = "combined" if include_outpatient else "inpatient"
+        trend_year = years_sorted[-1] if years_sorted else data_loaders.LATEST_YEAR
+        for trend in payload["inpatient_trends"]:
+            trend["evidence"] = _claims_row_evidence(
+                dataset=trend_dataset,
+                year=trend_year,
+                parent_query=payload["evidence"]["query"],
+                row=trend,
+                row_kind="inpatient_service_line_trend",
+                match_basis="inpatient_service_line_trend_row",
+            )
+        for trend in payload.get("outpatient_trends") or []:
+            trend["evidence"] = _claims_row_evidence(
+                dataset=trend_dataset,
+                year=trend_year,
+                parent_query=payload["evidence"]["query"],
+                row=trend,
+                row_kind="outpatient_apc_trend",
+                match_basis="outpatient_apc_trend_row",
+            )
+        return to_structured(payload)
 
     except Exception as e:
         logger.exception("trend_service_lines failed")
@@ -392,7 +626,36 @@ async def compute_case_mix(ccn: str, year: str = "") -> dict[str, Any]:
             service_line_acuity=sl_acuity,
             top_drgs_by_weight=sorted(drg_contribs, key=lambda d: d.total_weight_contribution, reverse=True)[:25],
         )
-        return to_structured(response.model_dump())
+        payload = _attach_claims_context(
+            response.model_dump(),
+            dataset="inpatient",
+            year=yr,
+            query={"ccn": ccn, "year": yr},
+            match_basis="ccn_exact_inpatient_drg_rows_with_public_weights",
+            confidence="derived_from_public_cms_provider_service_aggregate",
+            next_step="Preserve DRG weight assumptions and source period when citing case-mix-derived facts.",
+        )
+        for acuity in payload["service_line_acuity"]:
+            acuity["evidence"] = _claims_row_evidence(
+                dataset="inpatient",
+                year=yr,
+                parent_query=payload["evidence"]["query"],
+                row=acuity,
+                row_kind="case_mix_service_line_acuity",
+                match_basis="case_mix_service_line_acuity_row",
+                confidence="derived_source_row_aggregate",
+            )
+        for contribution in payload["top_drgs_by_weight"]:
+            contribution["evidence"] = _claims_row_evidence(
+                dataset="inpatient",
+                year=yr,
+                parent_query=payload["evidence"]["query"],
+                row=contribution,
+                row_kind="case_mix_drg_weight_contribution",
+                match_basis="case_mix_drg_weight_contribution_row",
+                confidence="derived_source_row_aggregate",
+            )
+        return to_structured(payload)
 
     except Exception as e:
         logger.exception("compute_case_mix failed")
@@ -504,7 +767,55 @@ async def analyze_market_volumes(
             provider_shares=provider_shares,
             service_line_totals=sl_totals,
         )
-        return to_structured(response.model_dump())
+        provider_rows = [
+            {
+                "ccn": share.ccn,
+                "provider_name": share.provider_name,
+                "state": share.state,
+            }
+            for share in provider_shares
+        ]
+        payload = _attach_claims_context(
+            response.model_dump(),
+            dataset="inpatient",
+            year=yr,
+            query={"provider_ccns": provider_ccns, "service_line": service_line, "year": yr},
+            match_basis="ccn_exact_provider_set_inpatient_rows",
+            confidence="high_for_public_cms_provider_service_market_aggregate",
+            next_step="Use the same provider CCN set and service-line filter when reproducing market-share facts.",
+            provider_rows=provider_rows,
+        )
+        for share in payload["provider_shares"]:
+            share["evidence"] = _claims_row_evidence(
+                dataset="inpatient",
+                year=yr,
+                parent_query=payload["evidence"]["query"],
+                row=share,
+                row_kind="provider_market_share",
+                match_basis="provider_market_share_row",
+                confidence="derived_provider_set_market_aggregate",
+            )
+            for breakdown in share.get("service_line_breakdown") or []:
+                breakdown["evidence"] = _claims_row_evidence(
+                    dataset="inpatient",
+                    year=yr,
+                    parent_query={**payload["evidence"]["query"], "ccn": share.get("ccn") or ""},
+                    row=breakdown,
+                    row_kind="provider_service_line_market_share",
+                    match_basis="provider_service_line_market_share_row",
+                    confidence="derived_provider_set_market_aggregate",
+                )
+        for total in payload["service_line_totals"]:
+            total["evidence"] = _claims_row_evidence(
+                dataset="inpatient",
+                year=yr,
+                parent_query=payload["evidence"]["query"],
+                row=total,
+                row_kind="service_line_market_total",
+                match_basis="service_line_market_total_row",
+                confidence="derived_provider_set_market_aggregate",
+            )
+        return to_structured(payload)
 
     except Exception as e:
         logger.exception("analyze_market_volumes failed")

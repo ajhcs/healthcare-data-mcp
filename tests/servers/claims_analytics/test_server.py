@@ -9,6 +9,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from servers.claims_analytics import server, data_loaders
+from shared.utils.mcp_response import validate_evidence_receipt
 
 
 # ---------------------------------------------------------------------------
@@ -78,6 +79,26 @@ OUTPATIENT_ROWS = [
 ]
 
 
+def assert_claims_receipt(result: dict, *, dataset_id: str, ccn: str = "390223") -> None:
+    validate_evidence_receipt(result["evidence"], require_content=True)
+    assert result["evidence"]["dataset_id"] == dataset_id
+    assert result["evidence"]["entity_scope"] == "claims_public_aggregate"
+    assert result["evidence"]["cache_status"] in {"ready", "partial", "missing"}
+    assert result["identity"]["ccn"] == ccn
+    assert result["source_metadata"]["dataset_id"] == dataset_id
+
+
+def assert_claims_row_receipt(receipt: dict, *, dataset_id: str, match_basis: str, row_kind: str) -> None:
+    validate_evidence_receipt(receipt, require_content=True)
+    assert receipt["dataset_id"] == dataset_id
+    assert receipt["entity_scope"] == "claims_public_aggregate"
+    assert receipt["match_basis"] == match_basis
+    assert receipt["query"]["row_kind"] == row_kind
+    assert receipt["confidence"]
+    assert "not PHI" in receipt["caveat"]
+    assert receipt["next_step"]
+
+
 # ---------------------------------------------------------------------------
 # Tests: get_inpatient_volumes
 # ---------------------------------------------------------------------------
@@ -98,6 +119,21 @@ async def test_get_inpatient_volumes_success():
     assert len(result["drg_details"]) == 3
     # Sorted descending by discharges — DRG 470 should be first
     assert result["drg_details"][0]["drg_code"] == "470"
+    assert result["evidence"]["match_basis"] == "ccn_exact_inpatient_provider_service_rows"
+    assert_claims_receipt(result, dataset_id="cms_medicare_inpatient_puf")
+    assert_claims_row_receipt(
+        result["service_line_summary"][0]["evidence"],
+        dataset_id="cms_medicare_inpatient_puf",
+        match_basis="inpatient_service_line_summary_row",
+        row_kind="inpatient_service_line_summary",
+    )
+    assert_claims_row_receipt(
+        result["drg_details"][0]["evidence"],
+        dataset_id="cms_medicare_inpatient_puf",
+        match_basis="inpatient_drg_detail_row",
+        row_kind="inpatient_drg_detail",
+    )
+    assert result["drg_details"][0]["evidence"]["query"]["row_drg_code"] == "470"
 
 
 @pytest.mark.asyncio
@@ -151,6 +187,15 @@ async def test_get_outpatient_volumes_success():
     assert result["total_apcs"] == 2
     # Sorted descending by services — APC 5115 should be first
     assert result["apc_details"][0]["apc_code"] == "5115"
+    assert result["evidence"]["match_basis"] == "ccn_exact_outpatient_provider_service_rows"
+    assert_claims_receipt(result, dataset_id="cms_medicare_outpatient_puf")
+    assert_claims_row_receipt(
+        result["apc_details"][0]["evidence"],
+        dataset_id="cms_medicare_outpatient_puf",
+        match_basis="outpatient_apc_detail_row",
+        row_kind="outpatient_apc_detail",
+    )
+    assert result["apc_details"][0]["evidence"]["query"]["row_apc_code"] == "5115"
 
 
 @pytest.mark.asyncio
@@ -186,6 +231,45 @@ async def test_compute_case_mix_success():
         assert "service_line" in entry
         assert "discharges" in entry
         assert "avg_drg_weight" in entry
+    assert result["evidence"]["match_basis"] == "ccn_exact_inpatient_drg_rows_with_public_weights"
+    assert_claims_receipt(result, dataset_id="cms_medicare_inpatient_puf")
+    assert_claims_row_receipt(
+        result["service_line_acuity"][0]["evidence"],
+        dataset_id="cms_medicare_inpatient_puf",
+        match_basis="case_mix_service_line_acuity_row",
+        row_kind="case_mix_service_line_acuity",
+    )
+    assert_claims_row_receipt(
+        result["top_drgs_by_weight"][0]["evidence"],
+        dataset_id="cms_medicare_inpatient_puf",
+        match_basis="case_mix_drg_weight_contribution_row",
+        row_kind="case_mix_drg_weight_contribution",
+    )
+
+
+@pytest.mark.asyncio
+async def test_trend_service_lines_rows_include_report_receipts():
+    with (
+        patch.object(data_loaders, "ensure_all_years_cached", new_callable=AsyncMock, return_value=["2021", "2022", "2023"]),
+        patch.object(data_loaders, "query_inpatient", return_value=INPATIENT_ROWS),
+        patch.object(data_loaders, "query_outpatient", return_value=OUTPATIENT_ROWS),
+    ):
+        result = parse_tool_result(await server.trend_service_lines(ccn="390223"))
+
+    assert result["evidence"]["match_basis"] == "ccn_exact_multi_year_provider_service_rows"
+    assert_claims_receipt(result, dataset_id="cms_medicare_provider_utilization_puf")
+    assert_claims_row_receipt(
+        result["inpatient_trends"][0]["evidence"],
+        dataset_id="cms_medicare_provider_utilization_puf",
+        match_basis="inpatient_service_line_trend_row",
+        row_kind="inpatient_service_line_trend",
+    )
+    assert_claims_row_receipt(
+        result["outpatient_trends"][0]["evidence"],
+        dataset_id="cms_medicare_provider_utilization_puf",
+        match_basis="outpatient_apc_trend_row",
+        row_kind="outpatient_apc_trend",
+    )
 
 
 @pytest.mark.asyncio
@@ -196,3 +280,47 @@ async def test_compute_case_mix_no_data():
     ):
         result = parse_tool_result(await server.compute_case_mix(ccn="000000"))
     assert "error" in result
+
+
+@pytest.mark.asyncio
+async def test_analyze_market_volumes_includes_evidence_and_identity_map():
+    market_rows = [
+        *INPATIENT_ROWS,
+        {
+            **INPATIENT_ROWS[0],
+            "ccn": "390226",
+            "provider_name": "Temple University Hospital",
+            "discharges": 500,
+        },
+    ]
+    with (
+        patch.object(data_loaders, "ensure_inpatient_cached", new_callable=AsyncMock, return_value=True),
+        patch.object(data_loaders, "query_inpatient", return_value=market_rows),
+    ):
+        result = parse_tool_result(await server.analyze_market_volumes(provider_ccns=["390223", "390226"]))
+
+    assert result["total_providers"] == 2
+    assert result["evidence"]["dataset_id"] == "cms_medicare_inpatient_puf"
+    assert result["evidence"]["match_basis"] == "ccn_exact_provider_set_inpatient_rows"
+    validate_evidence_receipt(result["evidence"], require_content=True)
+    identity_ccns = {entity["ccn"] for entity in result["identity_map"]["entities"]}
+    assert identity_ccns == {"390223", "390226"}
+    assert result["identity_map"]["match_basis"] == "ccn_exact_provider_set"
+    assert_claims_row_receipt(
+        result["provider_shares"][0]["evidence"],
+        dataset_id="cms_medicare_inpatient_puf",
+        match_basis="provider_market_share_row",
+        row_kind="provider_market_share",
+    )
+    assert_claims_row_receipt(
+        result["provider_shares"][0]["service_line_breakdown"][0]["evidence"],
+        dataset_id="cms_medicare_inpatient_puf",
+        match_basis="provider_service_line_market_share_row",
+        row_kind="provider_service_line_market_share",
+    )
+    assert_claims_row_receipt(
+        result["service_line_totals"][0]["evidence"],
+        dataset_id="cms_medicare_inpatient_puf",
+        match_basis="service_line_market_total_row",
+        row_kind="service_line_market_total",
+    )

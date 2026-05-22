@@ -61,10 +61,6 @@
       "type": "http",
       "url": "http://localhost:8016/mcp"
     },
-    "hc-live-gateway": {
-      "type": "http",
-      "url": "http://localhost:8020/mcp"
-    },
     "hc-provider-enrollment": {
       "type": "http",
       "url": "http://localhost:8017/mcp"
@@ -76,6 +72,10 @@
     "hc-research-trials": {
       "type": "http",
       "url": "http://localhost:8019/mcp"
+    },
+    "hc-live-gateway": {
+      "type": "http",
+      "url": "http://localhost:8020/mcp"
     }
   }
 }

@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from servers.community_health import data_loaders, server
+from shared.utils.mcp_response import validate_evidence_receipt
 
 
 SOURCE = {
@@ -66,6 +67,20 @@ RAW_ROWS = [
 ]
 
 
+def _assert_places_row_receipt(
+    receipt: dict,
+    *,
+    expected_match_basis: str,
+    expected_dataset_id: str = "fixture-county",
+) -> None:
+    validate_evidence_receipt(receipt, require_content=True)
+    assert receipt["source_name"] == "CDC PLACES: Local Data for Better Health"
+    assert receipt["dataset_id"] == expected_dataset_id
+    assert receipt["match_basis"] == expected_match_basis
+    assert "model-based community estimates" in receipt["caveat"]
+    assert receipt["next_step"]
+
+
 @pytest.fixture(autouse=True)
 def patch_places_rows(monkeypatch: pytest.MonkeyPatch) -> None:
     async def fake_normalized_places_rows(geography_type: str, **filters):
@@ -92,7 +107,16 @@ async def test_list_places_measures_returns_source_metadata() -> None:
     assert result["ok"] is True
     assert result["count"] == 1
     assert result["results"][0]["measure_id"] == "BPHIGH"
+    _assert_places_row_receipt(
+        result["results"][0]["evidence"],
+        expected_match_basis="cdc_places_measure_metadata_row",
+    )
+    assert result["results"][0]["evidence"]["query"]["row_measure_id"] == "BPHIGH"
     assert result["meta"]["source"]["dataset_id"] == "fixture-county"
+    assert result["evidence"]["dataset_id"] == "fixture-county"
+    assert result["evidence"]["match_basis"] == "cdc_places_measure_metadata_from_rows"
+    assert result["source_metadata"]["dataset_id"] == "fixture-county"
+    validate_evidence_receipt(result["evidence"], require_content=True)
 
 
 @pytest.mark.asyncio
@@ -102,6 +126,17 @@ async def test_search_places_returns_locations() -> None:
     assert result["ok"] is True
     assert result["results"][0]["location_id"] == "42003"
     assert result["results"][0]["location_name"] == "Allegheny"
+    _assert_places_row_receipt(
+        result["results"][0]["evidence"],
+        expected_match_basis="cdc_places_location_search_result_row",
+    )
+    assert result["results"][0]["evidence"]["query"]["row_location_id"] == "42003"
+    assert result["evidence"]["match_basis"] == "cdc_places_location_name_or_id_search"
+    assert result["identity_map"]["entities"][0]["unresolved_identifiers"][0] == {
+        "type": "places_county_location_id",
+        "value": "42003",
+    }
+    validate_evidence_receipt(result["evidence"], require_content=True)
 
 
 @pytest.mark.asyncio
@@ -119,7 +154,19 @@ async def test_get_places_profile_labels_community_estimates() -> None:
     profile = result["profile"]
     assert profile["location"]["location_id"] == "42003"
     assert profile["measures"][0]["data_value"] == 33.4
+    _assert_places_row_receipt(
+        profile["location"]["evidence"],
+        expected_match_basis="cdc_places_profile_location_id_exact_row",
+    )
+    _assert_places_row_receipt(
+        profile["measures"][0]["evidence"],
+        expected_match_basis="cdc_places_profile_measure_row_exact_location",
+    )
+    assert profile["measures"][0]["evidence"]["query"]["row_data_value"] == 33.4
     assert "not patient-level facts" in profile["interpretation"]
+    assert result["evidence"]["match_basis"] == "cdc_places_location_id_exact"
+    assert result["identity"]["canonical_name"] == "ALLEGHENY"
+    validate_evidence_receipt(result["evidence"], require_content=True)
 
 
 @pytest.mark.asyncio
@@ -137,6 +184,17 @@ async def test_compare_places_reports_missing_locations() -> None:
     assert result["ok"] is True
     assert result["comparison"]["missing_locations"] == ["42091"]
     assert result["comparison"]["profiles"]["42101"]["location"]["location_name"] == "Philadelphia"
+    _assert_places_row_receipt(
+        result["comparison"]["profiles"]["42101"]["location"]["evidence"],
+        expected_match_basis="cdc_places_comparison_location_id_exact_row",
+    )
+    _assert_places_row_receipt(
+        result["comparison"]["profiles"]["42101"]["measures"][0]["evidence"],
+        expected_match_basis="cdc_places_comparison_measure_row_exact_location",
+    )
+    assert result["evidence"]["match_basis"] == "cdc_places_location_id_exact_comparison"
+    assert {entity["canonical_name"] for entity in result["identity_map"]["entities"]} == {"ALLEGHENY", "PHILADELPHIA"}
+    validate_evidence_receipt(result["evidence"], require_content=True)
 
 
 @pytest.mark.asyncio
@@ -157,7 +215,24 @@ async def test_get_market_community_profile_aggregates_counties() -> None:
     assert measure["measure_id"] == "BPHIGH"
     assert measure["locations_reporting"] == 2
     assert measure["weighted_average"] == 34.291
+    _assert_places_row_receipt(
+        profile["locations"][0]["evidence"],
+        expected_match_basis="cdc_places_market_location_exact_geography_id_row",
+    )
+    _assert_places_row_receipt(
+        measure["evidence"],
+        expected_match_basis="cdc_places_market_aggregated_measure_row",
+        expected_dataset_id="cdc_places_market_community_profile",
+    )
+    assert measure["evidence"]["query"]["row_locations_reporting"] == 2
     assert "not patient-level facts" in profile["interpretation"]
+    assert result["evidence"]["dataset_id"] == "cdc_places_market_community_profile"
+    assert result["evidence"]["match_basis"] == "cdc_places_exact_geography_id_market_aggregation"
+    assert {entity["unresolved_identifiers"][0]["value"] for entity in result["identity_map"]["entities"]} == {
+        "42003",
+        "42101",
+    }
+    validate_evidence_receipt(result["evidence"], require_content=True)
 
 
 @pytest.mark.asyncio
