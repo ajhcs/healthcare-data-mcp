@@ -12,18 +12,20 @@ NOTE: The OSRM public demo server (router.project-osrm.org) is rate-limited.
 For production use, deploy a self-hosted OSRM instance and set OSRM_BASE_URL.
 """
 
-from typing import Any
 import io
 import json
 import logging
 import os
 import zipfile
+from datetime import UTC, datetime
+from typing import Any
 
 
 from shared.utils.http_client import resilient_request
 import pandas as pd
 from mcp.server.fastmcp import FastMCP
-from shared.utils.mcp_response import error_response, to_structured
+from shared.utils.healthcare_identity import identity_from_public_record
+from shared.utils.mcp_response import error_response, evidence_receipt, to_structured
 
 from .accessibility import compute_e2sfca, summarize_scores
 from .models import (
@@ -49,6 +51,7 @@ METERS_PER_MILE = 1609.344
 CACHE_DIR = os.path.join(os.path.expanduser("~"), ".healthcare-data-mcp", "cache")
 os.makedirs(CACHE_DIR, exist_ok=True)
 HOSPITAL_INFO_URL = "https://data.cms.gov/provider-data/api/1/datastore/query/xubh-q36u/0/download?format=csv"
+HOSPITAL_INFO_LANDING_PAGE = "https://data.cms.gov/provider-data/dataset/xubh-q36u"
 
 # In-memory cache of facility DataFrame
 _facility_df: pd.DataFrame | None = None
@@ -77,6 +80,231 @@ def _get_ors() -> ORSRouter:
     return ORSRouter(api_key=ORS_API_KEY)
 
 
+def _cache_age_days(cache_path: str) -> int | None:
+    if not os.path.exists(cache_path):
+        return None
+    age_seconds = datetime.now(UTC).timestamp() - os.path.getmtime(cache_path)
+    return max(0, int(age_seconds // 86400))
+
+
+def _cache_mtime(cache_path: str) -> str:
+    if not os.path.exists(cache_path):
+        return ""
+    return datetime.fromtimestamp(os.path.getmtime(cache_path), UTC).isoformat()
+
+
+def _osrm_source_metadata(operation: str) -> dict[str, Any]:
+    public_demo = "router.project-osrm.org" in OSRM_BASE_URL
+    return {
+        "source_name": "Open Source Routing Machine (OSRM) routing engine",
+        "source_url": OSRM_BASE_URL,
+        "dataset_id": f"osrm_{operation}",
+        "source_period": "live routing response at request time",
+        "landing_page": "https://project-osrm.org/",
+        "cache_status": "live_api",
+        "cache_freshness": "queried live via configured OSRM endpoint",
+        "source_caveat": (
+            "Drive times are routing-engine estimates from the configured OSRM road graph, "
+            "not observed traffic, official access standards, or proof of network adequacy."
+            + (" The public OSRM demo endpoint is rate-limited and not intended for production workloads." if public_demo else "")
+        ),
+    }
+
+
+def _ors_source_metadata() -> dict[str, Any]:
+    return {
+        "source_name": "OpenRouteService Isochrones API",
+        "source_url": "https://api.openrouteservice.org/v2/isochrones/driving-car",
+        "dataset_id": "openrouteservice_drive_isochrone",
+        "source_period": "live routing response at request time",
+        "landing_page": "https://openrouteservice.org/",
+        "cache_status": "live_api",
+        "cache_freshness": "queried live via OpenRouteService API",
+        "source_caveat": (
+            "Isochrones are modeled drive-time polygons from OpenRouteService and should be "
+            "validated against local routing assumptions before operational use."
+        ),
+    }
+
+
+def _hospital_info_source_metadata() -> dict[str, Any]:
+    cache_path = os.path.join(CACHE_DIR, "hospital_general_info.csv")
+    cache_status = "local_cache_hit" if os.path.exists(cache_path) else "download_on_demand"
+    return {
+        "source_name": "CMS Provider Data Hospital General Information",
+        "source_url": HOSPITAL_INFO_URL,
+        "dataset_id": "cms_hospital_general_information",
+        "source_period": "CMS Provider Data API export at cache download time",
+        "landing_page": HOSPITAL_INFO_LANDING_PAGE,
+        "source_modified": _cache_mtime(cache_path),
+        "cache_status": cache_status,
+        "cache_age_days": _cache_age_days(cache_path),
+        "cache_key": cache_path,
+        "source_caveat": (
+            "Hospital General Information identifies public Medicare facilities and locations; "
+            "it is not a complete provider directory, licensure record, or current capacity source."
+        ),
+    }
+
+
+def _gazetteer_source_metadata() -> dict[str, Any]:
+    cache_path = os.path.join(CACHE_DIR, "zip_centroids.txt")
+    cache_status = "local_cache_hit" if os.path.exists(cache_path) else "download_on_demand"
+    return {
+        "source_name": "U.S. Census Gazetteer ZCTA centroid file",
+        "source_url": GAZETTEER_URL,
+        "dataset_id": "census_gazetteer_zcta_centroids",
+        "source_period": "2023",
+        "landing_page": GAZETTEER_LANDING_PAGE,
+        "source_modified": _cache_mtime(cache_path),
+        "cache_status": cache_status,
+        "cache_age_days": _cache_age_days(cache_path),
+        "cache_key": cache_path,
+        "source_caveat": (
+            "ZCTA centroids are geography approximations used only when facility coordinates are absent; "
+            "they should not be treated as exact facility coordinates."
+        ),
+    }
+
+
+def _combined_source_metadata(*, dataset_id: str, include_gazetteer: bool = False) -> dict[str, Any]:
+    sources = [_hospital_info_source_metadata(), _osrm_source_metadata("table_matrix")]
+    if include_gazetteer:
+        sources.append(_gazetteer_source_metadata())
+    return {
+        "source_name": "CMS Provider Data Hospital General Information + OSRM routing engine",
+        "source_url": HOSPITAL_INFO_URL,
+        "dataset_id": dataset_id,
+        "source_period": "CMS facility cache plus live routing response at request time",
+        "landing_page": HOSPITAL_INFO_LANDING_PAGE,
+        "cache_status": ", ".join(str(source.get("cache_status") or "") for source in sources if source.get("cache_status")),
+        "cache_freshness": "; ".join(str(source.get("cache_freshness") or "") for source in sources if source.get("cache_freshness")),
+        "source_caveat": (
+            "Combines public CMS facility location records with modeled OSRM drive times. "
+            "Results are market/access context, not a complete provider directory, observed traffic, "
+            "network adequacy finding, or referral/leakage conclusion."
+        ),
+        "sources": sources,
+    }
+
+
+def _drive_time_evidence(
+    source_metadata: dict[str, Any],
+    *,
+    entity_scope: str,
+    query: dict[str, Any],
+    match_basis: str,
+    confidence: str,
+    caveat: str = "",
+    next_step: str = "",
+) -> dict[str, Any]:
+    return evidence_receipt(
+        source_metadata=source_metadata,
+        entity_scope=entity_scope,
+        query=query,
+        match_basis=match_basis,
+        confidence=confidence,
+        caveat=caveat or str(source_metadata.get("source_caveat") or ""),
+        next_step=next_step,
+    )
+
+
+def _drive_time_row_evidence(
+    source_metadata: dict[str, Any],
+    *,
+    entity_scope: str,
+    parent_query: dict[str, Any],
+    row_query: dict[str, Any],
+    match_basis: str,
+    confidence: str,
+    caveat: str = "",
+    next_step: str = "",
+) -> dict[str, Any]:
+    query = {
+        **{key: value for key, value in parent_query.items() if value not in ("", None, [])},
+        **{key: value for key, value in row_query.items() if value not in ("", None, [])},
+    }
+    return _drive_time_evidence(
+        source_metadata,
+        entity_scope=entity_scope,
+        query=query,
+        match_basis=match_basis,
+        confidence=confidence,
+        caveat=caveat,
+        next_step=next_step,
+    )
+
+
+def _coordinate_identity(*, entity_id: str, lat: float, lon: float, entity_type: str = "coordinate") -> dict[str, Any]:
+    return {
+        "canonical_name": str(entity_id or ""),
+        "entity_type": entity_type,
+        "ccn": "",
+        "npi": "",
+        "pecos_enrollment_id": "",
+        "ahrq_system_id": "",
+        "owner_id": "",
+        "address": "",
+        "zip_code": "",
+        "lat": lat,
+        "lon": lon,
+        "aliases": [],
+        "match_decisions": [
+            {
+                "basis": "caller_supplied_coordinate",
+                "confidence": "caller_supplied",
+                "decided_at": "",
+                "notes": "Coordinate identity is scoped to this request and is not a healthcare entity match.",
+            }
+        ],
+        "conflicts": [],
+        "unresolved_identifiers": [],
+    }
+
+
+def _facility_identity(row: pd.Series | dict[str, Any]) -> dict[str, Any]:
+    get = row.get
+    address = get("address", "")
+    city = get("city", get("city/town", ""))
+    state = get("state", "")
+    zip_code = get("zip_code", get("zip", get("zipcode", "")))
+    full_address = ", ".join(str(part) for part in (address, city, state) if part)
+    return identity_from_public_record(
+        name=get("facility_name", get("hospital_name", "")),
+        entity_type="facility",
+        ccn=get("facility_id", get("provider_id", get("ccn", ""))),
+        address=full_address,
+        zip_code=zip_code,
+        source_name="CMS Provider Data Hospital General Information",
+        source_url=HOSPITAL_INFO_URL,
+    ).to_dict()
+
+
+def _location_identity_map(
+    origins: list[dict[str, Any]],
+    destinations: list[dict[str, Any]],
+) -> dict[str, Any]:
+    entities = [
+        _coordinate_identity(
+            entity_id=str(origin.get("id", f"origin_{index}")),
+            lat=float(origin["lat"]),
+            lon=float(origin["lon"]),
+            entity_type="origin_coordinate",
+        )
+        for index, origin in enumerate(origins)
+    ]
+    entities.extend(
+        _coordinate_identity(
+            entity_id=str(destination.get("id", f"dest_{index}")),
+            lat=float(destination["lat"]),
+            lon=float(destination["lon"]),
+            entity_type="destination_coordinate",
+        )
+        for index, destination in enumerate(destinations)
+    )
+    return {"entities": entities}
+
+
 async def _load_facilities() -> pd.DataFrame:
     """Load CMS Hospital General Info, downloading and caching if needed."""
     global _facility_df
@@ -100,6 +328,7 @@ async def _load_facilities() -> pd.DataFrame:
 
 # Census Gazetteer ZIP centroid file (~1MB ZIP archive, pipe-delimited inside)
 GAZETTEER_URL = "https://www2.census.gov/geo/docs/maps-data/data/gazetteer/2023_Gazetteer/2023_Gaz_zcta_national.zip"
+GAZETTEER_LANDING_PAGE = "https://www.census.gov/geographies/reference-files/time-series/geo/gazetteer-files.html"
 _ZIP_CENTROIDS: dict[str, tuple[float, float]] | None = None
 
 
@@ -147,6 +376,7 @@ async def _parse_lat_lon(df: pd.DataFrame) -> pd.DataFrame:
         df = df.copy()
         df["_lat"] = pd.to_numeric(df["latitude"], errors="coerce")
         df["_lon"] = pd.to_numeric(df["longitude"], errors="coerce")
+        df["_coordinate_source"] = "facility_latitude_longitude_columns"
         return df
 
     if "location" in df.columns:
@@ -161,6 +391,7 @@ async def _parse_lat_lon(df: pd.DataFrame) -> pd.DataFrame:
 
         df["_lat"] = df["location"].apply(lambda v: _extract(v, "latitude"))
         df["_lon"] = df["location"].apply(lambda v: _extract(v, "longitude"))
+        df["_coordinate_source"] = "facility_location_json"
         return df
 
     # Fallback: geocode via ZIP centroid
@@ -174,6 +405,7 @@ async def _parse_lat_lon(df: pd.DataFrame) -> pd.DataFrame:
         df["_lon"] = df[zip_col].apply(
             lambda z: centroids.get(str(z).strip().zfill(5), (None, None))[1]
         )
+        df["_coordinate_source"] = "census_zcta_centroid_fallback"
         logger.info("Geocoded %d/%d facilities via ZIP centroids",
                      df["_lat"].notna().sum(), len(df))
         return df
@@ -208,7 +440,28 @@ async def compute_drive_time(
         distance_meters=result["distance_meters"],
         distance_miles=round(result["distance_meters"] / METERS_PER_MILE, 2),
     )
-    return route.model_dump()
+    source_metadata = _osrm_source_metadata("route")
+    response = route.model_dump()
+    response["source_metadata"] = source_metadata
+    response["evidence"] = _drive_time_evidence(
+        source_metadata,
+        entity_scope="point_to_point_route",
+        query={
+            "origin": {"lat": origin_lat, "lon": origin_lon},
+            "destination": {"lat": dest_lat, "lon": dest_lon},
+            "mode": "driving-car",
+        },
+        match_basis="caller_supplied_coordinates_osrm_route",
+        confidence="high_for_configured_routing_engine",
+        next_step="Use a self-hosted OSRM backend and local validation before treating this as an operational access standard.",
+    )
+    response["identity_map"] = {
+        "entities": [
+            _coordinate_identity(entity_id="origin", lat=origin_lat, lon=origin_lon, entity_type="origin_coordinate"),
+            _coordinate_identity(entity_id="destination", lat=dest_lat, lon=dest_lon, entity_type="destination_coordinate"),
+        ]
+    }
+    return to_structured(response)
 
 
 @mcp.tool(structured_output=True)
@@ -224,7 +477,17 @@ async def compute_drive_time_matrix(
     """
     # Validate inputs
     if not origins or not destinations:
-        return error_response("origins and destinations must be non-empty")
+        return error_response(
+            "origins and destinations must be non-empty",
+            evidence=_drive_time_evidence(
+                _osrm_source_metadata("table_matrix"),
+                entity_scope="origin_destination_drive_time_matrix",
+                query={"origin_count": len(origins), "destination_count": len(destinations)},
+                match_basis="caller_supplied_coordinate_ids_osrm_table",
+                confidence="not_run_invalid_input",
+                next_step="Provide at least one origin and one destination with lat/lon values.",
+            ),
+        )
 
     origin_ids = [o.get("id", f"origin_{i}") for i, o in enumerate(origins)]
     dest_ids = [d.get("id", f"dest_{i}") for i, d in enumerate(destinations)]
@@ -246,6 +509,14 @@ async def compute_drive_time_matrix(
     durations = data.get("durations", [])
     distances = data.get("distances", [])
 
+    source_metadata = _osrm_source_metadata("table_matrix")
+    parent_query = {
+        "origin_count": len(origins),
+        "destination_count": len(destinations),
+        "origin_ids": origin_ids,
+        "destination_ids": dest_ids,
+        "mode": "driving-car",
+    }
     entries: list[dict] = []
     for i, origin_id in enumerate(origin_ids):
         for j, dest_id in enumerate(dest_ids):
@@ -257,12 +528,37 @@ async def compute_drive_time_matrix(
                 duration_minutes=round(dur / 60, 2) if dur is not None else None,
                 distance_miles=round(dist / METERS_PER_MILE, 2) if dist is not None else None,
             )
-            entries.append(entry.model_dump())
+            entry_payload = entry.model_dump()
+            entry_payload["evidence"] = _drive_time_row_evidence(
+                source_metadata,
+                entity_scope="origin_destination_drive_time_matrix_row",
+                parent_query=parent_query,
+                row_query={
+                    "origin_id": origin_id,
+                    "destination_id": dest_id,
+                    "duration_minutes": entry_payload.get("duration_minutes"),
+                    "distance_miles": entry_payload.get("distance_miles"),
+                },
+                match_basis="osrm_table_matrix_origin_destination_cell",
+                confidence="high_for_configured_routing_engine_cell",
+                next_step="Preserve this row receipt before joining the origin/destination IDs to healthcare entities.",
+            )
+            entries.append(entry_payload)
 
     result = {
         "origin_ids": origin_ids,
         "destination_ids": dest_ids,
         "matrix": entries,
+        "source_metadata": source_metadata,
+        "evidence": _drive_time_evidence(
+            source_metadata,
+            entity_scope="origin_destination_drive_time_matrix",
+            query=parent_query,
+            match_basis="caller_supplied_coordinate_ids_osrm_table",
+            confidence="high_for_configured_routing_engine",
+            next_step="Retain caller-supplied IDs with the returned matrix before joining to healthcare entities.",
+        ),
+        "identity_map": _location_identity_map(origins, destinations),
     }
     return to_structured(result)
 
@@ -289,7 +585,20 @@ async def generate_isochrone(
     ranges_seconds = [m * 60 for m in minutes]
     ors = _get_ors()
     geojson = await ors.isochrone(lon=lon, lat=lat, ranges=ranges_seconds)
-    return to_structured(geojson)
+    result = to_structured(geojson)
+    if isinstance(result, dict):
+        source_metadata = _ors_source_metadata()
+        result["source_metadata"] = source_metadata
+        result["evidence"] = _drive_time_evidence(
+            source_metadata,
+            entity_scope="drive_time_isochrone",
+            query={"lat": lat, "lon": lon, "minutes": minutes, "mode": "driving-car"},
+            match_basis="caller_supplied_coordinate_openrouteservice_isochrone",
+            confidence="high_for_configured_routing_engine",
+            next_step="Validate polygon boundaries against local routing assumptions before using them for facility access decisions.",
+        )
+        result["identity"] = _coordinate_identity(entity_id="isochrone_center", lat=lat, lon=lon)
+    return to_structured(result)
 
 
 @mcp.tool(structured_output=True)
@@ -314,9 +623,28 @@ async def find_competing_facilities(
     df = await _load_facilities()
     df = await _parse_lat_lon(df)
     df = df.dropna(subset=["_lat", "_lon"])
+    include_gazetteer = bool(
+        "_coordinate_source" in df.columns and (df["_coordinate_source"] == "census_zcta_centroid_fallback").any()
+    )
+    source_metadata = _combined_source_metadata(
+        dataset_id="drive_time_competing_facilities",
+        include_gazetteer=include_gazetteer,
+    )
+    evidence = _drive_time_evidence(
+        source_metadata,
+        entity_scope="facilities_within_drive_time_radius",
+        query={"lat": lat, "lon": lon, "radius_minutes": radius_minutes, "facility_type": facility_type},
+        match_basis="cms_facility_location_candidates_plus_osrm_drive_time_threshold",
+        confidence="medium_for_market_context",
+        next_step="Inspect returned facility CCNs and source records before using the candidate set in a market or access workflow.",
+    )
 
     if df.empty:
-        return error_response("No geocoded facilities found in dataset")
+        return error_response(
+            "No geocoded facilities found in dataset",
+            evidence=evidence,
+            source_metadata={"sources": source_metadata["sources"]},
+        )
 
     # Pre-filter by rough bounding box (~1 degree ≈ 60 miles ≈ ~60 min drive)
     # to avoid sending thousands of points to OSRM
@@ -327,7 +655,15 @@ async def find_competing_facilities(
     ]
 
     if nearby.empty:
-        return to_structured({"facilities": [], "count": 0, "message": "No facilities found within bounding box"})
+        return to_structured({
+            "facilities": [],
+            "count": 0,
+            "message": "No facilities found within bounding box",
+            "evidence": evidence,
+            "source_metadata": {"sources": source_metadata["sources"]},
+            "identity": _coordinate_identity(entity_id="origin", lat=lat, lon=lon, entity_type="origin_coordinate"),
+            "identity_map": {"entities": []},
+        })
 
     # Cap at 100 facilities per OSRM table request to avoid overloading
     if len(nearby) > 100:
@@ -348,6 +684,7 @@ async def find_competing_facilities(
     distances_row = data.get("distances", [[]])[0]
 
     facilities: list[dict] = []
+    facility_identities: list[dict] = []
     for idx, (_, row) in enumerate(nearby.iterrows()):
         dur = durations[idx] if idx < len(durations) else None
         dist = distances_row[idx] if idx < len(distances_row) else None
@@ -365,11 +702,41 @@ async def find_competing_facilities(
             drive_time_minutes=round(drive_min, 2),
             distance_miles=round(dist / METERS_PER_MILE, 2) if dist is not None else 0.0,
         )
-        facilities.append(fac.model_dump())
+        facility_payload = fac.model_dump()
+        facility_payload["evidence"] = _drive_time_evidence(
+            source_metadata,
+            entity_scope="facilities_within_drive_time_radius_row",
+            query={
+                "origin_lat": lat,
+                "origin_lon": lon,
+                "radius_minutes": radius_minutes,
+                "facility_type": facility_type,
+                "ccn": facility_payload.get("ccn", ""),
+                "facility_name": facility_payload.get("name", ""),
+            },
+            match_basis="competing_facility_drive_time_row",
+            confidence="modeled_drive_time_public_facility_row",
+            caveat=(
+                "This competing-facility row combines public CMS facility coordinates with modeled OSRM drive time; "
+                "verify the facility source record and routing assumptions before citing competitive access context."
+            ),
+            next_step="Preserve this row receipt with the facility CCN/name and rerun using a production routing source if needed.",
+        )
+        facilities.append(facility_payload)
+        facility_identities.append(_facility_identity(row))
 
-    facilities.sort(key=lambda f: f["drive_time_minutes"])
+    paired = sorted(zip(facilities, facility_identities, strict=True), key=lambda pair: pair[0]["drive_time_minutes"])
+    facilities = [facility for facility, _ in paired]
+    facility_identities = [identity for _, identity in paired]
 
-    return to_structured({"facilities": facilities, "count": len(facilities)})
+    return to_structured({
+        "facilities": facilities,
+        "count": len(facilities),
+        "evidence": evidence,
+        "source_metadata": {"sources": source_metadata["sources"]},
+        "identity": _coordinate_identity(entity_id="origin", lat=lat, lon=lon, entity_type="origin_coordinate"),
+        "identity_map": {"entities": facility_identities},
+    })
 
 
 @mcp.tool(structured_output=True)
@@ -390,8 +757,50 @@ async def compute_accessibility_score(
             E.g., hospitals with bed counts.
         catchment_minutes: Max travel time for the catchment area (default 30).
     """
+    source_metadata = {
+        "source_name": "OSRM routing engine + E2SFCA accessibility method",
+        "source_url": OSRM_BASE_URL,
+        "dataset_id": "drive_time_e2sfca_accessibility",
+        "source_period": "live routing response at request time",
+        "landing_page": "https://project-osrm.org/",
+        "cache_status": "live_api",
+        "cache_freshness": "queried live via configured OSRM endpoint",
+        "source_caveat": (
+            "E2SFCA scores are modeled accessibility indexes using caller-supplied demand and supply inputs "
+            "plus OSRM travel times; they are not observed utilization, capacity verification, network adequacy, "
+            "or patient-level access facts."
+        ),
+        "sources": [
+            _osrm_source_metadata("accessibility_table"),
+            {
+                "source_name": "Enhanced Two-Step Floating Catchment Area method",
+                "source_url": "https://doi.org/10.1016/j.healthplace.2009.06.002",
+                "dataset_id": "e2sfca_method_reference",
+                "source_period": "2009 method publication",
+                "landing_page": "https://www.sciencedirect.com/science/article/pii/S1353829209000642",
+                "cache_status": "not_applicable",
+                "source_caveat": "Method reference only; input demand and supply values must be independently sourced and cited.",
+            },
+        ],
+    }
+    evidence = _drive_time_evidence(
+        source_metadata,
+        entity_scope="modeled_accessibility_score",
+        query={
+            "demand_point_count": len(demand_points),
+            "supply_point_count": len(supply_points),
+            "catchment_minutes": catchment_minutes,
+        },
+        match_basis="caller_supplied_demand_supply_coordinates_osrm_table_e2sfca",
+        confidence="method_estimate_depends_on_inputs",
+        next_step="Attach source evidence for the caller-supplied demand populations and supply capacities before citing scores.",
+    )
     if not demand_points or not supply_points:
-        return error_response("demand_points and supply_points must be non-empty")
+        return error_response(
+            "demand_points and supply_points must be non-empty",
+            evidence=evidence,
+            source_metadata={"sources": source_metadata["sources"]},
+        )
 
     # Build coordinate list: demand points first, then supply points
     coords: list[tuple[float, float]] = []
@@ -423,8 +832,14 @@ async def compute_accessibility_score(
     scores = compute_e2sfca(travel_matrix, populations, capacities, catchment_minutes)
 
     # Build results
+    parent_query = {
+        "demand_point_count": len(demand_points),
+        "supply_point_count": len(supply_points),
+        "catchment_minutes": catchment_minutes,
+    }
     results: list[dict] = []
     for i, dp in enumerate(demand_points):
+        reachable_supply_count = sum(1 for value in travel_matrix[i] if value is not None and value <= catchment_minutes)
         ar = AccessibilityResult(
             demand_id=dp.get("id", f"demand_{i}"),
             lat=float(dp["lat"]),
@@ -432,7 +847,25 @@ async def compute_accessibility_score(
             population=populations[i],
             accessibility_score=round(scores[i], 8),
         )
-        results.append(ar.model_dump())
+        result_payload = ar.model_dump()
+        result_payload["evidence"] = _drive_time_row_evidence(
+            source_metadata,
+            entity_scope="modeled_accessibility_score_row",
+            parent_query=parent_query,
+            row_query={
+                "demand_id": result_payload.get("demand_id"),
+                "population": result_payload.get("population"),
+                "reachable_supply_count": reachable_supply_count,
+                "accessibility_score": result_payload.get("accessibility_score"),
+            },
+            match_basis="e2sfca_demand_point_score_row",
+            confidence="method_estimate_depends_on_caller_supplied_inputs",
+            next_step=(
+                "Attach source evidence for this demand point's population and the supply capacities "
+                "before citing the modeled score."
+            ),
+        )
+        results.append(result_payload)
 
     stats = summarize_scores(scores)
     summary = AccessibilitySummary(
@@ -447,7 +880,31 @@ async def compute_accessibility_score(
         points_with_zero_access=stats["points_with_zero_access"],
         results=results,
     )
-    return summary.model_dump()
+    response = summary.model_dump()
+    response["results"] = results
+    response["evidence"] = evidence
+    response["source_metadata"] = {"sources": source_metadata["sources"]}
+    response["identity_map"] = {
+        "entities": [
+            _coordinate_identity(
+                entity_id=str(point.get("id", f"demand_{index}")),
+                lat=float(point["lat"]),
+                lon=float(point["lon"]),
+                entity_type="demand_coordinate",
+            )
+            for index, point in enumerate(demand_points)
+        ]
+        + [
+            _coordinate_identity(
+                entity_id=str(point.get("id", f"supply_{index}")),
+                lat=float(point["lat"]),
+                lon=float(point["lon"]),
+                entity_type="supply_coordinate",
+            )
+            for index, point in enumerate(supply_points)
+        ]
+    }
+    return to_structured(response)
 
 
 # ---------------------------------------------------------------------------

@@ -10,6 +10,7 @@ import pandas as pd
 import pytest
 
 from servers.cms_facility import server
+from shared.utils.mcp_response import validate_evidence_receipt
 
 
 # ---------------------------------------------------------------------------
@@ -65,7 +66,7 @@ def mock_hospital_df():
 def mock_nppes_results():
     return [
         {
-            "number": "1234567890",
+            "number": "1234567893",
             "enumeration_type": "NPI-2",
             "basic": {"organization_name": "Thomas Jefferson University Hospital"},
             "addresses": [
@@ -88,6 +89,17 @@ async def test_search_facilities_by_name(mock_hospital_df):
     assert "results" in result
     assert result["count"] == 1
     assert "Jefferson" in result["results"][0]["facility_name"]
+    assert result["results"][0]["identity"]["ccn"] == "390223"
+    assert result["identity_map"]["join_keys"][0]["field"] == "ccn"
+    assert result["identity_map"]["join_keys"][0]["values"] == ["390223"]
+    assert result["identity_map"]["source_claims"][0]["row_evidence_path"] == "results[].evidence"
+    validate_evidence_receipt(result["results"][0]["evidence"], require_content=True)
+    assert result["results"][0]["evidence"]["dataset_id"] == "cms_hospital_general_info"
+    assert result["results"][0]["evidence"]["match_basis"] == "cms_hospital_general_info_search_row"
+    assert result["results"][0]["evidence"]["query"]["ccn"] == "390223"
+    assert result["evidence"]["dataset_id"] == "cms_hospital_general_info"
+    assert result["evidence"]["match_basis"] == "facility_search_filters"
+    validate_evidence_receipt(result["evidence"], require_content=True)
 
 
 @pytest.mark.asyncio
@@ -125,6 +137,14 @@ async def test_get_facility_found(mock_hospital_df):
     assert "Jefferson" in result["facility_name"]
     assert result["beds"] == 757
     assert result["emergency_services"] is True
+    assert result["identity"]["ccn"] == "390223"
+    assert result["identity"]["canonical_name"] == "THOMAS JEFFERSON UNIVERSITY HOSPITAL"
+    assert result["identity_map"]["join_keys"][0]["values"] == ["390223"]
+    assert "identity.ccn" in result["identity_map"]["source_claims"][0]["identity_paths"]
+    assert result["source_metadata"]["dataset_id"] == "cms_hospital_general_info"
+    assert result["evidence"]["match_basis"] == "ccn_exact"
+    assert result["evidence"]["confidence"] == "high_for_cms_hospital_general_info_row"
+    validate_evidence_receipt(result["evidence"], require_content=True)
 
 
 @pytest.mark.asyncio
@@ -151,8 +171,19 @@ async def test_search_npi_returns_results(mock_nppes_results):
     with patch.object(server.data_loaders, "search_nppes", new_callable=AsyncMock, return_value=mock_nppes_results):
         result = parse_tool_result(await server.search_npi(organization_name="Jefferson"))
     assert result["count"] == 1
-    assert result["results"][0]["npi"] == "1234567890"
+    assert result["results"][0]["npi"] == "1234567893"
     assert result["results"][0]["enumeration_type"] == "NPI-2"
+    assert result["results"][0]["identity"]["npi"] == "1234567893"
+    assert result["identity_map"]["join_keys"][1]["field"] == "npi"
+    assert result["identity_map"]["join_keys"][1]["values"] == ["1234567893"]
+    assert "results[].identity.npi" in result["identity_map"]["source_claims"][0]["identity_paths"]
+    validate_evidence_receipt(result["results"][0]["evidence"], require_content=True)
+    assert result["results"][0]["evidence"]["dataset_id"] == "nppes_npi_registry"
+    assert result["results"][0]["evidence"]["match_basis"] == "nppes_result_row"
+    assert result["results"][0]["evidence"]["query"]["npi"] == "1234567893"
+    assert result["evidence"]["dataset_id"] == "nppes_npi_registry"
+    assert result["evidence"]["match_basis"] == "nppes_search_filters"
+    validate_evidence_receipt(result["evidence"], require_content=True)
 
 
 @pytest.mark.asyncio
@@ -169,3 +200,48 @@ async def test_search_npi_empty_results():
         result = parse_tool_result(await server.search_npi(organization_name="NonExistentHospital"))
     assert result["count"] == 0
     assert result["results"] == []
+    assert result["evidence"]["dataset_id"] == "nppes_npi_registry"
+    validate_evidence_receipt(result["evidence"], require_content=True)
+
+
+@pytest.mark.asyncio
+async def test_get_facility_financials_includes_identity_and_evidence():
+    cost_report = pd.DataFrame([
+        {
+            "provider_number": "390223",
+            "facility_name": "Thomas Jefferson University Hospital",
+            "fiscal_year_end": "2023-12-31",
+            "hospital_bed_count": "757",
+            "total_discharges": "32000",
+            "total_patient_days": "214000",
+            "net_patient_revenue": "1000000",
+            "total_costs": "900000",
+            "fte_employees": "4500.5",
+        },
+    ])
+    with patch.object(server.data_loaders, "load_cost_report", new_callable=AsyncMock, return_value=cost_report):
+        result = parse_tool_result(await server.get_facility_financials("390223"))
+
+    assert result["ccn"] == "390223"
+    assert result["fiscal_year_end"] == "2023-12-31"
+    assert result["identity"]["ccn"] == "390223"
+    assert result["identity_map"]["join_keys"][0]["values"] == ["390223"]
+    assert result["identity_map"]["source_claims"][0]["match_policy"] == "ccn_exact_cost_report_row"
+    assert result["evidence"]["dataset_id"] == "cms_cost_report"
+    assert result["evidence"]["source_period"] == "2023-12-31"
+    assert result["evidence"]["match_basis"] == "ccn_exact_cost_report_row"
+    validate_evidence_receipt(result["evidence"], require_content=True)
+
+
+@pytest.mark.asyncio
+async def test_get_hospital_info_includes_identity_and_evidence(mock_hospital_df):
+    with patch.object(server.data_loaders, "load_hospital_info", new_callable=AsyncMock, return_value=mock_hospital_df):
+        result = parse_tool_result(await server.get_hospital_info("390223"))
+
+    assert result["ccn"] == "390223"
+    assert result["identity"]["ccn"] == "390223"
+    assert result["identity_map"]["join_keys"][0]["values"] == ["390223"]
+    assert result["identity_map"]["source_claims"][0]["collection"] == "cms_hospital_general_info"
+    assert result["source_metadata"]["dataset_id"] == "cms_hospital_general_info"
+    assert result["evidence"]["match_basis"] == "ccn_exact"
+    validate_evidence_receipt(result["evidence"], require_content=True)

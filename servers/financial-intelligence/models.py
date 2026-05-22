@@ -77,6 +77,7 @@ class MuniBond(BaseModel):
 
     accession_number: str = ""
     issuer_name: str = ""
+    cik: str = ""
     state: str = ""
     filing_date: str = ""
     filing_url: str = ""
@@ -88,6 +89,7 @@ class MuniBondDetails(BaseModel):
 
     accession_number: str = ""
     issuer_name: str = ""
+    cik: str = ""
     filing_date: str = ""
     documents: list[dict] = Field(default_factory=list, description="[{name, url, type}]")
     source_url: str = ""

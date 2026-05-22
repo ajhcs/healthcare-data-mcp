@@ -1,99 +1,137 @@
 {
   "mcpServers": {
-    "cms-facility": {
-      "type": "stdio",
-      "command": "hc-mcp",
-      "args": ["cms-facility"]
-    },
     "service-area": {
       "type": "stdio",
       "command": "hc-mcp",
-      "args": ["service-area"]
+      "args": [
+        "service-area"
+      ]
     },
     "geo-demographics": {
       "type": "stdio",
       "command": "hc-mcp",
-      "args": ["geo-demographics"]
+      "args": [
+        "geo-demographics"
+      ]
     },
     "drive-time": {
       "type": "stdio",
       "command": "hc-mcp",
-      "args": ["drive-time"]
+      "args": [
+        "drive-time"
+      ]
     },
     "hospital-quality": {
       "type": "stdio",
       "command": "hc-mcp",
-      "args": ["hospital-quality"]
+      "args": [
+        "hospital-quality"
+      ]
+    },
+    "cms-facility": {
+      "type": "stdio",
+      "command": "hc-mcp",
+      "args": [
+        "cms-facility"
+      ]
     },
     "health-system-profiler": {
       "type": "stdio",
       "command": "hc-mcp",
-      "args": ["health-system-profiler"]
+      "args": [
+        "health-system-profiler"
+      ]
     },
     "financial-intelligence": {
       "type": "stdio",
       "command": "hc-mcp",
-      "args": ["financial-intelligence"]
+      "args": [
+        "financial-intelligence"
+      ]
     },
     "price-transparency": {
       "type": "stdio",
       "command": "hc-mcp",
-      "args": ["price-transparency"]
+      "args": [
+        "price-transparency"
+      ]
     },
     "physician-referral-network": {
       "type": "stdio",
       "command": "hc-mcp",
-      "args": ["physician-referral-network"]
+      "args": [
+        "physician-referral-network"
+      ]
     },
     "workforce-analytics": {
       "type": "stdio",
       "command": "hc-mcp",
-      "args": ["workforce-analytics"]
+      "args": [
+        "workforce-analytics"
+      ]
     },
     "claims-analytics": {
       "type": "stdio",
       "command": "hc-mcp",
-      "args": ["claims-analytics"]
+      "args": [
+        "claims-analytics"
+      ]
     },
     "public-records": {
       "type": "stdio",
       "command": "hc-mcp",
-      "args": ["public-records"]
+      "args": [
+        "public-records"
+      ]
     },
     "web-intelligence": {
       "type": "stdio",
       "command": "hc-mcp",
-      "args": ["web-intelligence"]
+      "args": [
+        "web-intelligence"
+      ]
     },
     "discovery": {
       "type": "stdio",
       "command": "hc-mcp",
-      "args": ["discovery"]
+      "args": [
+        "discovery"
+      ]
     },
     "gateway": {
       "type": "stdio",
       "command": "hc-mcp",
-      "args": ["gateway"]
-    },
-    "live-gateway": {
-      "type": "stdio",
-      "command": "hc-mcp",
-      "args": ["live-gateway"]
+      "args": [
+        "gateway"
+      ]
     },
     "provider-enrollment": {
       "type": "stdio",
       "command": "hc-mcp",
-      "args": ["provider-enrollment"]
+      "args": [
+        "provider-enrollment"
+      ]
     },
     "community-health": {
       "type": "stdio",
       "command": "hc-mcp",
-      "args": ["community-health"]
+      "args": [
+        "community-health"
+      ]
     },
     "research-trials": {
       "type": "stdio",
       "command": "hc-mcp",
-      "args": ["research-trials"]
+      "args": [
+        "research-trials"
+      ]
+    },
+    "live-gateway": {
+      "type": "stdio",
+      "command": "hc-mcp",
+      "args": [
+        "live-gateway"
+      ]
     }
   }
 }

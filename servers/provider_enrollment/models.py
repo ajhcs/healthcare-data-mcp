@@ -18,12 +18,15 @@ class SourceMetadata(BaseModel):
     title: str = ""
     modified: str = ""
     fetched_at: str = ""
+    source_period: str = ""
     retrieved_at: str = ""
     source_modified: str = ""
     record_count: int | None = None
     checksum: str = ""
     etag: str = ""
     last_modified: str = ""
+    cache_status: str = ""
+    cache_freshness: str = ""
     cache_path: str = ""
     entity_scope: str = ""
     query: dict[str, Any] = Field(default_factory=dict)
@@ -35,6 +38,7 @@ class EnrollmentRecord(BaseModel):
     """Normalized CMS provider enrollment row with original CMS values retained."""
 
     dataset_key: str = ""
+    dataset_id: str = ""
     provider_category: str = ""
     npi: str = ""
     pac_id: str = ""
@@ -47,13 +51,17 @@ class EnrollmentRecord(BaseModel):
     facility_name: str = ""
     source_name: str = ""
     source_url: str = ""
+    source_period: str = ""
     landing_page: str = ""
     retrieved_at: str = ""
     source_modified: str = ""
+    cache_status: str = ""
+    cache_freshness: str = ""
     entity_scope: str = ""
     query: dict[str, Any] = Field(default_factory=dict)
     cache_key: str = ""
     confidence: str = ""
+    evidence: dict[str, Any] = Field(default_factory=dict)
     raw: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -61,6 +69,7 @@ class OwnershipRecord(BaseModel):
     """Normalized CMS owner or managing-control relationship."""
 
     dataset_key: str = ""
+    dataset_id: str = ""
     provider_category: str = ""
     enrollment_id: str = ""
     ccn: str = ""
@@ -81,13 +90,17 @@ class OwnershipRecord(BaseModel):
     holding_company: str = ""
     source_name: str = ""
     source_url: str = ""
+    source_period: str = ""
     landing_page: str = ""
     retrieved_at: str = ""
     source_modified: str = ""
+    cache_status: str = ""
+    cache_freshness: str = ""
     entity_scope: str = ""
     query: dict[str, Any] = Field(default_factory=dict)
     cache_key: str = ""
     confidence: str = ""
+    evidence: dict[str, Any] = Field(default_factory=dict)
     raw: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -107,13 +120,17 @@ class ChangeOfOwnershipRecord(BaseModel):
     change_type: str = ""
     source_name: str = ""
     source_url: str = ""
+    source_period: str = ""
     landing_page: str = ""
     retrieved_at: str = ""
     source_modified: str = ""
+    cache_status: str = ""
+    cache_freshness: str = ""
     entity_scope: str = ""
     query: dict[str, Any] = Field(default_factory=dict)
     cache_key: str = ""
     confidence: str = ""
+    evidence: dict[str, Any] = Field(default_factory=dict)
     raw: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -125,6 +142,7 @@ class GraphNode(BaseModel):
     label: str = ""
     depth: int = 0
     attributes: dict[str, Any] = Field(default_factory=dict)
+    evidence: dict[str, Any] = Field(default_factory=dict)
 
 
 class GraphEdge(BaseModel):
@@ -135,6 +153,7 @@ class GraphEdge(BaseModel):
     relationship: str
     active: bool = True
     attributes: dict[str, Any] = Field(default_factory=dict)
+    evidence: dict[str, Any] = Field(default_factory=dict)
 
 
 class ProviderEnrollmentSearchResponse(BaseModel):

@@ -15,6 +15,9 @@ from pathlib import Path
 from typing import Any
 
 from mcp.server.fastmcp import FastMCP
+from shared.utils.presets import build_preset_plan, list_presets as list_curated_presets
+from shared.utils.server_registry import SERVER_BY_ID, SERVER_REGISTRY, ServerCapability
+from shared.utils.workflows import build_workflow_plan, list_workflow_plans
 
 _transport = os.environ.get("MCP_TRANSPORT", "stdio")
 _mcp_kwargs = {"name": "discovery"}
@@ -957,6 +960,42 @@ DATASET_CATALOG: dict[str, dict[str, Any]] = {
         "source_status_tool": "workforce_analytics.get_acgme_source_status",
         "unsupported_assertions": ["complete live ACGME inventory without a ready imported public export"],
     },
+    "mcp_metadata_surfaces": {
+        "title": "MCP Metadata and Discovery Surfaces",
+        "server": ["discovery", "gateway"],
+        "category": "metadata",
+        "grain": "server capability, dataset catalog, workflow plan, preset, and gateway document metadata",
+        "description": "Registry-backed metadata surfaces for dataset discovery, cache readiness, workflow planning, curated presets, and remote-safe gateway search/fetch.",
+        "source_system": "healthcare-data-mcp server registry and checked-in metadata catalogs",
+        "source_urls": [
+            "healthcare-data://datasets/catalog",
+            "healthcare-data://workflows/catalog",
+            "healthcare-data://presets/catalog",
+            "healthcare-data-mcp://datasets",
+        ],
+        "cache_files": [],
+        "schema": {
+            "identity_fields": ["server_id", "dataset_id", "workflow_id", "preset_id"],
+            "common_fields": [
+                "module",
+                "port",
+                "gateway_exposure",
+                "profiles",
+                "workflow_roles",
+                "cache_needs",
+                "safety_notes",
+            ],
+            "join_keys": ["server_id", "dataset_id", "workflow_id", "preset_id"],
+        },
+        "workflows": [
+            "installation validation",
+            "client setup",
+            "remote metadata discovery",
+            "workflow planning",
+            "curated preset selection",
+        ],
+        "unsupported_assertions": ["live tool access through metadata-only gateway or discovery resources"],
+    },
 }
 
 
@@ -1025,7 +1064,42 @@ def _dataset_or_error(dataset_id: str) -> dict[str, Any]:
             "error": f"Unknown dataset_id: {dataset_id}",
             "available_dataset_ids": sorted(DATASET_CATALOG),
         }
-    return {"dataset_id": dataset_id, **dataset}
+    return {"dataset_id": dataset_id, **dataset, "server_capabilities": _dataset_server_capabilities(dataset)}
+
+
+def _server_capability_payload(spec: ServerCapability) -> dict[str, Any]:
+    return {
+        "server_id": spec.server_id,
+        "module": spec.module,
+        "port": spec.port,
+        "description": spec.description,
+        "required_env": [
+            {"name": key.name, "required": key.required, "description": key.description}
+            for key in spec.required_env
+        ],
+        "optional_env": [
+            {"name": key.name, "required": key.required, "description": key.description}
+            for key in spec.optional_env
+        ],
+        "cache_needs": list(spec.cache_needs),
+        "zero_config": spec.zero_config,
+        "gateway_exposure": list(spec.gateway_exposure),
+        "profiles": list(spec.profiles),
+        "workflow_roles": list(spec.workflow_roles),
+        "dataset_ids": list(spec.dataset_ids),
+        "safety_notes": list(spec.safety_notes),
+    }
+
+
+def _dataset_server_capabilities(dataset: dict[str, Any]) -> list[dict[str, Any]]:
+    capabilities: list[dict[str, Any]] = []
+    for server_id in dataset.get("server", []):
+        spec = SERVER_BY_ID.get(str(server_id))
+        if spec:
+            capabilities.append(_server_capability_payload(spec))
+        else:
+            capabilities.append({"server_id": str(server_id), "error": "server_not_registered"})
+    return capabilities
 
 
 def dataset_catalog_payload() -> dict[str, Any]:
@@ -1041,6 +1115,7 @@ def dataset_catalog_payload() -> dict[str, Any]:
                 "grain": dataset["grain"],
                 "source_system": dataset["source_system"],
                 "workflows": dataset["workflows"],
+                "server_capabilities": _dataset_server_capabilities(dataset),
                 "supports_exact_inventory": bool(dataset.get("supports_exact_inventory", False)),
                 "requires_import": dataset.get("requires_import", []),
                 "source_status_tool": dataset.get("source_status_tool", ""),
@@ -1056,6 +1131,151 @@ def dataset_catalog_payload() -> dict[str, Any]:
             "healthcare-data://datasets/{dataset_id}/source",
         ],
         "datasets": datasets,
+    }
+
+
+def validate_dataset_catalog_contracts() -> dict[str, Any]:
+    """Validate discovery dataset metadata against the canonical server registry."""
+
+    expected_metadata_servers = {
+        spec.server_id
+        for spec in SERVER_REGISTRY
+        if "metadata" in spec.gateway_exposure
+    }
+    covered_servers: dict[str, list[str]] = {}
+    issues: list[dict[str, Any]] = []
+    required_fields = {
+        "title",
+        "server",
+        "category",
+        "grain",
+        "description",
+        "source_system",
+        "source_urls",
+        "cache_files",
+        "schema",
+        "workflows",
+    }
+
+    for dataset_id, dataset in sorted(DATASET_CATALOG.items()):
+        missing_fields = sorted(required_fields - set(dataset))
+        if missing_fields:
+            issues.append(
+                {
+                    "dataset_id": dataset_id,
+                    "status": "missing_dataset_fields",
+                    "message": "Discovery dataset metadata is missing required field(s): "
+                    + ", ".join(missing_fields),
+                }
+            )
+
+        servers = dataset.get("server", [])
+        if not isinstance(servers, list) or not servers:
+            issues.append(
+                {
+                    "dataset_id": dataset_id,
+                    "status": "missing_dataset_servers",
+                    "message": "Discovery dataset metadata must list at least one owning registry server.",
+                }
+            )
+            continue
+
+        for raw_server_id in servers:
+            server_id = str(raw_server_id)
+            covered_servers.setdefault(server_id, []).append(dataset_id)
+            spec = SERVER_BY_ID.get(server_id)
+            if spec is None:
+                issues.append(
+                    {
+                        "dataset_id": dataset_id,
+                        "server_id": server_id,
+                        "status": "server_not_registered",
+                        "message": "Discovery dataset references a server that is not in the canonical registry.",
+                    }
+                )
+                continue
+            if "metadata" not in spec.gateway_exposure:
+                issues.append(
+                    {
+                        "dataset_id": dataset_id,
+                        "server_id": server_id,
+                        "status": "server_not_metadata_exposed",
+                        "message": "Discovery dataset references a server not marked gateway_exposure='metadata'.",
+                    }
+                )
+            if spec.dataset_ids and dataset_id not in spec.dataset_ids:
+                issues.append(
+                    {
+                        "dataset_id": dataset_id,
+                        "server_id": server_id,
+                        "status": "dataset_not_declared_for_server",
+                        "message": "Discovery dataset references a registry server, but the server registry does not declare this dataset_id.",
+                    }
+                )
+
+        schema = dataset.get("schema")
+        if not isinstance(schema, dict) or not schema.get("join_keys"):
+            issues.append(
+                {
+                    "dataset_id": dataset_id,
+                    "status": "missing_join_keys",
+                    "message": "Discovery dataset schema must include explicit join_keys.",
+                }
+            )
+
+    for spec in SERVER_REGISTRY:
+        if "metadata" not in spec.gateway_exposure:
+            continue
+        if not spec.dataset_ids:
+            issues.append(
+                {
+                    "server_id": spec.server_id,
+                    "status": "missing_registry_dataset_ids",
+                    "message": "Metadata-exposed registry server must declare dataset_ids used by discovery and gateway metadata.",
+                }
+            )
+            continue
+        for dataset_id in spec.dataset_ids:
+            dataset = DATASET_CATALOG.get(dataset_id)
+            if dataset is None:
+                issues.append(
+                    {
+                        "server_id": spec.server_id,
+                        "dataset_id": dataset_id,
+                        "status": "declared_dataset_missing_from_catalog",
+                        "message": "Registry declares a dataset_id that is missing from the discovery dataset catalog.",
+                    }
+                )
+                continue
+            if spec.server_id not in dataset.get("server", []):
+                issues.append(
+                    {
+                        "server_id": spec.server_id,
+                        "dataset_id": dataset_id,
+                        "status": "declared_dataset_server_mismatch",
+                        "message": "Registry declares a dataset_id, but that dataset does not list the server as an owner/user.",
+                    }
+                )
+
+    missing_coverage = sorted(expected_metadata_servers - set(covered_servers))
+    for server_id in missing_coverage:
+        issues.append(
+            {
+                "server_id": server_id,
+                "status": "missing_metadata_server_coverage",
+                "message": "Registry metadata-exposed server is not represented in the discovery dataset catalog.",
+            }
+        )
+
+    return {
+        "status": "ok" if not issues else "issues_found",
+        "dataset_count": len(DATASET_CATALOG),
+        "metadata_server_count": len(expected_metadata_servers),
+        "covered_metadata_server_count": len(set(covered_servers) & expected_metadata_servers),
+        "issue_count": len(issues),
+        "issues": issues,
+        "covered_servers": {key: sorted(value) for key, value in sorted(covered_servers.items())},
+        "method": "registry_discovery_dataset_catalog",
     }
 
 
@@ -1086,6 +1306,7 @@ def dataset_source_payload(dataset_id: str) -> dict[str, Any]:
         "dataset_id": dataset_id,
         "title": dataset["title"],
         "server": dataset["server"],
+        "server_capabilities": dataset["server_capabilities"],
         "source_system": dataset["source_system"],
         "source_urls": dataset["source_urls"],
         "cache_files": dataset["cache_files"],
@@ -1170,6 +1391,30 @@ def runbook_payload(runbook_id: str) -> dict[str, Any]:
     return {"runbook_id": runbook_id, **runbook}
 
 
+def workflow_catalog_payload() -> dict[str, Any]:
+    """Return executable workflow plan summaries."""
+
+    return list_workflow_plans()
+
+
+def workflow_plan_payload(workflow_id: str, inputs: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Return one executable workflow plan with local cache readiness."""
+
+    return build_workflow_plan(workflow_id, inputs=inputs or {}, cache_status=cache_status_payload())
+
+
+def preset_catalog_payload() -> dict[str, Any]:
+    """Return curated registry-backed install/use presets."""
+
+    return list_curated_presets()
+
+
+def preset_plan_payload(preset_id: str) -> dict[str, Any]:
+    """Return one curated preset plan with server, env, workflow, and caveat metadata."""
+
+    return build_preset_plan(preset_id)
+
+
 @mcp.tool(structured_output=True)
 async def list_datasets(query: str = "", server: str = "", tag: str = "", limit: int = 50) -> dict[str, Any]:
     """List dataset catalog entries with optional text, server, and category filters."""
@@ -1245,6 +1490,13 @@ async def get_cache_status() -> dict[str, Any]:
 
 
 @mcp.tool(structured_output=True)
+async def validate_dataset_catalog() -> dict[str, Any]:
+    """Validate discovery dataset coverage against the canonical server registry."""
+
+    return validate_dataset_catalog_contracts()
+
+
+@mcp.tool(structured_output=True)
 async def list_runbooks() -> dict[str, Any]:
     """List available discovery and cache runbooks."""
 
@@ -1256,6 +1508,34 @@ async def get_runbook(runbook_id: str) -> dict[str, Any]:
     """Return one discovery/cache runbook by id."""
 
     return runbook_payload(runbook_id)
+
+
+@mcp.tool(structured_output=True)
+async def list_workflows() -> dict[str, Any]:
+    """List executable task-first workflow plans."""
+
+    return workflow_catalog_payload()
+
+
+@mcp.tool(structured_output=True)
+async def get_workflow_plan(workflow_id: str, inputs: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Return required sources, readiness, tool sequence, caveats, and report fact rows for one workflow."""
+
+    return workflow_plan_payload(workflow_id, inputs=inputs)
+
+
+@mcp.tool(structured_output=True)
+async def list_presets() -> dict[str, Any]:
+    """List curated registry-backed server/workflow presets."""
+
+    return preset_catalog_payload()
+
+
+@mcp.tool(structured_output=True)
+async def get_preset_plan(preset_id: str) -> dict[str, Any]:
+    """Return one curated preset with server commands, HTTP URLs, env keys, workflows, and caveats."""
+
+    return preset_plan_payload(preset_id)
 
 
 @mcp.resource(
@@ -1322,6 +1602,50 @@ def cache_status() -> str:
 def cache_runbooks() -> str:
     """List available runbooks."""
     return _json(cache_runbooks_payload())
+
+
+@mcp.resource(
+    "healthcare-data://workflows/catalog",
+    name="workflow_catalog",
+    description="Catalog of executable healthcare-data-mcp task-first workflows.",
+    mime_type="application/json",
+)
+def workflow_catalog() -> str:
+    """List executable workflow plans."""
+    return _json(workflow_catalog_payload())
+
+
+@mcp.resource(
+    "healthcare-data://workflows/{workflow_id}",
+    name="workflow_plan",
+    description="Executable workflow plan by workflow_id.",
+    mime_type="application/json",
+)
+def workflow_plan(workflow_id: str) -> str:
+    """Read one executable workflow plan by workflow_id."""
+    return _json(workflow_plan_payload(workflow_id))
+
+
+@mcp.resource(
+    "healthcare-data://presets/catalog",
+    name="preset_catalog",
+    description="Catalog of registry-backed healthcare-data-mcp server/workflow presets.",
+    mime_type="application/json",
+)
+def preset_catalog() -> str:
+    """List curated registry-backed presets."""
+    return _json(preset_catalog_payload())
+
+
+@mcp.resource(
+    "healthcare-data://presets/{preset_id}",
+    name="preset_plan",
+    description="Registry-backed curated preset by preset_id.",
+    mime_type="application/json",
+)
+def preset_plan(preset_id: str) -> str:
+    """Read one curated preset by preset_id."""
+    return _json(preset_plan_payload(preset_id))
 
 
 @mcp.resource(

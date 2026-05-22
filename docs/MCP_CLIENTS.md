@@ -5,7 +5,7 @@
 This repo supports two practical modes:
 
 - Local stdio: `hc-mcp <server-name>` for Claude Desktop, Claude Code, Codex, and other local MCP clients.
-- Local Streamable HTTP: `docker compose up --build`, then use `.mcp.json` with the localhost ports.
+- Local Streamable HTTP: `docker compose up --build`, then use `configs/http-clients.json` with the localhost ports.
 
 OpenAI API and ChatGPT connectors require remote MCP servers reachable over HTTP/SSE or Streamable HTTP. This repo includes a local-safe metadata gateway with bearer-token hooks, Host/Origin validation, and `search`/`fetch` tools, but production deployment still needs HTTPS termination and edge identity policy.
 
@@ -34,7 +34,9 @@ hc-mcp-setup --interactive
 hc-mcp --list
 ```
 
-The setup wizard prompts for known keys, preserves existing values, avoids echoing secret inputs, validates important settings, and can print client snippets:
+The setup wizard and universal installer prompt from the canonical registry's
+environment-key metadata, preserve existing values, avoid echoing secret inputs,
+validate important settings, and can print client snippets:
 
 ```bash
 hc-mcp-setup --validate-only
@@ -46,18 +48,52 @@ hc-mcp-setup --set SAM_GOV_API_KEY=... --set 'SEC_USER_AGENT=HealthcareData cont
 
 ## Client Examples
 
-Claude Code project config can use this repo's `.mcp.json` after Docker Compose starts the HTTP servers.
+Claude Code project config can use this repo's registry-rendered `.mcp.json`
+for local stdio. It does not require Docker or open HTTP ports.
 
-April 2026 local HTTP additions in `.mcp.json`:
+Local HTTP ports are rendered into `configs/http-clients.json`:
 
-| Server | URL |
-| --- | --- |
-| `provider-enrollment` | `http://localhost:8017/mcp` |
-| `community-health` | `http://localhost:8018/mcp` |
-| `research-trials` | `http://localhost:8019/mcp` |
-| `live-gateway` | `http://localhost:8020/mcp` |
+| Server | Local HTTP URL | Gateway exposure |
+| --- | --- | --- |
+| `service-area` | `http://localhost:8002/mcp` | `metadata` |
+| `geo-demographics` | `http://localhost:8003/mcp` | `metadata` |
+| `drive-time` | `http://localhost:8004/mcp` | `metadata` |
+| `hospital-quality` | `http://localhost:8005/mcp` | `metadata`, `live` |
+| `cms-facility` | `http://localhost:8006/mcp` | `metadata` |
+| `health-system-profiler` | `http://localhost:8007/mcp` | `metadata` |
+| `financial-intelligence` | `http://localhost:8008/mcp` | `metadata`, `live` |
+| `price-transparency` | `http://localhost:8009/mcp` | `metadata` |
+| `physician-referral-network` | `http://localhost:8010/mcp` | `metadata` |
+| `workforce-analytics` | `http://localhost:8011/mcp` | `metadata`, `live` |
+| `claims-analytics` | `http://localhost:8012/mcp` | `metadata`, `live` |
+| `public-records` | `http://localhost:8013/mcp` | `metadata`, `live` |
+| `web-intelligence` | `http://localhost:8014/mcp` | `metadata` |
+| `discovery` | `http://localhost:8015/mcp` | `metadata` |
+| `gateway` | `http://localhost:8016/mcp` | `metadata` |
+| `provider-enrollment` | `http://localhost:8017/mcp` | `metadata`, `live` |
+| `community-health` | `http://localhost:8018/mcp` | `metadata`, `live` |
+| `research-trials` | `http://localhost:8019/mcp` | `metadata`, `live` |
+| `live-gateway` | `http://localhost:8020/mcp` | `live` |
 
-`public-records` remains on `http://localhost:8013/mcp` for HHS OIG LEIE and SAM.gov Exclusions. Set `SAM_GOV_API_KEY` in the server environment for SAM.gov API-backed exclusion checks.
+Regenerate checked-in client configs after registry changes:
+
+```bash
+python scripts/render_client_configs.py project-mcp > .mcp.json
+python scripts/render_client_configs.py claude-desktop-stdio > examples/claude-desktop-stdio.json
+python scripts/render_client_configs.py codex > examples/codex-config.toml
+python scripts/render_client_configs.py http-clients > configs/http-clients.json
+python scripts/render_client_configs.py claude-desktop > configs/claude-desktop.json
+```
+
+Validate the checked-in examples without writing files:
+
+```bash
+python scripts/render_client_configs.py project-mcp --check
+python scripts/render_client_configs.py claude-desktop-stdio --check
+python scripts/render_client_configs.py codex --check
+python scripts/render_client_configs.py http-clients --check
+python scripts/render_client_configs.py claude-desktop --check
+```
 
 Claude Desktop stdio entry:
 
@@ -91,9 +127,12 @@ For servers that need keys, add the env-file pointer:
 Codex local stdio:
 
 ```bash
+scripts/register-codex.sh --dry-run
 codex mcp add cms-facility -- hc-mcp cms-facility
 codex mcp add publicRecords --env HC_MCP_ENV_FILE=/absolute/path/to/.env -- hc-mcp public-records
 ```
+
+`scripts/register-codex.sh --dry-run --http` previews the registry-backed localhost HTTP registrations for Docker Compose without mutating Codex config.
 
 Codex/OpenAI remote HTTP config should point at the deployed HTTPS gateway endpoint, not localhost:
 
@@ -117,7 +156,7 @@ args = ["public-records"]
 env = { HC_MCP_ENV_FILE = "/absolute/path/to/healthcare-data-mcp/.env" }
 ```
 
-Claude Code can import Claude Desktop server config and also supports local/project/user MCP scopes. For team use, keep the checked-in `.mcp.json` HTTP-only and put secrets in `.env` or in each user's local MCP config.
+Claude Code can import Claude Desktop server config and also supports local/project/user MCP scopes. For team use, keep the checked-in `.mcp.json` stdio-only and put secrets in `.env` or in each user's local MCP config.
 
 ## Compatibility Matrix
 
@@ -135,10 +174,22 @@ Claude Code can import Claude Desktop server config and also supports local/proj
 
 - Deploy `hc-mcp gateway` behind HTTPS with OAuth/OIDC or a trusted identity-aware proxy.
 - Configure `hc-mcp live-gateway` with `MCP_LIVE_GATEWAY_*` bearer auth or equivalent edge identity before exposing live tools.
-- Add integration tests with MCP Inspector against stdio and Streamable HTTP.
+- Validate stdio and Streamable HTTP with MCP Inspector and the CI-friendly protocol smoke runner:
+
+```bash
+scripts/mcp_inspector_smoke.sh
+python scripts/mcp_smoke.py --server discovery --expect-tool list_workflows --expect-resource healthcare-data://workflows/catalog --call-tool list_workflows --expect-structured-path-all workflows[].identity_join_keys --expect-structured-path-all workflows[].source_resolution
+python scripts/mcp_smoke.py --server discovery --expect-tool get_workflow_plan --call-tool get_workflow_plan --tool-args '{"workflow_id":"quality_measure_lookup","inputs":{"ccn":"390223","measure":"clabsi_sir"}}' --expect-structured-key workflow_id --expect-structured-key steps --expect-structured-key report_ingest_contract --expect-structured-path identity_map.join_keys --expect-structured-path-all steps[].identity_contract --expect-structured-path-all report_ingest_contract.fact_rows[].evidence_path --expect-structured-path-all report_ingest_contract.fact_rows[].source_metadata_path --expect-structured-path-all report_ingest_contract.fact_rows[].identity_path --expect-structured-path-all report_ingest_contract.fact_rows[].identity_map_path
+python scripts/mcp_smoke.py --server discovery --expect-tool get_workflow_plan --call-tool get_workflow_plan --tool-args '{"workflow_id":"system_reconciliation","inputs":{"query":"Jefferson Health","system_slug":"jefferson-health"}}' --expect-structured-key workflow_id --expect-structured-key identity_map --expect-structured-key steps --expect-structured-key report_ingest_contract --expect-structured-path identity_map.join_keys --expect-structured-path-all identity_map.resolution_plan[].qualified_tool --expect-structured-path-all identity_map.resolution_plan[].merge_action --expect-structured-path-all steps[].identity_contract --expect-structured-path-all steps[].source_resolution --expect-structured-path-all report_ingest_contract.fact_rows[].evidence_path --expect-structured-path-all report_ingest_contract.fact_rows[].identity_map_path
+python scripts/mcp_smoke.py --server discovery --expect-tool list_presets --expect-resource healthcare-data://presets/catalog --call-tool list_presets --expect-structured-key presets
+python scripts/mcp_smoke.py --server discovery --expect-tool get_preset_plan --call-tool get_preset_plan --tool-args '{"preset_id":"market-strategy"}' --expect-structured-key preset_id --expect-structured-key workflow_summaries --expect-structured-path-all workflow_summaries[].identity_join_keys --expect-structured-path-all workflow_summaries[].source_resolution
+python scripts/mcp_smoke.py --server gateway --expect-tool search --expect-tool fetch
+python scripts/mcp_smoke.py --server live-gateway --expect-tool list_live_tools --call-tool list_live_tools --expect-structured-key tools --expect-structured-path-all tools[].allowed_scopes --expect-structured-path-all tools[].request_size_limit_bytes --expect-structured-path-all tools[].result_size_limit_bytes --expect-structured-path-all tools[].rate_limit_class --expect-structured-path-all tools[].source_caveat_class --expect-structured-path-all tools[].requires_provenance
+```
+
+- Keep Streamable HTTP auth integration tests in CI for `gateway` and `live-gateway` before exposing either endpoint remotely.
 - Replace date-specific CMS download URLs with catalog discovery where possible.
-- Expand unit tests beyond `health-system-profiler`.
-- Package Claude Desktop distribution as a Desktop Extension (`.mcpb`) if the target is one-click desktop install.
+- Validate the generated `.mcpb` artifact inside Claude Desktop before broad desktop distribution.
 
 ## Primary References
 

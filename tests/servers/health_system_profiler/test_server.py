@@ -9,6 +9,7 @@ import pandas as pd
 import pytest
 
 from servers.health_system_profiler import server
+from shared.utils.mcp_response import validate_evidence_receipt
 
 
 @pytest.fixture
@@ -76,6 +77,16 @@ async def test_search_health_systems(mock_ahrq_systems):
     assert "results" in result
     assert len(result["results"]) >= 1
     assert result["results"][0]["name"] == "Jefferson Health"
+    _assert_system_evidence(result["evidence"])
+    _assert_system_source_metadata(result)
+    _assert_system_row_evidence(
+        result["results"][0]["evidence"],
+        dataset_id="ahrq_health_system_compendium",
+        match_basis="ahrq_system_search_result",
+    )
+    _assert_system_identity_map(result["identity_map"], expected_system_id="SYS_001")
+    claim = _system_source_claim(result["identity_map"], "system")
+    assert claim["row_evidence_paths"] == ["results[].evidence"]
 
 
 @pytest.mark.asyncio
@@ -94,6 +105,81 @@ async def test_get_system_profile(mock_ahrq_systems, mock_ahrq_hospitals, mock_p
     main = next(f for f in result["inpatient_facilities"] if f["ccn"] == "390001")
     assert main["beds"]["total"] == 900
     assert main["services"]["cardiac_catheterization"] is True
+    _assert_system_evidence(result["evidence"])
+    _assert_system_source_metadata(result)
+    _assert_system_row_evidence(
+        main["evidence"],
+        dataset_id="ahrq_health_system_compendium",
+        match_basis="inpatient_facility_source_row",
+    )
+    _assert_system_row_evidence(
+        result["facility_reconciliation"]["facilities"][0]["evidence"],
+        dataset_id="ahrq_health_system_compendium",
+        match_basis="health_system_facility_reconciliation_row",
+    )
+    assert result["identity"]["ahrq_system_id"] == "SYS_001"
+    _assert_system_identity_map(result["identity_map"], expected_system_id="SYS_001", expected_ccns={"390001", "390149"})
+    claim = _system_source_claim(result["identity_map"], "facilities")
+    assert "inpatient_facilities[].evidence" in claim["row_evidence_paths"]
+    assert "facility_reconciliation.facilities[].evidence" in claim["row_evidence_paths"]
+
+
+@pytest.mark.asyncio
+async def test_get_system_profile_outpatient_sites_have_nppes_row_evidence(
+    mock_ahrq_systems,
+    mock_ahrq_hospitals,
+    mock_pos,
+):
+    nppes_rows = [
+        {
+            "number": "1234567890",
+            "basic": {
+                "organization_name": "Jefferson Family Medicine",
+                "status": "A",
+            },
+            "addresses": [
+                {
+                    "address_purpose": "LOCATION",
+                    "address_1": "123 Main St",
+                    "city": "Philadelphia",
+                    "state": "PA",
+                    "postal_code": "191070000",
+                    "telephone_number": "215-555-1234",
+                }
+            ],
+            "taxonomies": [
+                {
+                    "code": "207Q00000X",
+                    "desc": "Family Medicine",
+                    "primary": True,
+                }
+            ],
+        }
+    ]
+    with (
+        patch.object(server, "_load_ahrq_systems", new_callable=AsyncMock, return_value=mock_ahrq_systems),
+        patch.object(server, "_load_ahrq_hospitals", new_callable=AsyncMock, return_value=mock_ahrq_hospitals),
+        patch.object(server, "_load_pos", new_callable=AsyncMock, return_value=mock_pos),
+        patch.object(server, "_search_nppes", new_callable=AsyncMock, return_value=nppes_rows),
+    ):
+        result = await server.get_system_profile(system_id="SYS_001", include_outpatient=True)
+
+    site = result["outpatient_sites"][0]
+    _assert_system_row_evidence(
+        site["evidence"],
+        dataset_id="nppes_npi_registry",
+        match_basis="outpatient_site_source_row",
+    )
+    assert site["evidence"]["source_name"] == "NPPES NPI Registry"
+    assert site["evidence"]["source_url"].startswith("https://npiregistry.cms.hhs.gov/api/?number=1234567890")
+    assert site["evidence"]["cache_status"] == "live_api"
+    assert site["evidence"]["landing_page"] == "https://npiregistry.cms.hhs.gov/search"
+    assert site["evidence"]["query"]["npi"] == "1234567890"
+    assert site["evidence"]["query"]["taxonomy_code"] == "207Q00000X"
+    assert site["evidence"]["query"]["category"] == "Family Medicine"
+    assert "system affiliation remains candidate context" in site["evidence"]["caveat"]
+    claim = _system_source_claim(result["identity_map"], "facilities")
+    assert "outpatient_sites[].evidence" in claim["row_evidence_paths"]
 
 
 @pytest.mark.asyncio
@@ -105,6 +191,14 @@ async def test_get_system_profile_not_found(mock_ahrq_systems, mock_ahrq_hospita
     ):
         result = await server.get_system_profile(system_name="Mayo Clinic")
     assert "error" in result
+    assert result["error"]["code"] == "not_found"
+    _assert_system_evidence(result["evidence"])
+    _assert_system_source_metadata(result)
+    assert result["evidence"]["match_basis"] == "system_name_search_no_ahrq_match"
+    assert result["evidence"]["confidence"] == "no_candidate_match_in_loaded_ahrq_compendium"
+    assert "exact AHRQ system_id" in result["evidence"]["next_step"]
+    assert result["identity"]["canonical_name"] == "MAYO CLINIC"
+    _assert_system_identity_map(result["identity_map"], expected_name="MAYO CLINIC")
 
 
 @pytest.mark.asyncio
@@ -116,3 +210,100 @@ async def test_get_system_facilities(mock_ahrq_hospitals, mock_pos):
         result = await server.get_system_facilities(system_id="SYS_001")
     assert result["system_id"] == "SYS_001"
     assert len(result["inpatient_facilities"]) == 2
+    _assert_system_evidence(result["evidence"])
+    _assert_system_source_metadata(result)
+    _assert_system_row_evidence(
+        result["inpatient_facilities"][0]["evidence"],
+        dataset_id="ahrq_health_system_compendium",
+        match_basis="inpatient_facility_source_row",
+    )
+    _assert_system_identity_map(result["identity_map"], expected_system_id="SYS_001", expected_ccns={"390001", "390149"})
+    claim = _system_source_claim(result["identity_map"], "facilities")
+    assert "inpatient_facilities[].evidence" in claim["row_evidence_paths"]
+
+
+@pytest.mark.asyncio
+async def test_get_system_facilities_no_linked_hospitals_has_evidence(mock_pos):
+    with (
+        patch.object(server, "_load_ahrq_hospitals", new_callable=AsyncMock, return_value=pd.DataFrame(columns=["health_sys_id", "ccn"])),
+        patch.object(server, "_load_pos", new_callable=AsyncMock, return_value=mock_pos),
+    ):
+        result = await server.get_system_facilities(system_id="SYS_MISSING")
+
+    assert result["error"]["code"] == "not_found"
+    _assert_system_evidence(result["evidence"])
+    _assert_system_source_metadata(result)
+    assert result["evidence"]["match_basis"] == "ahrq_system_id_no_linked_hospitals"
+    assert result["identity"]["ahrq_system_id"] == "SYS_MISSING"
+    _assert_system_identity_map(result["identity_map"], expected_system_id="SYS_MISSING")
+
+
+def _assert_system_evidence(evidence: dict) -> None:
+    validate_evidence_receipt(evidence, require_content=True)
+    assert evidence["source_name"] == "AHRQ Compendium, CMS Provider of Services, and NPPES public registry"
+    assert evidence["dataset_id"] == "ahrq_health_system_compendium"
+    assert evidence["source_period"]
+    assert evidence["landing_page"].startswith("https://www.ahrq.gov/")
+    assert evidence["cache_status"] == "mixed_public_cache"
+    assert evidence["cache_freshness"]
+    assert evidence["entity_scope"] == "health_system_facility_identity"
+    assert evidence["caveat"]
+    assert evidence["next_step"]
+
+
+def _assert_system_row_evidence(evidence: dict, *, dataset_id: str, match_basis: str) -> None:
+    validate_evidence_receipt(evidence, require_content=True)
+    assert evidence["dataset_id"] == dataset_id
+    assert evidence["match_basis"] == match_basis
+    assert evidence["entity_scope"] == "health_system_facility_identity"
+    assert evidence["query"]["row_kind"]
+    assert evidence["confidence"]
+    assert evidence["caveat"]
+    assert evidence["next_step"]
+
+
+def _assert_system_source_metadata(result: dict) -> None:
+    metadata = result["source_metadata"]
+    evidence = result["evidence"]
+
+    assert metadata["source_name"] == evidence["source_name"]
+    assert metadata["source_url"] == evidence["source_url"]
+    assert metadata["dataset_id"] == evidence["dataset_id"]
+    assert metadata["source_period"] == evidence["source_period"]
+    assert metadata["landing_page"] == evidence["landing_page"]
+    assert metadata["retrieved_at"] == evidence["retrieved_at"]
+    assert metadata["source_modified"] == evidence["source_modified"]
+    assert metadata["cache_status"] == evidence["cache_status"]
+    assert metadata["cache_freshness"] == evidence["cache_freshness"]
+    assert metadata["entity_scope"] == evidence["entity_scope"]
+    assert metadata["query"] == evidence["query"]
+    assert metadata["cache_key"] == evidence["cache_key"]
+    assert metadata["source_type"] == "ahrq_cms_nppes_health_system_public_sources"
+
+
+def _assert_system_identity_map(
+    identity_map: dict,
+    *,
+    expected_system_id: str = "",
+    expected_ccns: set[str] | None = None,
+    expected_name: str = "",
+) -> None:
+    by_field = {entry["field"]: entry for entry in identity_map["join_keys"]}
+
+    assert identity_map["entity_scope"] == "health_system_facility_identity"
+    assert identity_map["source_claims"]
+    assert identity_map["conflict_policy"]
+    assert identity_map["missing_data_policy"].startswith("No-match system-profiler responses")
+    if expected_system_id:
+        assert expected_system_id in by_field["ahrq_system_id"]["values"]
+        assert by_field["ahrq_system_id"]["status"] == "provided"
+    if expected_ccns:
+        assert set(by_field["ccn"]["values"]) >= expected_ccns
+        assert "facilities" in by_field["ccn"]["used_by"] or "inpatient_facilities" in by_field["ccn"]["used_by"]
+    if expected_name:
+        assert expected_name in by_field["canonical_name"]["values"]
+
+
+def _system_source_claim(identity_map: dict, collection: str) -> dict:
+    claims = {claim["collection"]: claim for claim in identity_map["source_claims"]}
+    return claims[collection]

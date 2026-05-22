@@ -21,6 +21,18 @@ MCP_TRANSPORT=streamable-http MCP_HOST=127.0.0.1 MCP_PORT=8015 \
 The discovery server is registered in the `hc-mcp` launcher, Docker Compose,
 and the checked-in local `.mcp.json` on port 8015.
 
+Dataset catalog, dataset metadata, and dataset source payloads include
+`server_capabilities` entries generated from
+`shared/utils/server_registry.py`. These entries expose each owning server's
+module, port, required and optional environment keys, cache needs,
+zero-config eligibility, gateway exposure, profiles, workflow roles, canonical
+dataset IDs, and safety notes. Treat the registry as canonical when server
+metadata in docs, client configs, Docker Compose, or gateway output differs. The
+`validate_dataset_catalog` tool checks that the discovery catalog references
+registered metadata-exposed servers and that every metadata-exposed registry
+server is represented. It also checks that dataset-to-server links match the
+registry's declared `dataset_ids` in both directions.
+
 ## Resources
 
 | URI | Description |
@@ -59,6 +71,7 @@ docgraph_referrals
 public_records
 web_intelligence
 workforce_labor
+mcp_metadata_surfaces
 ```
 
 ## Tools
@@ -72,8 +85,13 @@ The discovery server also exposes tool-callable versions of the catalog resource
 | `get_dataset_schema` | Return grain, identity fields, common fields, and join keys. |
 | `get_dataset_source` | Return source URLs and expected cache files. |
 | `get_cache_status` | Return filesystem-only cache status. |
+| `validate_dataset_catalog` | Validate discovery dataset coverage against the canonical server registry. |
 | `list_runbooks` | List cache/source-audit runbooks. |
 | `get_runbook` | Return one runbook by id. |
+| `list_workflows` | List executable task-first workflow plans, including source-resolution summaries. |
+| `get_workflow_plan` | Return required sources, readiness, tool sequence, caveats, and report fact rows for one workflow. |
+| `list_presets` | List curated registry-backed server/workflow presets. |
+| `get_preset_plan` | Return one preset with servers, env keys, workflow summaries, source resolution, examples, and plan commands. |
 
 ## Prompts
 
@@ -120,4 +138,12 @@ Status values:
 3. Read `/source` resources for source URLs and cache file expectations.
 4. Read `healthcare-data://cache/status` before long workflows to identify
    missing or stale local data.
-5. Use the workflow prompts to generate a client-specific execution plan.
+5. Use `list_workflows` or `get_workflow_plan` to inspect executable task
+   plans. Workflow summaries include `source_resolution`; full plans add
+   step-level readiness, identity-map actions, MCP call templates, and report
+   fact-row paths.
+6. Use `list_presets` or `get_preset_plan` when a user wants a curated job
+   family such as compliance, market strategy, research, or metadata-only.
+   Preset plans include `workflow_summaries` so clients can show required
+   identifiers, source aliases, validation status, examples, and plan commands
+   before opening each full workflow.

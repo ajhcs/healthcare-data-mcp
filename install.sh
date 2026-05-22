@@ -11,6 +11,7 @@
 #   --docker     Force Docker installation (skip pip)
 #   --pip        Force pip installation (skip Docker)
 #   --no-register  Install only, don't register with MCP clients
+#   --dry-run    Check prerequisites and planned mode without writing files
 #   --help       Show this help
 
 set -euo pipefail
@@ -20,68 +21,147 @@ set -euo pipefail
 REPO_URL="https://github.com/ajhcs/healthcare-data-mcp.git"
 PACKAGE_NAME="healthcare-data-mcp"
 INSTALL_DIR="${HEALTHCARE_MCP_DIR:-$HOME/.healthcare-data-mcp}"
+SCRIPT_PATH="${BASH_SOURCE[0]:-$0}"
+SCRIPT_DIR=""
+if [ -f "$SCRIPT_PATH" ]; then
+  SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+fi
 
-# Server name → module → port → requires_key (0=no, 1=optional)
-declare -A SERVER_MODULES=(
-  [hc-service-area]="servers.service_area.server"
-  [hc-geo-demographics]="servers.geo_demographics.server"
-  [hc-drive-time]="servers.drive_time.server"
-  [hc-hospital-quality]="servers.hospital_quality.server"
-  [hc-cms-facility]="servers.cms_facility.server"
-  [hc-health-system-profiler]="servers.health_system_profiler.server"
-  [hc-financial-intelligence]="servers.financial_intelligence.server"
-  [hc-price-transparency]="servers.price_transparency.server"
-  [hc-physician-referral-network]="servers.physician_referral_network.server"
-  [hc-workforce-analytics]="servers.workforce_analytics.server"
-  [hc-claims-analytics]="servers.claims_analytics.server"
-  [hc-public-records]="servers.public_records.server"
-  [hc-web-intelligence]="servers.web_intelligence.server"
-  [hc-discovery]="servers.discovery.server"
-  [hc-gateway]="servers.gateway.server"
-  [hc-live-gateway]="servers.live_gateway.server"
-  [hc-provider-enrollment]="servers.provider_enrollment.server"
-  [hc-community-health]="servers.community_health.server"
-  [hc-research-trials]="servers.research_trials.server"
-)
+# Server metadata is loaded from shared/utils/server_registry.py whenever a
+# checkout is available. This keeps installer registration and validation aligned
+# with the launcher, Compose files, docs, and MCPB packaging.
+declare -A SERVER_MODULES=()
+declare -A SERVER_IDS=()
+declare -A SERVER_PORTS=()
+declare -A ENV_DESCRIPTIONS=()
+declare -A ENV_REQUIRED=()
+declare -A ENV_SERVERS=()
+NO_KEY_SERVERS=()
+ENV_KEYS=()
 
-declare -A SERVER_PORTS=(
-  [hc-service-area]=8002
-  [hc-geo-demographics]=8003
-  [hc-drive-time]=8004
-  [hc-hospital-quality]=8005
-  [hc-cms-facility]=8006
-  [hc-health-system-profiler]=8007
-  [hc-financial-intelligence]=8008
-  [hc-price-transparency]=8009
-  [hc-physician-referral-network]=8010
-  [hc-workforce-analytics]=8011
-  [hc-claims-analytics]=8012
-  [hc-public-records]=8013
-  [hc-web-intelligence]=8014
-  [hc-discovery]=8015
-  [hc-gateway]=8016
-  [hc-live-gateway]=8020
-  [hc-provider-enrollment]=8017
-  [hc-community-health]=8018
-  [hc-research-trials]=8019
-)
+load_server_registry() {
+  local registry_dir="$1"
+  local python_cmd="$2"
 
-# Servers that work with zero API keys
-NO_KEY_SERVERS=(
-  hc-service-area
-  hc-hospital-quality
-  hc-cms-facility
-  hc-health-system-profiler
-  hc-price-transparency
-  hc-physician-referral-network
-  hc-claims-analytics
-  hc-discovery
-  hc-gateway
-  hc-live-gateway
-  hc-provider-enrollment
-  hc-community-health
-  hc-research-trials
-)
+  if [ -z "$python_cmd" ] || [ ! -f "$registry_dir/shared/utils/server_registry.py" ]; then
+    return 1
+  fi
+
+  SERVER_MODULES=()
+  SERVER_IDS=()
+  SERVER_PORTS=()
+  ENV_DESCRIPTIONS=()
+  ENV_REQUIRED=()
+  ENV_SERVERS=()
+  NO_KEY_SERVERS=()
+  ENV_KEYS=()
+
+  local rows row row_type name server_id module port zero_config required description servers
+  mapfile -t rows < <(
+    PYTHONPATH="$registry_dir" "$python_cmd" - <<'PY'
+from collections import defaultdict
+
+from shared.utils.server_registry import SERVER_REGISTRY
+
+env_servers = defaultdict(list)
+env_descriptions = {}
+env_required = defaultdict(bool)
+
+for spec in SERVER_REGISTRY:
+    print(f"SERVER\thc-{spec.server_id}\t{spec.server_id}\t{spec.module}\t{spec.port}\t{int(spec.zero_config)}")
+    for key in (*spec.required_env, *spec.optional_env):
+        env_servers[key.name].append(spec.server_id)
+        env_descriptions.setdefault(key.name, key.description.replace("\t", " "))
+        env_required[key.name] = env_required[key.name] or key.required
+
+for name in sorted(env_servers):
+    print(
+        "ENV\t"
+        f"{name}\t"
+        f"{int(env_required[name])}\t"
+        f"{env_descriptions.get(name, '')}\t"
+        f"{', '.join(sorted(env_servers[name]))}"
+    )
+PY
+  )
+
+  for row in "${rows[@]}"; do
+    IFS=$'\t' read -r row_type name server_id module port zero_config <<< "$row"
+    if [ "$row_type" = "SERVER" ]; then
+      SERVER_IDS["$name"]="$server_id"
+      SERVER_MODULES["$name"]="$module"
+      SERVER_PORTS["$name"]="$port"
+      if [ "$zero_config" = "1" ]; then
+        NO_KEY_SERVERS+=("$name")
+      fi
+    elif [ "$row_type" = "ENV" ]; then
+      required="$server_id"
+      description="$module"
+      servers="$port"
+      ENV_KEYS+=("$name")
+      ENV_REQUIRED["$name"]="$required"
+      ENV_DESCRIPTIONS["$name"]="$description"
+      ENV_SERVERS["$name"]="$servers"
+    fi
+  done
+}
+
+load_zero_config_compose_registry() {
+  local registry_dir="$1"
+  local compose_file="$registry_dir/docker-compose.zero-config.yml"
+
+  if [ ! -f "$compose_file" ]; then
+    return 1
+  fi
+
+  SERVER_MODULES=()
+  SERVER_IDS=()
+  SERVER_PORTS=()
+  ENV_DESCRIPTIONS=()
+  ENV_REQUIRED=()
+  ENV_SERVERS=()
+  NO_KEY_SERVERS=()
+  ENV_KEYS=()
+
+  local current_name="" current_module="" line
+  while IFS= read -r line; do
+    if [[ "$line" =~ ^[[:space:]]{2}([a-z0-9-]+):$ ]]; then
+      current_name="hc-${BASH_REMATCH[1]}"
+      current_module=""
+      SERVER_IDS["$current_name"]="${BASH_REMATCH[1]}"
+    elif [[ "$line" =~ command:[[:space:]]python[[:space:]]-m[[:space:]]([^[:space:]]+) ]]; then
+      current_module="${BASH_REMATCH[1]}"
+      if [ -n "$current_name" ]; then
+        SERVER_MODULES["$current_name"]="$current_module"
+      fi
+    elif [[ "$line" =~ 127\.0\.0\.1:([0-9]+):[0-9]+ ]]; then
+      if [ -n "$current_name" ]; then
+        SERVER_PORTS["$current_name"]="${BASH_REMATCH[1]}"
+        NO_KEY_SERVERS+=("$current_name")
+      fi
+    fi
+  done < "$compose_file"
+
+  [ "${#NO_KEY_SERVERS[@]}" -gt 0 ]
+}
+
+load_available_local_registry() {
+  local python_cmd="$1"
+  local candidate
+
+  if [ -z "$python_cmd" ]; then
+    return 1
+  fi
+
+  for candidate in "$(pwd)" "$SCRIPT_DIR"; do
+    if [ -n "$candidate" ] && load_server_registry "$candidate" "$python_cmd"; then
+      ok "Server registry: loaded ${#SERVER_MODULES[@]} entries from $candidate"
+      return 0
+    fi
+  done
+
+  return 1
+}
 
 # ── Colors ───────────────────────────────────────────────────────────────────
 
@@ -99,18 +179,55 @@ warn()  { echo -e "${YELLOW}[warn]${NC}  $*"; }
 err()   { echo -e "${RED}[err]${NC}   $*" >&2; }
 header() { echo -e "\n${BOLD}${CYAN}── $* ──${NC}\n"; }
 
+format_csv() {
+  local out="" item
+  for item in "$@"; do
+    if [ -n "$out" ]; then
+      out+=", "
+    fi
+    out+="$item"
+  done
+  printf '%s' "$out"
+}
+
+usage() {
+  cat <<'EOF'
+# Healthcare Data MCP — Universal Installer
+# Detects MCP clients, installs servers, registers with each client.
+#
+# Usage:
+#   curl -fsSL https://raw.githubusercontent.com/.../install.sh | bash
+#   # or
+#   ./install.sh
+#
+# Options:
+#   --docker       Force Docker installation (skip pip)
+#   --pip          Force pip installation (skip Docker)
+#   --no-register  Install only, don't register with MCP clients
+#   --dry-run      Check prerequisites and planned mode without writing files
+#   --help         Show this help
+EOF
+}
+
 # ── Argument parsing ─────────────────────────────────────────────────────────
 
 MODE=""
 REGISTER=1
+DRY_RUN=0
 for arg in "$@"; do
   case "$arg" in
     --docker)      MODE="docker" ;;
     --pip)         MODE="pip" ;;
     --no-register) REGISTER=0 ;;
+    --dry-run)     DRY_RUN=1 ;;
     --help|-h)
-      head -12 "$0" | tail -10
+      usage
       exit 0
+      ;;
+    *)
+      err "Unknown installer option: $arg"
+      usage >&2
+      exit 2
       ;;
   esac
 done
@@ -182,7 +299,28 @@ if [ ${#CLIENTS_FOUND[@]} -eq 0 ]; then
   REGISTER=0
 fi
 
+load_available_local_registry "$PYTHON_CMD" || true
+
 echo ""
+
+if [ "$DRY_RUN" -eq 1 ]; then
+  header "Dry Run"
+  info "Install directory: $INSTALL_DIR"
+  info "Requested mode: ${MODE:-auto-detect}"
+  info "Registration: $([ "$REGISTER" -eq 1 ] && echo enabled || echo disabled)"
+  if [ "${#SERVER_MODULES[@]}" -gt 0 ]; then
+    info "Server registry entries: ${#SERVER_MODULES[@]}"
+    info "Registry environment keys: ${#ENV_KEYS[@]}"
+    info "Zero-config servers: $(format_csv "${NO_KEY_SERVERS[@]}")"
+    if [ "${#ENV_KEYS[@]}" -gt 0 ]; then
+      info "Registry environment key names: $(format_csv "${ENV_KEYS[@]}")"
+    fi
+  else
+    info "Server registry entries: unavailable until the repository checkout exists"
+  fi
+  ok "Dry run completed without cloning, installing, writing config, or registering clients"
+  exit 0
+fi
 
 # ── Choose install method ────────────────────────────────────────────────────
 
@@ -248,6 +386,10 @@ if [ "$MODE" = "pip" ]; then
   ok "Python package installed"
 
   PYTHON_BIN="$VENV_DIR/bin/python"
+  if ! load_server_registry "$INSTALL_DIR" "$PYTHON_BIN"; then
+    err "Could not load server registry from $INSTALL_DIR"
+    exit 1
+  fi
 
 elif [ "$MODE" = "docker" ]; then
   if [ "$DOCKER_OK" -ne 1 ]; then
@@ -267,7 +409,19 @@ elif [ "$MODE" = "docker" ]; then
   info "Building Docker images..."
   docker compose -f "$INSTALL_DIR/docker-compose.zero-config.yml" build --quiet
 
-  info "Starting zero-config servers (7 servers, no API keys needed)..."
+  if [ -n "$PYTHON_CMD" ]; then
+    load_server_registry "$INSTALL_DIR" "$PYTHON_CMD" || load_zero_config_compose_registry "$INSTALL_DIR" || {
+      err "Could not load server registry from $INSTALL_DIR"
+      exit 1
+    }
+  else
+    load_zero_config_compose_registry "$INSTALL_DIR" || {
+      err "Could not load zero-config server metadata from $INSTALL_DIR/docker-compose.zero-config.yml"
+      exit 1
+    }
+  fi
+
+  info "Starting zero-config servers (registry-selected servers with no required API keys)..."
   docker compose -f "$INSTALL_DIR/docker-compose.zero-config.yml" up -d
 
   ok "Docker containers running"
@@ -283,20 +437,25 @@ if [ ! -f "$ENV_FILE" ] && [ -f "$INSTALL_DIR/.env.example" ]; then
   info "Created .env from .env.example"
 fi
 
-echo -e "${BOLD}Optional API keys improve some servers. Press Enter to skip any.${NC}\n"
+echo -e "${BOLD}Registry-defined environment keys enable optional and key-required tools. Press Enter to skip any.${NC}\n"
 
 prompt_key() {
-  local varname="$1" description="$2" url="$3"
-  local current
+  local varname="$1" description="$2" servers="$3" required="$4"
+  local current label
   current=$(grep "^${varname}=" "$ENV_FILE" 2>/dev/null | cut -d= -f2- || echo "")
+  label="optional"
+  if [ "$required" = "1" ]; then
+    label="required for listed server"
+  fi
 
   if [ -n "$current" ] && [ "$current" != "" ]; then
     ok "$varname already set"
     return
   fi
 
-  echo -e "  ${CYAN}$description${NC}"
-  echo -e "  Free signup: $url"
+  echo -e "  ${CYAN}$varname${NC} ($label)"
+  echo -e "  $description"
+  echo -e "  Servers: $servers"
   read -rp "  $varname= " value
   if [ -n "$value" ]; then
     sed -i "s|^${varname}=.*|${varname}=${value}|" "$ENV_FILE" 2>/dev/null || \
@@ -306,45 +465,19 @@ prompt_key() {
   echo ""
 }
 
-prompt_key "CENSUS_API_KEY" \
-  "Census Bureau (geo-demographics)" \
-  "https://api.census.gov/data/key_signup.html"
+prompt_registry_keys() {
+  if [ "${#ENV_KEYS[@]}" -eq 0 ]; then
+    warn "Registry environment metadata unavailable; skipping interactive key prompts."
+    return
+  fi
 
-prompt_key "HUD_API_TOKEN" \
-  "HUD USPS Crosswalk (geo-demographics)" \
-  "https://www.huduser.gov/portal/dataset/uspszip-api.html"
+  local varname
+  for varname in "${ENV_KEYS[@]}"; do
+    prompt_key "$varname" "${ENV_DESCRIPTIONS[$varname]}" "${ENV_SERVERS[$varname]}" "${ENV_REQUIRED[$varname]}"
+  done
+}
 
-prompt_key "ORS_API_KEY" \
-  "OpenRouteService (drive-time isochrones)" \
-  "https://openrouteservice.org/dev/#/signup"
-
-prompt_key "SEC_USER_AGENT" \
-  "SEC EDGAR fair-access header (financial-intelligence, required for that server)" \
-  "https://www.sec.gov/os/accessing-edgar-data"
-
-prompt_key "BLS_API_KEY" \
-  "Bureau of Labor Statistics (workforce analytics)" \
-  "https://data.bls.gov/registrationEngine/"
-
-prompt_key "SAM_GOV_API_KEY" \
-  "SAM.gov Entity API (public records)" \
-  "https://sam.gov/content/entity-information"
-
-prompt_key "CHPL_API_KEY" \
-  "ONC CHPL API (public records)" \
-  "https://chpl.healthit.gov/#/resources/api"
-
-prompt_key "GOOGLE_CSE_API_KEY" \
-  "Google Custom Search API (web intelligence)" \
-  "https://developers.google.com/custom-search/v1/introduction"
-
-prompt_key "GOOGLE_CSE_ID" \
-  "Google Programmable Search Engine ID (web intelligence)" \
-  "https://programmablesearchengine.google.com/controlpanel/all"
-
-prompt_key "PROXYCURL_API_KEY" \
-  "Proxycurl API (optional LinkedIn enrichment for web intelligence)" \
-  "https://nubela.co/proxycurl/"
+prompt_registry_keys
 
 # ── Register with MCP clients ───────────────────────────────────────────────
 
@@ -383,8 +516,12 @@ if [ "$REGISTER" -eq 1 ]; then
         else
           # stdio mode for pip
           for name in "${!SERVER_MODULES[@]}"; do
-            module="${SERVER_MODULES[$name]}"
-            codex mcp add "$name" -- "$PYTHON_BIN" -m "$module" 2>/dev/null && \
+            server_id="${SERVER_IDS[$name]:-${name#hc-}}"
+            env_args=()
+            if [ -f "$ENV_FILE" ]; then
+              env_args+=(--env "HC_MCP_ENV_FILE=$ENV_FILE")
+            fi
+            codex mcp add "$name" "${env_args[@]}" -- "$PYTHON_BIN" -m servers._launcher "$server_id" 2>/dev/null && \
               ok "  Codex: $name (stdio)" || \
               warn "  Codex: $name failed (may already exist)"
           done
@@ -471,7 +608,7 @@ if [ "$MODE" = "pip" ]; then
   echo "  # For Docker: docker compose up -d"
 elif [ "$MODE" = "docker" ]; then
   echo "  # Zero-config servers are already running!"
-  echo "  # For all 18 servers: cd $INSTALL_DIR && cp .env.example .env"
+  echo "  # For all registry servers: cd $INSTALL_DIR && cp .env.example .env"
   echo "  # Edit .env, then: docker compose up -d"
 fi
 
@@ -484,10 +621,11 @@ done
 
 echo ""
 echo -e "${BOLD}Servers with key-enhanced tools:${NC}"
-echo -e "  ${YELLOW}hc-geo-demographics${NC}  — Census + HUD keys"
-echo -e "  ${YELLOW}hc-drive-time${NC}        — OpenRouteService key"
-echo -e "  ${YELLOW}hc-financial-intelligence${NC} — SEC_USER_AGENT header"
-echo -e "  ${YELLOW}hc-workforce-analytics${NC} — BLS key"
-echo -e "  ${YELLOW}hc-public-records${NC}    — SAM.gov + CHPL keys"
-echo -e "  ${YELLOW}hc-web-intelligence${NC}  — Google CSE + Proxycurl keys"
+if [ "${#ENV_KEYS[@]}" -eq 0 ]; then
+  echo -e "  ${YELLOW}Run hc-mcp doctor for registry-backed environment guidance.${NC}"
+else
+  for varname in "${ENV_KEYS[@]}"; do
+    echo -e "  ${YELLOW}$varname${NC} — ${ENV_SERVERS[$varname]}"
+  done
+fi
 echo ""

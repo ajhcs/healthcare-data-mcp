@@ -462,8 +462,11 @@ def source_metadata_for_keys(
         payload = manifest.to_dict()
         payload["dataset_key"] = key
         payload["source_name"] = "CMS Provider Enrollment"
+        payload["source_period"] = _source_period_for_manifest(manifest)
         payload["retrieved_at"] = manifest.fetched_at
         payload["source_modified"] = manifest.modified or manifest.last_modified
+        payload["cache_status"] = "ready" if dataset_cache_path(key, cache_dir=cache_dir).exists() else "missing"
+        payload["cache_freshness"] = _cache_freshness_for_manifest(manifest)
         payload["entity_scope"] = _entity_scope_for_key(key)
         payload["query"] = {"dataset_key": key}
         payload["cache_key"] = key
@@ -483,9 +486,13 @@ def source_evidence_for_row(row: dict[str, Any], *, cache_dir: str | Path | None
         return {
             "source_name": metadata.get("source_name", "CMS Provider Enrollment"),
             "source_url": metadata.get("source_url", ""),
+            "dataset_id": dataset_key,
+            "source_period": metadata.get("source_period", ""),
             "landing_page": metadata.get("landing_page", ""),
             "retrieved_at": metadata.get("retrieved_at") or metadata.get("fetched_at", ""),
             "source_modified": metadata.get("source_modified") or metadata.get("modified", ""),
+            "cache_status": metadata.get("cache_status", ""),
+            "cache_freshness": metadata.get("cache_freshness", ""),
             "entity_scope": metadata.get("entity_scope") or _entity_scope_for_key(dataset_key),
             "query": {"dataset_key": dataset_key},
             "cache_key": dataset_key,
@@ -495,9 +502,13 @@ def source_evidence_for_row(row: dict[str, Any], *, cache_dir: str | Path | None
     return {
         "source_name": "CMS Provider Enrollment",
         "source_url": "",
+        "dataset_id": dataset_key,
+        "source_period": "",
         "landing_page": "",
         "retrieved_at": "",
         "source_modified": "",
+        "cache_status": "missing_manifest",
+        "cache_freshness": "source manifest is missing; cache freshness cannot be verified",
         "entity_scope": _entity_scope_for_key(dataset_key),
         "query": {"dataset_key": dataset_key} if dataset_key else {},
         "cache_key": dataset_key,
@@ -693,6 +704,26 @@ def _entity_scope_for_key(dataset_key: str) -> str:
     except KeyError:
         return dataset_key
     return f"{dataset.provider_category}:{dataset.record_type}"
+
+
+def _source_period_for_manifest(manifest: SourceManifest) -> str:
+    return (
+        manifest.modified
+        or manifest.last_modified
+        or manifest.fetched_at
+        or "latest cached CMS provider-enrollment public file"
+    )
+
+
+def _cache_freshness_for_manifest(manifest: SourceManifest) -> str:
+    parts = ["ready"]
+    if manifest.fetched_at:
+        parts.append(f"fetched_at={manifest.fetched_at}")
+    if manifest.modified or manifest.last_modified:
+        parts.append(f"source_modified={manifest.modified or manifest.last_modified}")
+    if manifest.record_count is not None:
+        parts.append(f"record_count={manifest.record_count}")
+    return "; ".join(parts)
 
 
 def _fixture_manifest(dataset_key: str, source: str | Path) -> SourceManifest:

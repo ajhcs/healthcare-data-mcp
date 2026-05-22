@@ -45,6 +45,7 @@ class GatewaySecurityConfig:
     bearer_tokens: tuple[str, ...]
     bearer_token_sha256: tuple[str, ...]
     required_scopes: tuple[str, ...]
+    token_scope_overrides: dict[str, tuple[str, ...]]
     allowed_origins: tuple[str, ...]
     allowed_hosts: tuple[str, ...]
     public_url: str | None = None
@@ -102,6 +103,7 @@ def load_gateway_security_config(env: Mapping[str, str] | None = None) -> Gatewa
 
     auth_enabled = has_credentials if auth_required is None else auth_required
     required_scopes = _split_csv(source.get("MCP_GATEWAY_REQUIRED_SCOPES")) or DEFAULT_REQUIRED_SCOPES
+    token_scope_overrides = parse_token_scope_overrides(source.get("MCP_GATEWAY_TOKEN_SCOPES"))
     allowed_origins = _split_csv(source.get("MCP_GATEWAY_ALLOWED_ORIGINS")) or DEFAULT_LOCAL_ALLOWED_ORIGINS
     allowed_hosts = _split_csv(source.get("MCP_GATEWAY_ALLOWED_HOSTS")) or DEFAULT_LOCAL_ALLOWED_HOSTS
 
@@ -117,6 +119,7 @@ def load_gateway_security_config(env: Mapping[str, str] | None = None) -> Gatewa
         bearer_tokens=bearer_tokens,
         bearer_token_sha256=bearer_hashes,
         required_scopes=required_scopes,
+        token_scope_overrides=token_scope_overrides,
         allowed_origins=allowed_origins,
         allowed_hosts=allowed_hosts,
         public_url=_clean_optional(source.get("MCP_GATEWAY_PUBLIC_URL")),
@@ -174,6 +177,36 @@ def token_fingerprint(token: str) -> str:
     """Return a short non-secret token identifier for logs and auth context."""
 
     return token_sha256(token)[:12]
+
+
+def parse_token_scope_overrides(value: str | None) -> dict[str, tuple[str, ...]]:
+    """Parse token-hash-specific scope overrides.
+
+    Format: <sha256>=mcp:read+mcp:bulk;<sha256>=mcp:read.
+    Hashes keep raw bearer tokens out of environment files while allowing
+    selected static-token principals to receive narrower or broader scopes than
+    the global gateway default.
+    """
+
+    if not value or not value.strip():
+        return {}
+    overrides: dict[str, tuple[str, ...]] = {}
+    for raw_entry in value.replace("\n", ";").split(";"):
+        entry = raw_entry.strip()
+        if not entry:
+            continue
+        token_hash, separator, scopes_raw = entry.partition("=")
+        if not separator:
+            raise GatewayAuthError(
+                "MCP_GATEWAY_TOKEN_SCOPES entries must use <sha256>=scope+scope format"
+            )
+        cleaned_hash = token_hash.strip().lower()
+        validate_sha256_token_hash(cleaned_hash)
+        scopes = tuple(scope.strip() for scope in scopes_raw.replace(",", "+").split("+") if scope.strip())
+        if not scopes:
+            raise GatewayAuthError("MCP_GATEWAY_TOKEN_SCOPES entries must declare at least one scope")
+        overrides[cleaned_hash] = scopes
+    return overrides
 
 
 def is_origin_allowed(origin: str | None, allowed_origins: Sequence[str]) -> bool:
@@ -253,12 +286,17 @@ class StaticBearerTokenVerifier:
         token_sha256_hashes: Sequence[str],
         *,
         required_scopes: Sequence[str] = DEFAULT_REQUIRED_SCOPES,
+        token_scope_overrides: Mapping[str, Sequence[str]] | None = None,
         client_id: str = "healthcare-data-mcp-gateway",
         resource: str | None = None,
     ) -> None:
         self._tokens = tuple(token.strip() for token in tokens if token.strip())
         self._hashes = tuple(token_hash.strip().lower() for token_hash in token_sha256_hashes if token_hash.strip())
         self._required_scopes = tuple(required_scopes)
+        self._token_scope_overrides = {
+            token_hash.strip().lower(): tuple(str(scope).strip() for scope in scopes if str(scope).strip())
+            for token_hash, scopes in dict(token_scope_overrides or {}).items()
+        }
         self._client_id = client_id
         self._resource = resource
 
@@ -271,17 +309,17 @@ class StaticBearerTokenVerifier:
         token_digest = token_sha256(token)
         for expected in self._tokens:
             if hmac.compare_digest(token, expected):
-                return self._access_token(token)
+                return self._access_token(token, token_digest=token_digest)
         for expected_hash in self._hashes:
             if hmac.compare_digest(token_digest, expected_hash):
-                return self._access_token(token)
+                return self._access_token(token, token_digest=token_digest)
         return None
 
-    def _access_token(self, token: str) -> AccessToken:
+    def _access_token(self, token: str, *, token_digest: str) -> AccessToken:
         return AccessToken(
             token=token_fingerprint(token),
             client_id=self._client_id,
-            scopes=list(self._required_scopes),
+            scopes=list(self._token_scope_overrides.get(token_digest, self._required_scopes)),
             resource=self._resource,
         )
 

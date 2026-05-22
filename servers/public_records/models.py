@@ -125,6 +125,7 @@ class CyberIncidentRecord(BaseModel):
     date: str = ""
     accession: str = ""
     accession_number: str = ""
+    individuals_affected: int = 0
     title: str = ""
     summary: str = ""
     source_url: str = ""

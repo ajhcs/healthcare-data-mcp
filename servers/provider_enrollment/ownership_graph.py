@@ -18,8 +18,7 @@ def build_ownership_graph(owner_rows: list[dict[str, Any]]) -> nx.DiGraph:
         if not row.get("is_active", True):
             continue
 
-        owner_id = _owner_node_id(row)
-        facility_id = _facility_node_id(row)
+        owner_id, facility_id = source_graph_ids(row)
         if not owner_id or not facility_id:
             continue
 
@@ -53,6 +52,12 @@ def build_ownership_graph(owner_rows: list[dict[str, Any]]) -> nx.DiGraph:
         )
 
     return graph
+
+
+def source_graph_ids(row: dict[str, Any]) -> tuple[str, str]:
+    """Return the graph owner/facility ids generated from a source ownership row."""
+
+    return _owner_node_id(row), _facility_node_id(row)
 
 
 def trace_owner_network(

@@ -7,6 +7,7 @@ from typing import Any
 import pytest
 
 from servers.public_records import server
+from shared.utils.mcp_response import validate_evidence_receipt
 
 
 SAM_METADATA = {
@@ -110,6 +111,40 @@ async def test_search_sam_exclusions_returns_structured_records(
     assert response["records"][0]["match_score"] == 100
     assert response["records"][0]["references"][0]["type"] == "Cross-Reference"
     assert "SAM.gov Exclusions" in response["sam_verification_caveat"]
+    assert response["evidence"]["dataset_id"] == "sam_gov_exclusions"
+    assert response["evidence"]["match_basis"] == "uei_exact"
+    assert response["evidence"]["retrieved_at"] == "2026-04-23T00:00:00+00:00"
+    validate_evidence_receipt(response["evidence"], require_content=True)
+    assert response["identity"]["canonical_name"] == "ACME HEALTH"
+    assert response["identity"]["npi"] == "1234567893"
+    assert response["identity"]["zip_code"] == "15213"
+    assert response["identity"]["match_decisions"][0]["basis"] == "uei_exact"
+    assert {"type": "uei", "value": "ABC123ABC123"} in response["identity"]["unresolved_identifiers"]
+    assert {"type": "cage_code", "value": "1CM51"} in response["identity"]["unresolved_identifiers"]
+
+
+@pytest.mark.asyncio
+async def test_check_sam_exclusion_identifier_returns_evidence_receipt(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def fake_check(**kwargs: Any) -> dict[str, Any]:
+        assert kwargs["uei"] == "ABC123ABC123"
+        return {
+            "totalRecords": 1,
+            "excludedEntity": [SAM_RECORD],
+            "source_metadata": SAM_METADATA,
+        }
+
+    monkeypatch.setattr(server.sam_exclusions_client, "check_identifier", fake_check)
+
+    response = await server.check_sam_exclusion_identifier(uei="ABC123ABC123")
+
+    assert response["status"] == "strong_potential_match"
+    assert response["records"][0]["match_basis"] == "uei_exact"
+    assert response["evidence"]["dataset_id"] == "sam_gov_exclusions"
+    assert response["evidence"]["match_basis"] == "uei_exact"
+    validate_evidence_receipt(response["evidence"], require_content=True)
+    assert response["identity"]["canonical_name"] == "ACME HEALTH"
 
 
 @pytest.mark.asyncio
@@ -207,6 +242,11 @@ async def test_screen_sam_exclusions_batch_returns_per_candidate_results(
     assert response["results"][0]["best_match_score"] == 70
     assert response["results"][0]["matches"][0]["match_score"] == 70
     assert response["results"][0]["matches"][0]["entity_name"] == "Acme Health LLC"
+    assert response["results"][0]["identity"]["canonical_name"] == "ACME HEALTH"
+    assert response["results"][0]["identity"]["match_decisions"][0]["basis"] == "name_search"
+    assert response["identity_map"][0]["npi"] == "1234567893"
+    assert response["evidence"]["match_basis"] == "batch_candidate_screening"
+    validate_evidence_receipt(response["evidence"], require_content=True)
 
 
 @pytest.mark.asyncio
@@ -217,3 +257,10 @@ async def test_get_sam_exclusions_metadata(monkeypatch: pytest.MonkeyPatch) -> N
 
     assert response["source_name"] == "SAM.gov Exclusions"
     assert response["api_version"] == "v4"
+    assert response["source_metadata"]["source_name"] == "SAM.gov Exclusions"
+    assert response["evidence"]["dataset_id"] == "sam_gov_exclusions"
+    assert response["evidence"]["match_basis"] == "source_metadata_lookup"
+    assert response["evidence"]["confidence"] == "api_metadata"
+    assert response["evidence"]["retrieved_at"] == "2026-04-23T00:00:00+00:00"
+    assert response["evidence"]["cache_status"] == "live_api"
+    validate_evidence_receipt(response["evidence"], require_content=True)

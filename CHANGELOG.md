@@ -1,6 +1,17 @@
 # Changelog
 
-## Unreleased
+## v0.2.0 - Operator-ready productization
+
+Released: 2026-05-22
+
+- Added `hc-mcp doctor` as a single read-only readiness command covering package/version, Python environment, server importability, port conflicts, client config hints, API-key posture, cache readiness, source freshness, registry artifact drift, evidence contract coverage, workflow validation, live-gateway policy checks, and distribution readiness.
+- Added a canonical typed server/capability registry that drives or validates the launcher, Compose files, installer/setup surfaces, Codex/Claude/client configs, MCPB/Desktop Extension choices, gateway/discovery metadata, docs tables, and release gates.
+- Standardized evidence/provenance receipts across the major healthcare and workflow surfaces, including source metadata, cache/freshness status, match basis, confidence, caveats, missing-data next steps, and shared validation helpers.
+- Added executable task-first workflows and curated presets for compliance screening, facility/system reconciliation, ownership/CHOW tracing, hospital competitive profiles, market/community scans, quality lookup, research activity, referral/leakage readiness, finance, and metadata-only usage.
+- Added a shared healthcare identity map foundation for CCN, NPI, PECOS enrollment, AHRQ system IDs, ownership/source aliases, match decisions, conflicts, and unresolved identifiers, with cross-server workflow smoke coverage.
+- Hardened metadata gateway and live-gateway separation with explicit live tool policy metadata, scopes, size bounds, rate-limit classes, audit event shape, source caveat classes, auth guards, and unsafe exposure tests.
+- Improved distribution and onboarding with versioned install guidance, package/container metadata checks, localhost-bound Compose output, dry-run setup/register scripts, MCP Inspector smoke, MCPB skeleton validation, and registry-rendered client artifacts.
+- Added product/security CI gates for secret scanning, dependency audit, installer dry runs, registry-rendered artifact checks, doctor readiness, workflow/preset smoke, MCP protocol smoke, Docker zero-config startup, gateway auth integration, and Python distribution checks.
 
 - Added public healthcare data cache acquisition and status coverage for PHC4,
   AHRQ HFMD, PA hospital reports, NJ hospital public data, DE discharge data,
