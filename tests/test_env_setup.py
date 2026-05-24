@@ -127,12 +127,16 @@ def test_cache_status_reports_missing_manual_data(tmp_path, capsys) -> None:
     print_cache_status(tmp_path / "cache")
 
     output = capsys.readouterr().out
+    assert "National coverage backbone: 50 states" in output
+    assert "State-specific hospital-report indexes: DE, NJ, PA" in output
     assert "340B covered entities" not in output
     assert "DocGraph shared patients: UNAVAILABLE" in output
     assert "data_unavailable: licensed_source_missing" in output
     assert "hc-mcp-setup --acquire-hipaa-breaches" in output
     assert "PHC4 public reports: MISSING" in output
     assert "hc-mcp-setup --acquire-phc4-public-reports" in output
+    assert "National hospital and county backbone: MISSING" in output
+    assert "hc-mcp-setup --acquire-national-public-caches" in output
 
 
 def test_cache_status_requires_docgraph_parquet_for_ready(tmp_path, capsys) -> None:

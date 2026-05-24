@@ -8,7 +8,7 @@ import re
 
 import pandas as pd
 
-from shared.utils.cache import is_cache_valid
+from shared.utils.cache import CacheMetadata, is_cache_valid, write_atomic_bytes, write_cache_metadata
 from shared.utils.http_client import resilient_request
 
 logger = logging.getLogger(__name__)
@@ -224,22 +224,42 @@ async def cms_api_query(dataset_id: str, params: dict | None = None, size: int =
     return data.get("results", [])
 
 
-async def cms_download_csv(url: str, cache_key: str | None = None) -> Path:
+async def cms_download_csv(
+    url: str,
+    cache_key: str | None = None,
+    *,
+    ttl_days: float = 90,
+    force_refresh: bool = False,
+) -> Path:
     """Download a CSV file from CMS, caching locally.
 
     Returns the local file path.
     """
-    if cache_key:
-        cached = get_cache_path(cache_key, suffix=".csv")
-        if cached.exists():
-            logger.info("Using cached file: %s", cached)
-            return cached
-    else:
-        cached = get_cache_path(url, suffix=".csv")
+    cache_identity = cache_key or url
+    cached = get_cache_path(cache_identity, suffix=".csv")
+    if not force_refresh and is_cache_valid(cached, max_age_days=ttl_days):
+        logger.info("Using cached file: %s", cached)
+        return cached
 
     logger.info("Downloading: %s", url)
-    resp = await resilient_request("GET", url, timeout=300.0)
-    cached.write_bytes(resp.content)
+    try:
+        resp = await resilient_request("GET", url, timeout=300.0)
+    except Exception:
+        if cached.exists() and cached.stat().st_size > 0 and not force_refresh:
+            logger.warning("CMS download failed; using stale cached file: %s", cached, exc_info=True)
+            return cached
+        raise
+    write_atomic_bytes(cached, resp.content)
+    write_cache_metadata(
+        cached,
+        CacheMetadata(
+            source_url=url,
+            fetched_at=pd.Timestamp.now(tz="UTC").isoformat(),
+            content_length=len(resp.content),
+            cache_key=cache_identity,
+            ttl_days=ttl_days,
+        ),
+    )
 
     logger.info("Saved to: %s", cached)
     return cached
@@ -283,16 +303,37 @@ async def load_hospital_general_info(normalize_columns: bool = False) -> "pd.Dat
 
     if not is_cache_valid(_HOSPITAL_INFO_CACHE_PATH, max_age_days=_HOSPITAL_INFO_TTL_DAYS):
         logger.info("Downloading Hospital General Info from CMS (%s)…", _HOSPITAL_INFO_URL)
-        resp = await resilient_request("GET", _HOSPITAL_INFO_URL, timeout=300.0)
-        _HOSPITAL_INFO_CACHE_PATH.write_bytes(resp.content)
-        logger.info(
-            "Hospital General Info cached to %s (%d bytes)",
-            _HOSPITAL_INFO_CACHE_PATH,
-            _HOSPITAL_INFO_CACHE_PATH.stat().st_size,
-        )
-        # Invalidate in-memory copies after a fresh download
-        _hospital_info_raw = None
-        _hospital_info_normalized = None
+        try:
+            resp = await resilient_request("GET", _HOSPITAL_INFO_URL, timeout=300.0)
+        except Exception:
+            if _HOSPITAL_INFO_CACHE_PATH.exists() and _HOSPITAL_INFO_CACHE_PATH.stat().st_size > 0:
+                logger.warning(
+                    "Hospital General Info refresh failed; using stale cached file: %s",
+                    _HOSPITAL_INFO_CACHE_PATH,
+                    exc_info=True,
+                )
+            else:
+                raise
+        else:
+            write_atomic_bytes(_HOSPITAL_INFO_CACHE_PATH, resp.content)
+            write_cache_metadata(
+                _HOSPITAL_INFO_CACHE_PATH,
+                CacheMetadata(
+                    source_url=_HOSPITAL_INFO_URL,
+                    fetched_at=pd.Timestamp.now(tz="UTC").isoformat(),
+                    content_length=len(resp.content),
+                    cache_key="cms_hospital_general_info",
+                    ttl_days=_HOSPITAL_INFO_TTL_DAYS,
+                ),
+            )
+            logger.info(
+                "Hospital General Info cached to %s (%d bytes)",
+                _HOSPITAL_INFO_CACHE_PATH,
+                _HOSPITAL_INFO_CACHE_PATH.stat().st_size,
+            )
+            # Invalidate in-memory copies after a fresh download
+            _hospital_info_raw = None
+            _hospital_info_normalized = None
 
     df = pd.read_csv(_HOSPITAL_INFO_CACHE_PATH, dtype=str, keep_default_na=False)
     if normalize_columns:

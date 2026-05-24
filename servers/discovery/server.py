@@ -416,7 +416,7 @@ DATASET_CATALOG: dict[str, dict[str, Any]] = {
         "server": ["public-records", "workforce-analytics", "financial-intelligence"],
         "category": "state_public_data",
         "grain": "public source artifact, normalized metadata row, or facility-year public metric",
-        "description": "Shared acquisition indexes for PA, NJ, and DE public hospital artifacts used by public financial, staffing, and throughput tools.",
+        "description": "Shared state-specific acquisition indexes for PA, NJ, and DE public hospital artifacts used as enhancements by public financial, staffing, and throughput tools. National hospital/state/county coverage comes from CMS, CDC PLACES, Census, HSAF, Dartmouth, and provider-enrollment sources.",
         "source_system": "PA DOH, NJ DOH, Delaware DHSS, PHC4, and AHRQ public artifacts",
         "source_urls": [
             "https://www.pa.gov/agencies/health/health-statistics/health-facilities/hospital-reports.html",

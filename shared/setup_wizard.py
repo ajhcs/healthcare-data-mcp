@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from shared.utils.env_file import read_env_file, write_env_file
-from shared.state_health_data import acquire_sources
+from shared.state_health_data import acquire_sources, source_coverage_summary
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -55,6 +55,7 @@ class PublicCacheItem:
     source_url: str
     acquire_flag: str
     instructions: str
+    requires_all: bool = False
 
 
 CONFIG_KEYS: tuple[ConfigKey, ...] = (
@@ -119,6 +120,26 @@ MANUAL_CACHE_ITEMS: tuple[ManualCacheItem, ...] = (
 
 
 PUBLIC_CACHE_ITEMS: tuple[PublicCacheItem, ...] = (
+    PublicCacheItem(
+        name="National hospital and county backbone",
+        cache_paths=(
+            Path("hospital_general_info.csv"),
+            Path("hsaf.csv"),
+            Path("dartmouth_zip_crosswalk.csv"),
+            Path("geo-demographics") / "geographic_variation.parquet",
+        ),
+        tools=(
+            "cms_facility.search_facilities",
+            "hospital_quality.compare_hospitals",
+            "service_area.compute_service_area",
+            "geo_demographics.get_geographic_variation",
+            "community_health.get_market_community_profile",
+        ),
+        source_url="CMS Provider Data Catalog, CMS Geographic Variation PUF, Dartmouth Atlas, CDC PLACES, and Census ACS",
+        acquire_flag="--acquire-national-public-caches",
+        instructions="Prime national CMS hospital, service-area, Dartmouth, and county/state Geographic Variation caches; CDC PLACES and Census remain live-query capable.",
+        requires_all=True,
+    ),
     PublicCacheItem(
         name="PHC4 public reports",
         cache_paths=(
@@ -231,6 +252,11 @@ def parse_args() -> argparse.Namespace:
         help="Fetch public cache datasets that expose stable unauthenticated acquisition paths.",
     )
     parser.add_argument(
+        "--acquire-national-public-caches",
+        action="store_true",
+        help="Prime national all-state hospital and county backbone caches.",
+    )
+    parser.add_argument(
         "--acquire-hipaa-breaches",
         action="store_true",
         help="Fetch the public HHS OCR HIPAA breach table and store it as the breach CSV seed.",
@@ -306,6 +332,7 @@ def main() -> None:
 
     acquisition_results = acquire_public_caches(
         cache_root=args.cache_root,
+        national_backbone=args.acquire_public_caches or args.acquire_national_public_caches,
         hipaa_breaches=args.acquire_public_caches or args.acquire_hipaa_breaches,
         provider_enrollment=args.acquire_public_caches or args.acquire_provider_enrollment,
         force=args.force_cache_refresh,
@@ -483,6 +510,7 @@ def import_manual_caches(
 def acquire_public_caches(
     *,
     cache_root: Path,
+    national_backbone: bool = False,
     hipaa_breaches: bool = False,
     provider_enrollment: bool = False,
     force: bool = False,
@@ -490,6 +518,9 @@ def acquire_public_caches(
     """Acquire public datasets that have stable unauthenticated access paths."""
     root = cache_root.expanduser()
     results: list[str] = []
+
+    if national_backbone:
+        results.extend(asyncio.run(_acquire_national_public_backbone(cache_root=root, force=force)))
 
     if hipaa_breaches:
         target = root / "public-records" / "hipaa_breaches.csv"
@@ -514,10 +545,85 @@ async def _acquire_provider_enrollment(cache_dir: Path, *, force: bool = False):
     return await data_loaders.ensure_all_datasets_cached(cache_dir=cache_dir, force_refresh=force)
 
 
+async def _acquire_national_public_backbone(cache_root: Path, *, force: bool = False) -> list[str]:
+    """Prime national public caches that are not limited to PA/NJ/DE."""
+
+    results: list[str] = []
+
+    from shared.utils import cms_client
+    from servers.geo_demographics import data_loaders as gv_loaders
+    from servers.service_area import data_loaders as service_area_loaders
+
+    hospital_info_path = cache_root / "hospital_general_info.csv"
+    hsaf_path = cache_root / "hsaf.csv"
+    dartmouth_path = cache_root / "dartmouth_zip_crosswalk.csv"
+    gv_dir = cache_root / "geo-demographics"
+    gv_path = gv_dir / "geographic_variation.parquet"
+    gv_dir.mkdir(parents=True, exist_ok=True)
+
+    original_hospital_info_path = cms_client._HOSPITAL_INFO_CACHE_PATH
+    original_hospital_info_raw = cms_client._hospital_info_raw
+    original_hospital_info_normalized = cms_client._hospital_info_normalized
+    original_hsaf_path = service_area_loaders.HSAF_CACHE_PATH
+    original_dartmouth_path = service_area_loaders.DARTMOUTH_CACHE_PATH
+    original_gv_dir = gv_loaders._CACHE_DIR
+    original_gv_path = gv_loaders._GV_PARQUET
+    cms_client._HOSPITAL_INFO_CACHE_PATH = hospital_info_path
+    cms_client._hospital_info_raw = None
+    cms_client._hospital_info_normalized = None
+    service_area_loaders.HSAF_CACHE_PATH = hsaf_path
+    service_area_loaders.DARTMOUTH_CACHE_PATH = dartmouth_path
+    gv_loaders._CACHE_DIR = gv_dir
+    gv_loaders._GV_PARQUET = gv_path
+
+    try:
+        if force:
+            hospital_info_path.unlink(missing_ok=True)
+        hospitals = await cms_client.load_hospital_general_info(normalize_columns=False)
+        results.append(
+            f"Acquired national CMS Hospital General Information -> {hospital_info_path} ({len(hospitals)} rows)"
+        )
+
+        hsaf = await service_area_loaders.download_hsaf(force=force)
+        results.append(
+            f"Acquired national CMS Hospital Service Area File -> {hsaf_path} ({len(hsaf)} rows)"
+        )
+
+        dartmouth = await service_area_loaders.download_dartmouth_crosswalk(force=force)
+        results.append(
+            f"Acquired Dartmouth ZIP-HSA-HRR crosswalk -> {dartmouth_path} ({len(dartmouth)} rows)"
+        )
+
+        gv_ready = await gv_loaders.ensure_gv_cached(force=force)
+        status = "ready" if gv_ready else "failed"
+        results.append(f"Acquired national CMS Geographic Variation state/county cache -> {gv_path} ({status})")
+    finally:
+        cms_client._HOSPITAL_INFO_CACHE_PATH = original_hospital_info_path
+        cms_client._hospital_info_raw = original_hospital_info_raw
+        cms_client._hospital_info_normalized = original_hospital_info_normalized
+        service_area_loaders.HSAF_CACHE_PATH = original_hsaf_path
+        service_area_loaders.DARTMOUTH_CACHE_PATH = original_dartmouth_path
+        gv_loaders._CACHE_DIR = original_gv_dir
+        gv_loaders._GV_PARQUET = original_gv_path
+
+    return results
+
+
 def print_cache_status(cache_root: Path) -> None:
     """Print cache status and setup instructions."""
     root = cache_root.expanduser()
     print(f"\nData cache: {root}")
+    coverage = source_coverage_summary()
+    print(
+        "- National coverage backbone: "
+        f"{coverage['national_state_count']} states via "
+        + ", ".join(coverage["national_backbone_sources"])
+    )
+    print(
+        "- State-specific hospital-report indexes: "
+        + ", ".join(coverage["state_specific_public_hospital_states"])
+        + " (enhancements; not the national coverage boundary)"
+    )
     for item in MANUAL_CACHE_ITEMS:
         seed = root / item.seed_path
         parquet = root / item.parquet_path
@@ -542,11 +648,12 @@ def print_cache_status(cache_root: Path) -> None:
             print(f"  note: {item.automation_note}")
     for item in PUBLIC_CACHE_ITEMS:
         ready_paths = [root / path for path in item.cache_paths if _public_cache_path_ready(root / path)]
-        status = "READY" if ready_paths else "MISSING"
+        ready = len(ready_paths) == len(item.cache_paths) if item.requires_all else bool(ready_paths)
+        status = "READY" if ready else ("PARTIAL" if ready_paths else "MISSING")
         print(f"- {item.name}: {status}")
         for path in item.cache_paths:
             print(f"  cache: {root / path}")
-        if not ready_paths:
+        if not ready:
             print(f"  affected tools: {', '.join(item.tools)}")
             print(f"  next step: {item.instructions}")
             print(f"  source: {item.source_url}")
@@ -599,7 +706,9 @@ For each missing dataset:
         print(f"  Source: {item.source_url}")
         print(f"  Import command: hc-mcp-setup {item.import_flag} <downloaded-file>")
     for item in PUBLIC_CACHE_ITEMS:
-        if any(_public_cache_path_ready(root / path) for path in item.cache_paths):
+        ready_count = sum(1 for path in item.cache_paths if _public_cache_path_ready(root / path))
+        ready = ready_count == len(item.cache_paths) if item.requires_all else ready_count > 0
+        if ready:
             continue
         print(f"- {item.name}: run hc-mcp-setup {item.acquire_flag}")
         print(f"  Source: {item.source_url}")

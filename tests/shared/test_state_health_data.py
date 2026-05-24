@@ -10,6 +10,17 @@ from shared import state_health_data
 from shared.utils.cost_report import load_cost_report_row
 
 
+def test_source_coverage_summary_separates_national_backbone_from_state_enhancements() -> None:
+    summary = state_health_data.source_coverage_summary()
+
+    assert summary["national_state_count"] == 50
+    assert "cms_hospital_general_info" in summary["national_backbone_sources"]
+    assert "cdc_places" in summary["national_backbone_sources"]
+    assert summary["state_specific_public_hospital_states"] == ["DE", "NJ", "PA"]
+    assert "CA" in summary["state_specific_public_hospital_missing_states"]
+    assert "not the national hospital/county coverage boundary" in summary["coverage_note"]
+
+
 @pytest.mark.asyncio
 async def test_search_phc4_reports_uses_cached_index(tmp_path) -> None:
     cache = tmp_path / "state-health-data" / "phc4"

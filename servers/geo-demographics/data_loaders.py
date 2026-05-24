@@ -13,7 +13,7 @@ _project_root = __import__("pathlib").Path(__file__).resolve().parent.parent.par
 if str(_project_root) not in _sys.path:
     _sys.path.insert(0, str(_project_root))
 
-from shared.utils.cache import is_cache_valid  # noqa: E402
+from shared.utils.cache import CacheMetadata, is_cache_valid, write_atomic_bytes, write_cache_metadata  # noqa: E402
 from shared.utils.cms_url_resolver import resolve_cms_download_url  # noqa: E402
 
 logger = logging.getLogger(__name__)
@@ -36,9 +36,9 @@ def _is_cache_valid(path: Path) -> bool:
     return is_cache_valid(path, max_age_days=_CACHE_TTL_DAYS)
 
 
-async def ensure_gv_cached() -> bool:
+async def ensure_gv_cached(force: bool = False) -> bool:
     """Download GV PUF CSV and convert to Parquet if needed."""
-    if _is_cache_valid(_GV_PARQUET):
+    if not force and _is_cache_valid(_GV_PARQUET):
         return True
 
     logger.info("Downloading Geographic Variation PUF...")
@@ -50,10 +50,21 @@ async def ensure_gv_cached() -> bool:
         resp = await resilient_request("GET", gv_url, timeout=600.0)
 
         csv_path = _CACHE_DIR / "gv_raw.csv"
-        csv_path.write_bytes(resp.content)
+        write_atomic_bytes(csv_path, resp.content)
 
         df = pd.read_csv(csv_path, dtype=str, keep_default_na=False, low_memory=False)
         df.to_parquet(_GV_PARQUET, compression="zstd", index=False)
+        write_cache_metadata(
+            _GV_PARQUET,
+            CacheMetadata(
+                source_url=gv_url,
+                fetched_at=pd.Timestamp.now(tz="UTC").isoformat(),
+                content_length=_GV_PARQUET.stat().st_size,
+                cache_key="cms_geographic_variation",
+                ttl_days=_CACHE_TTL_DAYS,
+                extra={"raw_csv_bytes": len(resp.content), "record_count": len(df)},
+            ),
+        )
 
         csv_path.unlink(missing_ok=True)
         logger.info("GV PUF cached: %d rows", len(df))

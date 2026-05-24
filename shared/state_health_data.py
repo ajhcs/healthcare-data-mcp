@@ -45,6 +45,69 @@ _PUBLIC_WEB_HEADERS = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
 }
 
+US_STATE_ABBREVIATIONS: tuple[str, ...] = (
+    "AL",
+    "AK",
+    "AZ",
+    "AR",
+    "CA",
+    "CO",
+    "CT",
+    "DE",
+    "FL",
+    "GA",
+    "HI",
+    "ID",
+    "IL",
+    "IN",
+    "IA",
+    "KS",
+    "KY",
+    "LA",
+    "ME",
+    "MD",
+    "MA",
+    "MI",
+    "MN",
+    "MS",
+    "MO",
+    "MT",
+    "NE",
+    "NV",
+    "NH",
+    "NJ",
+    "NM",
+    "NY",
+    "NC",
+    "ND",
+    "OH",
+    "OK",
+    "OR",
+    "PA",
+    "RI",
+    "SC",
+    "SD",
+    "TN",
+    "TX",
+    "UT",
+    "VT",
+    "VA",
+    "WA",
+    "WV",
+    "WI",
+    "WY",
+)
+STATE_SPECIFIC_PUBLIC_HOSPITAL_STATES: tuple[str, ...] = ("DE", "NJ", "PA")
+NATIONAL_PUBLIC_BACKBONE_SOURCES: tuple[str, ...] = (
+    "cms_hospital_general_info",
+    "cms_hospital_quality",
+    "cms_hsaf",
+    "cms_geographic_variation",
+    "cms_provider_enrollment",
+    "cdc_places",
+    "census_acs",
+)
+
 
 @dataclass(frozen=True)
 class SourceStatus:
@@ -109,6 +172,26 @@ def _state_for_source(source_id: str) -> str:
     if source_id.startswith("de_"):
         return "DE"
     return ""
+
+
+def source_coverage_summary() -> dict[str, Any]:
+    """Describe national versus state-specific acquisition coverage."""
+
+    state_specific = set(STATE_SPECIFIC_PUBLIC_HOSPITAL_STATES)
+    return {
+        "national_state_count": len(US_STATE_ABBREVIATIONS),
+        "national_states": list(US_STATE_ABBREVIATIONS),
+        "national_backbone_sources": list(NATIONAL_PUBLIC_BACKBONE_SOURCES),
+        "state_specific_public_hospital_states": list(STATE_SPECIFIC_PUBLIC_HOSPITAL_STATES),
+        "state_specific_public_hospital_state_count": len(STATE_SPECIFIC_PUBLIC_HOSPITAL_STATES),
+        "state_specific_public_hospital_missing_states": [
+            state for state in US_STATE_ABBREVIATIONS if state not in state_specific
+        ],
+        "coverage_note": (
+            "National CMS, CDC PLACES, Census, HSAF, and provider-enrollment sources cover all 50 states when acquired or queried. "
+            "PA/NJ/DE indexes are state-specific public hospital-report enhancements, not the national hospital/county coverage boundary."
+        ),
+    }
 
 
 def _normalized_artifact_record(

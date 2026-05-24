@@ -14,7 +14,7 @@ _project_root = __import__("pathlib").Path(__file__).resolve().parent.parent.par
 if str(_project_root) not in _sys.path:
     _sys.path.insert(0, str(_project_root))
 
-from shared.utils.cache import is_cache_valid  # noqa: E402
+from shared.utils.cache import CacheMetadata, is_cache_valid, write_atomic_bytes, write_cache_metadata  # noqa: E402
 from shared.utils.cms_client import load_hospital_names as _load_hospital_names  # noqa: E402
 from shared.utils.cms_url_resolver import resolve_cms_download_url  # noqa: E402
 from shared.utils.column_detection import find_df_column  # noqa: E402
@@ -113,7 +113,17 @@ async def download_hsaf(force: bool = False) -> pd.DataFrame:
 
     logger.info("Downloading HSAF from %s", hsaf_url)
     resp = await resilient_request("GET", hsaf_url, timeout=300.0)
-    HSAF_CACHE_PATH.write_bytes(resp.content)
+    write_atomic_bytes(HSAF_CACHE_PATH, resp.content)
+    write_cache_metadata(
+        HSAF_CACHE_PATH,
+        CacheMetadata(
+            source_url=hsaf_url,
+            fetched_at=pd.Timestamp.now(tz="UTC").isoformat(),
+            content_length=len(resp.content),
+            cache_key="cms_hsaf",
+            ttl_days=_BULK_TTL_DAYS,
+        ),
+    )
 
     logger.info("HSAF cached to %s (%d bytes)", HSAF_CACHE_PATH, HSAF_CACHE_PATH.stat().st_size)
     df = pd.read_csv(HSAF_CACHE_PATH, dtype=str)
@@ -144,7 +154,17 @@ async def download_dartmouth_crosswalk(force: bool = False) -> pd.DataFrame:
                 # Fallback: read the first file
                 content = zf.read(zf.namelist()[0])
 
-    DARTMOUTH_CACHE_PATH.write_bytes(content)
+    write_atomic_bytes(DARTMOUTH_CACHE_PATH, content)
+    write_cache_metadata(
+        DARTMOUTH_CACHE_PATH,
+        CacheMetadata(
+            source_url=DARTMOUTH_CROSSWALK_URL,
+            fetched_at=pd.Timestamp.now(tz="UTC").isoformat(),
+            content_length=len(content),
+            cache_key="dartmouth_hsa_hrr",
+            ttl_days=_BULK_TTL_DAYS,
+        ),
+    )
     logger.info("Dartmouth crosswalk cached to %s", DARTMOUTH_CACHE_PATH)
     df = pd.read_csv(DARTMOUTH_CACHE_PATH, dtype=str)
     return _normalize_dartmouth(df)
