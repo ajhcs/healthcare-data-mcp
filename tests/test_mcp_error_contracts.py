@@ -70,6 +70,10 @@ async def test_gateway_fetch_unknown_dataset_returns_recovery_hints() -> None:
     result = await gateway_server.fetch("cms-facilty")
 
     assert result["ok"] is False
+    assert result["legacy_error"] == "dataset_not_found"
+    assert result["message"] == "No dataset metadata found for 'cms-facilty'. Call search first and use a returned id."
+    assert "cms-facility" in result["available_ids"]
+    assert result["error"]["code"] == "dataset_not_found"
     assert result["error"]["type"] == "NOT_FOUND"
     assert "cms-facility" in result["error"]["data"]["available_options"]
     assert result["error"]["data"]["suggested_tool_calls"][0]["tool"] == "search"

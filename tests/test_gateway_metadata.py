@@ -44,6 +44,10 @@ async def test_gateway_fetch_unknown_dataset_is_helpful() -> None:
     result = await server.fetch("missing")
 
     assert result["ok"] is False
+    assert result["legacy_error"] == "dataset_not_found"
+    assert result["message"] == "No dataset metadata found for 'missing'. Call search first and use a returned id."
+    assert "cms-facility" in result["available_ids"]
+    assert result["error"]["code"] == "dataset_not_found"
     assert result["error"]["type"] == "NOT_FOUND"
     assert "cms-facility" in result["error"]["data"]["available_options"]
 

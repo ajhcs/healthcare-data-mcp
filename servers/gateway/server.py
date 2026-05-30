@@ -525,10 +525,12 @@ async def fetch(id: str) -> dict[str, Any]:
     dataset = _DATASET_BY_ID.get(dataset_id)
     if dataset is None:
         suggestions = fuzzy_options(dataset_id, _DATASET_BY_ID)
-        return not_found_response(
+        available_ids = sorted(_DATASET_BY_ID)
+        message = f"No dataset metadata found for {id!r}. Call search first and use a returned id."
+        response = not_found_response(
             f"No dataset metadata found for {id!r}.",
             fix_hint="Call search first and use a returned id.",
-            available_options=sorted(_DATASET_BY_ID),
+            available_options=available_ids,
             suggested_tool_calls=[
                 {
                     "tool": "search",
@@ -538,6 +540,11 @@ async def fetch(id: str) -> dict[str, Any]:
             ],
             suggestions=suggestions,
         )
+        response["error"]["code"] = "dataset_not_found"
+        response["legacy_error"] = "dataset_not_found"
+        response["message"] = message
+        response["available_ids"] = available_ids
+        return response
     return _fetch_result(dataset)
 
 
