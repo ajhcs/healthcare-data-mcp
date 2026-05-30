@@ -21,6 +21,8 @@ from mcp.server.auth.middleware.auth_context import get_access_token
 from mcp.server.auth.provider import AccessToken
 from mcp.server.auth.settings import AuthSettings
 from mcp.server.fastmcp import FastMCP
+from shared.utils.mcp_observability import observe_tool
+from shared.utils.mcp_resources import register_standard_resources
 
 from shared.utils.gateway_auth import (
     GatewayAuthError,
@@ -442,6 +444,7 @@ if _security_config.auth_enabled:
     )
 
 mcp = FastMCP(**_mcp_kwargs)
+register_standard_resources(mcp, "live-gateway")
 
 
 def live_tool_inventory() -> list[dict[str, Any]]:
@@ -474,8 +477,51 @@ def live_tool_inventory() -> list[dict[str, Any]]:
 
 
 @mcp.tool(structured_output=True)
+@observe_tool("live-gateway")
 async def list_live_tools() -> dict[str, Any]:
-    """List approved tools exposed by this authenticated live gateway."""
+    """List approved tools exposed by this authenticated live gateway.
+
+    Discovery
+    ---------
+    - Inspect this server's healthcare-data://server/.../capabilities resource for datasets, cache needs, and capability clusters.
+    - Use discovery workflow plans when you need cross-server call order, source caveats, or identity handoffs.
+
+    When to use
+    -----------
+    - Use this tool only for its named public healthcare data task.
+    - Prefer exact identifiers when available; use search tools first when you only have names or partial context.
+    - NOT for: patient-level data, PHI, legal clearance, or substituting adjacent public sources for exact source-backed facts.
+
+    Parameters
+    ----------
+    See the function signature and parameter descriptions above. Preserve exact public identifiers such as CCN, NPI, ZCTA, state, dataset_id, workflow_id, or source-specific IDs.
+
+    Returns
+    -------
+    dict
+        Structured JSON-compatible payload. Preserve evidence, source_metadata, identity, and identity_map fields when present.
+
+    Do / Don't
+    ----------
+    Do:
+    - Preserve source evidence and identity fields with cited facts.
+    - Follow returned next_step or next_actions hints before making source claims.
+
+    Don't:
+    - Treat candidate search rows as exact matches without exact identifiers.
+    - Pass placeholders like <ccn> or YOUR_VALUE as real arguments.
+
+    Examples
+    --------
+    Basic MCP call shape:
+    {"jsonrpc":"2.0","id":"1","method":"tools/call","params":{"name":"list_live_tools","arguments":{}}}
+
+    Common mistakes
+    ---------------
+    - Name supplied to exact-ID lookup: search first, then retry with the returned identifier.
+    - Missing API key or cache: run hc-mcp doctor or inspect the server datasets resource.
+    - Source substitution: keep each claim scoped to the source that produced it.
+    """
 
     tools = live_tool_inventory()
     return {
@@ -545,8 +591,51 @@ async def list_live_tools() -> dict[str, Any]:
 
 
 @mcp.tool(structured_output=True)
+@observe_tool("live-gateway")
 async def get_live_gateway_audit_events(limit: int = 50) -> dict[str, Any]:
-    """Return recent non-secret live-gateway audit events for local operations review."""
+    """Return recent non-secret live-gateway audit events for local operations review.
+
+    Discovery
+    ---------
+    - Inspect this server's healthcare-data://server/.../capabilities resource for datasets, cache needs, and capability clusters.
+    - Use discovery workflow plans when you need cross-server call order, source caveats, or identity handoffs.
+
+    When to use
+    -----------
+    - Use this tool only for its named public healthcare data task.
+    - Prefer exact identifiers when available; use search tools first when you only have names or partial context.
+    - NOT for: patient-level data, PHI, legal clearance, or substituting adjacent public sources for exact source-backed facts.
+
+    Parameters
+    ----------
+    See the function signature and parameter descriptions above. Preserve exact public identifiers such as CCN, NPI, ZCTA, state, dataset_id, workflow_id, or source-specific IDs.
+
+    Returns
+    -------
+    dict
+        Structured JSON-compatible payload. Preserve evidence, source_metadata, identity, and identity_map fields when present.
+
+    Do / Don't
+    ----------
+    Do:
+    - Preserve source evidence and identity fields with cited facts.
+    - Follow returned next_step or next_actions hints before making source claims.
+
+    Don't:
+    - Treat candidate search rows as exact matches without exact identifiers.
+    - Pass placeholders like <ccn> or YOUR_VALUE as real arguments.
+
+    Examples
+    --------
+    Basic MCP call shape:
+    {"jsonrpc":"2.0","id":"1","method":"tools/call","params":{"name":"get_live_gateway_audit_events","arguments":{}}}
+
+    Common mistakes
+    ---------------
+    - Name supplied to exact-ID lookup: search first, then retry with the returned identifier.
+    - Missing API key or cache: run hc-mcp doctor or inspect the server datasets resource.
+    - Source substitution: keep each claim scoped to the source that produced it.
+    """
 
     bounded_limit = max(1, min(int(limit or 50), 100))
     return {

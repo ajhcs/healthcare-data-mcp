@@ -27,6 +27,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import TypedDict
 
+from shared.utils.cache import write_atomic_json
+
 logger = logging.getLogger(__name__)
 
 # Module-level lock protecting the URL registry read-modify-write cycle.
@@ -241,9 +243,7 @@ def _load_registry() -> dict:
 def _save_registry(registry: dict) -> None:
     """Persist the URL registry to disk."""
     try:
-        _REGISTRY_CACHE_PATH.write_text(
-            json.dumps(registry, indent=2), encoding="utf-8"
-        )
+        write_atomic_json(_REGISTRY_CACHE_PATH, registry)
     except Exception:
         logger.debug("Could not write URL registry cache", exc_info=True)
 

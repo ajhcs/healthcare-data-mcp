@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "healthcare-data-mcp",
   "display_name": "Healthcare Data MCP",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Local MCP access to public healthcare market intelligence: facilities, ownership, quality, claims, workforce, research, and compliance screening.",
   "long_description": "Runs one selected healthcare-data-mcp server over stdio for Claude Desktop. Choose from focused servers for CMS facilities, service areas, demographics, drive times, quality, health systems, finance, price transparency, referrals, workforce, claims, public records, web intelligence, provider enrollment, community health, and research trials. Optional API keys can be entered through the desktop extension configuration UI.",
   "author": {

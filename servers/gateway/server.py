@@ -11,12 +11,16 @@ from typing import Any
 
 from mcp.server.auth.settings import AuthSettings
 from mcp.server.fastmcp import FastMCP
+from shared.utils.mcp_observability import observe_tool
+from shared.utils.mcp_resources import register_standard_resources
 
 from shared.utils.gateway_auth import (
     StaticBearerTokenVerifier,
     build_transport_security_settings,
     load_gateway_security_config,
 )
+from shared.utils.mcp_response import not_found_response
+from shared.utils.mistake_detection import fuzzy_options
 from shared.utils.server_registry import SERVER_BY_ID, ServerCapability
 
 
@@ -402,15 +406,58 @@ if _security_config.auth_enabled:
     )
 
 mcp = FastMCP(**_mcp_kwargs)
+register_standard_resources(mcp, "gateway")
 
 
 @mcp.tool(structured_output=True)
+@observe_tool("gateway")
 async def search(query: str, max_results: int = 10) -> dict[str, Any]:
     """Search healthcare-data-mcp dataset metadata.
 
     Args:
         query: Natural-language search terms such as "CMS quality", "NPPES", or "price transparency".
         max_results: Maximum result count. Values outside 1-20 are clamped.
+
+    Discovery
+    ---------
+    - Inspect this server's healthcare-data://server/.../capabilities resource for datasets, cache needs, and capability clusters.
+    - Use discovery workflow plans when you need cross-server call order, source caveats, or identity handoffs.
+
+    When to use
+    -----------
+    - Use this tool only for its named public healthcare data task.
+    - Prefer exact identifiers when available; use search tools first when you only have names or partial context.
+    - NOT for: patient-level data, PHI, legal clearance, or substituting adjacent public sources for exact source-backed facts.
+
+    Parameters
+    ----------
+    See the function signature and parameter descriptions above. Preserve exact public identifiers such as CCN, NPI, ZCTA, state, dataset_id, workflow_id, or source-specific IDs.
+
+    Returns
+    -------
+    dict
+        Structured JSON-compatible payload. Preserve evidence, source_metadata, identity, and identity_map fields when present.
+
+    Do / Don't
+    ----------
+    Do:
+    - Preserve source evidence and identity fields with cited facts.
+    - Follow returned next_step or next_actions hints before making source claims.
+
+    Don't:
+    - Treat candidate search rows as exact matches without exact identifiers.
+    - Pass placeholders like <ccn> or YOUR_VALUE as real arguments.
+
+    Examples
+    --------
+    Basic MCP call shape:
+    {"jsonrpc":"2.0","id":"1","method":"tools/call","params":{"name":"search","arguments":{}}}
+
+    Common mistakes
+    ---------------
+    - Name supplied to exact-ID lookup: search first, then retry with the returned identifier.
+    - Missing API key or cache: run hc-mcp doctor or inspect the server datasets resource.
+    - Source substitution: keep each claim scoped to the source that produced it.
     """
 
     normalized_query = query.strip()
@@ -425,21 +472,72 @@ async def search(query: str, max_results: int = 10) -> dict[str, Any]:
 
 
 @mcp.tool(structured_output=True)
+@observe_tool("gateway")
 async def fetch(id: str) -> dict[str, Any]:
     """Fetch one dataset metadata document by ID from search results.
 
     Args:
         id: Dataset ID returned by search, for example "cms-facility" or "price-transparency".
+
+    Discovery
+    ---------
+    - Inspect this server's healthcare-data://server/.../capabilities resource for datasets, cache needs, and capability clusters.
+    - Use discovery workflow plans when you need cross-server call order, source caveats, or identity handoffs.
+
+    When to use
+    -----------
+    - Use this tool only for its named public healthcare data task.
+    - Prefer exact identifiers when available; use search tools first when you only have names or partial context.
+    - NOT for: patient-level data, PHI, legal clearance, or substituting adjacent public sources for exact source-backed facts.
+
+    Parameters
+    ----------
+    See the function signature and parameter descriptions above. Preserve exact public identifiers such as CCN, NPI, ZCTA, state, dataset_id, workflow_id, or source-specific IDs.
+
+    Returns
+    -------
+    dict
+        Structured JSON-compatible payload. Preserve evidence, source_metadata, identity, and identity_map fields when present.
+
+    Do / Don't
+    ----------
+    Do:
+    - Preserve source evidence and identity fields with cited facts.
+    - Follow returned next_step or next_actions hints before making source claims.
+
+    Don't:
+    - Treat candidate search rows as exact matches without exact identifiers.
+    - Pass placeholders like <ccn> or YOUR_VALUE as real arguments.
+
+    Examples
+    --------
+    Basic MCP call shape:
+    {"jsonrpc":"2.0","id":"1","method":"tools/call","params":{"name":"fetch","arguments":{}}}
+
+    Common mistakes
+    ---------------
+    - Name supplied to exact-ID lookup: search first, then retry with the returned identifier.
+    - Missing API key or cache: run hc-mcp doctor or inspect the server datasets resource.
+    - Source substitution: keep each claim scoped to the source that produced it.
     """
 
     dataset_id = id.strip().lower()
     dataset = _DATASET_BY_ID.get(dataset_id)
     if dataset is None:
-        return {
-            "error": "dataset_not_found",
-            "message": f"No dataset metadata found for {id!r}. Call search first and use a returned id.",
-            "available_ids": sorted(_DATASET_BY_ID),
-        }
+        suggestions = fuzzy_options(dataset_id, _DATASET_BY_ID)
+        return not_found_response(
+            f"No dataset metadata found for {id!r}.",
+            fix_hint="Call search first and use a returned id.",
+            available_options=sorted(_DATASET_BY_ID),
+            suggested_tool_calls=[
+                {
+                    "tool": "search",
+                    "arguments": {"query": id, "max_results": 5},
+                    "reason": "Find matching dataset metadata IDs before calling fetch.",
+                }
+            ],
+            suggestions=suggestions,
+        )
     return _fetch_result(dataset)
 
 

@@ -13,6 +13,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 
+from shared.utils.cache import write_atomic_bytes
 from shared.utils.http_client import resilient_request
 import pandas as pd
 
@@ -66,7 +67,7 @@ async def download_990_xml(xml_url: str, ein: str, tax_period: str) -> Path | No
 
     try:
         resp = await resilient_request("GET", xml_url, timeout=120.0)
-        cached.write_bytes(resp.content)
+        write_atomic_bytes(cached, resp.content)
         logger.info("Cached 990 XML for EIN %s period %s", ein, tax_period)
         return cached
     except Exception as e:
@@ -90,7 +91,7 @@ async def load_efile_index(year: str) -> pd.DataFrame:
         url = f"{IRS_EFILE_INDEX_BASE}/{year}/index_{year}.csv"
         try:
             resp = await resilient_request("GET", url, timeout=300.0)
-            cached.write_bytes(resp.content)
+            write_atomic_bytes(cached, resp.content)
             logger.info("Cached IRS e-file index for year %s (%d bytes)", year, len(resp.content))
         except Exception as e:
             logger.warning("Failed to download IRS e-file index for %s: %s", year, e)

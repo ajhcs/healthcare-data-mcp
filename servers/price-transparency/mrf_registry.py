@@ -11,6 +11,7 @@ import re
 from pathlib import Path
 
 
+from shared.utils.cache import write_atomic_json
 from shared.utils.http_client import resilient_request
 
 logger = logging.getLogger(__name__)
@@ -188,7 +189,7 @@ def _load_registry() -> dict:
 
 def _save_registry(registry: dict) -> None:
     """Persist the registry to disk."""
-    _REGISTRY_PATH.write_text(json.dumps(registry, indent=2), encoding="utf-8")
+    write_atomic_json(_REGISTRY_PATH, registry)
 
 
 def search_registry(query: str, state: str = "") -> list[dict]:

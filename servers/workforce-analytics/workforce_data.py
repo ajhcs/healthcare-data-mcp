@@ -24,7 +24,7 @@ _project_root = __import__("pathlib").Path(__file__).resolve().parent.parent.par
 if str(_project_root) not in _sys.path:
     _sys.path.insert(0, str(_project_root))
 
-from shared.utils.cache import is_cache_valid  # noqa: E402
+from shared.utils.cache import is_cache_valid, write_atomic_bytes, write_atomic_json, write_atomic_parquet  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -274,9 +274,9 @@ def write_acgme_import_metadata(
         "optional_missing_columns": optional_missing,
     }
     meta_path = output_path.with_suffix(".meta.json")
-    meta_path.write_text(json.dumps(meta, indent=2, sort_keys=True), encoding="utf-8")
+    write_atomic_json(meta_path, meta)
     if output_path == _ACGME_CACHE_CSV and meta_path != _ACGME_CACHE_META:
-        _ACGME_CACHE_META.write_text(json.dumps(meta, indent=2, sort_keys=True), encoding="utf-8")
+        write_atomic_json(_ACGME_CACHE_META, meta)
     return meta
 
 
@@ -432,11 +432,11 @@ async def ensure_hpsa_cached() -> bool:
         resp = await resilient_request("GET", HPSA_CSV_URL, timeout=300.0)
 
         csv_path = _CACHE_DIR / "hpsa_raw.csv"
-        csv_path.write_bytes(resp.content)
+        write_atomic_bytes(csv_path, resp.content)
 
         df = pd.read_csv(csv_path, dtype=str, keep_default_na=False, low_memory=False)
         df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
-        df.to_parquet(_HPSA_CACHE, compression="zstd", index=False)
+        write_atomic_parquet(_HPSA_CACHE, df, compression="zstd", index=False)
 
         csv_path.unlink(missing_ok=True)
         logger.info("HPSA data cached: %d records", len(df))
@@ -542,7 +542,7 @@ async def ensure_hcris_cached() -> bool:
                 )
                 if resp.status_code == 200 and len(resp.content) > 10000:
                     zip_path = _CACHE_DIR / f"hcris_fy{year}.zip"
-                    zip_path.write_bytes(resp.content)
+                    write_atomic_bytes(zip_path, resp.content)
                     logger.info("Downloaded HCRIS FY%d (%d bytes)", year, len(resp.content))
                     break
             except Exception:
@@ -601,7 +601,7 @@ async def ensure_hcris_cached() -> bool:
                         deduped, on=rpt_rec_col, how="left"
                     )
 
-        result_df.to_parquet(_HCRIS_CACHE, compression="zstd", index=False)
+        write_atomic_parquet(_HCRIS_CACHE, result_df, compression="zstd", index=False)
         logger.info("HCRIS staffing data cached: %d rows (S-2 and S-3)", len(result_df))
 
         # Cleanup

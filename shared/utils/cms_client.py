@@ -8,7 +8,7 @@ import re
 
 import pandas as pd
 
-from shared.utils.cache import CacheMetadata, is_cache_valid, write_atomic_bytes, write_cache_metadata
+from shared.utils.cache import CacheMetadata, is_cache_valid, write_atomic_bytes, write_atomic_json, write_cache_metadata
 from shared.utils.http_client import resilient_request
 
 logger = logging.getLogger(__name__)
@@ -41,7 +41,7 @@ async def get_cms_data_catalog(force_refresh: bool = False) -> dict:
 
     resp = await resilient_request("GET", CMS_CATALOG_URL, timeout=120.0)
     catalog = resp.json()
-    cache_path.write_text(json.dumps(catalog), encoding="utf-8")
+    write_atomic_json(cache_path, catalog, indent=None)
     return catalog
 
 

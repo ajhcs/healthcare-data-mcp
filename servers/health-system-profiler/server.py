@@ -12,6 +12,8 @@ from pathlib import Path
 
 import pandas as pd
 from mcp.server.fastmcp import FastMCP
+from shared.utils.mcp_observability import observe_tool
+from shared.utils.mcp_resources import register_standard_resources
 from shared.utils.healthcare_identity import identity_from_public_record
 from shared.utils.identity import normalize_ccn, normalize_name, normalize_npi
 from shared.utils.mcp_response import error_response, evidence_receipt, to_structured
@@ -77,6 +79,7 @@ if _transport in ("sse", "streamable-http"):
     _mcp_kwargs["host"] = _os.environ.get("MCP_HOST", "127.0.0.1")
     _mcp_kwargs["port"] = int(_os.environ.get("MCP_PORT", "8007"))
 mcp = FastMCP(**_mcp_kwargs)
+register_standard_resources(mcp, "health-system-profiler")
 
 
 def _system_evidence(*, query: dict[str, Any], match_basis: str, confidence: str) -> dict[str, Any]:
@@ -478,6 +481,7 @@ def _load_provider_enrollment() -> pd.DataFrame:
 # ---- MCP Tools ----
 
 @mcp.tool(structured_output=True)
+@observe_tool("health-system-profiler")
 async def search_health_systems(query: str, limit: int = 10) -> dict[str, Any]:
     """Search for health systems by name using AHRQ Compendium.
 
@@ -486,6 +490,47 @@ async def search_health_systems(query: str, limit: int = 10) -> dict[str, Any]:
     Args:
         query: System name to search for (e.g. "Jefferson Health", "LVHN", "Penn Medicine").
         limit: Maximum results to return (default 10).
+
+    Discovery
+    ---------
+    - Inspect this server's healthcare-data://server/.../capabilities resource for datasets, cache needs, and capability clusters.
+    - Use discovery workflow plans when you need cross-server call order, source caveats, or identity handoffs.
+
+    When to use
+    -----------
+    - Use this tool only for its named public healthcare data task.
+    - Prefer exact identifiers when available; use search tools first when you only have names or partial context.
+    - NOT for: patient-level data, PHI, legal clearance, or substituting adjacent public sources for exact source-backed facts.
+
+    Parameters
+    ----------
+    See the function signature and parameter descriptions above. Preserve exact public identifiers such as CCN, NPI, ZCTA, state, dataset_id, workflow_id, or source-specific IDs.
+
+    Returns
+    -------
+    dict
+        Structured JSON-compatible payload. Preserve evidence, source_metadata, identity, and identity_map fields when present.
+
+    Do / Don't
+    ----------
+    Do:
+    - Preserve source evidence and identity fields with cited facts.
+    - Follow returned next_step or next_actions hints before making source claims.
+
+    Don't:
+    - Treat candidate search rows as exact matches without exact identifiers.
+    - Pass placeholders like <ccn> or YOUR_VALUE as real arguments.
+
+    Examples
+    --------
+    Basic MCP call shape:
+    {"jsonrpc":"2.0","id":"1","method":"tools/call","params":{"name":"search_health_systems","arguments":{}}}
+
+    Common mistakes
+    ---------------
+    - Name supplied to exact-ID lookup: search first, then retry with the returned identifier.
+    - Missing API key or cache: run hc-mcp doctor or inspect the server datasets resource.
+    - Source substitution: keep each claim scoped to the source that produced it.
     """
     systems_df = await _load_ahrq_systems()
     results = fuzzy_search_systems(query, systems_df, limit=limit)
@@ -518,6 +563,7 @@ async def search_health_systems(query: str, limit: int = 10) -> dict[str, Any]:
 
 
 @mcp.tool(structured_output=True)
+@observe_tool("health-system-profiler")
 async def get_system_profile(
     system_id: str | None = None,
     system_name: str | None = None,
@@ -538,6 +584,47 @@ async def get_system_profile(
         edition_date: Profile edition/as-of date. Jefferson Health uses this to apply the
             post-2024 LVHN combined-system resolver.
         include_outpatient: Include NPPES outpatient site discovery (default True).
+
+    Discovery
+    ---------
+    - Inspect this server's healthcare-data://server/.../capabilities resource for datasets, cache needs, and capability clusters.
+    - Use discovery workflow plans when you need cross-server call order, source caveats, or identity handoffs.
+
+    When to use
+    -----------
+    - Use this tool only for its named public healthcare data task.
+    - Prefer exact identifiers when available; use search tools first when you only have names or partial context.
+    - NOT for: patient-level data, PHI, legal clearance, or substituting adjacent public sources for exact source-backed facts.
+
+    Parameters
+    ----------
+    See the function signature and parameter descriptions above. Preserve exact public identifiers such as CCN, NPI, ZCTA, state, dataset_id, workflow_id, or source-specific IDs.
+
+    Returns
+    -------
+    dict
+        Structured JSON-compatible payload. Preserve evidence, source_metadata, identity, and identity_map fields when present.
+
+    Do / Don't
+    ----------
+    Do:
+    - Preserve source evidence and identity fields with cited facts.
+    - Follow returned next_step or next_actions hints before making source claims.
+
+    Don't:
+    - Treat candidate search rows as exact matches without exact identifiers.
+    - Pass placeholders like <ccn> or YOUR_VALUE as real arguments.
+
+    Examples
+    --------
+    Basic MCP call shape:
+    {"jsonrpc":"2.0","id":"1","method":"tools/call","params":{"name":"get_system_profile","arguments":{}}}
+
+    Common mistakes
+    ---------------
+    - Name supplied to exact-ID lookup: search first, then retry with the returned identifier.
+    - Missing API key or cache: run hc-mcp doctor or inspect the server datasets resource.
+    - Source substitution: keep each claim scoped to the source that produced it.
     """
     if not system_id and system_name and resolve_combined_system_slug(system_name=system_name) == JEFFERSON_SLUG:
         profile = build_combined_system_profile(system_name, edition_date=edition_date)
@@ -725,6 +812,7 @@ async def get_system_profile(
 
 
 @mcp.tool(structured_output=True)
+@observe_tool("health-system-profiler")
 async def reconcile_system_facilities(
     system_slug: str,
     as_of_date: str | None = None,
@@ -738,6 +826,47 @@ async def reconcile_system_facilities(
     Args:
         system_slug: Jefferson alias, AHRQ system ID, normalized system name, or slug.
         as_of_date: Ledger as-of date. Jefferson/LVHN is valid on or after 2024-08-01.
+
+    Discovery
+    ---------
+    - Inspect this server's healthcare-data://server/.../capabilities resource for datasets, cache needs, and capability clusters.
+    - Use discovery workflow plans when you need cross-server call order, source caveats, or identity handoffs.
+
+    When to use
+    -----------
+    - Use this tool only for its named public healthcare data task.
+    - Prefer exact identifiers when available; use search tools first when you only have names or partial context.
+    - NOT for: patient-level data, PHI, legal clearance, or substituting adjacent public sources for exact source-backed facts.
+
+    Parameters
+    ----------
+    See the function signature and parameter descriptions above. Preserve exact public identifiers such as CCN, NPI, ZCTA, state, dataset_id, workflow_id, or source-specific IDs.
+
+    Returns
+    -------
+    dict
+        Structured JSON-compatible payload. Preserve evidence, source_metadata, identity, and identity_map fields when present.
+
+    Do / Don't
+    ----------
+    Do:
+    - Preserve source evidence and identity fields with cited facts.
+    - Follow returned next_step or next_actions hints before making source claims.
+
+    Don't:
+    - Treat candidate search rows as exact matches without exact identifiers.
+    - Pass placeholders like <ccn> or YOUR_VALUE as real arguments.
+
+    Examples
+    --------
+    Basic MCP call shape:
+    {"jsonrpc":"2.0","id":"1","method":"tools/call","params":{"name":"reconcile_system_facilities","arguments":{}}}
+
+    Common mistakes
+    ---------------
+    - Name supplied to exact-ID lookup: search first, then retry with the returned identifier.
+    - Missing API key or cache: run hc-mcp doctor or inspect the server datasets resource.
+    - Source substitution: keep each claim scoped to the source that produced it.
     """
     if resolve_combined_system_slug(system_name=system_slug, system_slug=system_slug) == JEFFERSON_SLUG:
         result = reconcile_jefferson_facilities(JEFFERSON_SLUG, as_of_date=as_of_date)
@@ -813,6 +942,7 @@ async def reconcile_system_facilities(
 
 
 @mcp.tool(structured_output=True)
+@observe_tool("health-system-profiler")
 async def get_system_facilities(
     system_id: str,
     facility_type: str = "all",
@@ -822,6 +952,47 @@ async def get_system_facilities(
     Args:
         system_id: AHRQ system ID (from search_health_systems).
         facility_type: Filter: "inpatient", "outpatient", "rehab", "behavioral_health", "all" (default).
+
+    Discovery
+    ---------
+    - Inspect this server's healthcare-data://server/.../capabilities resource for datasets, cache needs, and capability clusters.
+    - Use discovery workflow plans when you need cross-server call order, source caveats, or identity handoffs.
+
+    When to use
+    -----------
+    - Use this tool only for its named public healthcare data task.
+    - Prefer exact identifiers when available; use search tools first when you only have names or partial context.
+    - NOT for: patient-level data, PHI, legal clearance, or substituting adjacent public sources for exact source-backed facts.
+
+    Parameters
+    ----------
+    See the function signature and parameter descriptions above. Preserve exact public identifiers such as CCN, NPI, ZCTA, state, dataset_id, workflow_id, or source-specific IDs.
+
+    Returns
+    -------
+    dict
+        Structured JSON-compatible payload. Preserve evidence, source_metadata, identity, and identity_map fields when present.
+
+    Do / Don't
+    ----------
+    Do:
+    - Preserve source evidence and identity fields with cited facts.
+    - Follow returned next_step or next_actions hints before making source claims.
+
+    Don't:
+    - Treat candidate search rows as exact matches without exact identifiers.
+    - Pass placeholders like <ccn> or YOUR_VALUE as real arguments.
+
+    Examples
+    --------
+    Basic MCP call shape:
+    {"jsonrpc":"2.0","id":"1","method":"tools/call","params":{"name":"get_system_facilities","arguments":{}}}
+
+    Common mistakes
+    ---------------
+    - Name supplied to exact-ID lookup: search first, then retry with the returned identifier.
+    - Missing API key or cache: run hc-mcp doctor or inspect the server datasets resource.
+    - Source substitution: keep each claim scoped to the source that produced it.
     """
     hospitals_df = await _load_ahrq_hospitals()
     pos_df = await _load_pos()

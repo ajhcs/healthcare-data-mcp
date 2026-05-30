@@ -13,7 +13,7 @@ _project_root = __import__("pathlib").Path(__file__).resolve().parent.parent.par
 if str(_project_root) not in _sys.path:
     _sys.path.insert(0, str(_project_root))
 
-from shared.utils.cache import CacheMetadata, is_cache_valid, write_atomic_bytes, write_cache_metadata  # noqa: E402
+from shared.utils.cache import CacheMetadata, is_cache_valid, write_atomic_bytes, write_atomic_parquet, write_cache_metadata  # noqa: E402
 from shared.utils.cms_url_resolver import resolve_cms_download_url  # noqa: E402
 
 logger = logging.getLogger(__name__)
@@ -53,7 +53,7 @@ async def ensure_gv_cached(force: bool = False) -> bool:
         write_atomic_bytes(csv_path, resp.content)
 
         df = pd.read_csv(csv_path, dtype=str, keep_default_na=False, low_memory=False)
-        df.to_parquet(_GV_PARQUET, compression="zstd", index=False)
+        write_atomic_parquet(_GV_PARQUET, df, compression="zstd", index=False)
         write_cache_metadata(
             _GV_PARQUET,
             CacheMetadata(

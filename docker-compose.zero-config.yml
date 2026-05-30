@@ -9,7 +9,7 @@
 services:
   service-area:
     build: .
-    image: "${HC_MCP_IMAGE:-healthcare-data-mcp:0.2.0}"
+    image: "${HC_MCP_IMAGE:-healthcare-data-mcp:0.3.0}"
     pull_policy: missing
     command: python -m servers.service_area.server
     ports:
@@ -30,7 +30,7 @@ services:
 
   geo-demographics:
     build: .
-    image: "${HC_MCP_IMAGE:-healthcare-data-mcp:0.2.0}"
+    image: "${HC_MCP_IMAGE:-healthcare-data-mcp:0.3.0}"
     pull_policy: missing
     command: python -m servers.geo_demographics.server
     ports:
@@ -53,7 +53,7 @@ services:
 
   drive-time:
     build: .
-    image: "${HC_MCP_IMAGE:-healthcare-data-mcp:0.2.0}"
+    image: "${HC_MCP_IMAGE:-healthcare-data-mcp:0.3.0}"
     pull_policy: missing
     command: python -m servers.drive_time.server
     ports:
@@ -76,7 +76,7 @@ services:
 
   hospital-quality:
     build: .
-    image: "${HC_MCP_IMAGE:-healthcare-data-mcp:0.2.0}"
+    image: "${HC_MCP_IMAGE:-healthcare-data-mcp:0.3.0}"
     pull_policy: missing
     command: python -m servers.hospital_quality.server
     ports:
@@ -97,7 +97,7 @@ services:
 
   cms-facility:
     build: .
-    image: "${HC_MCP_IMAGE:-healthcare-data-mcp:0.2.0}"
+    image: "${HC_MCP_IMAGE:-healthcare-data-mcp:0.3.0}"
     pull_policy: missing
     command: python -m servers.cms_facility.server
     ports:
@@ -118,7 +118,7 @@ services:
 
   health-system-profiler:
     build: .
-    image: "${HC_MCP_IMAGE:-healthcare-data-mcp:0.2.0}"
+    image: "${HC_MCP_IMAGE:-healthcare-data-mcp:0.3.0}"
     pull_policy: missing
     command: python -m servers.health_system_profiler.server
     ports:
@@ -139,7 +139,7 @@ services:
 
   price-transparency:
     build: .
-    image: "${HC_MCP_IMAGE:-healthcare-data-mcp:0.2.0}"
+    image: "${HC_MCP_IMAGE:-healthcare-data-mcp:0.3.0}"
     pull_policy: missing
     command: python -m servers.price_transparency.server
     ports:
@@ -163,7 +163,7 @@ services:
 
   physician-referral-network:
     build: .
-    image: "${HC_MCP_IMAGE:-healthcare-data-mcp:0.2.0}"
+    image: "${HC_MCP_IMAGE:-healthcare-data-mcp:0.3.0}"
     pull_policy: missing
     command: python -m servers.physician_referral_network.server
     ports:
@@ -185,7 +185,7 @@ services:
 
   workforce-analytics:
     build: .
-    image: "${HC_MCP_IMAGE:-healthcare-data-mcp:0.2.0}"
+    image: "${HC_MCP_IMAGE:-healthcare-data-mcp:0.3.0}"
     pull_policy: missing
     command: python -m servers.workforce_analytics.server
     ports:
@@ -208,7 +208,7 @@ services:
 
   claims-analytics:
     build: .
-    image: "${HC_MCP_IMAGE:-healthcare-data-mcp:0.2.0}"
+    image: "${HC_MCP_IMAGE:-healthcare-data-mcp:0.3.0}"
     pull_policy: missing
     command: python -m servers.claims_analytics.server
     ports:
@@ -229,7 +229,7 @@ services:
 
   public-records:
     build: .
-    image: "${HC_MCP_IMAGE:-healthcare-data-mcp:0.2.0}"
+    image: "${HC_MCP_IMAGE:-healthcare-data-mcp:0.3.0}"
     pull_policy: missing
     command: python -m servers.public_records.server
     ports:
@@ -252,7 +252,7 @@ services:
 
   discovery:
     build: .
-    image: "${HC_MCP_IMAGE:-healthcare-data-mcp:0.2.0}"
+    image: "${HC_MCP_IMAGE:-healthcare-data-mcp:0.3.0}"
     pull_policy: missing
     command: python -m servers.discovery.server
     ports:
@@ -273,7 +273,7 @@ services:
 
   gateway:
     build: .
-    image: "${HC_MCP_IMAGE:-healthcare-data-mcp:0.2.0}"
+    image: "${HC_MCP_IMAGE:-healthcare-data-mcp:0.3.0}"
     pull_policy: missing
     command: python -m servers.gateway.server
     ports:
@@ -305,7 +305,7 @@ services:
 
   provider-enrollment:
     build: .
-    image: "${HC_MCP_IMAGE:-healthcare-data-mcp:0.2.0}"
+    image: "${HC_MCP_IMAGE:-healthcare-data-mcp:0.3.0}"
     pull_policy: missing
     command: python -m servers.provider_enrollment.server
     ports:
@@ -326,7 +326,7 @@ services:
 
   community-health:
     build: .
-    image: "${HC_MCP_IMAGE:-healthcare-data-mcp:0.2.0}"
+    image: "${HC_MCP_IMAGE:-healthcare-data-mcp:0.3.0}"
     pull_policy: missing
     command: python -m servers.community_health.server
     ports:
@@ -348,7 +348,7 @@ services:
 
   research-trials:
     build: .
-    image: "${HC_MCP_IMAGE:-healthcare-data-mcp:0.2.0}"
+    image: "${HC_MCP_IMAGE:-healthcare-data-mcp:0.3.0}"
     pull_policy: missing
     command: python -m servers.research_trials.server
     ports:

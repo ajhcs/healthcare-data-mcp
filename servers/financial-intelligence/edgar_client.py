@@ -10,6 +10,7 @@ from bs4 import BeautifulSoup
 
 from shared.utils.http_client import resilient_request
 
+from shared.utils.cache import write_atomic_json, write_atomic_text
 from shared.utils.cms_client import get_cache_path
 
 logger = logging.getLogger(__name__)
@@ -90,7 +91,7 @@ async def get_company_submissions(cik: str) -> dict:
     try:
         resp = await _sec_rate_limited_get(f"{SUBMISSIONS_BASE}/CIK{padded_cik}.json", timeout=30.0)
         data = resp.json()
-        cached.write_text(json.dumps(data))
+        write_atomic_json(cached, data, indent=None)
         return data
     except Exception as e:
         logger.warning("EDGAR submissions lookup failed for CIK %s: %s", cik, e)
@@ -115,7 +116,7 @@ async def get_company_facts(cik: str) -> dict:
     try:
         resp = await _sec_rate_limited_get(f"{XBRL_BASE}/CIK{padded_cik}.json", timeout=60.0)
         data = resp.json()
-        cached.write_text(json.dumps(data))
+        write_atomic_json(cached, data, indent=None)
         return data
     except Exception as e:
         logger.warning("EDGAR company facts failed for CIK %s: %s", cik, e)
@@ -217,7 +218,7 @@ async def download_filing_html(cik: str, accession_number: str) -> str | None:
 
         resp = await _sec_rate_limited_get(doc_url, timeout=30.0)
         html = resp.text
-        cached.write_text(html)
+        write_atomic_text(cached, html)
         return html
     except Exception as e:
         logger.warning("Failed to download filing HTML for %s: %s", accession_number, e)

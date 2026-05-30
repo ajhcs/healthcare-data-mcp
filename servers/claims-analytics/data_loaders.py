@@ -10,6 +10,7 @@ from pathlib import Path
 
 import duckdb
 
+from shared.utils.cache import write_atomic_bytes, write_atomic_parquet
 from shared.utils.http_client import resilient_request
 import pandas as pd
 
@@ -59,11 +60,11 @@ async def _download_and_cache_csv(url: str, cache_path: Path, dataset_name: str)
         resp = await resilient_request("GET", url, timeout=300.0)
 
         csv_path = _CACHE_DIR / f"{cache_path.stem}_raw.csv"
-        csv_path.write_bytes(resp.content)
+        write_atomic_bytes(csv_path, resp.content)
 
         df = pd.read_csv(csv_path, dtype=str, keep_default_na=False, low_memory=False)
         df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
-        df.to_parquet(cache_path, compression="zstd", index=False)
+        write_atomic_parquet(cache_path, df, compression="zstd", index=False)
 
         csv_path.unlink(missing_ok=True)
         logger.info("%s cached: %d records -> %s", dataset_name, len(df), cache_path.name)

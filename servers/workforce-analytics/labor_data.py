@@ -19,7 +19,7 @@ _project_root = __import__("pathlib").Path(__file__).resolve().parent.parent.par
 if str(_project_root) not in _sys.path:
     _sys.path.insert(0, str(_project_root))
 
-from shared.utils.cache import is_cache_valid  # noqa: E402
+from shared.utils.cache import is_cache_valid, write_atomic_bytes, write_atomic_parquet  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +62,7 @@ async def ensure_nlrb_cached() -> bool:
         resp = await resilient_request("GET", NLRB_DB_URL, timeout=300.0)
 
         zip_path = _CACHE_DIR / "nlrb.db.zip"
-        zip_path.write_bytes(resp.content)
+        write_atomic_bytes(zip_path, resp.content)
 
         with zipfile.ZipFile(zip_path) as zf:
             db_files = [f for f in zf.namelist() if f.endswith(".db")]
@@ -209,7 +209,7 @@ async def ensure_stoppages_cached() -> bool:
                 data_rows.append(dict(zip(header, values)))
 
         df = pd.DataFrame(data_rows)
-        df.to_parquet(_STOPPAGES_CACHE, compression="zstd", index=False)
+        write_atomic_parquet(_STOPPAGES_CACHE, df, compression="zstd", index=False)
 
         logger.info("Work stoppages cached: %d records", len(df))
         return True

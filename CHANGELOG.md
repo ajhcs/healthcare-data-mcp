@@ -1,5 +1,32 @@
 # Changelog
 
+## v0.3.0 - MCP design hardening
+
+Released: 2026-05-30
+
+- Added standardized MCP error payloads with machine-readable error types,
+  recoverability flags, fix hints, available options, and suggested follow-up
+  tool calls.
+- Added an enforced MCP tool documentation contract covering discovery,
+  when-to-use guidance, parameters, returns, do/don't rules, examples, and
+  common mistakes for every checked-in tool.
+- Added per-server metadata resources for capabilities, datasets, examples,
+  identity rules, and local non-secret metrics.
+- Added capability clusters for broad servers so agents can choose smaller,
+  task-aligned tool groups.
+- Added shared input normalization and mistake detection for exact public
+  identifiers such as CCN, NPI, state, ZCTA, FIPS, and catalog IDs.
+- Hardened public web fetching against redirect-chain SSRF, private/metadata
+  hosts, excessive redirects, and oversized HTML responses.
+- Added read-only discovery macro tools for quality measure lookup, compliance
+  exclusion screening, and facility profile readiness.
+- Migrated runtime public-source cache writes to atomic replacement helpers for
+  bytes, JSON, CSV, and Parquet artifacts.
+- Added shared tool-call observability for local/HTTP MCP servers with
+  non-secret duration, outcome, result-size, dataset, and cache-status metrics.
+- Added MCP UX regression tests for doc contracts, resources, structured
+  errors, mistake recovery, observability, cache writes, and web SSRF behavior.
+
 ## v0.2.0 - Operator-ready productization
 
 Released: 2026-05-22

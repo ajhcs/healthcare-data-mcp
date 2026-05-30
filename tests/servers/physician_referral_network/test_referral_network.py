@@ -89,7 +89,9 @@ def test_load_docgraph_csv_normalizes_columns_and_writes_cache(monkeypatch, tmp_
     rows_loaded = referral_network.load_docgraph_csv(csv_path)
 
     assert rows_loaded == 2
-    assert captured["path"] == cache_path
+    assert captured["path"] != cache_path
+    assert captured["path"].parent == cache_path.parent
+    assert cache_path.exists()
     assert captured["rows"] == [
         {
             "npi_from": "1111111111",

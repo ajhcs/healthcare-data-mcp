@@ -25,6 +25,8 @@ from typing import Any
 import duckdb
 import polars as pl
 
+from shared.utils.cache import write_atomic_json
+
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -847,9 +849,7 @@ def normalize_to_parquet(df: pl.DataFrame, hospital_name: str, output_dir: Path)
         "plan_count": len(plan_unique),
         "description_count": len(desc_unique),
     }
-    (output_dir / "metadata.json").write_text(
-        json.dumps(metadata, indent=2), encoding="utf-8"
-    )
+    write_atomic_json(output_dir / "metadata.json", metadata)
 
     logger.info(
         "Normalized %d rows -> %s (%d payers, %d plans)",

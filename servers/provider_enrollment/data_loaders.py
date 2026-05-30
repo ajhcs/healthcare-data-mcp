@@ -14,6 +14,7 @@ from typing import Any
 
 import pandas as pd
 
+from shared.utils.cache import write_atomic_parquet
 from shared.utils.http_client import resilient_request
 from shared.utils.identity import (
     normalize_ccn,
@@ -292,7 +293,7 @@ def cache_dataframe(
     parquet_path = dataset_cache_path(dataset_key, cache_dir=cache_dir)
     manifest_path = dataset_manifest_path(dataset_key, cache_dir=cache_dir)
     parquet_path.parent.mkdir(parents=True, exist_ok=True)
-    normalized.to_parquet(parquet_path, compression="zstd", index=False)
+    write_atomic_parquet(parquet_path, normalized, compression="zstd", index=False)
 
     hydrated = SourceManifest.from_dict(manifest.to_dict())
     hydrated.record_count = len(normalized)

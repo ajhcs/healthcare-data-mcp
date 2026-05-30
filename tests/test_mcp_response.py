@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import date
+import json
 from typing import Any
 
 import pytest
@@ -127,26 +128,28 @@ def test_empty_response_returns_zero_result_success() -> None:
 def test_error_response_is_structured_without_raising() -> None:
     response = error_response("Upstream unavailable", code="cms_unavailable", detail={"status": 503}, retryable=True)
 
-    assert response == {
-        "ok": False,
-        "error": {
-            "code": "cms_unavailable",
-            "message": "Upstream unavailable",
-            "retryable": True,
-            "detail": {"status": 503},
-        },
-    }
+    assert response["ok"] is False
+    assert response["error"]["code"] == "cms_unavailable"
+    assert response["error"]["type"] == "CMS_UNAVAILABLE"
+    assert response["error"]["message"] == "Upstream unavailable"
+    assert response["error"]["retryable"] is True
+    assert response["error"]["recoverable"] is True
+    assert response["error"]["detail"] == {"status": 503}
+    assert response["error"]["data"]["detail"] == {"status": 503}
 
 
 def test_tool_error_formats_fastmcp_tool_error() -> None:
     error = tool_error("limit must be positive", code="invalid_params", detail={"limit": 0})
 
     assert isinstance(error, ToolError)
-    assert str(error) == 'invalid_params: limit must be positive | detail={"limit":0}'
+    payload = json.loads(str(error))
+    assert payload["error"]["type"] == "INVALID_PARAMS"
+    assert payload["error"]["message"] == "limit must be positive"
+    assert payload["error"]["data"]["detail"] == {"limit": 0}
 
 
 def test_raise_invalid_params_raises_tool_error() -> None:
-    with pytest.raises(ToolError, match="invalid_params: state is required"):
+    with pytest.raises(ToolError, match="state is required"):
         raise_invalid_params("state is required")
 
 

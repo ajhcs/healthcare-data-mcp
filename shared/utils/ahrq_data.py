@@ -14,6 +14,7 @@ from pathlib import Path
 import pandas as pd
 from shared.utils.cms_url_resolver import resolve_cms_download_url as _resolve_cms_url
 
+from shared.utils.cache import write_atomic_bytes
 from shared.utils.http_client import resilient_request
 
 logger = logging.getLogger(__name__)
@@ -160,7 +161,7 @@ async def _download_if_missing(url: str, cache_path: Path) -> Path:
             f"or manually download and place at {cache_path}"
         )
 
-    cache_path.write_bytes(resp.content)
+    write_atomic_bytes(cache_path, resp.content)
 
     logger.info("Saved to: %s (%d bytes)", cache_path, cache_path.stat().st_size)
     return cache_path

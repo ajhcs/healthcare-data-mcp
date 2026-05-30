@@ -1,9 +1,11 @@
 """Data loading and caching for AHRQ Compendium, CMS POS, and NPPES."""
 
 import logging
+from datetime import datetime, timezone
 from pathlib import Path
 
 
+from shared.utils.cache import CacheMetadata, write_atomic_bytes, write_cache_metadata
 from shared.utils.http_client import resilient_request
 import pandas as pd
 
@@ -143,7 +145,16 @@ async def _download_if_missing(url: str, cache_path: Path) -> Path:
         )
 
     resp.raise_for_status()
-    cache_path.write_bytes(resp.content)
+    write_atomic_bytes(cache_path, resp.content)
+    write_cache_metadata(
+        cache_path,
+        CacheMetadata(
+            source_url=url,
+            fetched_at=datetime.now(timezone.utc).isoformat(),
+            content_length=len(resp.content),
+            cache_key=cache_path.name,
+        ),
+    )
 
     logger.info("Saved to: %s (%d bytes)", cache_path, cache_path.stat().st_size)
     return cache_path

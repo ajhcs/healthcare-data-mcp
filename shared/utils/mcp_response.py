@@ -76,6 +76,32 @@ class ReportIngestContractError(ValueError):
     """Raised when report-ingest fact rows lack source evidence."""
 
 
+@dataclass(frozen=True, slots=True)
+class ToolExecutionError(Exception):
+    """Machine-parseable MCP tool failure with agent recovery guidance."""
+
+    error_type: str
+    message: str
+    recoverable: bool = True
+    data: Mapping[str, Any] | None = None
+
+    def __str__(self) -> str:
+        return self.message
+
+    def to_payload(self) -> JsonDict:
+        return {
+            "ok": False,
+            "error": {
+                "type": self.error_type,
+                "code": self.error_type.lower(),
+                "message": self.message,
+                "recoverable": self.recoverable,
+                "retryable": self.recoverable,
+                "data": to_structured(dict(self.data or {})),
+            }
+        }
+
+
 def to_structured(value: Any) -> JsonValue:
     """Convert Pydantic models, dataclasses, dates, and scalars to JSON-safe values."""
     return to_jsonable_python(value, by_alias=True, fallback=str)
@@ -331,15 +357,36 @@ def error_response(
     message: str,
     *,
     code: str = "tool_error",
+    error_type: str | None = None,
     detail: Any | None = None,
     retryable: bool = False,
+    recoverable: bool | None = None,
+    data: Mapping[str, Any] | None = None,
+    fix_hint: str | None = None,
+    available_options: Sequence[Any] | None = None,
+    suggested_tool_calls: Sequence[Mapping[str, Any]] | None = None,
     **fields: Any,
 ) -> JsonDict:
     """Return a structured failure envelope for non-exceptional tool failures."""
+    resolved_type = (error_type or code or "tool_error").upper()
+    resolved_recoverable = retryable if recoverable is None else recoverable
+    recovery_data: JsonDict = dict(data or {})
+    if detail is not None:
+        recovery_data["detail"] = to_structured(detail)
+    if fix_hint:
+        recovery_data["fix_hint"] = fix_hint
+    if available_options is not None:
+        recovery_data["available_options"] = to_structured(list(available_options))
+    if suggested_tool_calls is not None:
+        recovery_data["suggested_tool_calls"] = to_structured(list(suggested_tool_calls))
+
     error: JsonDict = {
         "code": code,
+        "type": resolved_type,
         "message": message,
         "retryable": retryable,
+        "recoverable": resolved_recoverable,
+        "data": recovery_data,
     }
     if detail is not None:
         error["detail"] = to_structured(detail)
@@ -349,6 +396,97 @@ def error_response(
         if value is not None:
             response[key] = to_structured(value)
     return response
+
+
+def invalid_argument_response(
+    message: str,
+    *,
+    detail: Any | None = None,
+    fix_hint: str | None = None,
+    available_options: Sequence[Any] | None = None,
+    suggested_tool_calls: Sequence[Mapping[str, Any]] | None = None,
+    **fields: Any,
+) -> JsonDict:
+    """Return a structured invalid-argument failure."""
+
+    return error_response(
+        message,
+        code="invalid_params",
+        error_type="INVALID_ARGUMENT",
+        detail=detail,
+        recoverable=True,
+        data={"fix_hint": fix_hint} if fix_hint else None,
+        fix_hint=fix_hint,
+        available_options=available_options,
+        suggested_tool_calls=suggested_tool_calls,
+        **fields,
+    )
+
+
+def not_found_response(
+    message: str,
+    *,
+    detail: Any | None = None,
+    fix_hint: str | None = None,
+    available_options: Sequence[Any] | None = None,
+    suggested_tool_calls: Sequence[Mapping[str, Any]] | None = None,
+    **fields: Any,
+) -> JsonDict:
+    """Return a structured not-found failure with recovery options."""
+
+    return error_response(
+        message,
+        code="not_found",
+        error_type="NOT_FOUND",
+        detail=detail,
+        recoverable=True,
+        fix_hint=fix_hint,
+        available_options=available_options,
+        suggested_tool_calls=suggested_tool_calls,
+        **fields,
+    )
+
+
+def source_unavailable_response(
+    message: str,
+    *,
+    detail: Any | None = None,
+    retryable: bool = True,
+    fix_hint: str | None = None,
+    **fields: Any,
+) -> JsonDict:
+    """Return a structured source-unavailable failure."""
+
+    return error_response(
+        message,
+        code="source_unavailable",
+        error_type="SOURCE_UNAVAILABLE",
+        detail=detail,
+        retryable=retryable,
+        recoverable=retryable,
+        fix_hint=fix_hint,
+        **fields,
+    )
+
+
+def policy_denied_response(
+    message: str,
+    *,
+    detail: Any | None = None,
+    fix_hint: str | None = None,
+    **fields: Any,
+) -> JsonDict:
+    """Return a structured policy-denied failure."""
+
+    return error_response(
+        message,
+        code="policy_denied",
+        error_type="POLICY_DENIED",
+        detail=detail,
+        recoverable=True,
+        fix_hint=fix_hint,
+        **fields,
+    )
 
 
 def validate_report_ingest_payload(
@@ -446,10 +584,9 @@ def _has_value(value: Any) -> bool:
 
 def tool_error(message: str, *, code: str = "tool_error", detail: Any | None = None) -> ToolError:
     """Create a FastMCP ToolError with compact structured context in the message."""
-    if detail is None:
-        return ToolError(f"{code}: {message}")
-    detail_json = dumps(to_structured(detail), separators=(",", ":"), sort_keys=True)
-    return ToolError(f"{code}: {message} | detail={detail_json}")
+    payload = error_response(message, code=code, error_type=code.upper(), detail=detail)
+    payload_json = dumps(to_structured(payload), separators=(",", ":"), sort_keys=True)
+    return ToolError(payload_json)
 
 
 def raise_tool_error(message: str, *, code: str = "tool_error", detail: Any | None = None) -> NoReturn:
@@ -476,15 +613,20 @@ __all__ = [
     "EVIDENCE_RECEIPT_FIELDS",
     "EVIDENCE_RECEIPT_REQUIRED_CONTENT_FIELDS",
     "EvidenceReceipt",
+    "ToolExecutionError",
     "evidence_receipts_in_payload",
     "evidence_receipt_validation_summary",
     "error_response",
+    "invalid_argument_response",
+    "not_found_response",
+    "policy_denied_response",
     "pagination_meta",
     "raise_invalid_params",
     "raise_not_found",
     "raise_tool_error",
     "record_response",
     "response_envelope",
+    "source_unavailable_response",
     "REPORT_SOURCE_METADATA_FIELDS",
     "ReportIngestContractError",
     "to_structured",

@@ -26,6 +26,10 @@ __all__ = [
     "is_cache_valid",
     "read_cache_metadata",
     "write_atomic_bytes",
+    "write_atomic_dataframe_csv",
+    "write_atomic_parquet",
+    "write_atomic_json",
+    "write_atomic_text",
     "write_cache_metadata",
 ]
 
@@ -111,11 +115,55 @@ def write_cache_metadata(path: Path, metadata: CacheMetadata) -> Path:
     """Write a stable JSON sidecar next to a cache artifact."""
 
     metadata_path = cache_metadata_path(path)
-    metadata_path.write_text(
-        json.dumps(metadata.to_dict(), indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
+    write_atomic_text(metadata_path, json.dumps(metadata.to_dict(), indent=2, sort_keys=True) + "\n")
     return metadata_path
+
+
+def write_atomic_text(path: Path, content: str, *, encoding: str = "utf-8") -> None:
+    """Atomically replace a text file."""
+
+    write_atomic_bytes(path, content.encode(encoding))
+
+
+def write_atomic_json(path: Path, payload: Any, *, indent: int = 2) -> None:
+    """Atomically replace a JSON file with stable formatting."""
+
+    write_atomic_text(path, json.dumps(payload, indent=indent, sort_keys=True, default=str) + "\n")
+
+
+def write_atomic_dataframe_csv(path: Path, dataframe: Any, **kwargs: Any) -> None:
+    """Atomically replace a CSV file produced by a pandas-like DataFrame."""
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(
+        dir=path.parent,
+        delete=False,
+        suffix=path.suffix or ".csv",
+        mode="w",
+        encoding=str(kwargs.pop("encoding", "utf-8")),
+        newline="",
+    ) as handle:
+        tmp_path = Path(handle.name)
+        try:
+            dataframe.to_csv(handle, **kwargs)
+        except Exception:
+            tmp_path.unlink(missing_ok=True)
+            raise
+    tmp_path.replace(path)
+
+
+def write_atomic_parquet(path: Path, dataframe: Any, **kwargs: Any) -> None:
+    """Atomically replace a Parquet file produced by a pandas-like DataFrame."""
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(dir=path.parent, delete=False, suffix=path.suffix or ".parquet") as handle:
+        tmp_path = Path(handle.name)
+    try:
+        dataframe.to_parquet(tmp_path, **kwargs)
+        tmp_path.replace(path)
+    except Exception:
+        tmp_path.unlink(missing_ok=True)
+        raise
 
 
 def write_atomic_bytes(path: Path, content: bytes) -> None:

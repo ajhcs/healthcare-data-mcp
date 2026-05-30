@@ -10,6 +10,7 @@ from typing import Any, Iterable
 
 import pandas as pd
 
+from shared.utils.cache import write_atomic_parquet
 from shared.utils.source_catalog import SourceManifest, read_source_manifest, write_source_manifest
 
 from .socrata_client import (
@@ -134,7 +135,7 @@ def write_parquet_cache(rows: Iterable[dict[str, Any]], path: str | Path) -> Pat
     cache_path.parent.mkdir(parents=True, exist_ok=True)
     df = pd.DataFrame(list(rows))
     try:
-        df.to_parquet(cache_path, compression="zstd", index=False)
+        write_atomic_parquet(cache_path, df, compression="zstd", index=False)
     except ImportError:
         import duckdb
 

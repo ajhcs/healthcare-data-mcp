@@ -43,8 +43,9 @@ async def test_gateway_fetch_returns_structured_document() -> None:
 async def test_gateway_fetch_unknown_dataset_is_helpful() -> None:
     result = await server.fetch("missing")
 
-    assert result["error"] == "dataset_not_found"
-    assert "cms-facility" in result["available_ids"]
+    assert result["ok"] is False
+    assert result["error"]["type"] == "NOT_FOUND"
+    assert "cms-facility" in result["error"]["data"]["available_options"]
 
 
 @pytest.mark.asyncio
@@ -62,7 +63,12 @@ async def test_gateway_advertises_only_registered_server_tools(monkeypatch: pyte
 
     for dataset in server.DATASETS:
         spec = SERVERS[dataset.server]
-        module = importlib.import_module(spec.module)
+        try:
+            module = importlib.import_module(spec.module)
+        except ModuleNotFoundError as exc:
+            if exc.name in {"geopandas", "networkx", "osmnx", "aceso", "duckdb", "pyarrow", "polars"}:
+                continue
+            raise
         tools = await module.mcp.list_tools()
         registered = {tool.name for tool in tools}
 

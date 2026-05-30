@@ -26,9 +26,9 @@ curl -fsSL https://raw.githubusercontent.com/ajhcs/healthcare-data-mcp/main/inst
 
 ## TL;DR
 
-Healthcare data is public, but it is scattered across CMS, CDC, NIH, HHS OIG, SAM.gov, Census, HUD, SEC, IRS, hospital MRFs, and other systems. Healthcare Data MCP turns those sources into focused MCP tools with local caches, structured responses, source metadata, and client-friendly server discovery.
+Healthcare data is public, but it is scattered across CMS, CDC, NIH, HHS OIG, SAM.gov, Census, HUD, SEC, IRS, hospital MRFs, and other systems. Healthcare Data MCP turns those sources into focused MCP tools with local caches, structured responses, source metadata, recovery hints, per-server discovery resources, and client-friendly server discovery.
 
-Latest release: `v0.2.0` productizes the toolkit around operator-ready readiness checks, task-first workflows, registry-driven packaging, evidence receipts, identity-map handoffs, and safe gateway deployment defaults. See [v0.2.0 release notes](docs/release-notes/2026-05-22-v0.2.0-operator-ready-productization.md).
+Latest release: `v0.3.0` focuses on MCP design quality for agents: standardized error recovery, required tool documentation sections, capability clusters for large servers, per-server resources, shared input normalization, redirect-safe public web fetches, read-only macro workflow tools, atomic cache writes, local tool observability, and MCP UX validation tests. See [v0.3.0 release notes](docs/release-notes/2026-05-30-v0.3.0-mcp-design-hardening.md).
 
 | If your agent needs to... | Use these servers |
 | --- | --- |
@@ -59,6 +59,11 @@ hc-mcp workflow compliance_exclusion_screening
 hc-mcp workflow quality_measure_lookup --input ccn=390223 --inputs-json '{"measure":"clabsi_sir"}' --json
 hc-mcp workflow system_reconciliation --input query="Jefferson Health" --input system_slug=jefferson-health --json
 
+# Connect to discovery to expose read-only macro tools for common workflows
+hc-mcp discovery
+# MCP tools: macro_quality_measure_lookup, macro_compliance_exclusion_screening,
+# and macro_facility_profile_readiness return bounded workflow plans.
+
 # Show curated install/use presets by job family
 hc-mcp preset
 hc-mcp preset market-strategy
@@ -76,6 +81,12 @@ docker compose up --build
 Workflow plans are read-only and include concrete MCP call templates,
 registry-backed source/API-key readiness, identity-map handoff rules, caveats,
 and report fact-row templates.
+
+The `v0.3.0` MCP UX release also makes individual servers self-describing:
+each server exposes standard resources for capabilities, datasets, examples,
+identity rules, and non-secret local metrics. Unknown IDs and malformed exact
+identifier inputs now return machine-parseable recovery payloads where the
+surface has been migrated.
 
 ## Preset Catalog
 
@@ -95,7 +106,9 @@ used by setup, docs, and distribution checks.
 | Capability | What you get | Example source families |
 | --- | --- | --- |
 | Agent-ready tools | Narrow MCP servers instead of one huge ambiguous tool surface | Facility lookup, LEIE screening, trial search, ownership graph expansion |
-| Structured responses | Bounded JSON-compatible results with provenance fields where available | CMS, CDC, NIH, ClinicalTrials.gov, SAM.gov, HHS OIG |
+| Self-describing MCP UX | Tool docstrings include discovery, when-to-use, examples, do/don't guidance, and common mistakes | Every checked-in `@mcp.tool` surface |
+| Structured responses | Bounded JSON-compatible results with provenance fields, error types, recovery hints, and suggested next calls where available | CMS, CDC, NIH, ClinicalTrials.gov, SAM.gov, HHS OIG |
+| Per-server resources | Metadata resources expose capabilities, datasets, examples, identity rules, and local metrics even when a client connects to one server | `healthcare-data://server/{server}/capabilities` |
 | Local-first operation | Stdio and localhost HTTP by default, with cache reuse across sessions | `~/.healthcare-data-mcp/cache` or Docker `healthcare-cache` |
 | Remote-safe metadata mode | A gateway that exposes `search` and `fetch` for dataset metadata only | OpenAI and Claude remote MCP connector shapes |
 | Authenticated live router | One allowlisted gateway for provider, quality, claims, compliance, PLACES, NIH, and ClinicalTrials tools | Local stdio, or Streamable HTTP behind bearer auth/HTTPS |
@@ -183,7 +196,7 @@ docker compose up --build
 Each server is exposed at `http://localhost:<port>/mcp`. Compose publishes ports on `127.0.0.1` by default.
 
 Generated Compose files assign the local build a package-versioned image tag
-such as `healthcare-data-mcp:0.2.0`. To run a published image instead of
+such as `healthcare-data-mcp:0.3.0`. To run a published image instead of
 building locally, set `HC_MCP_IMAGE` to the trusted image reference before
 starting Compose; Compose uses `pull_policy: missing` so normal startup can
 reuse or pull the tagged image unless you explicitly pass `--build`.
@@ -369,6 +382,9 @@ Healthcare Data MCP launch layer
           ▼
 Focused FastMCP servers
   ├─ structured_output=True tools
+  ├─ agent-facing docstrings, capability clusters, and MCP resources
+  ├─ structured errors with recovery hints and suggested calls
+  ├─ local non-secret tool timing/result metrics
   ├─ shared HTTP retry/client helpers
   ├─ source catalog, evidence receipt, and identity-map helpers
   └─ bounded responses with source metadata and caveats
@@ -389,6 +405,19 @@ Public sources + local cache
 | Direct public APIs | Custom applications with narrow, known data needs | Every agent/client must learn each source schema, auth rule, pagination model, and caveat |
 | Data warehouse or BI stack | Internal reporting on curated tables | Strong for dashboards, weaker for ad hoc agent workflows and source-aware discovery |
 | One-off notebooks/scripts | Analyst experiments | Harder to share with MCP clients, cache consistently, or reuse across agents |
+
+## MCP Design Guarantees
+
+The tool surface is tested for agent usability, not only Python correctness:
+
+| Contract | What is enforced |
+| --- | --- |
+| Tool documentation | Every `@mcp.tool` docstring includes discovery, when-to-use, parameters, returns, do/don't, examples, and common mistakes sections. |
+| Error recovery | Shared errors include `error.type`, `recoverable`, `data.fix_hint`, `available_options`, and `suggested_tool_calls` where applicable. |
+| Capability clusters | Broad servers publish small capability clusters so clients can choose the narrowest relevant group. |
+| Resources | Every server registers standard metadata resources under `healthcare-data://server/{server_id}/...`. |
+| Web safety | Public web fetches revalidate redirect targets and reject private, metadata, non-http(s), excessive, and oversized HTML targets. |
+| Cache durability | Runtime public-source cache writes use atomic replacement helpers for bytes, JSON, CSV, and Parquet paths. |
 
 ## Cache and Compliance Notes
 
@@ -554,10 +583,7 @@ Local Python runs use `~/.healthcare-data-mcp/cache`. Docker Compose uses the `h
 
 ## About Contributions
 
-This project is primarily maintained as a personal toolkit. Issues and bug
-reports are welcome, but outside pull requests may be used as references rather
-than merged directly. Proposed fixes may be reimplemented independently after
-review.
+*About Contributions:* Please don't take this the wrong way, but I do not accept outside contributions for any of my projects. I simply don't have the mental bandwidth to review anything, and it's my name on the thing, so I'm responsible for any problems it causes; thus, the risk-reward is highly asymmetric from my perspective. I'd also have to worry about other "stakeholders," which seems unwise for tools I mostly make for myself for free. Feel free to submit issues, and even PRs if you want to illustrate a proposed fix, but know I won't merge them directly. Instead, I'll have Claude or Codex review submissions via `gh` and independently decide whether and how to address them. Bug reports in particular are welcome. Sorry if this offends, but I want to avoid wasted time and hurt feelings. I understand this isn't in sync with the prevailing open-source ethos that seeks community contributions, but it's the only way I can move at this velocity and keep my sanity.
 
 ## License
 

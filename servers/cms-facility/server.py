@@ -12,8 +12,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
+from shared.utils.mcp_observability import observe_tool
+from shared.utils.mcp_resources import register_standard_resources
 from shared.utils.healthcare_identity import identity_from_public_record
-from shared.utils.mcp_response import error_response, evidence_receipt, to_structured
+from shared.utils.input_normalization import normalize_ccn, normalize_npi
+from shared.utils.mcp_response import error_response, evidence_receipt, invalid_argument_response, not_found_response, to_structured
 from shared.utils.bed_resolver import resolve_hospital_bed_source
 
 # Support running both as a package and as a standalone script
@@ -33,6 +36,7 @@ if _transport in ("sse", "streamable-http"):
     _mcp_kwargs["host"] = os.environ.get("MCP_HOST", "127.0.0.1")
     _mcp_kwargs["port"] = int(os.environ.get("MCP_PORT", "8006"))
 mcp = FastMCP(**_mcp_kwargs)
+register_standard_resources(mcp, "cms-facility")
 
 _HOSPITAL_INFO_DATASET_ID = "cms_hospital_general_info"
 _HOSPITAL_INFO_SOURCE_NAME = "CMS Hospital General Information"
@@ -271,6 +275,7 @@ def _receipt(
 
 
 @mcp.tool(structured_output=True)
+@observe_tool("cms-facility")
 async def search_facilities(
     name: str | None = None,
     state: str | None = None,
@@ -286,6 +291,47 @@ async def search_facilities(
         facility_type: Hospital type filter (e.g. "Acute Care", "Critical Access").
         city: City name filter.
         limit: Max results to return (default 50).
+
+    Discovery
+    ---------
+    - Inspect this server's healthcare-data://server/.../capabilities resource for datasets, cache needs, and capability clusters.
+    - Use discovery workflow plans when you need cross-server call order, source caveats, or identity handoffs.
+
+    When to use
+    -----------
+    - Use this tool only for its named public healthcare data task.
+    - Prefer exact identifiers when available; use search tools first when you only have names or partial context.
+    - NOT for: patient-level data, PHI, legal clearance, or substituting adjacent public sources for exact source-backed facts.
+
+    Parameters
+    ----------
+    See the function signature and parameter descriptions above. Preserve exact public identifiers such as CCN, NPI, ZCTA, state, dataset_id, workflow_id, or source-specific IDs.
+
+    Returns
+    -------
+    dict
+        Structured JSON-compatible payload. Preserve evidence, source_metadata, identity, and identity_map fields when present.
+
+    Do / Don't
+    ----------
+    Do:
+    - Preserve source evidence and identity fields with cited facts.
+    - Follow returned next_step or next_actions hints before making source claims.
+
+    Don't:
+    - Treat candidate search rows as exact matches without exact identifiers.
+    - Pass placeholders like <ccn> or YOUR_VALUE as real arguments.
+
+    Examples
+    --------
+    Basic MCP call shape:
+    {"jsonrpc":"2.0","id":"1","method":"tools/call","params":{"name":"search_facilities","arguments":{}}}
+
+    Common mistakes
+    ---------------
+    - Name supplied to exact-ID lookup: search first, then retry with the returned identifier.
+    - Missing API key or cache: run hc-mcp doctor or inspect the server datasets resource.
+    - Source substitution: keep each claim scoped to the source that produced it.
     """
     df = await data_loaders.load_hospital_info()
     if df.empty:
@@ -370,12 +416,69 @@ async def search_facilities(
 
 
 @mcp.tool(structured_output=True)
+@observe_tool("cms-facility")
 async def get_facility(ccn: str) -> dict[str, Any]:
     """Get full facility details by CMS Certification Number (CCN).
 
     Args:
         ccn: The 6-character CMS Certification Number.
+
+    Discovery
+    ---------
+    - Inspect this server's healthcare-data://server/.../capabilities resource for datasets, cache needs, and capability clusters.
+    - Use discovery workflow plans when you need cross-server call order, source caveats, or identity handoffs.
+
+    When to use
+    -----------
+    - Use this tool only for its named public healthcare data task.
+    - Prefer exact identifiers when available; use search tools first when you only have names or partial context.
+    - NOT for: patient-level data, PHI, legal clearance, or substituting adjacent public sources for exact source-backed facts.
+
+    Parameters
+    ----------
+    See the function signature and parameter descriptions above. Preserve exact public identifiers such as CCN, NPI, ZCTA, state, dataset_id, workflow_id, or source-specific IDs.
+
+    Returns
+    -------
+    dict
+        Structured JSON-compatible payload. Preserve evidence, source_metadata, identity, and identity_map fields when present.
+
+    Do / Don't
+    ----------
+    Do:
+    - Preserve source evidence and identity fields with cited facts.
+    - Follow returned next_step or next_actions hints before making source claims.
+
+    Don't:
+    - Treat candidate search rows as exact matches without exact identifiers.
+    - Pass placeholders like <ccn> or YOUR_VALUE as real arguments.
+
+    Examples
+    --------
+    Basic MCP call shape:
+    {"jsonrpc":"2.0","id":"1","method":"tools/call","params":{"name":"get_facility","arguments":{}}}
+
+    Common mistakes
+    ---------------
+    - Name supplied to exact-ID lookup: search first, then retry with the returned identifier.
+    - Missing API key or cache: run hc-mcp doctor or inspect the server datasets resource.
+    - Source substitution: keep each claim scoped to the source that produced it.
     """
+    normalized_ccn, mistake = normalize_ccn(ccn)
+    if mistake:
+        return invalid_argument_response(
+            mistake.message,
+            fix_hint=mistake.fix_hint,
+            detail=mistake.data,
+            suggested_tool_calls=[
+                {
+                    "tool": "search_facilities",
+                    "arguments": {"name": ccn},
+                    "reason": "Discover candidate facilities when a name was supplied instead of a CCN.",
+                }
+            ],
+        )
+
     df = await data_loaders.load_hospital_info()
     if df.empty:
         return error_response("Hospital data not available")
@@ -384,9 +487,19 @@ async def get_facility(ccn: str) -> dict[str, Any]:
     if not ccn_col:
         return error_response("Cannot identify CCN column in dataset")
 
-    matches = df[df[ccn_col].str.strip() == ccn.strip()]
+    matches = df[df[ccn_col].str.strip().str.upper() == normalized_ccn]
     if matches.empty:
-        return error_response(f"No facility found with CCN: {ccn}")
+        return not_found_response(
+            f"No facility found with CCN: {normalized_ccn}",
+            fix_hint="Use search_facilities with name/state filters to discover a valid CCN.",
+            suggested_tool_calls=[
+                {
+                    "tool": "search_facilities",
+                    "arguments": {"name": "", "state": ""},
+                    "reason": "Find candidate facility rows and then retry get_facility with an exact CCN.",
+                }
+            ],
+        )
 
     source_metadata = _hospital_info_metadata()
     facility = _row_to_facility(matches.iloc[0])
@@ -401,7 +514,7 @@ async def get_facility(ccn: str) -> dict[str, Any]:
     )
     payload["evidence"] = _receipt(
         source_metadata=source_metadata,
-        query={"ccn": ccn},
+        query={"ccn": normalized_ccn},
         match_basis="ccn_exact",
         confidence="high_for_cms_hospital_general_info_row",
         caveat=(
@@ -414,6 +527,7 @@ async def get_facility(ccn: str) -> dict[str, Any]:
 
 
 @mcp.tool(structured_output=True)
+@observe_tool("cms-facility")
 async def search_npi(
     npi: str | None = None,
     organization_name: str | None = None,
@@ -431,7 +545,66 @@ async def search_npi(
         taxonomy_description: Provider taxonomy/specialty description.
         enumeration_type: "NPI-1" for individuals, "NPI-2" for organizations (default NPI-2).
         limit: Max results (default 50, API max 200).
+
+    Discovery
+    ---------
+    - Inspect this server's healthcare-data://server/.../capabilities resource for datasets, cache needs, and capability clusters.
+    - Use discovery workflow plans when you need cross-server call order, source caveats, or identity handoffs.
+
+    When to use
+    -----------
+    - Use this tool only for its named public healthcare data task.
+    - Prefer exact identifiers when available; use search tools first when you only have names or partial context.
+    - NOT for: patient-level data, PHI, legal clearance, or substituting adjacent public sources for exact source-backed facts.
+
+    Parameters
+    ----------
+    See the function signature and parameter descriptions above. Preserve exact public identifiers such as CCN, NPI, ZCTA, state, dataset_id, workflow_id, or source-specific IDs.
+
+    Returns
+    -------
+    dict
+        Structured JSON-compatible payload. Preserve evidence, source_metadata, identity, and identity_map fields when present.
+
+    Do / Don't
+    ----------
+    Do:
+    - Preserve source evidence and identity fields with cited facts.
+    - Follow returned next_step or next_actions hints before making source claims.
+
+    Don't:
+    - Treat candidate search rows as exact matches without exact identifiers.
+    - Pass placeholders like <ccn> or YOUR_VALUE as real arguments.
+
+    Examples
+    --------
+    Basic MCP call shape:
+    {"jsonrpc":"2.0","id":"1","method":"tools/call","params":{"name":"search_npi","arguments":{}}}
+
+    Common mistakes
+    ---------------
+    - Name supplied to exact-ID lookup: search first, then retry with the returned identifier.
+    - Missing API key or cache: run hc-mcp doctor or inspect the server datasets resource.
+    - Source substitution: keep each claim scoped to the source that produced it.
     """
+    if npi:
+        normalized_npi, mistake = normalize_npi(npi)
+        if mistake:
+            return invalid_argument_response(
+                mistake.message,
+                results=[],
+                fix_hint=mistake.fix_hint,
+                detail=mistake.data,
+                suggested_tool_calls=[
+                    {
+                        "tool": "search_npi",
+                        "arguments": {"organization_name": organization_name or npi, "state": state or ""},
+                        "reason": "Search NPPES by name/state before retrying exact NPI lookup.",
+                    }
+                ],
+            )
+        npi = normalized_npi
+
     try:
         raw_results = await data_loaders.search_nppes(
             npi=npi,
@@ -526,11 +699,53 @@ async def search_npi(
 
 
 @mcp.tool(structured_output=True)
+@observe_tool("cms-facility")
 async def get_facility_financials(ccn: str) -> dict[str, Any]:
     """Get financial data for a facility from the CMS Hospital Cost Report PUF.
 
     Args:
         ccn: The CMS Certification Number of the facility.
+
+    Discovery
+    ---------
+    - Inspect this server's healthcare-data://server/.../capabilities resource for datasets, cache needs, and capability clusters.
+    - Use discovery workflow plans when you need cross-server call order, source caveats, or identity handoffs.
+
+    When to use
+    -----------
+    - Use this tool only for its named public healthcare data task.
+    - Prefer exact identifiers when available; use search tools first when you only have names or partial context.
+    - NOT for: patient-level data, PHI, legal clearance, or substituting adjacent public sources for exact source-backed facts.
+
+    Parameters
+    ----------
+    See the function signature and parameter descriptions above. Preserve exact public identifiers such as CCN, NPI, ZCTA, state, dataset_id, workflow_id, or source-specific IDs.
+
+    Returns
+    -------
+    dict
+        Structured JSON-compatible payload. Preserve evidence, source_metadata, identity, and identity_map fields when present.
+
+    Do / Don't
+    ----------
+    Do:
+    - Preserve source evidence and identity fields with cited facts.
+    - Follow returned next_step or next_actions hints before making source claims.
+
+    Don't:
+    - Treat candidate search rows as exact matches without exact identifiers.
+    - Pass placeholders like <ccn> or YOUR_VALUE as real arguments.
+
+    Examples
+    --------
+    Basic MCP call shape:
+    {"jsonrpc":"2.0","id":"1","method":"tools/call","params":{"name":"get_facility_financials","arguments":{}}}
+
+    Common mistakes
+    ---------------
+    - Name supplied to exact-ID lookup: search first, then retry with the returned identifier.
+    - Missing API key or cache: run hc-mcp doctor or inspect the server datasets resource.
+    - Source substitution: keep each claim scoped to the source that produced it.
     """
     df = await data_loaders.load_cost_report()
     if df.empty:
@@ -606,11 +821,53 @@ async def get_facility_financials(ccn: str) -> dict[str, Any]:
 
 
 @mcp.tool(structured_output=True)
+@observe_tool("cms-facility")
 async def get_hospital_info(ccn: str) -> dict[str, Any]:
     """Get Hospital General Information including quality ratings for a facility.
 
     Args:
         ccn: The CMS Certification Number of the hospital.
+
+    Discovery
+    ---------
+    - Inspect this server's healthcare-data://server/.../capabilities resource for datasets, cache needs, and capability clusters.
+    - Use discovery workflow plans when you need cross-server call order, source caveats, or identity handoffs.
+
+    When to use
+    -----------
+    - Use this tool only for its named public healthcare data task.
+    - Prefer exact identifiers when available; use search tools first when you only have names or partial context.
+    - NOT for: patient-level data, PHI, legal clearance, or substituting adjacent public sources for exact source-backed facts.
+
+    Parameters
+    ----------
+    See the function signature and parameter descriptions above. Preserve exact public identifiers such as CCN, NPI, ZCTA, state, dataset_id, workflow_id, or source-specific IDs.
+
+    Returns
+    -------
+    dict
+        Structured JSON-compatible payload. Preserve evidence, source_metadata, identity, and identity_map fields when present.
+
+    Do / Don't
+    ----------
+    Do:
+    - Preserve source evidence and identity fields with cited facts.
+    - Follow returned next_step or next_actions hints before making source claims.
+
+    Don't:
+    - Treat candidate search rows as exact matches without exact identifiers.
+    - Pass placeholders like <ccn> or YOUR_VALUE as real arguments.
+
+    Examples
+    --------
+    Basic MCP call shape:
+    {"jsonrpc":"2.0","id":"1","method":"tools/call","params":{"name":"get_hospital_info","arguments":{}}}
+
+    Common mistakes
+    ---------------
+    - Name supplied to exact-ID lookup: search first, then retry with the returned identifier.
+    - Missing API key or cache: run hc-mcp doctor or inspect the server datasets resource.
+    - Source substitution: keep each claim scoped to the source that produced it.
     """
     df = await data_loaders.load_hospital_info()
     if df.empty:

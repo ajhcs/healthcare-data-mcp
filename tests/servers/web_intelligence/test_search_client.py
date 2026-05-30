@@ -325,6 +325,36 @@ async def test_fetch_web_page_rejects_hostname_resolving_to_private_ip(monkeypat
 
 
 @pytest.mark.asyncio
+async def test_fetch_and_parse_rejects_redirect_to_private_host(monkeypatch):
+    calls = []
+
+    class FakeResponse:
+        def __init__(self, status_code: int, *, location: str = "", text: str = "") -> None:
+            self.status_code = status_code
+            self.headers = {"location": location} if location else {}
+            self.text = text
+            self.content = text.encode()
+
+    async def fake_resilient_request(method, url, **kwargs):
+        calls.append((url, kwargs.get("follow_redirects")))
+        return FakeResponse(302, location="http://127.0.0.1/private")
+
+    def fake_getaddrinfo(host, *args, **kwargs):
+        if host == "example.org":
+            return [(server.socket.AF_INET, server.socket.SOCK_STREAM, 6, "", ("93.184.216.34", 443))]
+        return [(server.socket.AF_INET, server.socket.SOCK_STREAM, 6, "", ("127.0.0.1", 80))]
+
+    monkeypatch.setattr(server, "resilient_request", fake_resilient_request)
+    monkeypatch.setattr(server.socket, "getaddrinfo", fake_getaddrinfo)
+
+    html, soup = await server._fetch_and_parse("https://example.org/redirect")
+
+    assert html == ""
+    assert soup is None
+    assert calls == [("https://example.org/redirect", False)]
+
+
+@pytest.mark.asyncio
 async def test_fetch_web_page_allows_public_url_before_fetch(monkeypatch):
     html = "<html><head><title>Public</title></head><body><main>Public page text.</main></body></html>"
     calls = {"urls": []}

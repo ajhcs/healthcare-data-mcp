@@ -20,6 +20,7 @@ from bs4 import BeautifulSoup
 import pandas as pd
 from pypdf import PdfReader
 
+from shared.utils.cache import write_atomic_bytes, write_atomic_dataframe_csv, write_atomic_json, write_atomic_parquet
 from shared.utils.http_client import resilient_request
 
 
@@ -249,7 +250,7 @@ def _write_artifact_indexes(
         "artifact_count": len(artifacts),
         "artifacts": artifacts,
     }
-    index_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    write_atomic_json(index_path, payload)
     metadata_columns = [
         "state",
         "source",
@@ -266,7 +267,7 @@ def _write_artifact_indexes(
         "cached_path",
         "download_error",
     ]
-    pd.DataFrame(artifacts).reindex(columns=metadata_columns).to_csv(metadata_path, index=False)
+    write_atomic_dataframe_csv(metadata_path, pd.DataFrame(artifacts).reindex(columns=metadata_columns), index=False)
     return index_path
 
 
@@ -281,7 +282,7 @@ async def _download(url: str, target: Path, *, force: bool = False) -> bool:
         follow_redirects=True,
         headers=_PUBLIC_WEB_HEADERS,
     )
-    target.write_bytes(resp.content)
+    write_atomic_bytes(target, resp.content)
     return True
 
 
@@ -323,7 +324,7 @@ async def _scrape_artifact_links(
             reason=f"source_request_failed: {exc}",
             next_step="Use the source website manually or provide a stable public artifact URL if one becomes available.",
         )
-    html_path.write_bytes(resp.content)
+    write_atomic_bytes(html_path, resp.content)
     soup = BeautifulSoup(resp.text, "html.parser")
 
     artifacts: list[dict[str, Any]] = []
@@ -466,24 +467,21 @@ def normalize_pa_doh_hospital_extract(cache_root: Path | None = None) -> int:
     metadata_path = output_cache / "normalized.meta.json"
     normalized = pd.DataFrame(normalized_rows)
     if normalized.empty:
-        metadata_path.write_text(json.dumps({"record_count": 0, "source_url": PA_HOSPITAL_REPORTS_URL}, indent=2), encoding="utf-8")
+        write_atomic_json(metadata_path, {"record_count": 0, "source_url": PA_HOSPITAL_REPORTS_URL})
         return 0
     try:
-        normalized.to_parquet(output_path, compression="zstd", index=False)
+        write_atomic_parquet(output_path, normalized, compression="zstd", index=False)
     except Exception:
-        normalized.to_csv(csv_path, index=False)
-    metadata_path.write_text(
-        json.dumps(
-            {
-                "source_id": "pa_doh_hospital_extract",
-                "source_name": "Pennsylvania DOH Hospital Reports record-level extract",
-                "source_url": PA_HOSPITAL_REPORTS_URL,
-                "record_count": len(normalized),
-                "generated_at": _now(),
-            },
-            indent=2,
-        ),
-        encoding="utf-8",
+        write_atomic_dataframe_csv(csv_path, normalized, index=False)
+    write_atomic_json(
+        metadata_path,
+        {
+            "source_id": "pa_doh_hospital_extract",
+            "source_name": "Pennsylvania DOH Hospital Reports record-level extract",
+            "source_url": PA_HOSPITAL_REPORTS_URL,
+            "record_count": len(normalized),
+            "generated_at": _now(),
+        },
     )
     return int(len(normalized))
 
@@ -688,7 +686,7 @@ async def acquire_ahrq_hfmd(cache_root: Path | None = None, *, force: bool = Fal
                     continue
                 extracted = extracted_dir / Path(member).name
                 if force or not extracted.exists():
-                    extracted.write_bytes(zf.read(member))
+                    write_atomic_bytes(extracted, zf.read(member))
                 try:
                     record_count += len(pd.read_csv(extracted, dtype=str, keep_default_na=False))
                 except Exception:
@@ -763,10 +761,10 @@ async def acquire_phc4_public_reports(cache_root: Path | None = None, *, force: 
     df = pd.DataFrame(deduped)
     if not df.empty:
         try:
-            df.to_parquet(index, compression="zstd", index=False)
+            write_atomic_parquet(index, df, compression="zstd", index=False)
         except ImportError:
             index = json_index
-    json_index.write_text(json.dumps(deduped, indent=2), encoding="utf-8")
+    write_atomic_json(json_index, deduped)
     _write_artifact_indexes(
         cache,
         source_id="phc4_public_reports",
@@ -815,17 +813,14 @@ def _extract_structured_tables(path: Path, cache_dir: Path) -> list[dict[str, An
             continue
         df = df.astype(str).head(5000)
         table_path = table_dir / f"{path.stem}-table-{idx}.json"
-        table_path.write_text(
-            json.dumps(
-                {
-                    "source_artifact": str(path),
-                    "table_name": names[idx - 1] if idx - 1 < len(names) else f"table_{idx}",
-                    "columns": [str(col) for col in df.columns],
-                    "rows": df.to_dict(orient="records"),
-                },
-                indent=2,
-            ),
-            encoding="utf-8",
+        write_atomic_json(
+            table_path,
+            {
+                "source_artifact": str(path),
+                "table_name": names[idx - 1] if idx - 1 < len(names) else f"table_{idx}",
+                "columns": [str(col) for col in df.columns],
+                "rows": df.to_dict(orient="records"),
+            },
         )
         references.append(
             {
@@ -865,18 +860,15 @@ def _extract_pdf_table_like_pages(path: Path, table_dir: Path) -> list[dict[str,
             continue
         extracted_path = table_dir / f"{path.stem}-page-{page_idx}-table-text.json"
         parsed_rows = _parse_table_like_lines(table_like[:200])
-        extracted_path.write_text(
-            json.dumps(
-                {
-                    "source_artifact": str(path),
-                    "page": page_idx,
-                    "extraction_method": "pdf_text_table_like_lines",
-                    "lines": table_like[:200],
-                    "parsed_rows": parsed_rows,
-                },
-                indent=2,
-            ),
-            encoding="utf-8",
+        write_atomic_json(
+            extracted_path,
+            {
+                "source_artifact": str(path),
+                "page": page_idx,
+                "extraction_method": "pdf_text_table_like_lines",
+                "lines": table_like[:200],
+                "parsed_rows": parsed_rows,
+            },
         )
         parsed_columns = list((parsed_rows[:1] or [{}])[0].keys())
         has_facility = bool(find_matching_columns(parsed_columns, ["hospital", "facility", "provider", "name"]))

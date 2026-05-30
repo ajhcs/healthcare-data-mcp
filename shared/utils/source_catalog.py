@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
+from shared.utils.cache import write_atomic_json
 from shared.utils.http_client import resilient_request
 
 CMS_DATA_JSON_URL = "https://data.cms.gov/data.json"
@@ -53,11 +54,7 @@ def read_source_manifest(path: str | Path) -> SourceManifest:
 def write_source_manifest(manifest: SourceManifest, path: str | Path) -> Path:
     """Write a source manifest as stable, human-readable JSON."""
     manifest_path = Path(path)
-    manifest_path.parent.mkdir(parents=True, exist_ok=True)
-    manifest_path.write_text(
-        json.dumps(manifest.to_dict(), indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
+    write_atomic_json(manifest_path, manifest.to_dict())
     return manifest_path
 
 

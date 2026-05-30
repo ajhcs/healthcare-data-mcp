@@ -7,6 +7,7 @@ from pathlib import Path
 
 import geopandas as gpd
 
+from shared.utils.cache import write_atomic_bytes
 from shared.utils.http_client import resilient_request
 
 logger = logging.getLogger(__name__)
@@ -34,7 +35,7 @@ async def _download_zcta_shapefile() -> Path:
     if not zip_path.exists():
         logger.info("Downloading ZCTA shapefile from %s ...", TIGER_ZCTA_URL)
         resp = await resilient_request("GET", TIGER_ZCTA_URL, timeout=600.0)
-        zip_path.write_bytes(resp.content)
+        write_atomic_bytes(zip_path, resp.content)
         logger.info("Downloaded ZCTA shapefile (%d MB)", zip_path.stat().st_size // (1024 * 1024))
 
     ZCTA_SHAPEFILE_CACHE.mkdir(parents=True, exist_ok=True)

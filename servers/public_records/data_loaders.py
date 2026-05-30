@@ -9,6 +9,7 @@ import hashlib
 import json
 import logging
 import re
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -22,6 +23,7 @@ from shared.utils.identity import (
 )
 from shared.utils.duckdb_safe import safe_parquet_sql
 
+from shared.utils.cache import write_atomic_bytes, write_atomic_json
 from shared.utils.http_client import resilient_request
 import pandas as pd
 
@@ -183,21 +185,30 @@ def _write_dataframe_parquet(
     compression: str = "zstd",
 ) -> None:
     """Write Parquet with pandas, falling back to DuckDB when no pandas engine is installed."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(dir=path.parent, delete=False, suffix=path.suffix or ".parquet") as handle:
+        tmp_path = Path(handle.name)
     try:
-        df.to_parquet(path, compression=compression, index=False)
+        df.to_parquet(tmp_path, compression=compression, index=False)
+        tmp_path.replace(path)
         return
     except ImportError:
         logger.info("pandas Parquet engine unavailable; writing %s with DuckDB", path.name)
+    except Exception:
+        tmp_path.unlink(missing_ok=True)
+        raise
 
     con = duckdb.connect(":memory:")
     try:
         con.register("df_to_write", df)
         con.execute(
             "COPY df_to_write TO ? (FORMAT PARQUET, COMPRESSION ZSTD)",
-            [str(path)],
+            [str(tmp_path)],
         )
+        tmp_path.replace(path)
     finally:
         con.close()
+        tmp_path.unlink(missing_ok=True)
 
 
 def _read_parquet_dataframe(path: Path) -> pd.DataFrame:
@@ -276,7 +287,7 @@ def _leie_metadata(cache_status: str | None = None, **updates: object) -> dict:
 
 def _write_leie_metadata(meta: dict) -> dict:
     payload = _leie_metadata(**meta)
-    _LEIE_META.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+    write_atomic_json(_LEIE_META, payload)
     return payload
 
 
@@ -382,7 +393,7 @@ async def ensure_pos_cached() -> bool:
         resp = await resilient_request("GET", POS_URL, timeout=300.0)
 
         csv_path = _CACHE_DIR / "pos_raw.csv"
-        csv_path.write_bytes(resp.content)
+        write_atomic_bytes(csv_path, resp.content)
 
         df = pd.read_csv(
             csv_path, dtype=str, keep_default_na=False,
@@ -413,7 +424,7 @@ async def ensure_pi_cached() -> bool:
         resp = await resilient_request("GET", PI_URL, timeout=300.0)
 
         csv_path = _CACHE_DIR / "pi_raw.csv"
-        csv_path.write_bytes(resp.content)
+        write_atomic_bytes(csv_path, resp.content)
 
         df = pd.read_csv(
             csv_path, dtype=str, keep_default_na=False,
@@ -1075,7 +1086,7 @@ async def ensure_leie_cached(force_refresh: bool = False) -> dict:
         resp = await resilient_request("GET", LEIE_URL, timeout=300.0)
         source_last_modified = resp.headers.get("last-modified", source_last_modified)
         source_etag = resp.headers.get("etag", source_etag)
-        _LEIE_CSV.write_bytes(resp.content)
+        write_atomic_bytes(_LEIE_CSV, resp.content)
 
         df = parse_leie_csv(_LEIE_CSV)
         _write_dataframe_parquet(df, _LEIE_PARQUET, compression="zstd")
@@ -1633,7 +1644,7 @@ def cache_api_response(prefix: str, params: dict, data: dict | list) -> None:
         "params": params,
         "data": data,
     }
-    path.write_text(json.dumps(payload, default=str), encoding="utf-8")
+    write_atomic_json(path, payload, indent=None)
     logger.debug("Cached API response: %s", path.name)
 
 

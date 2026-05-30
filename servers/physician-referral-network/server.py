@@ -11,6 +11,8 @@ import logging
 import os as _os
 
 from mcp.server.fastmcp import FastMCP
+from shared.utils.mcp_observability import observe_tool
+from shared.utils.mcp_resources import register_standard_resources
 from shared.utils.healthcare_identity import identity_from_public_record
 from shared.utils.mcp_response import error_response, evidence_receipt, to_structured
 
@@ -40,6 +42,7 @@ if _transport in ("sse", "streamable-http"):
     _mcp_kwargs["host"] = _os.environ.get("MCP_HOST", "127.0.0.1")
     _mcp_kwargs["port"] = int(_os.environ.get("MCP_PORT", "8010"))
 mcp = FastMCP(**_mcp_kwargs)
+register_standard_resources(mcp, "physician-referral-network")
 
 
 def _docgraph_setup_message() -> str:
@@ -245,6 +248,7 @@ def _docgraph_unavailable_response() -> dict[str, Any]:
 # Tool 1: search_physicians
 # ---------------------------------------------------------------------------
 @mcp.tool(structured_output=True)
+@observe_tool("physician-referral-network")
 async def search_physicians(
     query: str, specialty: str = "", state: str = "", limit: int = 25
 ) -> dict[str, Any]:
@@ -258,6 +262,47 @@ async def search_physicians(
         specialty: Specialty filter (e.g. "Cardiology", "Orthopedic Surgery").
         state: Two-letter state code filter (e.g. "PA").
         limit: Maximum results (1-200).
+
+    Discovery
+    ---------
+    - Inspect this server's healthcare-data://server/.../capabilities resource for datasets, cache needs, and capability clusters.
+    - Use discovery workflow plans when you need cross-server call order, source caveats, or identity handoffs.
+
+    When to use
+    -----------
+    - Use this tool only for its named public healthcare data task.
+    - Prefer exact identifiers when available; use search tools first when you only have names or partial context.
+    - NOT for: patient-level data, PHI, legal clearance, or substituting adjacent public sources for exact source-backed facts.
+
+    Parameters
+    ----------
+    See the function signature and parameter descriptions above. Preserve exact public identifiers such as CCN, NPI, ZCTA, state, dataset_id, workflow_id, or source-specific IDs.
+
+    Returns
+    -------
+    dict
+        Structured JSON-compatible payload. Preserve evidence, source_metadata, identity, and identity_map fields when present.
+
+    Do / Don't
+    ----------
+    Do:
+    - Preserve source evidence and identity fields with cited facts.
+    - Follow returned next_step or next_actions hints before making source claims.
+
+    Don't:
+    - Treat candidate search rows as exact matches without exact identifiers.
+    - Pass placeholders like <ccn> or YOUR_VALUE as real arguments.
+
+    Examples
+    --------
+    Basic MCP call shape:
+    {"jsonrpc":"2.0","id":"1","method":"tools/call","params":{"name":"search_physicians","arguments":{}}}
+
+    Common mistakes
+    ---------------
+    - Name supplied to exact-ID lookup: search first, then retry with the returned identifier.
+    - Missing API key or cache: run hc-mcp doctor or inspect the server datasets resource.
+    - Source substitution: keep each claim scoped to the source that produced it.
     """
     try:
         physicians = await nppes_client.search_physicians(query, specialty, state, limit)
@@ -301,6 +346,7 @@ async def search_physicians(
 # Tool 2: get_physician_profile
 # ---------------------------------------------------------------------------
 @mcp.tool(structured_output=True)
+@observe_tool("physician-referral-network")
 async def get_physician_profile(npi: str) -> dict[str, Any]:
     """Get a full physician profile including specialties, affiliations,
     Medicare utilization, and quality scores.
@@ -310,6 +356,47 @@ async def get_physician_profile(npi: str) -> dict[str, Any]:
 
     Args:
         npi: 10-digit National Provider Identifier.
+
+    Discovery
+    ---------
+    - Inspect this server's healthcare-data://server/.../capabilities resource for datasets, cache needs, and capability clusters.
+    - Use discovery workflow plans when you need cross-server call order, source caveats, or identity handoffs.
+
+    When to use
+    -----------
+    - Use this tool only for its named public healthcare data task.
+    - Prefer exact identifiers when available; use search tools first when you only have names or partial context.
+    - NOT for: patient-level data, PHI, legal clearance, or substituting adjacent public sources for exact source-backed facts.
+
+    Parameters
+    ----------
+    See the function signature and parameter descriptions above. Preserve exact public identifiers such as CCN, NPI, ZCTA, state, dataset_id, workflow_id, or source-specific IDs.
+
+    Returns
+    -------
+    dict
+        Structured JSON-compatible payload. Preserve evidence, source_metadata, identity, and identity_map fields when present.
+
+    Do / Don't
+    ----------
+    Do:
+    - Preserve source evidence and identity fields with cited facts.
+    - Follow returned next_step or next_actions hints before making source claims.
+
+    Don't:
+    - Treat candidate search rows as exact matches without exact identifiers.
+    - Pass placeholders like <ccn> or YOUR_VALUE as real arguments.
+
+    Examples
+    --------
+    Basic MCP call shape:
+    {"jsonrpc":"2.0","id":"1","method":"tools/call","params":{"name":"get_physician_profile","arguments":{}}}
+
+    Common mistakes
+    ---------------
+    - Name supplied to exact-ID lookup: search first, then retry with the returned identifier.
+    - Missing API key or cache: run hc-mcp doctor or inspect the server datasets resource.
+    - Source substitution: keep each claim scoped to the source that produced it.
     """
     try:
         # Ensure bulk datasets are cached
@@ -371,6 +458,7 @@ async def get_physician_profile(npi: str) -> dict[str, Any]:
 # Tool 3: load_docgraph_cache
 # ---------------------------------------------------------------------------
 @mcp.tool(structured_output=True)
+@observe_tool("physician-referral-network")
 async def load_docgraph_cache(csv_path: str = "") -> dict[str, Any]:
     """Import a local DocGraph CSV into the shared Parquet cache used by
     referral network and leakage tools.
@@ -378,6 +466,47 @@ async def load_docgraph_cache(csv_path: str = "") -> dict[str, Any]:
     Args:
         csv_path: Absolute or relative path to a downloaded CareSet DocGraph CSV.
             If omitted, the server will use DOCGRAPH_CSV_PATH from the environment.
+
+    Discovery
+    ---------
+    - Inspect this server's healthcare-data://server/.../capabilities resource for datasets, cache needs, and capability clusters.
+    - Use discovery workflow plans when you need cross-server call order, source caveats, or identity handoffs.
+
+    When to use
+    -----------
+    - Use this tool only for its named public healthcare data task.
+    - Prefer exact identifiers when available; use search tools first when you only have names or partial context.
+    - NOT for: patient-level data, PHI, legal clearance, or substituting adjacent public sources for exact source-backed facts.
+
+    Parameters
+    ----------
+    See the function signature and parameter descriptions above. Preserve exact public identifiers such as CCN, NPI, ZCTA, state, dataset_id, workflow_id, or source-specific IDs.
+
+    Returns
+    -------
+    dict
+        Structured JSON-compatible payload. Preserve evidence, source_metadata, identity, and identity_map fields when present.
+
+    Do / Don't
+    ----------
+    Do:
+    - Preserve source evidence and identity fields with cited facts.
+    - Follow returned next_step or next_actions hints before making source claims.
+
+    Don't:
+    - Treat candidate search rows as exact matches without exact identifiers.
+    - Pass placeholders like <ccn> or YOUR_VALUE as real arguments.
+
+    Examples
+    --------
+    Basic MCP call shape:
+    {"jsonrpc":"2.0","id":"1","method":"tools/call","params":{"name":"load_docgraph_cache","arguments":{}}}
+
+    Common mistakes
+    ---------------
+    - Name supplied to exact-ID lookup: search first, then retry with the returned identifier.
+    - Missing API key or cache: run hc-mcp doctor or inspect the server datasets resource.
+    - Source substitution: keep each claim scoped to the source that produced it.
     """
     try:
         resolved_path = csv_path.strip() or _os.environ.get("DOCGRAPH_CSV_PATH", "").strip()
@@ -412,6 +541,7 @@ async def load_docgraph_cache(csv_path: str = "") -> dict[str, Any]:
 # Tool 4: map_referral_network
 # ---------------------------------------------------------------------------
 @mcp.tool(structured_output=True)
+@observe_tool("physician-referral-network")
 async def map_referral_network(
     npi: str, depth: int = 1, min_shared: int = 11
 ) -> dict[str, Any]:
@@ -425,6 +555,47 @@ async def map_referral_network(
         npi: Center physician NPI.
         depth: Network depth (1=direct connections, 2=include second-hop).
         min_shared: Minimum shared patient count to include an edge (default 11).
+
+    Discovery
+    ---------
+    - Inspect this server's healthcare-data://server/.../capabilities resource for datasets, cache needs, and capability clusters.
+    - Use discovery workflow plans when you need cross-server call order, source caveats, or identity handoffs.
+
+    When to use
+    -----------
+    - Use this tool only for its named public healthcare data task.
+    - Prefer exact identifiers when available; use search tools first when you only have names or partial context.
+    - NOT for: patient-level data, PHI, legal clearance, or substituting adjacent public sources for exact source-backed facts.
+
+    Parameters
+    ----------
+    See the function signature and parameter descriptions above. Preserve exact public identifiers such as CCN, NPI, ZCTA, state, dataset_id, workflow_id, or source-specific IDs.
+
+    Returns
+    -------
+    dict
+        Structured JSON-compatible payload. Preserve evidence, source_metadata, identity, and identity_map fields when present.
+
+    Do / Don't
+    ----------
+    Do:
+    - Preserve source evidence and identity fields with cited facts.
+    - Follow returned next_step or next_actions hints before making source claims.
+
+    Don't:
+    - Treat candidate search rows as exact matches without exact identifiers.
+    - Pass placeholders like <ccn> or YOUR_VALUE as real arguments.
+
+    Examples
+    --------
+    Basic MCP call shape:
+    {"jsonrpc":"2.0","id":"1","method":"tools/call","params":{"name":"map_referral_network","arguments":{}}}
+
+    Common mistakes
+    ---------------
+    - Name supplied to exact-ID lookup: search first, then retry with the returned identifier.
+    - Missing API key or cache: run hc-mcp doctor or inspect the server datasets resource.
+    - Source substitution: keep each claim scoped to the source that produced it.
     """
     try:
         if not referral_network.is_docgraph_cached():
@@ -515,6 +686,7 @@ async def map_referral_network(
 # Tool 4: analyze_physician_mix
 # ---------------------------------------------------------------------------
 @mcp.tool(structured_output=True)
+@observe_tool("physician-referral-network")
 async def analyze_physician_mix(system_name: str, state: str = "") -> dict[str, Any]:
     """Analyze the employed vs. affiliated vs. independent physician mix
     for a health system.
@@ -525,6 +697,47 @@ async def analyze_physician_mix(system_name: str, state: str = "") -> dict[str, 
     Args:
         system_name: Health system name (e.g. "Penn Medicine", "HCA Healthcare").
         state: Two-letter state code filter.
+
+    Discovery
+    ---------
+    - Inspect this server's healthcare-data://server/.../capabilities resource for datasets, cache needs, and capability clusters.
+    - Use discovery workflow plans when you need cross-server call order, source caveats, or identity handoffs.
+
+    When to use
+    -----------
+    - Use this tool only for its named public healthcare data task.
+    - Prefer exact identifiers when available; use search tools first when you only have names or partial context.
+    - NOT for: patient-level data, PHI, legal clearance, or substituting adjacent public sources for exact source-backed facts.
+
+    Parameters
+    ----------
+    See the function signature and parameter descriptions above. Preserve exact public identifiers such as CCN, NPI, ZCTA, state, dataset_id, workflow_id, or source-specific IDs.
+
+    Returns
+    -------
+    dict
+        Structured JSON-compatible payload. Preserve evidence, source_metadata, identity, and identity_map fields when present.
+
+    Do / Don't
+    ----------
+    Do:
+    - Preserve source evidence and identity fields with cited facts.
+    - Follow returned next_step or next_actions hints before making source claims.
+
+    Don't:
+    - Treat candidate search rows as exact matches without exact identifiers.
+    - Pass placeholders like <ccn> or YOUR_VALUE as real arguments.
+
+    Examples
+    --------
+    Basic MCP call shape:
+    {"jsonrpc":"2.0","id":"1","method":"tools/call","params":{"name":"analyze_physician_mix","arguments":{}}}
+
+    Common mistakes
+    ---------------
+    - Name supplied to exact-ID lookup: search first, then retry with the returned identifier.
+    - Missing API key or cache: run hc-mcp doctor or inspect the server datasets resource.
+    - Source substitution: keep each claim scoped to the source that produced it.
     """
     try:
         result = await physician_mix.analyze_system_mix(system_name, state)
@@ -588,6 +801,7 @@ async def analyze_physician_mix(system_name: str, state: str = "") -> dict[str, 
 # Tool 5: detect_leakage
 # ---------------------------------------------------------------------------
 @mcp.tool(structured_output=True)
+@observe_tool("physician-referral-network")
 async def detect_leakage(
     system_name: str, state: str = "", specialty: str = ""
 ) -> dict[str, Any]:
@@ -601,6 +815,47 @@ async def detect_leakage(
         system_name: Health system name (e.g. "Cleveland Clinic").
         state: Two-letter state code filter.
         specialty: Optional specialty filter to focus leakage analysis.
+
+    Discovery
+    ---------
+    - Inspect this server's healthcare-data://server/.../capabilities resource for datasets, cache needs, and capability clusters.
+    - Use discovery workflow plans when you need cross-server call order, source caveats, or identity handoffs.
+
+    When to use
+    -----------
+    - Use this tool only for its named public healthcare data task.
+    - Prefer exact identifiers when available; use search tools first when you only have names or partial context.
+    - NOT for: patient-level data, PHI, legal clearance, or substituting adjacent public sources for exact source-backed facts.
+
+    Parameters
+    ----------
+    See the function signature and parameter descriptions above. Preserve exact public identifiers such as CCN, NPI, ZCTA, state, dataset_id, workflow_id, or source-specific IDs.
+
+    Returns
+    -------
+    dict
+        Structured JSON-compatible payload. Preserve evidence, source_metadata, identity, and identity_map fields when present.
+
+    Do / Don't
+    ----------
+    Do:
+    - Preserve source evidence and identity fields with cited facts.
+    - Follow returned next_step or next_actions hints before making source claims.
+
+    Don't:
+    - Treat candidate search rows as exact matches without exact identifiers.
+    - Pass placeholders like <ccn> or YOUR_VALUE as real arguments.
+
+    Examples
+    --------
+    Basic MCP call shape:
+    {"jsonrpc":"2.0","id":"1","method":"tools/call","params":{"name":"detect_leakage","arguments":{}}}
+
+    Common mistakes
+    ---------------
+    - Name supplied to exact-ID lookup: search first, then retry with the returned identifier.
+    - Missing API key or cache: run hc-mcp doctor or inspect the server datasets resource.
+    - Source substitution: keep each claim scoped to the source that produced it.
     """
     try:
         if not referral_network.is_docgraph_cached():

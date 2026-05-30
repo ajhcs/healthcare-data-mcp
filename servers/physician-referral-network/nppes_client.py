@@ -18,7 +18,7 @@ _project_root = __import__("pathlib").Path(__file__).resolve().parent.parent.par
 if str(_project_root) not in _sys.path:
     _sys.path.insert(0, str(_project_root))
 
-from shared.utils.cache import is_cache_valid  # noqa: E402
+from shared.utils.cache import is_cache_valid, write_atomic_bytes, write_atomic_parquet  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -262,11 +262,11 @@ async def ensure_physician_compare_cached() -> bool:
 
         # Write CSV temporarily, convert to Parquet
         csv_path = _CACHE_DIR / "physician_compare_raw.csv"
-        csv_path.write_bytes(resp.content)
+        write_atomic_bytes(csv_path, resp.content)
 
         df = pd.read_csv(csv_path, dtype=str, keep_default_na=False, low_memory=False)
         df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
-        df.to_parquet(_PHYSICIAN_COMPARE_CACHE, compression="zstd", index=False)
+        write_atomic_parquet(_PHYSICIAN_COMPARE_CACHE, df, compression="zstd", index=False)
 
         csv_path.unlink(missing_ok=True)
         logger.info("Physician Compare cached: %d rows", len(df))
@@ -363,11 +363,11 @@ async def ensure_utilization_cached() -> bool:
         # If we got CSV data, save it
         if resp.headers.get("content-type", "").startswith("text/csv") or len(resp.content) > 10000:
             csv_path = _CACHE_DIR / "utilization_raw.csv"
-            csv_path.write_bytes(resp.content)
+            write_atomic_bytes(csv_path, resp.content)
 
             df = pd.read_csv(csv_path, dtype=str, keep_default_na=False, low_memory=False)
             df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
-            df.to_parquet(_UTILIZATION_CACHE, compression="zstd", index=False)
+            write_atomic_parquet(_UTILIZATION_CACHE, df, compression="zstd", index=False)
 
             csv_path.unlink(missing_ok=True)
             logger.info("Utilization data cached: %d rows", len(df))

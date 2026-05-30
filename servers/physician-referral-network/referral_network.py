@@ -13,6 +13,7 @@ from pathlib import Path
 import duckdb
 from shared.utils.duckdb_safe import safe_parquet_sql
 
+from shared.utils.cache import write_atomic_bytes, write_atomic_parquet
 from shared.utils.http_client import resilient_request
 import pandas as pd
 
@@ -120,7 +121,7 @@ def load_docgraph_csv(csv_path: str | Path) -> int:
 
     # Write Parquet
     try:
-        df.to_parquet(_SHARED_PATIENTS_CACHE, compression="zstd", index=False)
+        write_atomic_parquet(_SHARED_PATIENTS_CACHE, df, compression="zstd", index=False)
     except ImportError:
         import polars as pl
 
@@ -144,11 +145,11 @@ async def ensure_hsa_crosswalk_cached() -> bool:
         resp = await resilient_request("GET", DARTMOUTH_HSA_URL, timeout=120.0)
 
         csv_path = _DARTMOUTH_DIR / "zip_hsa_hrr_raw.csv"
-        csv_path.write_bytes(resp.content)
+        write_atomic_bytes(csv_path, resp.content)
 
         df = pd.read_csv(csv_path, dtype=str, keep_default_na=False)
         df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
-        df.to_parquet(_HSA_CROSSWALK_CACHE, compression="zstd", index=False)
+        write_atomic_parquet(_HSA_CROSSWALK_CACHE, df, compression="zstd", index=False)
 
         csv_path.unlink(missing_ok=True)
         logger.info("HSA crosswalk cached: %d ZIP codes", len(df))

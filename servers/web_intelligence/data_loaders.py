@@ -16,6 +16,7 @@ from pathlib import Path
 import duckdb
 from shared.utils.duckdb_safe import safe_parquet_sql
 
+from shared.utils.cache import write_atomic_bytes, write_atomic_json, write_atomic_parquet
 from shared.utils.http_client import resilient_request
 import pandas as pd
 
@@ -142,14 +143,14 @@ async def ensure_pi_cached() -> bool:
         resp = await resilient_request("GET", PI_URL, timeout=300.0)
 
         csv_path = _CACHE_DIR / "pi_raw.csv"
-        csv_path.write_bytes(resp.content)
+        write_atomic_bytes(csv_path, resp.content)
 
         df = pd.read_csv(
             csv_path, dtype=str, keep_default_na=False,
             low_memory=False, encoding_errors="replace",
         )
         df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
-        df.to_parquet(_PI_PARQUET, compression="zstd", index=False)
+        write_atomic_parquet(_PI_PARQUET, df, compression="zstd", index=False)
 
         csv_path.unlink(missing_ok=True)
         logger.info("PI cached: %d records -> %s", len(df), _PI_PARQUET.name)
@@ -294,7 +295,7 @@ def cache_response(prefix: str, params: dict, data: dict | list) -> None:
         "params": params,
         "data": data,
     }
-    path.write_text(json.dumps(payload, default=str), encoding="utf-8")
+    write_atomic_json(path, payload, indent=None)
 
 
 def load_cached_response(prefix: str, params: dict, ttl_days: int) -> dict | list | None:

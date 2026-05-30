@@ -1,9 +1,11 @@
 """Data loading and caching for CMS facility datasets."""
 
 import logging
+from datetime import datetime, timezone
 from pathlib import Path
 
 
+from shared.utils.cache import CacheMetadata, write_atomic_bytes, write_cache_metadata
 from shared.utils.http_client import resilient_request
 import pandas as pd
 
@@ -29,7 +31,16 @@ async def _download_csv(url: str, cache_name: str) -> Path:
 
     logger.info("Downloading %s ...", url)
     resp = await resilient_request("GET", url, timeout=300.0)
-    cached.write_bytes(resp.content)
+    write_atomic_bytes(cached, resp.content)
+    write_cache_metadata(
+        cached,
+        CacheMetadata(
+            source_url=url,
+            fetched_at=datetime.now(timezone.utc).isoformat(),
+            content_length=len(resp.content),
+            cache_key=cache_name,
+        ),
+    )
 
     logger.info("Saved to: %s", cached)
     return cached
