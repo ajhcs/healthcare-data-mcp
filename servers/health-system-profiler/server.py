@@ -5,6 +5,7 @@ AHRQ Compendium, CMS Provider of Services, NPPES, and HSAF data.
 """
 
 from typing import Any
+import json
 import logging
 import os as _os
 import sys
@@ -43,6 +44,12 @@ try:
         SystemProfileResponse,
     )
     from .outpatient_discovery import build_search_patterns, parse_nppes_results
+    from .profile_evidence_pack import (
+        build_profile_evidence_pack as assemble_profile_evidence_pack,
+        census_geocode_address,
+        osm_geocode_address,
+        reverse_geocode_coordinates,
+    )
     from .system_discovery import fuzzy_search_systems, resolve_system_ccns
 except ImportError:
     sys.path.insert(0, str(Path(__file__).parent))
@@ -69,6 +76,12 @@ except ImportError:
         SystemProfileResponse,
     )
     from outpatient_discovery import build_search_patterns, parse_nppes_results
+    from profile_evidence_pack import (
+        build_profile_evidence_pack as assemble_profile_evidence_pack,
+        census_geocode_address,
+        osm_geocode_address,
+        reverse_geocode_coordinates,
+    )
     from system_discovery import fuzzy_search_systems, resolve_system_ccns
 
 logger = logging.getLogger(__name__)
@@ -476,6 +489,146 @@ def _load_provider_enrollment() -> pd.DataFrame:
     except Exception:
         return pd.DataFrame()
     return load_cached_frames(ENROLLMENT_DATASET_KEYS)
+
+
+def _load_profile_provider_rows(ccns: list[str]) -> list[dict[str, Any]]:
+    """Return bounded provider-enrollment/ownership/CHOW rows for pack review."""
+
+    try:
+        from servers.provider_enrollment import data_loaders as provider_loaders
+    except Exception:
+        return []
+
+    rows: list[dict[str, Any]] = []
+    for ccn in ccns[:50]:
+        try:
+            rows.extend(provider_loaders.query_ownership(ccn=ccn, limit=25))
+            rows.extend(provider_loaders.query_chow(ccn=ccn, limit=25))
+        except Exception:
+            logger.warning("Provider enrollment profile rows failed for CCN %s", ccn, exc_info=True)
+    return rows[:250]
+
+
+async def _load_hcris_bed_rows(state: str, ccns: list[str]) -> list[dict[str, Any]]:  # noqa: ARG001
+    """Return CMS HCRIS/cost-report rows for exact CCNs from the configured cache."""
+
+    try:
+        from servers.hospital_quality import data_loaders as hospital_quality_loaders
+        from shared.utils.cost_report import load_cost_report_row
+    except Exception:
+        return []
+
+    rows: list[dict[str, Any]] = []
+    for ccn in ccns[:100]:
+        try:
+            row, error = await load_cost_report_row(hospital_quality_loaders, ccn)
+        except Exception:
+            logger.warning("HCRIS/cost-report bed row lookup failed for CCN %s", ccn, exc_info=True)
+            continue
+        if error or row is None:
+            continue
+        payload = row.to_dict() if hasattr(row, "to_dict") else dict(row)
+        payload.setdefault("ccn", ccn)
+        payload.setdefault("source", "CMS Hospital Cost Report Public Use File")
+        payload.setdefault("dataset_id", "cms_cost_report")
+        payload.setdefault("cache_status", "configured_hcris_cache")
+        rows.append(payload)
+    return rows[:250]
+
+
+def _load_state_bed_rows(state: str, ccns: list[str]) -> list[dict[str, Any]]:
+    """Return public state bed rows from configured state-health-data caches."""
+
+    if state.upper() != "PA":
+        return []
+    try:
+        from shared import state_health_data
+    except Exception:
+        return []
+
+    rows: list[dict[str, Any]] = []
+    for ccn in ccns[:100]:
+        try:
+            candidates = state_health_data.load_pa_doh_bed_candidates(ccn=ccn)
+        except Exception:
+            logger.warning("PA DOH bed row lookup failed for CCN %s", ccn, exc_info=True)
+            continue
+        for row in candidates:
+            payload = dict(row)
+            payload.setdefault("ccn", ccn)
+            payload.setdefault("state", "PA")
+            payload.setdefault("source", "Pennsylvania Department of Health Hospital Reports")
+            payload.setdefault("dataset_id", "pa_hospital_reports")
+            payload.setdefault("cache_status", "configured_state_health_data_cache")
+            rows.append(payload)
+    return rows[:250]
+
+
+def _load_official_profile_evidence(system_name: str, state: str) -> list[dict[str, Any]]:
+    """Load reviewed official page/report evidence rows from an optional local cache."""
+
+    root = Path(_os.environ.get("HC_MCP_CACHE_ROOT") or (Path.home() / ".healthcare-data-mcp" / "cache")).expanduser()
+    evidence_dir = root / "profile-evidence"
+    paths = (
+        evidence_dir / "official_profile_evidence.json",
+        evidence_dir / "official_profile_evidence.jsonl",
+        evidence_dir / "official_profile_evidence.csv",
+    )
+    rows: list[dict[str, Any]] = []
+    for path in paths:
+        if not path.exists():
+            continue
+        try:
+            rows.extend(_read_official_profile_evidence_path(path))
+        except Exception:
+            logger.warning("Official profile evidence cache read failed for %s", path, exc_info=True)
+    wanted = normalize_name(system_name, remove_legal_suffixes=True)
+    state_norm = state.upper()
+    matched: list[dict[str, Any]] = []
+    for row in rows:
+        row_state = str(row.get("state") or row.get("system_state") or "").upper()
+        if row_state and state_norm and row_state != state_norm:
+            continue
+        row_name = normalize_name(
+            row.get("system_name") or row.get("health_system_name") or row.get("name") or "",
+            remove_legal_suffixes=True,
+        )
+        if wanted and row_name and wanted not in row_name and row_name not in wanted:
+            continue
+        payload = dict(row)
+        payload.setdefault("source_name", "Reviewed official health-system page/report")
+        payload.setdefault("dataset_id", "official_system_page")
+        payload.setdefault("cache_status", "reviewed_local_cache")
+        payload.setdefault("cache_freshness", f"Reviewed cache file under {evidence_dir}")
+        matched.append(payload)
+    return matched[:250]
+
+
+def _read_official_profile_evidence_path(path: Path) -> list[dict[str, Any]]:
+    if path.suffix == ".json":
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        if isinstance(payload, dict):
+            payload = payload.get("rows") or payload.get("evidence") or []
+        return [dict(row) for row in payload if isinstance(row, dict)]
+    if path.suffix == ".jsonl":
+        rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        return [dict(row) for row in rows if isinstance(row, dict)]
+    if path.suffix == ".csv":
+        frame = pd.read_csv(path, dtype=str, keep_default_na=False)
+        return frame.to_dict(orient="records")
+    return []
+
+
+async def _census_geocode_address(address: str) -> dict[str, Any] | None:
+    return await census_geocode_address(address)
+
+
+async def _osm_geocode_address(address: str) -> dict[str, Any] | None:
+    return await osm_geocode_address(address)
+
+
+async def _reverse_geocode_coordinates(latitude: float, longitude: float) -> dict[str, Any] | None:
+    return await reverse_geocode_coordinates(latitude, longitude)
 
 
 # ---- MCP Tools ----
@@ -1045,6 +1198,118 @@ async def get_system_facilities(
 
     _attach_system_row_evidence(result, query={"system_id": system_id, "facility_type": facility_type})
     return to_structured(result)
+
+
+@mcp.tool(structured_output=True)
+@observe_tool("health-system-profiler")
+async def build_profile_evidence_pack(
+    state: str,
+    system_slug: str | None = None,
+    system_name: str | None = None,
+    ccns: list[str] | None = None,
+    required_fields: list[str] | None = None,
+) -> dict[str, Any]:
+    """Build a read-only source-backed health-system profile evidence pack.
+
+    The pack is designed for Healthcare Toolkit profile population. It returns
+    structured public-data candidates, source conflicts, and unavailable-public
+    findings for profile_sources, profile_metric_values, and
+    profile_knowledge_objects. It does not write to Healthcare Toolkit.
+
+    Discovery
+    ---------
+    - Use state plus one or more of system_slug, system_name, or exact ccns.
+    - Run cache-manager.get_workflow_cache_readiness with workflow_id profile_evidence_pack before operational use.
+    - Use search_health_systems when only a partial system name is available.
+
+    When to use
+    -----------
+    - Use when Healthcare Toolkit needs source-backed evidence to populate a health-system profile.
+    - Use when bed counts, facility rosters, official count claims, geography, or current-affiliation evidence must be reviewable.
+    - NOT for: writing to Healthcare Toolkit, estimating missing values, PHI, or final legal ownership determinations.
+
+    Parameters
+    ----------
+    state : str
+        Two-letter state abbreviation such as "PA". Required.
+    system_slug : str | None
+        Optional Healthcare Toolkit or reviewed source slug, for example "jefferson-health".
+    system_name : str | None
+        Optional public system name, for example "Jefferson Health".
+    ccns : list[str] | None
+        Optional exact CMS Certification Numbers to anchor facility rows.
+    required_fields : list[str] | None
+        Optional fields that must be present or returned as unavailable_public/needs_review findings.
+
+    Returns
+    -------
+    dict
+        Evidence pack with source-backed candidates, conflicts, unavailable_public findings, cache_preflight,
+        source_precedence, identity, identity_map, evidence, and source_metadata.
+
+    Do / Don't
+    ----------
+    Do:
+    - Persist only supported source-backed values with their evidence and source_metadata.
+    - Route source_conflict, needs_review, and unavailable_public rows to manual review.
+    - Preserve source precedence: CMS POS/HGI for facility identity, AHRQ as linkage spine, Census before OSM.
+
+    Don't:
+    - Treat AHRQ as final current-operator authority.
+    - Sum bed rows when duplicate campus, incompatible row scope, or material source variance is reported.
+    - Persist vague official count claims such as "more than 20 locations" as exact metric values.
+
+    Examples
+    --------
+    Basic MCP call shape:
+    {"jsonrpc":"2.0","id":"1","method":"tools/call","params":{"name":"build_profile_evidence_pack","arguments":{"state":"PA","system_name":"Jefferson Health","required_fields":["county_geoid","system_bed_count"]}}}
+
+    Common mistakes
+    ---------------
+    - Passing a system name without state: provide state to keep public-source matching bounded.
+    - Treating unavailable_public as proof of absence: it only records searched public sources.
+    - Using OSM fallback geography without review when Census Geocoder could not match.
+    """
+
+    state_norm = str(state or "").strip().upper()
+    if len(state_norm) != 2 or not state_norm.isalpha():
+        return _system_error_response(
+            "state must be a two-letter abbreviation such as 'PA'.",
+            code="invalid_params",
+            query={
+                "state": state,
+                "system_slug": system_slug or "",
+                "system_name": system_name or "",
+                "ccns": ccns or [],
+                "required_fields": required_fields or [],
+            },
+            match_basis="invalid_state_argument",
+            confidence="not_evaluated",
+            next_step="Retry with a two-letter state abbreviation and at least one system name, slug, or CCN when available.",
+        )
+
+    systems_df = await _load_ahrq_systems()
+    hospitals_df = await _load_ahrq_hospitals()
+    pos_df = await _load_pos()
+    normalized_ccns = [normalize_ccn(ccn) for ccn in (ccns or []) if normalize_ccn(ccn)]
+
+    return await assemble_profile_evidence_pack(
+        state=state_norm,
+        system_slug=system_slug or "",
+        system_name=system_name or "",
+        ccns=normalized_ccns,
+        required_fields=required_fields or [],
+        systems_df=systems_df,
+        hospitals_df=hospitals_df,
+        pos_df=pos_df,
+        provider_enrollment_loader=_load_profile_provider_rows,
+        hcris_loader=_load_hcris_bed_rows,
+        state_bed_loader=_load_state_bed_rows,
+        official_evidence_loader=_load_official_profile_evidence,
+        census_geocoder=_census_geocode_address,
+        osm_geocoder=_osm_geocode_address,
+        reverse_geocoder=_reverse_geocode_coordinates,
+    )
 
 
 if __name__ == "__main__":

@@ -36,6 +36,21 @@ def test_plan_cache_refresh_for_flagship_workflow_has_ordered_blockers(tmp_path:
     assert all("next_action" in blocker for blocker in plan["blockers"])
 
 
+def test_profile_evidence_pack_cache_preflight_includes_core_sources(tmp_path: Path) -> None:
+    readiness = core.list_cache_sources(workflow="profile_evidence_pack", cache_root=tmp_path)
+    source_ids = {row["dataset_id"] for row in readiness["sources"]}
+
+    assert {
+        "cms_provider_of_services",
+        "cms_hospital_general_info",
+        "ahrq_health_system_compendium",
+        "cms_cost_report",
+        "cms_pecos_public_provider_enrollment",
+        "cms_pecos_hospital_chow",
+    } <= source_ids
+    assert readiness["summary"]
+
+
 def test_start_cache_refresh_rejects_unknown_and_oversized_requests(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="Unknown dataset_id"):
         core.start_cache_refresh(["not_a_dataset"], cache_root=tmp_path)

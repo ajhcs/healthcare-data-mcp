@@ -61,6 +61,21 @@ WORKFLOW_SOURCE_ALIASES: dict[str, dict[str, Any]] = {
         "source_type": "public_web_osint",
         "caveat": "Public web pages are candidate alias/context evidence and require source review before entity merges.",
     },
+    "census_geocoder": {
+        "canonical_dataset_ids": ("census_acs",),
+        "source_type": "public_geocoding_api",
+        "caveat": "Census Geocoder coordinates and county GEOIDs are request-time geography evidence, not facility identity proof.",
+    },
+    "osm_nominatim": {
+        "canonical_dataset_ids": ("web_intelligence",),
+        "source_type": "public_geocoding_fallback",
+        "caveat": "OSM/Nominatim is fallback geography evidence and requires match-quality review before persistence.",
+    },
+    "official_system_pages_reports": {
+        "canonical_dataset_ids": ("web_intelligence",),
+        "source_type": "official_public_page_or_report_review",
+        "caveat": "Official system pages and reports can support exact site/facility counts or current-operator claims only when the claim text is preserved.",
+    },
     "routing": {
         "canonical_dataset_ids": ("cms_hospital_general_info",),
         "source_type": "public_or_configured_routing",
@@ -838,6 +853,145 @@ WORKFLOW_DEFINITIONS: dict[str, WorkflowDefinition] = {
             },
         ),
     ),
+    "profile_evidence_pack": WorkflowDefinition(
+        workflow_id="profile_evidence_pack",
+        title="Profile Evidence Pack",
+        description=(
+            "Return a read-only source-backed evidence pack for Healthcare Toolkit health-system profile population, "
+            "including facility roster, identifiers, geography, beds, affiliation review, count evidence, conflicts, and unavailable-public findings."
+        ),
+        required_identifiers=("state",),
+        recommended_servers=WORKFLOW_PRESETS["profile_evidence_pack"],
+        required_sources=(
+            "cms_provider_of_services",
+            "cms_hospital_general_info",
+            "ahrq_health_system_compendium",
+            "cms_cost_report",
+            "state_hospital_reports",
+            "census_geocoder",
+            "osm_nominatim",
+            "official_system_pages_reports",
+            "cms_pecos_public_provider_enrollment",
+            "cms_pecos_hospital_chow",
+        ),
+        steps=(
+            WorkflowToolStep(
+                "cache-manager",
+                "get_workflow_cache_readiness",
+                "Preflight cache readiness and source blockers before treating missing public rows as unavailable.",
+                optional_inputs=("workflow_id", "inputs"),
+                required_sources=(
+                    "cms_provider_of_services",
+                    "cms_hospital_general_info",
+                    "ahrq_health_system_compendium",
+                    "cms_cost_report",
+                    "state_hospital_reports",
+                ),
+            ),
+            WorkflowToolStep(
+                "health-system-profiler",
+                "build_profile_evidence_pack",
+                "Assemble the read-only structured profile evidence pack for Healthcare Toolkit ingestion/review using configured public caches and reviewed official rows when available.",
+                required_inputs=("state",),
+                optional_inputs=("system_slug", "system_name", "ccns", "required_fields"),
+                required_sources=(
+                    "cms_provider_of_services",
+                    "cms_hospital_general_info",
+                    "ahrq_health_system_compendium",
+                    "cms_cost_report",
+                    "state_hospital_reports",
+                    "census_geocoder",
+                    "osm_nominatim",
+                    "official_system_pages_reports",
+                    "cms_pecos_public_provider_enrollment",
+                    "cms_pecos_hospital_chow",
+                ),
+            ),
+            WorkflowToolStep(
+                "provider-enrollment",
+                "profile_provider_control",
+                "Optional exact-CCN cross-check for current enrollment, ownership, and CHOW evidence.",
+                optional_inputs=("ccn", "npi"),
+                required_sources=("cms_pecos_public_provider_enrollment", "cms_pecos_hospital_chow"),
+                blocking=False,
+                execution_notes=("Use exact CCN/NPI only; do not infer current control from names.",),
+            ),
+            WorkflowToolStep(
+                "web-intelligence",
+                "scrape_system_profile",
+                "Optional official/public page collection for exact count and current-operator claim review.",
+                required_inputs=("system_name",),
+                optional_inputs=("system_domain",),
+                required_sources=("official_system_pages_reports", "public_web"),
+                blocking=False,
+                execution_notes=("Persist exact official counts only; vague count claims remain needs_review.",),
+            ),
+        ),
+        caveats=(
+            "This MCP workflow never writes to Healthcare Toolkit; it returns evidence candidates and review findings only.",
+            "Do not estimate missing fields. Return unavailable_public, source_conflict, or needs_review with searched-source evidence.",
+            "AHRQ is linkage/discovery context, not final current-operator authority.",
+            "OSM/Nominatim is a fallback only when Census Geocoder does not produce an acceptable match.",
+        ),
+        identity_join_keys=(
+            "state",
+            "system_slug",
+            "ahrq_system_id",
+            "ccn",
+            "npi",
+            "pecos_enrollment_id",
+            "canonical_name",
+            "address",
+            "zip_code",
+            "county_fips",
+            "lat",
+            "lon",
+        ),
+        identity_strategy=(
+            "Anchor facility facts on CCN/source-local identifiers and preserve names/addresses as aliases or conflict context.",
+            "Use AHRQ system IDs as linkage spine only, then review PECOS/CHOW and official pages for current affiliation.",
+            "Persist supported exact metric candidates with their row evidence; route needs_review/source_conflict/unavailable_public rows to manual review.",
+            "Keep geography, bed, count, and affiliation facts source-scoped by source period and retrieval/access date.",
+        ),
+        report_fact_rows=(
+            {
+                "label": "Profile evidence pack",
+                "value_path": "health_system_profiler.build_profile_evidence_pack",
+                "required_evidence": "profile_evidence_pack receipt",
+                "identity_fields": ("state", "system_slug", "ahrq_system_id", "ccn", "canonical_name"),
+                "evidence_path": "health_system_profiler.build_profile_evidence_pack.evidence",
+                "source_metadata_path": "health_system_profiler.build_profile_evidence_pack.source_metadata",
+                "identity_map_path": "health_system_profiler.build_profile_evidence_pack.identity_map",
+            },
+            {
+                "label": "Supported profile source candidates",
+                "value_path": "health_system_profiler.build_profile_evidence_pack.current_hospital_roster",
+                "required_evidence": "profile_evidence_pack row receipts",
+                "identity_fields": ("ccn", "canonical_name", "address", "zip_code"),
+                "evidence_path": "health_system_profiler.build_profile_evidence_pack.current_hospital_roster[].evidence",
+                "source_metadata_path": "health_system_profiler.build_profile_evidence_pack.current_hospital_roster[].source_metadata",
+                "identity_map_path": "health_system_profiler.build_profile_evidence_pack.identity_map",
+            },
+            {
+                "label": "Profile metric candidates",
+                "value_path": "health_system_profiler.build_profile_evidence_pack.hospital_bed_counts",
+                "required_evidence": "profile_evidence_pack bed receipts",
+                "identity_fields": ("ccn", "state"),
+                "evidence_path": "health_system_profiler.build_profile_evidence_pack.hospital_bed_counts[].evidence",
+                "source_metadata_path": "health_system_profiler.build_profile_evidence_pack.hospital_bed_counts[].source_metadata",
+                "identity_map_path": "health_system_profiler.build_profile_evidence_pack.identity_map",
+            },
+            {
+                "label": "Manual review findings",
+                "value_path": "health_system_profiler.build_profile_evidence_pack.conflicts",
+                "required_evidence": "profile_evidence_pack conflict receipts",
+                "identity_fields": ("state", "ccn", "canonical_name"),
+                "evidence_path": "health_system_profiler.build_profile_evidence_pack.conflicts[].evidence",
+                "source_metadata_path": "health_system_profiler.build_profile_evidence_pack.conflicts[].source_metadata",
+                "identity_map_path": "health_system_profiler.build_profile_evidence_pack.identity_map",
+            },
+        ),
+    ),
     "market_community_health_scan": WorkflowDefinition(
         workflow_id="market_community_health_scan",
         title="Market And Community Health Scan",
@@ -1057,6 +1211,13 @@ WORKFLOW_EXAMPLE_INPUTS: dict[str, dict[str, Any]] = {
         "ccn": "390223",
         "state": "PA",
     },
+    "profile_evidence_pack": {
+        "state": "PA",
+        "system_name": "Jefferson Health",
+        "system_slug": "jefferson-health",
+        "ccns": ["390223"],
+        "required_fields": ["county_geoid", "system_bed_count", "facility_site_count"],
+    },
 }
 
 
@@ -1122,6 +1283,7 @@ def build_workflow_plan(
             step,
             input_payload,
             workflow.identity_join_keys,
+            workflow.workflow_id,
             cache_entries,
             tool_reference_validation.get("steps", {}),
         )
@@ -1486,11 +1648,12 @@ def _workflow_step_payload(
     step: WorkflowToolStep,
     inputs: dict[str, Any],
     workflow_join_keys: tuple[str, ...],
+    workflow_id: str = "",
     cache_entries: list[Any] | None = None,
     tool_reference_validation: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     payload = asdict(step)
-    arguments_template = _step_argument_template(step, inputs)
+    arguments_template = _step_argument_template(step, inputs, workflow_id=workflow_id)
     payload["stdio_command"] = f"hc-mcp {step.server}"
     payload["mcp_call"] = {
         "server": step.server,
@@ -2136,11 +2299,14 @@ def _module_function_signatures(module_name: str) -> dict[str, dict[str, Any]]:
     return signatures
 
 
-def _step_argument_template(step: WorkflowToolStep, inputs: dict[str, Any]) -> dict[str, Any]:
+def _step_argument_template(step: WorkflowToolStep, inputs: dict[str, Any], *, workflow_id: str = "") -> dict[str, Any]:
     template: dict[str, Any] = {}
     for label in (*step.required_inputs, *step.optional_inputs):
         for argument in _input_alternatives(label):
             template[argument] = _workflow_argument_value(argument, inputs)
+    if step.server == "cache-manager" and step.tool == "get_workflow_cache_readiness":
+        template["workflow_id"] = workflow_id or template.get("workflow_id") or _workflow_argument_value("workflow_id", inputs)
+        template["inputs"] = dict(inputs)
     return template
 
 
@@ -2254,6 +2420,23 @@ def _step_row_evidence_paths(step: WorkflowToolStep) -> list[str]:
             "result.bed_source.rejected_candidates[].evidence",
         ]
     if step.server == "health-system-profiler":
+        if step.tool == "build_profile_evidence_pack":
+            return [
+                "result.system_identity_aliases[].evidence",
+                "result.current_hospital_roster[].evidence",
+                "result.source_identifiers[].evidence",
+                "result.addresses[].evidence",
+                "result.geography_candidates[].evidence",
+                "result.hospital_bed_counts[].evidence",
+                "result.hospital_bed_counts[].value.resolution.candidates[].evidence",
+                "result.hospital_bed_counts[].value.resolution.rejected_candidates[].evidence",
+                "result.system_bed_count_candidates[].evidence",
+                "result.bed_rollup_guidance[].evidence",
+                "result.affiliation_evidence[].evidence",
+                "result.facility_site_count_evidence[].evidence",
+                "result.conflicts[].evidence",
+                "result.unavailable_public_findings[].evidence",
+            ]
         return [
             "result.records[].evidence",
             "result.results[].evidence",

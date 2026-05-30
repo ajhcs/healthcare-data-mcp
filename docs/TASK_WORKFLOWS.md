@@ -205,6 +205,12 @@ for system-affiliation fact rows, and `system_reconciliation` cites
 `web_intelligence.scrape_system_profile.locations[].evidence` for public-web
 alias context so report builders preserve row-level receipts instead of only
 the composite profile receipt.
+The profile_evidence_pack workflow is the Healthcare Toolkit handoff surface:
+health_system_profiler.build_profile_evidence_pack returns supported candidates,
+source_conflict rows, needs_review rows, unavailable_public findings, cache
+preflight, source precedence, and suggested recovery calls. Healthcare Toolkit
+should persist supported source-backed candidates and route conflicts or vague
+claims to review.
 The executable `quality_profile` plan also cites HRRP
 `get_readmission_data.conditions[].evidence`, HAC
 `get_safety_scores.domain_evidence[].evidence`, HCAHPS
@@ -317,6 +323,7 @@ The canonical workflow registry is rendered from
 | `research_trials_activity_profile` | `research-trials` |
 | `referral_leakage_readiness` | `physician-referral-network`, `claims-analytics`, `drive-time` |
 | `system_reconciliation` | `health-system-profiler`, `cms-facility`, `provider-enrollment`, `web-intelligence` |
+| `profile_evidence_pack` | `health-system-profiler`, `cache-manager`, `provider-enrollment`, `web-intelligence` |
 
 Use `hc-mcp doctor --json` to inspect machine-readable workflow readiness and
 missing requirements before handing a workflow to an agent. Doctor uses the

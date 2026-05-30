@@ -28,7 +28,7 @@ curl -fsSL https://raw.githubusercontent.com/ajhcs/healthcare-data-mcp/main/inst
 
 Healthcare data is public, but it is scattered across CMS, CDC, NIH, HHS OIG, SAM.gov, Census, HUD, SEC, IRS, hospital MRFs, and other systems. Healthcare Data MCP turns those sources into focused MCP tools with local caches, structured responses, source metadata, recovery hints, per-server discovery resources, and client-friendly server discovery.
 
-Latest release: `v0.3.0` focuses on MCP design quality for agents: standardized error recovery, required tool documentation sections, capability clusters for large servers, per-server resources, shared input normalization, redirect-safe public web fetches, read-only macro workflow tools, atomic cache writes, local tool observability, and MCP UX validation tests. See [v0.3.0 release notes](docs/release-notes/2026-05-30-v0.3.0-mcp-design-hardening.md).
+Latest release: `v0.3.1` adds the read-only Profile Evidence Pack workflow for Healthcare Toolkit profile population, including source-backed facility rosters, identifiers, geography, bed candidates, affiliation review, official count evidence, conflicts, and unavailable-public findings. See [v0.3.1 release notes](docs/release-notes/2026-05-30-v0.3.1-profile-evidence-pack.md).
 
 | If your agent needs to... | Use these servers |
 | --- | --- |
@@ -58,6 +58,7 @@ hc-mcp workflow
 hc-mcp workflow compliance_exclusion_screening
 hc-mcp workflow quality_measure_lookup --input ccn=390223 --inputs-json '{"measure":"clabsi_sir"}' --json
 hc-mcp workflow system_reconciliation --input query="Jefferson Health" --input system_slug=jefferson-health --json
+hc-mcp workflow profile_evidence_pack --input state=PA --input system_name="Jefferson Health" --json
 
 # Connect to discovery to expose read-only macro tools for common workflows
 hc-mcp discovery
@@ -97,7 +98,7 @@ used by setup, docs, and distribution checks.
 | Preset | Servers | Workflows |
 | --- | ---: | --- |
 | `compliance` | 4 | `compliance_exclusion_screening`, `ownership_chow_trace` |
-| `market-strategy` | 10 | `facility_profile`, `quality_profile`, `finance_profile`, `hospital_competitive_profile`, `system_reconciliation`, `market_community_health_scan`, `referral_leakage_readiness` |
+| `market-strategy` | 10 | `facility_profile`, `quality_profile`, `finance_profile`, `hospital_competitive_profile`, `system_reconciliation`, `profile_evidence_pack`, `market_community_health_scan`, `referral_leakage_readiness` |
 | `metadata-only` | 2 | `quality_measure_lookup` |
 | `research` | 3 | `research_trials_activity_profile` |
 
@@ -195,7 +196,7 @@ docker compose up --build
 Each server is exposed at `http://localhost:<port>/mcp`. Compose publishes ports on `127.0.0.1` by default.
 
 Generated Compose files assign the local build a package-versioned image tag
-such as `healthcare-data-mcp:0.3.0`. To run a published image instead of
+such as `healthcare-data-mcp:0.3.1`. To run a published image instead of
 building locally, set `HC_MCP_IMAGE` to the trusted image reference before
 starting Compose; Compose uses `pull_policy: missing` so normal startup can
 reuse or pull the tagged image unless you explicitly pass `--build`.
@@ -260,6 +261,7 @@ More detail:
 - [Remote gateway](docs/REMOTE_GATEWAY.md)
 - [Structured MCP results](docs/STRUCTURED_RESULTS.md)
 - [Task-first workflows](docs/TASK_WORKFLOWS.md)
+- [Profile evidence pack workflow](docs/PROFILE_EVIDENCE_PACK.md)
 - [Source capability ledger](docs/SOURCE_CAPABILITY_LEDGER.md)
 
 ## Configuration

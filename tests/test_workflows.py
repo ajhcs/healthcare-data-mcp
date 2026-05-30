@@ -526,6 +526,32 @@ def test_system_reconciliation_workflow_has_ordered_identity_resolution_plan() -
     validate_report_ingest_payload(plan["report_ingest_contract"])
 
 
+def test_profile_evidence_pack_workflow_contract_targets_healthcare_toolkit_population() -> None:
+    plan = build_workflow_plan(
+        "profile_evidence_pack",
+        inputs={"state": "PA", "system_name": "Example Health", "system_slug": "example-health"},
+    )
+    by_tool = {step["tool"]: step for step in plan["steps"]}
+    facts = {row["label"]: row for row in plan["report_ingest_contract"]["fact_rows"]}
+
+    assert plan["workflow_id"] == "profile_evidence_pack"
+    assert plan["readiness"]["status"] == "ready"
+    assert "cms_provider_of_services" in plan["required_sources"]
+    assert "census_geocoder" in {row["source_id"] for row in plan["source_resolution"] if row["status"] == "alias"}
+    assert by_tool["get_workflow_cache_readiness"]["mcp_call"]["resolved_arguments"] == {
+        "workflow_id": "profile_evidence_pack",
+        "inputs": {"state": "PA", "system_name": "Example Health", "system_slug": "example-health"},
+    }
+    assert by_tool["build_profile_evidence_pack"]["server"] == "health-system-profiler"
+    assert "result.hospital_bed_counts[].evidence" in by_tool["build_profile_evidence_pack"]["evidence_contract"]["row_evidence_paths"]
+    assert facts["Profile evidence pack"]["value_path"] == "health_system_profiler.build_profile_evidence_pack"
+    assert facts["Profile metric candidates"]["evidence_path"] == (
+        "health_system_profiler.build_profile_evidence_pack.hospital_bed_counts[].evidence"
+    )
+    assert "unavailable_public" in " ".join(plan["caveats"])
+    validate_report_ingest_payload(plan["report_ingest_contract"])
+
+
 def test_ownership_chow_workflow_uses_cross_server_identity_resolution(monkeypatch) -> None:
     monkeypatch.delenv("SAM_GOV_API_KEY", raising=False)
 
