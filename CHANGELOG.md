@@ -1,5 +1,26 @@
 # Changelog
 
+## v0.3.1 - Profile evidence pack workflow
+
+Released: 2026-05-30
+
+- Added health-system-profiler.build_profile_evidence_pack, a read-only MCP
+  workflow output for Healthcare Toolkit health-system profile population.
+- Added source-backed profile candidates for system identity, aliases, hospital
+  rosters, CCNs, source-local identifiers, addresses, county/GEOID,
+  coordinates, facility bed counts, system bed rollup guidance, affiliations,
+  official count claims, conflicts, and unavailable-public findings.
+- Fixed workflow cache preflight planning so
+  cache-manager.get_workflow_cache_readiness receives concrete workflow_id and
+  inputs arguments.
+- Moved PECOS/HCRIS/state/official enrichment after roster resolution so
+  state + system_name calls use discovered CCNs for source lookups.
+- Wired HCRIS/cost-report, PA state bed, and reviewed official-evidence cache
+  loaders instead of advertising stubbed source families.
+- Added evidence-pack documentation and regression tests for JSON contract,
+  cache readiness, PA fixtures, bed/geography/affiliation resolution, and
+  exact-vs-vague official count handling.
+
 ## v0.3.0 - MCP design hardening
 
 Released: 2026-05-30
