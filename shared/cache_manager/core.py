@@ -21,7 +21,7 @@ from urllib.parse import parse_qsl, urlencode, urlparse, urlsplit, urlunsplit
 import httpx
 
 from shared.utils.cache import write_atomic_json
-from shared.utils.server_registry import SERVER_BY_ID, SERVER_REGISTRY
+from shared.utils.server_registry import SERVER_REGISTRY
 from shared.utils.workflows import WORKFLOW_DEFINITIONS, WORKFLOW_SOURCE_ALIASES
 
 DEFAULT_CACHE_ROOT = Path.home() / ".healthcare-data-mcp" / "cache"
@@ -1573,10 +1573,10 @@ _IDENTIFIER_GROUPS = {
 
 def _missing_required_columns(spec: CacheDatasetSpec, normalized_columns: set[str]) -> list[str]:
     missing = []
-    for field in spec.required_columns:
-        normalized = _normalize_column(field)
+    for column_name in spec.required_columns:
+        normalized = _normalize_column(column_name)
         if normalized not in normalized_columns:
-            missing.append(field)
+            missing.append(column_name)
     return missing
 
 
@@ -1587,8 +1587,8 @@ def _missing_required_identifier_groups(
     relative_path: str = "",
 ) -> list[str]:
     required_groups: dict[str, set[str]] = {}
-    for field in (*spec.primary_keys, *spec.join_keys):
-        normalized = _normalize_column(field)
+    for column_name in (*spec.primary_keys, *spec.join_keys):
+        normalized = _normalize_column(column_name)
         group = _IDENTIFIER_GROUPS.get(normalized)
         if group:
             required_groups[normalized] = {_normalize_column(item) for item in group}
