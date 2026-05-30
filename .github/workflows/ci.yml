@@ -91,6 +91,7 @@ jobs:
           python scripts/mcp_smoke.py --server discovery --expect-tool get_preset_plan --call-tool get_preset_plan --tool-args '{"preset_id":"market-strategy"}' --expect-structured-key preset_id --expect-structured-key workflow_summaries --expect-structured-path-all workflow_summaries[].identity_join_keys --expect-structured-path-all workflow_summaries[].source_resolution
           python scripts/mcp_smoke.py --server gateway --expect-tool search --expect-tool fetch
           python scripts/mcp_smoke.py --server live-gateway --expect-tool list_live_tools --call-tool list_live_tools --expect-structured-key tools --expect-structured-path-all tools[].allowed_scopes --expect-structured-path-all tools[].request_size_limit_bytes --expect-structured-path-all tools[].result_size_limit_bytes --expect-structured-path-all tools[].rate_limit_class --expect-structured-path-all tools[].source_caveat_class --expect-structured-path-all tools[].requires_provenance
+          python scripts/mcp_smoke.py --server cache-manager --expect-tool list_cache_sources --expect-tool get_workflow_cache_readiness --expect-resource healthcare-data://cache-manager/policy --call-tool get_workflow_cache_readiness --tool-args '{"workflow_id":"hospital_competitive_profile","inputs":{"ccn":"390223","measure":"clabsi_sir"}}' --expect-structured-key data --expect-structured-path data.ordered_cache_plan --expect-structured-path data.blockers
       - name: MCP Inspector smoke
         run: scripts/mcp_inspector_smoke.sh
       - name: Docker Compose zero-config validation

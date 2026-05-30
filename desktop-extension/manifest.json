@@ -43,6 +43,8 @@
         "GOOGLE_CSE_DAILY_LIMIT": "${user_config.GOOGLE_CSE_DAILY_LIMIT}",
         "GOOGLE_CSE_ID": "${user_config.GOOGLE_CSE_ID}",
         "GOOGLE_CSE_SESSION_LIMIT": "${user_config.GOOGLE_CSE_SESSION_LIMIT}",
+        "HC_MCP_CACHE_MANAGER_ALLOW_REMOTE_MUTATIONS": "${user_config.HC_MCP_CACHE_MANAGER_ALLOW_REMOTE_MUTATIONS}",
+        "HC_MCP_CACHE_ROOT": "${user_config.HC_MCP_CACHE_ROOT}",
         "HUD_API_TOKEN": "${user_config.HUD_API_TOKEN}",
         "MCP_GATEWAY_ALLOWED_HOSTS": "${user_config.MCP_GATEWAY_ALLOWED_HOSTS}",
         "MCP_GATEWAY_ALLOWED_ORIGINS": "${user_config.MCP_GATEWAY_ALLOWED_ORIGINS}",
@@ -100,6 +102,8 @@
             "GOOGLE_CSE_DAILY_LIMIT": "${user_config.GOOGLE_CSE_DAILY_LIMIT}",
             "GOOGLE_CSE_ID": "${user_config.GOOGLE_CSE_ID}",
             "GOOGLE_CSE_SESSION_LIMIT": "${user_config.GOOGLE_CSE_SESSION_LIMIT}",
+            "HC_MCP_CACHE_MANAGER_ALLOW_REMOTE_MUTATIONS": "${user_config.HC_MCP_CACHE_MANAGER_ALLOW_REMOTE_MUTATIONS}",
+            "HC_MCP_CACHE_ROOT": "${user_config.HC_MCP_CACHE_ROOT}",
             "HUD_API_TOKEN": "${user_config.HUD_API_TOKEN}",
             "MCP_GATEWAY_ALLOWED_HOSTS": "${user_config.MCP_GATEWAY_ALLOWED_HOSTS}",
             "MCP_GATEWAY_ALLOWED_ORIGINS": "${user_config.MCP_GATEWAY_ALLOWED_ORIGINS}",
@@ -156,7 +160,7 @@
     "server_name": {
       "type": "string",
       "title": "Healthcare Data MCP server",
-      "description": "Registry-backed server to run. Choices: service-area: CMS hospital service areas and market share; geo-demographics: Census, ZCTA, Medicare, and HUD geography; drive-time: Routing, drive-time matrices, and access scoring; hospital-quality: CMS quality, readmission, and safety data; cms-facility: CMS facility master data and NPPES lookup; health-system-profiler: Health system discovery and facility enrichment; financial-intelligence: IRS 990, SEC EDGAR, and nonprofit finance intelligence; price-transparency: Hospital MRF and benchmark pricing; physician-referral-network: NPPES, physician mix, referral network, and leakage analysis; workforce-analytics: BLS and ACGME workforce analytics; claims-analytics: DRG, service-line, and claims analytics; public-records: SAM.gov, USAspending, CHPL, accreditation, and exclusion screening; web-intelligence: Web search and health system OSINT; discovery: Dataset catalog resources, cache status, and prompts; gateway: Remote-safe metadata gateway with search/fetch; provider-enrollment: CMS PECOS-derived provider enrollment, ownership, and CHOW; community-health: CDC PLACES community-health estimates for counties, places, tracts, and ZCTAs; research-trials: NIH RePORTER funding and ClinicalTrials.gov study activity; live-gateway: Authenticated live router for approved provider, quality, claims, compliance, community, and research tools.",
+      "description": "Registry-backed server to run. Choices: service-area: CMS hospital service areas and market share; geo-demographics: Census, ZCTA, Medicare, and HUD geography; drive-time: Routing, drive-time matrices, and access scoring; hospital-quality: CMS quality, readmission, and safety data; cms-facility: CMS facility master data and NPPES lookup; health-system-profiler: Health system discovery and facility enrichment; financial-intelligence: IRS 990, SEC EDGAR, and nonprofit finance intelligence; price-transparency: Hospital MRF and benchmark pricing; physician-referral-network: NPPES, physician mix, referral network, and leakage analysis; workforce-analytics: BLS and ACGME workforce analytics; claims-analytics: DRG, service-line, and claims analytics; public-records: SAM.gov, USAspending, CHPL, accreditation, and exclusion screening; web-intelligence: Web search and health system OSINT; discovery: Dataset catalog resources, cache status, and prompts; gateway: Remote-safe metadata gateway with search/fetch; provider-enrollment: CMS PECOS-derived provider enrollment, ownership, and CHOW; community-health: CDC PLACES community-health estimates for counties, places, tracts, and ZCTAs; research-trials: NIH RePORTER funding and ClinicalTrials.gov study activity; live-gateway: Authenticated live router for approved provider, quality, claims, compliance, community, and research tools; cache-manager: Local-safe cache inspection, planning, validation, refresh, promotion, rollback, and lineage control plane.",
       "required": true,
       "default": "cms-facility",
       "enum": [
@@ -178,7 +182,8 @@
         "provider-enrollment",
         "community-health",
         "research-trials",
-        "live-gateway"
+        "live-gateway",
+        "cache-manager"
       ]
     },
     "SAM_GOV_API_KEY": {
@@ -520,6 +525,20 @@
       "required": false,
       "default": "",
       "sensitive": true
+    },
+    "HC_MCP_CACHE_MANAGER_ALLOW_REMOTE_MUTATIONS": {
+      "type": "string",
+      "title": "Hc Mcp Cache Manager Allow Remote Mutations",
+      "description": "Explicit opt-in for mutating HTTP deployments.",
+      "required": false,
+      "default": ""
+    },
+    "HC_MCP_CACHE_ROOT": {
+      "type": "string",
+      "title": "Hc Mcp Cache Root",
+      "description": "Optional cache root override for cache-manager operations.",
+      "required": false,
+      "default": ""
     }
   }
 }

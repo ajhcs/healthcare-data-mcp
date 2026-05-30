@@ -62,6 +62,10 @@ DATASET_CATALOG: dict[str, dict[str, Any]] = {
                 "hospital_overall_rating",
             ],
             "join_keys": ["ccn", "facility_id"],
+            "column_aliases": {
+                "city": ["City/Town"],
+                "zip_code": ["ZIP Code"],
+            },
         },
         "workflows": ["facility lookup", "competitor list building", "quality benchmarking"],
     },
@@ -161,6 +165,17 @@ DATASET_CATALOG: dict[str, dict[str, Any]] = {
                 "payment_reduction",
             ],
             "join_keys": ["facility_id", "ccn"],
+            "column_aliases": {
+                "measure_id": ["HCAHPS Measure ID", "Measure ID"],
+                "city": ["City/Town"],
+                "zip_code": ["ZIP Code"],
+            },
+            "exact_measure_artifacts": [
+                "hospital_quality_hcahps.csv",
+                "hospital_quality_complications.csv",
+                "hospital_quality_hai.csv",
+                "hospital_quality_unplanned_visits.csv",
+            ],
         },
         "workflows": ["quality comparison", "readmission risk", "patient experience analysis"],
         "supports_exact_inventory": True,
@@ -1359,19 +1374,10 @@ def _cache_entry_status(entry: dict[str, Any], cache_root: Path, now: datetime) 
 
 
 def cache_status_payload(cache_root: str | Path | None = None) -> dict[str, Any]:
-    """Return cache status using only local filesystem metadata."""
-    root = Path(cache_root) if cache_root is not None else DEFAULT_CACHE_ROOT
-    now = datetime.now(timezone.utc)
-    entries = [_cache_entry_status(entry, root, now) for entry in CACHE_ENTRIES]
-    counts: dict[str, int] = {}
-    for entry in entries:
-        counts[entry["status"]] = counts.get(entry["status"], 0) + 1
-    return {
-        "cache_root": str(root),
-        "checked_at": now.isoformat(),
-        "summary": counts,
-        "entries": entries,
-    }
+    """Return manifest-backed cache readiness without downloading or writing."""
+    from shared.cache_manager import cache_status_payload as manager_cache_status_payload
+
+    return manager_cache_status_payload(cache_root=cache_root)
 
 
 def cache_runbooks_payload() -> dict[str, Any]:

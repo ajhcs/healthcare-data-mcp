@@ -4,7 +4,7 @@
 [![MCP](https://img.shields.io/badge/MCP-stdio%20%7C%20streamable--http-0f766e)](https://modelcontextprotocol.io/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-Public healthcare market intelligence for AI agents: 19 local MCP servers covering hospitals, ownership, quality, claims, price transparency, workforce, finance, public state-health reporting, community health, research activity, web intelligence, and federal exclusion screening.
+Public healthcare market intelligence for AI agents: 20 local MCP servers covering hospitals, ownership, quality, claims, price transparency, workforce, finance, public state-health reporting, community health, research activity, web intelligence, federal exclusion screening, and local-safe cache management.
 
 ```bash
 git clone https://github.com/ajhcs/healthcare-data-mcp.git
@@ -137,8 +137,7 @@ used by setup, docs, and distribution checks.
 | `community-health` | 8018 | CDC PLACES community-health estimates for counties, places, tracts, and ZCTAs | `cdc_places` |
 | `research-trials` | 8019 | NIH RePORTER funding and ClinicalTrials.gov study activity | `clinicaltrials_gov`, `nih_reporter_projects` |
 | `live-gateway` | 8020 | Authenticated live router for approved provider, quality, claims, compliance, community, and research tools | none |
-
-HTTP servers bind to `127.0.0.1` by default. Use `MCP_HOST=0.0.0.0` only in containers or behind a trusted reverse proxy with authentication.
+| `cache-manager` | 8021 | Local-safe cache inspection, planning, validation, refresh, promotion, rollback, and lineage control plane | none |
 
 ## Installation
 
@@ -535,6 +534,8 @@ Registry-backed environment key catalog:
 | `GOOGLE_CSE_DAILY_LIMIT` | no | `web-intelligence` | Google Custom Search daily request guardrail. |
 | `GOOGLE_CSE_ID` | no | `web-intelligence` | Optional Google Custom Search Engine ID. |
 | `GOOGLE_CSE_SESSION_LIMIT` | no | `web-intelligence` | Google Custom Search per-session request guardrail. |
+| `HC_MCP_CACHE_MANAGER_ALLOW_REMOTE_MUTATIONS` | no | `cache-manager` | Explicit opt-in for mutating HTTP deployments. |
+| `HC_MCP_CACHE_ROOT` | no | `cache-manager` | Optional cache root override for cache-manager operations. |
 | `HUD_API_TOKEN` | no | `geo-demographics` | Optional HUD USPS ZIP crosswalk API token. |
 | `MCP_GATEWAY_ALLOWED_HOSTS` | no | `gateway` | Allowed Host headers for metadata gateway HTTP/SSE. |
 | `MCP_GATEWAY_ALLOWED_ORIGINS` | no | `gateway` | Allowed Origin headers for metadata gateway HTTP/SSE. |
@@ -576,10 +577,10 @@ Registry-backed environment key catalog:
 Use stdio for local desktop/CLI agents. Use local Streamable HTTP when Docker is already running or when multiple local clients share the same server process. Use the HTTPS `gateway` for remote metadata integrations and HTTPS `live-gateway` only when live-tool auth is configured.
 
 **Can I expose every server to ChatGPT or another remote MCP client?**
-Use the metadata-only `gateway` for discovery. Use `live-gateway` only behind HTTPS with bearer auth/OIDC-equivalent edge policy, Host/Origin validation, rate limits, and source-specific compliance controls.
+Use the metadata-only `gateway` for discovery. Use `live-gateway` only behind HTTPS with bearer auth/OIDC-equivalent edge policy, Host/Origin validation, rate limits, and source-specific compliance controls. Do not expose cache-manager mutating tools remotely unless the deployment is explicitly scoped, authenticated, loopback-safe, and `HC_MCP_CACHE_MANAGER_ALLOW_REMOTE_MUTATIONS=true` is intentionally set.
 
 **Where do cached datasets live?**
-Local Python runs use `~/.healthcare-data-mcp/cache`. Docker Compose uses the `healthcare-cache` volume.
+Local Python runs use `~/.healthcare-data-mcp/cache` by default. Docker Compose uses the `healthcare-cache` volume unless `HC_MCP_CACHE_ROOT` is set.
 
 ## About Contributions
 

@@ -301,7 +301,8 @@ Decision caveat:
 
 ## Other Canonical Workflow Presets
 
-The registry-backed readiness check and workflow planner track these presets:
+The canonical workflow registry is rendered from
+`shared.utils.server_registry.WORKFLOW_PRESETS`.
 
 | Workflow | Primary servers |
 |---|---|

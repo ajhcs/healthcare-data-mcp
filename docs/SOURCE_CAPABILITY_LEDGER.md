@@ -34,6 +34,7 @@ Registry-rendered server/source coverage:
 | `community-health` | `cdc_places` | zero-config: yes; cache: cdc-places; optional env: PLACES_CACHE_DIR | `metadata`, `live` | CDC PLACES values are modeled community estimates, not facility-specific outcomes. |
 | `research-trials` | `clinicaltrials_gov`, `nih_reporter_projects` | zero-config: yes; optional env: CLINICAL_TRIALS_INVENTORY_HARD_MAX | `metadata`, `live` | Follow tool evidence receipts, source metadata, and workflow caveats. |
 | `live-gateway` | none | zero-config: no; optional env: MCP_LIVE_GATEWAY_AUTH_REQUIRED, MCP_LIVE_GATEWAY_BEARER_TOKEN, MCP_LIVE_GATEWAY_BEARER_TOKENS, MCP_LIVE_GATEWAY_BEARER_TOKEN_SHA256, MCP_LIVE_GATEWAY_BEARER_TOKEN_SHA256_LIST, MCP_LIVE_GATEWAY_REQUIRED_SCOPES, MCP_LIVE_GATEWAY_TOKEN_SCOPES, MCP_LIVE_GATEWAY_ALLOW_GLOBAL_BULK_SCOPE, MCP_LIVE_GATEWAY_CONTAINER_LOCAL_BIND, MCP_LIVE_GATEWAY_ALLOWED_HOSTS, MCP_LIVE_GATEWAY_ALLOWED_ORIGINS, MCP_LIVE_GATEWAY_PUBLIC_URL, MCP_LIVE_GATEWAY_ISSUER_URL, MCP_LIVE_GATEWAY_ALLOW_NETWORK_BIND, MCP_LIVE_GATEWAY_AUDIT_LOG_PATH | `live` | HTTP/SSE live-gateway requires auth and should be deployed behind HTTPS. |
+| `cache-manager` | none | zero-config: yes; optional env: HC_MCP_CACHE_ROOT, HC_MCP_CACHE_MANAGER_ALLOW_REMOTE_MUTATIONS | none | Read-only inspection and planning are safe by default; mutating tools are dataset allowlisted and cache-root scoped.; Remote metadata gateway does not expose cache-manager mutations. |
 
 ## Source Boundaries
 

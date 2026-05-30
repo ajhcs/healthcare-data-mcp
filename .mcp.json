@@ -132,6 +132,13 @@
       "args": [
         "live-gateway"
       ]
+    },
+    "cache-manager": {
+      "type": "stdio",
+      "command": "hc-mcp",
+      "args": [
+        "cache-manager"
+      ]
     }
   }
 }

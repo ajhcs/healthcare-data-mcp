@@ -84,7 +84,7 @@ The discovery server also exposes tool-callable versions of the catalog resource
 | `get_dataset` | Return full metadata for one `dataset_id`. |
 | `get_dataset_schema` | Return grain, identity fields, common fields, and join keys. |
 | `get_dataset_source` | Return source URLs and expected cache files. |
-| `get_cache_status` | Return filesystem-only cache status. |
+| `get_cache_status` | Return manifest-backed cache readiness without downloading or writing. |
 | `validate_dataset_catalog` | Validate discovery dataset coverage against the canonical server registry. |
 | `list_runbooks` | List cache/source-audit runbooks. |
 | `get_runbook` | Return one runbook by id. |
@@ -105,11 +105,13 @@ The discovery server also exposes tool-callable versions of the catalog resource
 
 ## Cache Status
 
-`healthcare-data://cache/status` checks file existence, size, modified time, and
-age for known cache paths. It does not create directories or validate file
-contents. Paths with globs or templates, such as MRF directories and API
-response cache files, are reported as `pattern` so clients know to inspect the
-owning cache directory.
+`healthcare-data://cache/status` uses the shared cache-manager readiness model.
+Readiness is based on promoted manifests and validation status, not file
+existence alone. It reports source period, validation status, report eligibility,
+next actions, source caveats, and expected artifacts without downloading data or
+creating cache directories. Paths with globs or templates, such as MRF
+directories and API response cache files, are reported as `pattern` so clients
+know to inspect the owning cache directory or the `cache-manager` server.
 
 April 2026 expansion cache conventions:
 
@@ -126,9 +128,16 @@ Status values:
 
 | Status | Meaning |
 | --- | --- |
-| `ready` | File exists and is inside the configured TTL. |
-| `stale` | File exists but is older than the configured TTL. |
-| `missing` | File does not exist at the expected path. |
+| `ready` | A promoted manifest exists, validation passed/warned, the artifact exists, and it is inside the configured TTL. |
+| `stale` | A promoted artifact exists and validated, but it is older than the configured TTL. |
+| `missing` | No validated promoted artifact exists for a public downloadable dataset. |
+| `corrupt` | A promoted artifact exists but current validation fails. |
+| `partial` | Legacy cache files exist without a validating cache-manager manifest. |
+| `manual_import_required` | A source requires scoped local import before validation. |
+| `licensed_import_required` | A separately licensed source cannot be downloaded by cache-manager. |
+| `state_limited` | Source is a state-specific supplement and must not be used as national coverage. |
+| `env_required` | Required environment configuration is missing before readiness can be established. |
+| `unsupported` | Use the owning live/read-only tool; cache-manager does not acquire this dataset. |
 | `pattern` | Entry is a glob/template rather than one concrete file. |
 
 ## Client Flow
@@ -136,8 +145,9 @@ Status values:
 1. Read `healthcare-data://datasets/catalog` to choose datasets for the task.
 2. Read `/schema` resources for join keys and grain before combining outputs.
 3. Read `/source` resources for source URLs and cache file expectations.
-4. Read `healthcare-data://cache/status` before long workflows to identify
-   missing or stale local data.
+4. Read `healthcare-data://cache/status` or use the local `cache-manager`
+   server before long workflows to identify missing, stale, corrupt, partial,
+   import-only, env-required, unsupported, or state-limited data.
 5. Use `list_workflows` or `get_workflow_plan` to inspect executable task
    plans. Workflow summaries include `source_resolution`; full plans add
    step-level readiness, identity-map actions, MCP call templates, and report

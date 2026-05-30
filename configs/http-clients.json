@@ -76,6 +76,10 @@
     "hc-live-gateway": {
       "type": "http",
       "url": "http://localhost:8020/mcp"
+    },
+    "hc-cache-manager": {
+      "type": "http",
+      "url": "http://localhost:8021/mcp"
     }
   }
 }

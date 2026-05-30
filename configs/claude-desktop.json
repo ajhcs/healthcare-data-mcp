@@ -170,6 +170,15 @@
       "env": {
         "HC_MCP_ENV_FILE": "/absolute/path/to/healthcare-data-mcp/.env"
       }
+    },
+    "hc-cache-manager": {
+      "command": "hc-mcp",
+      "args": [
+        "cache-manager"
+      ],
+      "env": {
+        "HC_MCP_ENV_FILE": "/absolute/path/to/healthcare-data-mcp/.env"
+      }
     }
   }
 }

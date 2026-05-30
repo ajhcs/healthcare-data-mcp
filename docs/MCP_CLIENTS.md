@@ -74,6 +74,7 @@ Local HTTP ports are rendered into `configs/http-clients.json`:
 | `community-health` | `http://localhost:8018/mcp` | `metadata`, `live` |
 | `research-trials` | `http://localhost:8019/mcp` | `metadata`, `live` |
 | `live-gateway` | `http://localhost:8020/mcp` | `live` |
+| `cache-manager` | `http://localhost:8021/mcp` | none |
 
 Regenerate checked-in client configs after registry changes:
 

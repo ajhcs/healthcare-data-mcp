@@ -116,6 +116,12 @@
       "args": [
         "live-gateway"
       ]
+    },
+    "cache-manager": {
+      "command": "hc-mcp",
+      "args": [
+        "cache-manager"
+      ]
     }
   }
 }
