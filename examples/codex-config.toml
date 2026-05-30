@@ -81,6 +81,10 @@ args = ["research-trials"]
 command = "hc-mcp"
 args = ["live-gateway"]
 
+[mcp_servers.cacheManager]
+command = "hc-mcp"
+args = ["cache-manager"]
+
 # If the Docker Compose Streamable HTTP servers are already running, Codex can
 # connect to localhost instead of spawning stdio processes.
 [mcp_servers.serviceAreaHttp]
@@ -139,3 +143,6 @@ url = "http://127.0.0.1:8019/mcp"
 
 [mcp_servers.liveGatewayHttp]
 url = "http://127.0.0.1:8020/mcp"
+
+[mcp_servers.cacheManagerHttp]
+url = "http://127.0.0.1:8021/mcp"

@@ -359,6 +359,23 @@ SERVER_REGISTRY: tuple[ServerCapability, ...] = (
         workflow_roles=("compliance_exclusion_screening",),
         safety_notes=("HTTP/SSE live-gateway requires auth and should be deployed behind HTTPS.",),
     ),
+    ServerCapability(
+        "cache-manager",
+        "servers.cache_manager.server",
+        8021,
+        "Local-safe cache inspection, planning, validation, refresh, promotion, rollback, and lineage control plane",
+        optional_env=(
+            env("HC_MCP_CACHE_ROOT", "Optional cache root override for cache-manager operations."),
+            env("HC_MCP_CACHE_MANAGER_ALLOW_REMOTE_MUTATIONS", "Explicit opt-in for mutating HTTP deployments."),
+        ),
+        profiles=("cache", "operations"),
+        gateway_exposure=(),
+        dataset_ids=(),
+        safety_notes=(
+            "Read-only inspection and planning are safe by default; mutating tools are dataset allowlisted and cache-root scoped.",
+            "Remote metadata gateway does not expose cache-manager mutations.",
+        ),
+    ),
 )
 
 SERVER_BY_ID: dict[str, ServerCapability] = {spec.server_id: spec for spec in SERVER_REGISTRY}

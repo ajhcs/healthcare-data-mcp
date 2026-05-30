@@ -1116,7 +1116,7 @@ def build_workflow_plan(
     tool_reference_validation = validate_workflow_tool_references(workflow.workflow_id)
     workflow_contract_validation = validate_workflow_contracts(workflow.workflow_id)
     workflow_payload = asdict(workflow)
-    cache_entries = cache_status.get("entries", []) if isinstance(cache_status, dict) else []
+    cache_entries = _workflow_cache_entries(cache_status)
     workflow_payload["steps"] = [
         _workflow_step_payload(
             step,
@@ -1147,6 +1147,7 @@ def build_workflow_plan(
                 if server_id in SERVER_BY_ID
             ],
             "source_resolution": _workflow_source_resolution(workflow),
+            "cache_readiness": _workflow_cache_readiness(workflow, cache_entries),
             "examples": _workflow_examples(workflow.workflow_id),
             "evidence": evidence_receipt(
                 source_name="healthcare-data-mcp workflow registry",
@@ -2388,16 +2389,44 @@ def _is_placeholder(value: Any) -> bool:
 def _source_checks(required_sources: tuple[str, ...], cache_entries: list[Any]) -> list[dict[str, Any]]:
     checks: list[dict[str, Any]] = []
     for source in required_sources:
-        matching = [entry for entry in cache_entries if isinstance(entry, dict) and entry.get("dataset_id") == source]
+        canonical_sources = _canonical_dataset_ids_for_source(source)
+        matching = [
+            entry
+            for entry in cache_entries
+            if isinstance(entry, dict) and entry.get("dataset_id") in canonical_sources
+        ]
         if not matching:
-            checks.append({"dataset_id": source, "status": "not_checked", "cache_status": []})
+            checks.append(
+                {
+                    "source_id": source,
+                    "dataset_id": source,
+                    "canonical_dataset_ids": canonical_sources,
+                    "status": "not_checked",
+                    "cache_status": [],
+                }
+            )
             continue
-        statuses = sorted({str(entry.get("status") or "unknown") for entry in matching})
+        statuses = sorted({str(entry.get("readiness_status") or entry.get("status") or "unknown") for entry in matching})
+        aggregate_status = _aggregate_cache_status(statuses)
         checks.append(
             {
+                "source_id": source,
                 "dataset_id": source,
-                "status": "ready" if "ready" in statuses else statuses[0],
+                "canonical_dataset_ids": canonical_sources,
+                "status": aggregate_status,
                 "cache_status": statuses,
+                "validation_status": sorted(
+                    {str(entry.get("validation_status") or "") for entry in matching if entry.get("validation_status")}
+                ),
+                "source_period": sorted(
+                    {str(entry.get("source_period") or "") for entry in matching if entry.get("source_period")}
+                ),
+                "report_eligible": all(bool(entry.get("report_eligible")) for entry in matching),
+                "next_actions": [
+                    str(entry.get("next_action"))
+                    for entry in matching
+                    if str(entry.get("next_action") or "").strip()
+                ],
             }
         )
     return checks
@@ -2633,7 +2662,7 @@ def _workflow_readiness(
     cache_status: dict[str, Any],
 ) -> dict[str, Any]:
     missing_inputs = _missing_inputs(workflow.required_identifiers, inputs)
-    cache_entries = cache_status.get("entries", []) if isinstance(cache_status, dict) else []
+    cache_entries = _workflow_cache_entries(cache_status)
     missing_caches = _missing_cache_notes(workflow.required_sources, cache_entries)
     missing_required_env = _workflow_missing_required_env(workflow)
     optional_unavailable = _workflow_optional_unavailable(workflow)
@@ -2698,10 +2727,103 @@ def _missing_cache_notes(required_sources: tuple[str, ...], cache_entries: list[
         return []
     notes: list[str] = []
     for source in required_sources:
-        matching = [entry for entry in cache_entries if isinstance(entry, dict) and entry.get("dataset_id") == source]
-        if matching and not any(entry.get("status") == "ready" for entry in matching):
-            notes.append(f"{source}: {', '.join(sorted({str(entry.get('status')) for entry in matching}))}")
+        canonical_sources = _canonical_dataset_ids_for_source(source)
+        matching = [
+            entry
+            for entry in cache_entries
+            if isinstance(entry, dict) and entry.get("dataset_id") in canonical_sources
+        ]
+        if matching and not all((entry.get("readiness_status") or entry.get("status")) == "ready" for entry in matching):
+            statuses = ", ".join(
+                sorted({str(entry.get("readiness_status") or entry.get("status")) for entry in matching})
+            )
+            next_actions = [
+                str(entry.get("next_action"))
+                for entry in matching
+                if str(entry.get("next_action") or "").strip()
+            ]
+            suffix = f"; next={next_actions[0]}" if next_actions else ""
+            notes.append(f"{source}: {statuses}{suffix}")
+        elif not matching:
+            notes.append(f"{source}: not_checked")
     return notes
+
+
+def _workflow_cache_readiness(workflow: WorkflowDefinition, cache_entries: list[Any]) -> dict[str, Any]:
+    checks = _source_checks(workflow.required_sources, cache_entries)
+    counts: dict[str, int] = {}
+    blockers: list[dict[str, Any]] = []
+    for check in checks:
+        status = str(check.get("status") or "unknown")
+        counts[status] = counts.get(status, 0) + 1
+        if status not in {"ready", "live_api", "not_applicable"}:
+            blockers.append(
+                {
+                    "source_id": check.get("source_id"),
+                    "canonical_dataset_ids": check.get("canonical_dataset_ids", []),
+                    "status": status,
+                    "next_actions": check.get("next_actions", []),
+                }
+            )
+    return {
+        "status": "ready" if not blockers else "blocked",
+        "readiness_model": "validated_source_readiness_not_file_existence",
+        "required_sources": list(workflow.required_sources),
+        "checks": checks,
+        "status_counts": counts,
+        "blockers": blockers,
+        "missing_data_policy": "Missing cache data is an unknown, not a negative factual claim.",
+    }
+
+
+def _canonical_dataset_ids_for_source(source: str) -> list[str]:
+    alias = WORKFLOW_SOURCE_ALIASES.get(source)
+    if alias:
+        return [str(item) for item in alias.get("canonical_dataset_ids", ())]
+    return [source]
+
+
+def _workflow_cache_entries(cache_status: dict[str, Any] | None) -> list[Any]:
+    if not isinstance(cache_status, dict):
+        return []
+    datasets = cache_status.get("datasets")
+    if isinstance(datasets, list) and datasets:
+        return datasets
+    entries = cache_status.get("entries")
+    return entries if isinstance(entries, list) else []
+
+
+_CACHE_STATUS_SEVERITY = {
+    "corrupt": 90,
+    "env_required": 80,
+    "unsupported": 75,
+    "licensed_import_required": 70,
+    "manual_import_required": 70,
+    "state_limited": 65,
+    "partial": 60,
+    "missing": 50,
+    "stale": 40,
+    "pattern": 20,
+    "not_checked": 10,
+    "live_api": 0,
+    "not_applicable": 0,
+    "ready": 0,
+}
+
+
+def _aggregate_cache_status(statuses: list[str]) -> str:
+    normalized = {status or "unknown" for status in statuses}
+    if not normalized:
+        return "not_checked"
+    if normalized == {"ready"}:
+        return "ready"
+    if normalized <= {"ready", "stale"} and "stale" in normalized:
+        return "stale"
+    if "ready" in normalized and "missing" in normalized:
+        return "partial"
+    if "ready" in normalized and any(status not in {"ready", "not_checked", "live_api", "not_applicable"} for status in normalized):
+        return "partial"
+    return max(normalized, key=lambda status: _CACHE_STATUS_SEVERITY.get(status, 55))
 
 
 def _workflow_identity(inputs: dict[str, Any]):

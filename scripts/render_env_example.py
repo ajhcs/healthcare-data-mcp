@@ -47,6 +47,7 @@ DEFAULTS = {
     "MCP_LIVE_GATEWAY_ALLOW_NETWORK_BIND": "false",
     "MCP_LIVE_GATEWAY_ALLOWED_HOSTS": "localhost:8020,127.0.0.1:8020",
     "MCP_LIVE_GATEWAY_ALLOWED_ORIGINS": "http://localhost:*,http://127.0.0.1:*",
+    "HC_MCP_CACHE_MANAGER_ALLOW_REMOTE_MUTATIONS": "false",
     "MRF_MAX_DOWNLOAD_BYTES": "10737418240",
     "MRF_MIN_FREE_BYTES": "2147483648",
     "MRF_DOWNLOAD_PROGRESS_INTERVAL_BYTES": "104857600",
@@ -81,7 +82,7 @@ SECTIONS = (
     ),
     (
         "Local launcher and client helpers",
-        ("HC_MCP_ENV_FILE", "MCP_HOST"),
+        ("HC_MCP_ENV_FILE", "MCP_HOST", "HC_MCP_CACHE_ROOT"),
     ),
     (
         "Remote metadata gateway",
@@ -125,6 +126,12 @@ SECTIONS = (
             "MRF_MAX_DOWNLOAD_BYTES",
             "MRF_MIN_FREE_BYTES",
             "MRF_DOWNLOAD_PROGRESS_INTERVAL_BYTES",
+        ),
+    ),
+    (
+        "Cache manager guardrails",
+        (
+            "HC_MCP_CACHE_MANAGER_ALLOW_REMOTE_MUTATIONS",
         ),
     ),
 )
@@ -176,6 +183,7 @@ def render_env_example() -> str:
             lines.append("# Format: YourAppName your-real-email@domain.com")
         elif title == "Local launcher and client helpers":
             lines.append("# Docker Compose sets MCP_HOST=0.0.0.0 inside containers while published ports bind to 127.0.0.1.")
+            lines.append("# HC_MCP_CACHE_ROOT defaults to ~/.healthcare-data-mcp/cache when unset.")
         elif title == "Remote metadata gateway":
             lines.append("# Leave auth disabled for local-only development.")
             lines.append("# For production, terminate HTTPS at a reverse proxy and prefer SHA-256 token hashes.")
@@ -184,6 +192,8 @@ def render_env_example() -> str:
             lines.append("# Prefer MCP_LIVE_GATEWAY_TOKEN_SCOPES=<sha256>=mcp:read+mcp:bulk for selected bulk-screening tokens.")
             lines.append("# Global mcp:bulk is rejected unless MCP_LIVE_GATEWAY_ALLOW_GLOBAL_BULK_SCOPE=true.")
             lines.append("# MCP_LIVE_GATEWAY_ALLOW_NETWORK_BIND=true also requires HTTPS public URL and explicit Host/Origin allow-lists.")
+        elif title == "Cache manager guardrails":
+            lines.append("# Keep remote cache mutations disabled unless cache-manager is deployed behind explicit local-safe auth.")
 
         for name in names:
             comment = descriptions.get(name, "")

@@ -455,7 +455,15 @@ def format_doctor_report(report: dict[str, Any]) -> str:
             f"{summary.get('missing', 0)} missing"
         )
     for item in cache.get("not_ready_examples", []):
-        lines.append(f"  {item['status']} {item['relative_path']} ({item['dataset_id']})")
+        validation = item.get("validation_status") or "not_validated"
+        period = item.get("source_period") or "source_period_unknown"
+        eligible = "report eligible" if item.get("report_eligible") else "not report eligible"
+        lines.append(
+            f"  {item['status']} {item['relative_path']} ({item['dataset_id']}); "
+            f"validation={validation}; period={period}; {eligible}"
+        )
+        if item.get("next_action"):
+            lines.append(f"      next: {item['next_action']}")
 
     lines.append("")
     lines.append("Workflow readiness:")
@@ -716,17 +724,24 @@ def _cache_report(cache_root: str | Path | None) -> dict[str, Any]:
             {
                 "dataset_id": str(entry.get("dataset_id", "")),
                 "relative_path": str(entry.get("relative_path", "")),
-                "status": str(entry.get("status", "")),
+                "status": str(entry.get("readiness_status") or entry.get("status", "")),
+                "validation_status": str(entry.get("validation_status", "")),
+                "source_period": str(entry.get("source_period", "")),
+                "report_eligible": bool(entry.get("report_eligible", False)),
+                "next_action": str(entry.get("next_action", "")),
                 "ttl_days": entry.get("ttl_days"),
             }
             for entry in entries
-            if entry.get("status") != "ready"
+            if (entry.get("readiness_status") or entry.get("status")) != "ready"
         ][:10]
         return {
             "status": "ok",
             "cache_root": payload.get("cache_root", ""),
             "summary": payload.get("summary", {}),
             "entries": payload.get("entries", []),
+            "datasets": payload.get("datasets", []),
+            "readiness_model": payload.get("readiness_model", ""),
+            "allowed_states": payload.get("allowed_states", []),
             "not_ready_examples": not_ready,
         }
     except Exception as exc:
