@@ -1147,6 +1147,98 @@ WORKFLOW_DEFINITIONS: dict[str, WorkflowDefinition] = {
             },
         ),
     ),
+    "health_system_metrics": WorkflowDefinition(
+        workflow_id="health_system_metrics",
+        title="Health System Metrics",
+        description=(
+            "Return source-disciplined AHRQ Compendium 2023 health-system metrics with explicit snapshot "
+            "versus latest-public-overlay semantics for system counts, hospital beds, addresses, hospital type, "
+            "and physician count candidates."
+        ),
+        required_identifiers=("system_id",),
+        recommended_servers=WORKFLOW_PRESETS["health_system_metrics"],
+        required_sources=(
+            "ahrq_health_system_compendium",
+            "cms_hospital_general_info",
+            "cms_provider_of_services",
+        ),
+        steps=(
+            WorkflowToolStep(
+                "cache-manager",
+                "get_workflow_cache_readiness",
+                "Preflight AHRQ and optional CMS overlay cache readiness before interpreting missing overlay candidates.",
+                optional_inputs=("workflow_id", "inputs"),
+                required_sources=("ahrq_health_system_compendium", "cms_hospital_general_info", "cms_provider_of_services"),
+                blocking=False,
+            ),
+            WorkflowToolStep(
+                "health-system-profiler",
+                "list_health_system_metrics",
+                "Page through the AHRQ Compendium 2023 health-system universe with cursor and snapshot_id.",
+                optional_inputs=(
+                    "cursor",
+                    "page_size",
+                    "sort",
+                    "state",
+                    "state_scope",
+                    "as_of_mode",
+                    "include_facilities",
+                    "include_medicare_public_clinician_roster_estimate",
+                ),
+                required_sources=("ahrq_health_system_compendium",),
+                execution_notes=(
+                    "Default as_of_mode is compendium_snapshot; do not silently mix current CMS overlays into AHRQ 2023 values.",
+                ),
+            ),
+            WorkflowToolStep(
+                "health-system-profiler",
+                "get_health_system_metrics",
+                "Fetch one exact system metrics package after resolving health_sys_id.",
+                optional_inputs=(
+                    "system_id",
+                    "system_name",
+                    "as_of_mode",
+                    "include_facilities",
+                    "include_medicare_public_clinician_roster_estimate",
+                ),
+                required_sources=("ahrq_health_system_compendium",),
+                execution_notes=(
+                    "Use health_sys_id for system joins; use compendium_hospital_id as hospital row identity and CCN only as a join key.",
+                ),
+            ),
+        ),
+        caveats=(
+            "This workflow covers the AHRQ Compendium 2023 health-system universe, not an unqualified live registry of every U.S. health system.",
+            "AHRQ physician counts are Compendium counts, not a public roster of individually verified active physicians.",
+            "CMS HGI/POS values are latest-public-overlay candidates when requested and must remain separate from compendium_snapshot values.",
+        ),
+        identity_join_keys=("health_sys_id", "system_id", "compendium_hospital_id", "ccn"),
+        identity_strategy=(
+            "Use AHRQ health_sys_id for system-level joins.",
+            "Use compendium_hospital_id as the AHRQ hospital linkage row identity.",
+            "Use CCN as a cross-source facility join key, not guaranteed campus-level identity.",
+        ),
+        report_fact_rows=(
+            {
+                "label": "AHRQ health-system metrics page",
+                "value_path": "health_system_profiler.list_health_system_metrics.systems",
+                "required_evidence": "AHRQ Compendium 2023 metrics receipt",
+                "evidence_path": "health_system_profiler.list_health_system_metrics.systems[].evidence",
+                "source_metadata_path": "health_system_profiler.list_health_system_metrics.source_metadata",
+                "identity_map_path": "health_system_profiler.list_health_system_metrics.identity_map",
+                "identity_fields": ("health_sys_id", "system_id"),
+            },
+            {
+                "label": "Single AHRQ health-system metrics package",
+                "value_path": "health_system_profiler.get_health_system_metrics.system",
+                "required_evidence": "AHRQ Compendium 2023 system metrics receipt",
+                "evidence_path": "health_system_profiler.get_health_system_metrics.evidence",
+                "source_metadata_path": "health_system_profiler.get_health_system_metrics.source_metadata",
+                "identity_map_path": "health_system_profiler.get_health_system_metrics.identity_map",
+                "identity_fields": ("health_sys_id", "system_id"),
+            },
+        ),
+    ),
 }
 
 
@@ -1217,6 +1309,14 @@ WORKFLOW_EXAMPLE_INPUTS: dict[str, dict[str, Any]] = {
         "system_slug": "jefferson-health",
         "ccns": ["390223"],
         "required_fields": ["county_geoid", "system_bed_count", "facility_site_count"],
+    },
+    "health_system_metrics": {
+        "system_id": "HSI00000008",
+        "state": "PA",
+        "state_scope": "headquarters",
+        "as_of_mode": "compendium_snapshot",
+        "page_size": 25,
+        "system_name": "Jefferson Health",
     },
 }
 

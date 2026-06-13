@@ -51,6 +51,10 @@ try:
         reverse_geocode_coordinates,
     )
     from .system_discovery import fuzzy_search_systems, resolve_system_ccns
+    from .system_metrics import (
+        get_health_system_metric as assemble_health_system_metric,
+        list_health_system_metric_rows,
+    )
 except ImportError:
     sys.path.insert(0, str(Path(__file__).parent))
     from data_loaders import (
@@ -83,6 +87,10 @@ except ImportError:
         reverse_geocode_coordinates,
     )
     from system_discovery import fuzzy_search_systems, resolve_system_ccns
+    from system_metrics import (
+        get_health_system_metric as assemble_health_system_metric,
+        list_health_system_metric_rows,
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -480,6 +488,37 @@ async def _load_ahrq_hospitals() -> pd.DataFrame:
 async def _load_pos() -> pd.DataFrame:
     return await load_pos()
 
+
+async def _load_hospital_general_info_overlay() -> pd.DataFrame:
+    try:
+        from shared.utils.cms_client import load_hospital_general_info
+
+        return await load_hospital_general_info(normalize_columns=True)
+    except Exception:
+        logger.warning("CMS Hospital General Information overlay load failed", exc_info=True)
+        return pd.DataFrame()
+
+
+def _load_medicare_public_clinicians_overlay() -> pd.DataFrame:
+    """Load optional Doctors and Clinicians cache without forcing a huge download."""
+
+    candidates = [
+        _os.environ.get("HC_MCP_DOCTORS_CLINICIANS_CSV", ""),
+        str(Path.home() / ".healthcare-data-mcp" / "cache" / "doctors_clinicians_national_downloadable_file.csv"),
+        str(Path.home() / ".healthcare-data-mcp" / "cache" / "DAC_NationalDownloadableFile.csv"),
+    ]
+    for candidate in candidates:
+        if not candidate:
+            continue
+        path = Path(candidate)
+        if not path.exists():
+            continue
+        try:
+            return pd.read_csv(path, dtype=str, keep_default_na=False, encoding_errors="replace", low_memory=False)
+        except Exception:
+            logger.warning("CMS Doctors and Clinicians overlay cache read failed for %s", path, exc_info=True)
+    return pd.DataFrame()
+
 async def _search_nppes(**kwargs) -> list[dict]:
     return await search_nppes(**kwargs)
 
@@ -712,6 +751,199 @@ async def search_health_systems(query: str, limit: int = 10) -> dict[str, Any]:
     }
     return to_structured(
         _attach_system_row_evidence(payload, query=query_payload)
+    )
+
+
+@mcp.tool(structured_output=True)
+@observe_tool("health-system-profiler")
+async def list_health_system_metrics(
+    cursor: str | None = None,
+    page_size: int = 50,
+    sort: str = "health_sys_id",
+    state: str | None = None,
+    state_scope: str = "headquarters",
+    as_of_mode: str = "compendium_snapshot",
+    include_facilities: bool = False,
+    include_medicare_public_clinician_roster_estimate: bool = False,
+) -> dict[str, Any]:
+    """List AHRQ Compendium 2023 health-system metrics with source-vintage discipline.
+
+    Discovery
+    ---------
+    - Use this tool for cursor-paged national health-system metric inventory.
+    - Use get_health_system_metrics for one exact AHRQ health_sys_id.
+    - Default data_mode is compendium_snapshot, which does not silently prefer current CMS overlays.
+
+    When to use
+    -----------
+    - Use when an agent needs hospital counts, system beds, physician counts, or facility rows across the AHRQ 2023 universe.
+    - Use latest_public_overlay only when current CMS HGI/POS candidates are acceptable as later public overlays.
+    - NOT for: an unqualified live list of every legal health-system entity in the United States.
+
+    Parameters
+    ----------
+    cursor : str | None
+        Cursor returned by the previous response. Encodes snapshot_id, filters, and offset.
+    page_size : int
+        Number of systems to return. Capped at 100.
+    sort : str
+        One of health_sys_id, health_sys_name, state, hospital_count, or bed_count.
+    state : str | None
+        Optional two-letter state filter.
+    state_scope : str
+        headquarters or facility_presence. Facility presence is based on AHRQ hospital linkage rows.
+    as_of_mode : str
+        compendium_snapshot or latest_public_overlay.
+    include_facilities : bool
+        Include hospital rows with address/type/bed candidates.
+    include_medicare_public_clinician_roster_estimate : bool
+        Include an experimental Doctors and Clinicians NPI-deduped estimate when a local cache is configured.
+
+    Returns
+    -------
+    dict
+        Paged systems, universe metadata, coverage, evidence, source_metadata, identity_map, and next_actions.
+
+    Do / Don't
+    ----------
+    Do:
+    - Preserve universe, snapshot_id, data_mode, evidence, and source_metadata with cited facts.
+    - Keep compendium_snapshot values separate from latest_public_overlay candidates.
+
+    Don't:
+    - Treat state filters as all systems operating in a market; AHRQ aggregates at highest ownership level.
+    - Treat CCN as campus-level identity; use compendium_hospital_id for AHRQ linkage rows.
+
+    Examples
+    --------
+    {"jsonrpc":"2.0","id":"1","method":"tools/call","params":{"name":"list_health_system_metrics","arguments":{"page_size":25,"state":"PA","include_facilities":true}}}
+
+    Common mistakes
+    ---------------
+    - Calling this "every health system in America": say "AHRQ Compendium 2023 health-system universe."
+    - Mixing current CMS address/type values into 2023 snapshot metrics without data_mode and candidate caveats.
+    """
+
+    systems_df = await _load_ahrq_systems()
+    hospitals_df = await _load_ahrq_hospitals()
+    hgi_df = await _load_hospital_general_info_overlay() if as_of_mode == "latest_public_overlay" else pd.DataFrame()
+    pos_df = await _load_pos() if as_of_mode == "latest_public_overlay" else pd.DataFrame()
+    clinicians_df = (
+        _load_medicare_public_clinicians_overlay()
+        if include_medicare_public_clinician_roster_estimate
+        else pd.DataFrame()
+    )
+    return to_structured(
+        list_health_system_metric_rows(
+            systems_df=systems_df,
+            hospitals_df=hospitals_df,
+            cursor=cursor,
+            page_size=page_size,
+            sort=sort,
+            state=state,
+            state_scope=state_scope,
+            as_of_mode=as_of_mode,
+            include_facilities=include_facilities,
+            include_medicare_public_clinician_roster_estimate=include_medicare_public_clinician_roster_estimate,
+            hgi_df=hgi_df,
+            pos_df=pos_df,
+            clinicians_df=clinicians_df,
+        )
+    )
+
+
+@mcp.tool(structured_output=True)
+@observe_tool("health-system-profiler")
+async def get_health_system_metrics(
+    system_id: str | None = None,
+    system_name: str | None = None,
+    as_of_mode: str = "compendium_snapshot",
+    include_facilities: bool = True,
+    include_medicare_public_clinician_roster_estimate: bool = False,
+) -> dict[str, Any]:
+    """Get source-disciplined metrics for one AHRQ Compendium 2023 health system.
+
+    Discovery
+    ---------
+    - Prefer exact system_id from search_health_systems or list_health_system_metrics.
+    - Use system_name only for discovery; low-confidence fuzzy matches return candidate rows.
+
+    When to use
+    -----------
+    - Use for one source-backed health-system metric package with facility rows.
+    - Use latest_public_overlay only for dated CMS HGI/POS candidates alongside AHRQ snapshot values.
+    - NOT for: current legal ownership, PHI, or proprietary roster counts.
+
+    Parameters
+    ----------
+    system_id : str | None
+        Exact AHRQ health_sys_id. Preferred.
+    system_name : str | None
+        Name to resolve when system_id is unavailable.
+    as_of_mode : str
+        compendium_snapshot or latest_public_overlay.
+    include_facilities : bool
+        Include hospital-level address/type/bed candidates.
+    include_medicare_public_clinician_roster_estimate : bool
+        Include an experimental local-cache-only Doctors and Clinicians estimate.
+
+    Returns
+    -------
+    dict
+        System metrics, universe metadata, coverage, evidence, source_metadata, identity_map, and next_actions.
+
+    Do / Don't
+    ----------
+    Do:
+    - Cite AHRQ total_mds as "AHRQ Compendium physician count" with caveats.
+    - Cite hospital_bed_count primary values as AHRQ hospital linkage hos_beds in compendium_snapshot mode.
+
+    Don't:
+    - Silently replace AHRQ 2023 metrics with current CMS overlays.
+    - Use CCN as a campus-level unique hospital identity.
+
+    Examples
+    --------
+    {"jsonrpc":"2.0","id":"1","method":"tools/call","params":{"name":"get_health_system_metrics","arguments":{"system_id":"HSI00000008"}}}
+
+    Common mistakes
+    ---------------
+    - Passing a vague system_name and assuming the top fuzzy match is exact.
+    - Treating medicare_public_clinician_roster_estimate as a complete system physician roster.
+    """
+
+    if not system_id and not system_name:
+        return _system_error_response(
+            "Provide system_id or system_name.",
+            code="invalid_params",
+            query={"system_id": system_id or "", "system_name": system_name or "", "as_of_mode": as_of_mode},
+            match_basis="missing_required_identifier",
+            confidence="not_evaluated",
+            next_step="Retry with an exact AHRQ health_sys_id or a system_name to search.",
+        )
+
+    systems_df = await _load_ahrq_systems()
+    hospitals_df = await _load_ahrq_hospitals()
+    hgi_df = await _load_hospital_general_info_overlay() if as_of_mode == "latest_public_overlay" else pd.DataFrame()
+    pos_df = await _load_pos() if as_of_mode == "latest_public_overlay" else pd.DataFrame()
+    clinicians_df = (
+        _load_medicare_public_clinicians_overlay()
+        if include_medicare_public_clinician_roster_estimate
+        else pd.DataFrame()
+    )
+    return to_structured(
+        assemble_health_system_metric(
+            systems_df=systems_df,
+            hospitals_df=hospitals_df,
+            system_id=system_id,
+            system_name=system_name,
+            as_of_mode=as_of_mode,
+            include_facilities=include_facilities,
+            include_medicare_public_clinician_roster_estimate=include_medicare_public_clinician_roster_estimate,
+            hgi_df=hgi_df,
+            pos_df=pos_df,
+            clinicians_df=clinicians_df,
+        )
     )
 
 

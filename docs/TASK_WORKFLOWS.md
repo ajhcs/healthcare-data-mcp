@@ -324,6 +324,7 @@ The canonical workflow registry is rendered from
 | `referral_leakage_readiness` | `physician-referral-network`, `claims-analytics`, `drive-time` |
 | `system_reconciliation` | `health-system-profiler`, `cms-facility`, `provider-enrollment`, `web-intelligence` |
 | `profile_evidence_pack` | `health-system-profiler`, `cache-manager`, `provider-enrollment`, `web-intelligence` |
+| `health_system_metrics` | `health-system-profiler`, `cache-manager` |
 
 Use `hc-mcp doctor --json` to inspect machine-readable workflow readiness and
 missing requirements before handing a workflow to an agent. Doctor uses the
