@@ -98,7 +98,7 @@ used by setup, docs, and distribution checks.
 | Preset | Servers | Workflows |
 | --- | ---: | --- |
 | `compliance` | 4 | `compliance_exclusion_screening`, `ownership_chow_trace` |
-| `market-strategy` | 10 | `facility_profile`, `quality_profile`, `finance_profile`, `hospital_competitive_profile`, `system_reconciliation`, `profile_evidence_pack`, `market_community_health_scan`, `referral_leakage_readiness` |
+| `market-strategy` | 10 | `facility_profile`, `quality_profile`, `finance_profile`, `hospital_competitive_profile`, `system_reconciliation`, `profile_evidence_pack`, `health_system_metrics`, `market_community_health_scan`, `referral_leakage_readiness` |
 | `metadata-only` | 2 | `quality_measure_lookup` |
 | `research` | 3 | `research_trials_activity_profile` |
 
@@ -124,7 +124,7 @@ used by setup, docs, and distribution checks.
 | `drive-time` | 8004 | Routing, drive-time matrices, and access scoring | `cms_hospital_general_info` |
 | `hospital-quality` | 8005 | CMS quality, readmission, and safety data | `cms_cost_report`, `cms_hospital_general_info`, `cms_hospital_quality` |
 | `cms-facility` | 8006 | CMS facility master data and NPPES lookup | `cms_hospital_general_info`, `cms_provider_of_services`, `nppes_registry` |
-| `health-system-profiler` | 8007 | Health system discovery and facility enrichment | `ahrq_health_system_compendium`, `cms_provider_of_services`, `nppes_registry` |
+| `health-system-profiler` | 8007 | Health system discovery and facility enrichment | `ahrq_health_system_compendium`, `cms_hospital_general_info`, `cms_provider_of_services`, `cms_doctors_clinicians_national_downloadable_file`, `nppes_registry` |
 | `financial-intelligence` | 8008 | IRS 990, SEC EDGAR, and nonprofit finance intelligence | `ahrq_hfmd`, `nj_hospital_public_data`, `state_health_data` |
 | `price-transparency` | 8009 | Hospital MRF and benchmark pricing | `cms_price_transparency_mrf` |
 | `physician-referral-network` | 8010 | NPPES, physician mix, referral network, and leakage analysis | `dartmouth_hsa_hrr`, `docgraph_referrals`, `nppes_registry`, `physician_compare_utilization` |

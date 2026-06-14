@@ -1,0 +1,640 @@
+system_id,system_name,status,expected_hospital_count_total,expected_acute_hospital_count,expected_system_bed_count,expected_physician_count,expected_linked_hospital_rows,expected_linked_acute_rows,actual_hospital_count_total,actual_acute_hospital_count,actual_system_bed_count,actual_physician_count,actual_linked_hospital_rows,actual_linked_acute_rows
+HSI00000008,Adena Health System,pass,4,4,298,336,4,4,4,4,298,336,4,4
+HSI00000010,AdventHealth,pass,42,41,8809,3580,42,41,42,41,8809,3580,42,41
+HSI00000011,Adventist Health,pass,28,25,2976,1658,28,25,28,25,2976,1658,28,25
+HSI00000012,Adventist Healthcare,pass,6,4,866,707,6,4,6,4,866,707,6,4
+HSI00000018,Alameda Health System,pass,4,3,298,483,4,3,4,3,298,483,4,3
+HSI00000019,Albany Medical Center,pass,3,2,890,1383,3,2,3,2,890,1383,3,2
+HSI00000025,Allegheny Health Network,pass,11,11,2082,1850,11,11,11,11,2082,1850,11,11
+HSI00000026,Allegiance Health Management,pass,13,10,507,83,13,10,13,10,507,83,13,10
+HSI00000029,Allina Health,pass,13,12,1759,1808,13,12,13,12,1759,1808,13,12
+HSI00000032,Altru Health System,pass,2,1,198,241,2,1,2,1,198,241,2,1
+HSI00000034,Anderson Regional Health System,pass,2,2,303,85,2,2,2,2,303,85,2,2
+HSI00000036,Ann and Robert H Lurie Childrens Hospital of Chicago,pass,1,1,364,1303,1,1,1,1,364,1303,1,1
+HSI00000038,Luminis Health,pass,3,2,579,603,3,2,3,2,579,603,3,2
+HSI00000041,Appalachian Regional Healthcare,pass,14,14,713,289,14,14,14,14,713,289,14,14
+HSI00000045,Archbold Medical Center,pass,4,4,293,105,4,4,4,4,293,105,4,4
+HSI00000046,Ardent Health Services,pass,31,26,2800,917,31,26,31,26,2800,917,31,26
+HSI00000048,Jefferson Health,pass,9,7,3181,3811,9,7,9,7,3181,3811,9,7
+HSI00000050,Arkansas Childrens Hospital,pass,2,2,350,313,2,2,2,2,350,313,2,2
+HSI00000051,Armstrong County Memorial Hospital,pass,1,1,95,67,1,1,1,1,95,67,1,1
+HSI00000052,Arnot Health,pass,3,3,206,225,3,3,3,3,206,225,3,3
+HSI00000053,Arrowhead Regional Medical Center,pass,1,1,366,379,1,1,1,1,366,379,1,1
+HSI00000054,Asante Health System,pass,3,3,489,296,3,3,3,3,489,296,3,3
+HSI00000055,Ascension Health,pass,120,104,15162,9747,120,104,120,104,15162,9747,120,104
+HSI00000057,Aspirus,pass,16,16,699,640,16,16,16,16,699,640,16,16
+HSI00000059,Atlantic General Health System,pass,1,1,62,61,1,1,1,1,62,61,1,1
+HSI00000060,Atlantic Health System,pass,6,5,1568,1416,6,5,6,5,1568,1416,6,5
+HSI00000063,Augusta Health,pass,1,1,193,195,1,1,1,1,193,195,1,1
+HSI00000064,Augusta University Health System,pass,4,2,519,1064,4,2,4,2,519,1064,4,2
+HSI00000065,Aultman Health Foundation,pass,5,3,410,461,5,3,5,3,410,461,5,3
+HSI00000067,Pipeline Health,pass,7,7,808,145,7,7,7,7,808,145,7,7
+HSI00000068,Avera Health,pass,42,39,1324,971,42,39,42,39,1324,971,42,39
+HSI00000070,BJC Healthcare,pass,16,14,3180,4467,16,14,16,14,3180,4467,16,14
+HSI00000071,BMH,pass,2,1,25,86,2,1,2,1,25,86,2,1
+HSI00000073,Banner Health,pass,33,29,5258,3960,33,29,33,29,5258,3960,33,29
+HSI00000074,Baptist Health,pass,12,10,1512,616,12,10,12,10,1512,616,12,10
+HSI00000075,Baptist Health,pass,3,3,1170,949,3,3,3,3,1170,949,3,3
+HSI00000076,Baptist Health Care,pass,3,3,362,214,3,3,3,3,362,214,3,3
+HSI00000077,Baptist Health South Florida,pass,9,9,2246,1402,9,9,9,9,2246,1402,9,9
+HSI00000080,Baptist Healthcare System,pass,10,10,2045,1287,10,10,10,10,2045,1287,10,10
+HSI00000081,Baptist Memorial Health Care Corporation,pass,21,19,2368,1184,21,19,21,19,2368,1184,21,19
+HSI00000086,Barton Health,pass,2,2,86,135,2,2,2,2,86,135,2,2
+HSI00000087,Bassett Healthcare Network,pass,5,5,279,342,5,5,5,5,279,342,5,5
+HSI00000089,Baton Rouge General Health System,pass,2,2,425,193,2,2,2,2,425,193,2,2
+HSI00000090,Baxter Regional Medical Center,pass,1,1,169,75,1,1,1,1,169,75,1,1
+HSI00000094,Bayhealth,pass,2,2,396,321,2,2,2,2,396,321,2,2
+HSI00000096,Baylor Scott and White Health,pass,31,25,3840,3943,31,25,31,25,3840,3943,31,25
+HSI00000097,Baystate Health,pass,4,4,939,1153,4,4,4,4,939,1153,4,4
+HSI00000098,Beacon Health System,pass,5,4,702,468,5,4,5,4,702,468,5,4
+HSI00000100,Beaufort Memorial Hospital,pass,1,1,167,114,1,1,1,1,167,114,1,1
+HSI00000103,Beebe Healthcare,pass,1,1,210,191,1,1,1,1,210,191,1,1
+HSI00000105,Bellin Health Systems,pass,3,2,204,301,3,2,3,2,204,301,3,2
+HSI00000106,Beloit Health System,pass,1,1,97,121,1,1,1,1,97,121,1,1
+HSI00000107,Benefis Health System,pass,3,3,362,218,3,3,3,3,362,218,3,3
+HSI00000109,Berkshire Health Systems,pass,2,2,262,337,2,2,2,2,262,337,2,2
+HSI00000113,University Health System,pass,1,1,657,540,1,1,1,1,657,540,1,1
+HSI00000114,Billings Clinic,pass,13,13,474,620,13,13,13,13,474,620,13,13
+HSI00000116,Blanchard Valley Health System,pass,2,2,177,145,2,2,2,2,177,145,2,2
+HSI00000117,Blessing Health System,pass,2,2,334,233,2,2,2,2,334,233,2,2
+HSI00000118,Blount Memorial Hospital,pass,1,1,145,134,1,1,1,1,145,134,1,1
+HSI00000130,Boston Childrens Hospital,pass,1,1,485,2200,1,1,1,1,485,2200,1,1
+HSI00000131,Boston Medical Center,pass,1,1,442,1789,1,1,1,1,442,1789,1,1
+HSI00000132,Boulder Community Health,pass,1,1,139,207,1,1,1,1,139,207,1,1
+HSI00000135,Bozeman Deaconess Hospital,pass,1,1,139,189,1,1,1,1,139,189,1,1
+HSI00000139,Bronson Healthcare Group,pass,5,4,602,538,5,4,5,4,602,538,5,4
+HSI00000140,BronxCare Health System,pass,1,1,454,415,1,1,1,1,454,415,1,1
+HSI00000143,Bryan Health,pass,8,8,700,250,8,8,8,8,700,250,8,8
+HSI00000146,Butler Health System,pass,2,2,332,317,2,2,2,2,332,317,2,2
+HSI00000147,CAMC Health System,pass,8,8,1087,727,8,8,8,8,1087,727,8,8
+HSI00000148,CGH Medical Center,pass,1,1,95,70,1,1,1,1,95,70,1,1
+HSI00000152,Christus Health,pass,32,26,3916,1928,32,26,32,26,3916,1928,32,26
+HSI00000154,Cabell Huntington Hospital,pass,3,3,740,848,3,3,3,3,740,848,3,3
+HSI00000155,CalvertHealth,pass,1,1,78,65,1,1,1,1,78,65,1,1
+HSI00000156,Cambridge Health Alliance,pass,1,1,225,533,1,1,1,1,225,533,1,1
+HSI00000159,Campbell County Health,pass,1,1,66,79,1,1,1,1,66,79,1,1
+HSI00000161,Cape Cod Healthcare,pass,2,2,320,491,2,2,2,2,320,491,2,2
+HSI00000162,Cape Fear Valley Health System,pass,6,4,811,507,6,4,6,4,811,507,6,4
+HSI00000164,Capital Health System,pass,2,2,382,514,2,2,2,2,382,514,2,2
+HSI00000165,Capital Region Health Care,pass,3,3,317,372,3,3,3,3,317,372,3,3
+HSI00000166,Care New England Health System,pass,3,2,570,1262,3,2,3,2,570,1262,3,2
+HSI00000169,Carepoint Health,pass,3,3,408,208,3,3,3,3,408,208,3,3
+HSI00000170,Carilion Clinic,pass,7,7,838,1111,7,7,7,7,838,1111,7,7
+HSI00000171,Caromont Health System,pass,1,1,424,272,1,1,1,1,424,272,1,1
+HSI00000172,CarolinaEast Health System,pass,1,1,306,160,1,1,1,1,306,160,1,1
+HSI00000178,Carson Tahoe Health,pass,3,1,175,114,3,1,3,1,175,114,3,1
+HSI00000180,Skagit Regional Health,pass,2,2,185,282,2,2,2,2,185,282,2,2
+HSI00000182,Catawba Valley Medical Center,pass,1,1,200,103,1,1,1,1,200,103,1,1
+HSI00000186,Catholic Health,pass,6,6,1724,747,6,6,6,6,1724,747,6,6
+HSI00000188,Catholic Medical Center,pass,1,1,262,158,1,1,1,1,262,158,1,1
+HSI00000189,Cayuga Medical Center,pass,2,2,114,160,2,2,2,2,114,160,2,2
+HSI00000190,Cedars Sinai Health System,pass,4,4,1972,3754,4,4,4,4,1972,3754,4,4
+HSI00000192,Centra Health,pass,5,4,562,381,5,4,5,4,562,381,5,4
+HSI00000193,CentraCare,pass,10,10,650,585,10,10,10,10,650,585,10,10
+HSI00000194,Centrastate Healthcare System,pass,1,1,240,92,1,1,1,1,240,92,1,1
+HSI00000197,Central Maine Healthcare Corporation,pass,3,3,237,272,3,3,3,3,237,272,3,3
+HSI00000203,Erlanger Health System,pass,3,3,800,573,3,3,3,3,800,573,3,3
+HSI00000205,Chesapeake Regional Healthcare,pass,1,1,302,139,1,1,1,1,302,139,1,1
+HSI00000206,Cheyenne Regional Medical Center,pass,2,1,147,162,2,1,2,1,147,162,2,1
+HSI00000207,Childrens Minnesota,pass,2,2,420,414,2,2,2,2,420,414,2,2
+HSI00000208,Childrens Health,pass,3,3,448,546,3,3,3,3,448,546,3,3
+HSI00000209,Childrens Healthcare of Atlanta,pass,2,2,649,933,2,2,2,2,649,933,2,2
+HSI00000210,Childrens Hospital Los Angeles,pass,1,1,413,809,1,1,1,1,413,809,1,1
+HSI00000211,Akron Childrens Hospital,pass,1,1,408,442,1,1,1,1,408,442,1,1
+HSI00000212,Childrens Hospital and Health System,pass,2,2,340,508,2,2,2,2,340,508,2,2
+HSI00000213,Childrens Hospital and Medical Center,pass,1,1,186,317,1,1,1,1,186,317,1,1
+HSI00000214,CHOC Childrens,pass,2,2,334,809,2,2,2,2,334,809,2,2
+HSI00000215,Childrens Hospital of the Kings Daughters Health System,pass,1,1,202,448,1,1,1,1,202,448,1,1
+HSI00000216,Childrens National Health System,pass,2,1,323,1071,2,1,2,1,323,1071,2,1
+HSI00000217,Childrens of Alabama,pass,1,1,351,492,1,1,1,1,351,492,1,1
+HSI00000218,ChristianaCare,pass,2,2,1296,1054,2,2,2,2,1296,1054,2,2
+HSI00000224,Cincinnati Childrens Hospital Medical Center,pass,1,1,711,1177,1,1,1,1,711,1177,1,1
+HSI00000225,Citizens Memorial Healthcare,pass,1,1,52,86,1,1,1,1,52,86,1,1
+HSI00000226,Emanate Health,pass,3,3,586,158,3,3,3,3,586,158,3,3
+HSI00000229,Olympic Medical Center,pass,1,1,78,149,1,1,1,1,78,149,1,1
+HSI00000235,Colquitt Regional Medical Center,pass,1,1,100,82,1,1,1,1,100,82,1,1
+HSI00000236,Columbia Memorial Health,pass,1,1,192,127,1,1,1,1,192,127,1,1
+HSI00000240,Columbus Regional Health,pass,1,1,213,140,1,1,1,1,213,140,1,1
+HSI00000242,Comanche County Memorial Hospital,pass,1,1,201,162,1,1,1,1,201,162,1,1
+HSI00000244,Commonwealth Health Corporation,pass,6,5,413,153,6,5,6,5,413,153,6,5
+HSI00000246,Community Foundation of Northwest Indiana,pass,4,3,707,445,4,3,4,3,707,445,4,3
+HSI00000248,Community Health Network,pass,10,5,1118,1009,10,5,10,5,1118,1009,10,5
+HSI00000249,Community Health Systems,pass,81,77,9046,3738,81,77,81,77,9046,3738,81,77
+HSI00000251,Community Hospital Corporation,pass,20,11,772,409,20,11,20,11,772,409,20,11
+HSI00000253,Community Medical Centers,pass,4,2,1135,351,4,2,4,2,1135,351,4,2
+HSI00000255,Community Memorial Health System,pass,2,2,254,282,2,2,2,2,254,282,2,2
+HSI00000263,Cone Health,pass,3,3,936,723,3,3,3,3,936,723,3,3
+HSI00000264,Conejos County Hospital Corporation,pass,2,2,66,56,2,2,2,2,66,56,2,2
+HSI00000266,Confluence Health,pass,3,2,198,344,3,2,3,2,198,344,3,2
+HSI00000268,Connecticut Childrens Medical Center Foundation,pass,1,1,187,377,1,1,1,1,187,377,1,1
+HSI00000270,Contra Costa Health Services,pass,1,1,124,366,1,1,1,1,124,366,1,1
+HSI00000271,Conway Medical Center,pass,1,1,171,169,1,1,1,1,171,169,1,1
+HSI00000272,Conway Regional Health System,pass,3,2,194,89,3,2,3,2,194,89,3,2
+HSI00000273,Cook Childrens Health Care System,pass,2,2,447,485,2,2,2,2,447,485,2,2
+HSI00000274,Cook County Health and Hospital System,pass,2,2,460,922,2,2,2,2,460,922,2,2
+HSI00000275,Cookeville Regional Health System,pass,1,1,212,84,1,1,1,1,212,84,1,1
+HSI00000283,Cottage Health System,pass,4,3,397,214,4,3,4,3,397,214,4,3
+HSI00000286,Covenant Health,pass,10,9,1162,497,10,9,10,9,1162,497,10,9
+HSI00000287,Covenant Health Systems,pass,3,3,399,352,3,3,3,3,399,352,3,3
+HSI00000288,Covenant Medical Center,pass,1,1,464,506,1,1,1,1,464,506,1,1
+HSI00000290,CoxHealth,pass,5,4,986,836,5,4,5,4,986,836,5,4
+HSI00000297,DCH Health System,pass,3,3,433,90,3,3,3,3,433,90,3,3
+HSI00000298,Parkland Health and Hospital System,pass,1,1,787,313,1,1,1,1,787,313,1,1
+HSI00000299,Dartmouth-Hitchcock,pass,8,8,771,1725,8,8,8,8,771,1725,8,8
+HSI00000300,Davis Health System,pass,3,3,127,62,3,3,3,3,127,62,3,3
+HSI00000301,Day Kimball Healthcare,pass,1,1,104,60,1,1,1,1,104,60,1,1
+HSI00000302,Dayton Childrens,pass,1,1,181,286,1,1,1,1,181,286,1,1
+HSI00000305,Deaconess Health System,pass,8,6,834,596,8,6,8,6,834,596,8,6
+HSI00000306,Delta Health System,pass,4,3,282,65,4,3,4,3,282,65,4,3
+HSI00000307,Denver Health and Hospital Authority,pass,1,1,396,649,1,1,1,1,396,649,1,1
+HSI00000318,DHR Health,pass,2,2,399,180,2,2,2,2,399,180,2,2
+HSI00000319,Alomere Health,pass,1,1,99,59,1,1,1,1,99,59,1,1
+HSI00000320,Doylestown Health,pass,1,1,247,198,1,1,1,1,247,198,1,1
+HSI00000321,Driscoll Childrens Hospital,pass,1,1,215,171,1,1,1,1,215,171,1,1
+HSI00000323,Duke University Health System,pass,3,3,1535,3437,3,3,3,3,1535,3437,3,3
+HSI00000325,East Alabama Medical Center,pass,2,2,277,128,2,2,2,2,277,128,2,2
+HSI00000327,East Tennessee Childrens Hospital Association,pass,1,1,,153,1,1,1,1,,153,1,1
+HSI00000330,Northern Light Health,pass,11,10,637,803,11,10,11,10,637,803,11,10
+HSI00000335,Eisenhower Health,pass,1,1,362,504,1,1,1,1,362,504,1,1
+HSI00000336,El Camino Health,pass,2,2,388,213,2,2,2,2,388,213,2,2
+HSI00000338,Solutionhealth,pass,2,2,353,556,2,2,2,2,353,556,2,2
+HSI00000339,Ellis Medicine,pass,2,2,270,177,2,2,2,2,270,177,2,2
+HSI00000340,Emerson Hospital Health System,pass,1,1,111,176,1,1,1,1,111,176,1,1
+HSI00000342,Emory Healthcare,pass,9,7,2250,3268,9,7,9,7,2250,3268,9,7
+HSI00000345,Enloe Medical Center,pass,1,1,258,185,1,1,1,1,258,185,1,1
+HSI00000346,Ephraim Mcdowell Health,pass,3,3,207,74,3,3,3,3,207,74,3,3
+HSI00000347,Episcopal Health Services,pass,1,1,140,112,1,1,1,1,140,112,1,1
+HSI00000349,Eskenazi Health,pass,1,1,314,350,1,1,1,1,314,350,1,1
+HSI00000350,Essentia Health,pass,18,18,966,1166,18,18,18,18,966,1166,18,18
+HSI00000352,Evangelical Community Hospital,pass,1,1,119,102,1,1,1,1,119,102,1,1
+HSI00000353,EvergreenHealth,pass,2,2,330,447,2,2,2,2,330,447,2,2
+HSI00000354,Excela Health,pass,3,3,431,268,3,3,3,3,431,268,3,3
+HSI00000355,Exeter Health Resources,pass,1,1,99,171,1,1,1,1,99,171,1,1
+HSI00000356,Fairfield Medical Center,pass,1,1,185,127,1,1,1,1,185,127,1,1
+HSI00000357,Fairview Health Services,pass,13,11,1636,3184,13,11,13,11,1636,3184,13,11
+HSI00000358,Faith Regional Health Services,pass,4,4,173,210,4,4,4,4,173,210,4,4
+HSI00000360,Boys Town National Research Hospital,pass,1,1,52,97,1,1,1,1,52,97,1,1
+HSI00000362,Finger Lakes Regional Health System,pass,2,2,142,76,2,2,2,2,142,76,2,2
+HSI00000363,Firelands Regional Health System,pass,1,1,149,99,1,1,1,1,149,99,1,1
+HSI00000365,FirstHealth of the Carolinas,pass,3,3,415,227,3,3,3,3,415,227,3,3
+HSI00000367,Fisher Titus Medical Center,pass,1,1,78,58,1,1,1,1,78,58,1,1
+HSI00000368,Florida Health Sciences Center,pass,2,1,1017,528,2,1,2,1,1017,528,2,1
+HSI00000371,Forrest Health,pass,8,8,673,156,8,8,8,8,673,156,8,8
+HSI00000375,Franciscan Health,pass,14,13,1366,1204,14,13,14,13,1366,1204,14,13
+HSI00000376,Franciscan Missionaries of Our Lady Health System,pass,11,9,1940,1138,11,9,11,9,1940,1138,11,9
+HSI00000380,Frederick Regional Health System,pass,1,1,279,180,1,1,1,1,279,180,1,1
+HSI00000381,Freeman Health System,pass,2,2,384,282,2,2,2,2,384,282,2,2
+HSI00000382,Freeport Health Network,pass,1,1,100,71,1,1,1,1,100,71,1,1
+HSI00000386,Froedtert and the Medical College of Wisconsin,pass,6,6,1061,2406,6,6,6,6,1061,2406,6,6
+HSI00000388,Geisinger,pass,9,9,1292,2057,9,9,9,9,1292,2057,9,9
+HSI00000391,Genesis Healthcare System,pass,1,1,277,215,1,1,1,1,277,215,1,1
+HSI00000394,Gerald Champion Regional Medical Center,pass,1,1,66,54,1,1,1,1,66,54,1,1
+HSI00000401,Glens Falls Hospital,pass,1,1,391,99,1,1,1,1,391,99,1,1
+HSI00000402,Golden Valley Memorial Healthcare,pass,1,1,42,54,1,1,1,1,42,54,1,1
+HSI00000405,Good Samaritan,pass,1,1,99,145,1,1,1,1,99,145,1,1
+HSI00000412,Grady Health System,pass,1,1,707,357,1,1,1,1,707,357,1,1
+HSI00000415,Grand View Hospital,pass,1,1,180,129,1,1,1,1,180,129,1,1
+HSI00000416,Grande Ronde Hospital and Clinics,pass,1,1,25,50,1,1,1,1,25,50,1,1
+HSI00000421,Great River Health Systems,pass,1,1,174,154,1,1,1,1,174,154,1,1
+HSI00000422,GBMC Healthcare,pass,1,1,265,559,1,1,1,1,265,559,1,1
+HSI00000423,Garnet Health,pass,3,3,420,213,3,3,3,3,420,213,3,3
+HSI00000428,Gundersen Health System,pass,8,8,399,730,8,8,8,8,399,730,8,8
+HSI00000430,Guthrie Healthcare System,pass,5,5,426,509,5,5,5,5,426,509,5,5
+HSI00000439,Hackensack Meridian Health,pass,13,10,3075,2152,13,10,13,10,3075,2152,13,10
+HSI00000441,Halifax Health,pass,2,2,576,253,2,2,2,2,576,253,2,2
+HSI00000444,Hamilton Health Care System,pass,1,1,239,147,1,1,1,1,239,147,1,1
+HSI00000445,Hannibal Regional Healthcare System,pass,1,1,86,116,1,1,1,1,86,116,1,1
+HSI00000451,Harris Health System,pass,1,1,595,495,1,1,1,1,595,495,1,1
+HSI00000452,Hartford Healthcare,pass,10,8,1674,1704,10,8,10,8,1674,1704,10,8
+HSI00000454,Hawaii Health Systems Corporation,pass,11,10,385,328,11,10,11,10,385,328,11,10
+HSI00000455,Hawaii Pacific Health,pass,4,4,602,832,4,4,4,4,602,832,4,4
+HSI00000461,Health First,pass,4,4,904,419,4,4,4,4,904,419,4,4
+HSI00000464,HealthPartners,pass,10,10,1002,2197,10,10,10,10,1002,2197,10,10
+HSI00000466,Healthcare Authority for Baptist Health,pass,3,3,611,256,3,3,3,3,611,256,3,3
+HSI00000467,Huntsville Hospital Health System,pass,8,8,1571,526,8,8,8,8,1571,526,8,8
+HSI00000471,Hendrick Health System,pass,3,3,656,206,3,3,3,3,656,206,3,3
+HSI00000472,Hendricks Regional Health,pass,2,1,130,189,2,1,2,1,130,189,2,1
+HSI00000473,Hennepin Healthcare,pass,1,1,347,573,1,1,1,1,347,573,1,1
+HSI00000474,Henry Community Health,pass,1,1,48,57,1,1,1,1,48,57,1,1
+HSI00000475,Henry Ford Health,pass,6,5,1787,3796,6,5,6,5,1787,3796,6,5
+HSI00000476,Heritage Valley Health System,pass,3,3,365,227,3,3,3,3,365,227,3,3
+HSI00000478,Heywood Healthcare,pass,2,2,135,85,2,2,2,2,135,85,2,2
+HSI00000484,Hoag Memorial Hospital Presbyterian,pass,2,1,512,597,2,1,2,1,512,597,2,1
+HSI00000488,Holy Redeemer Health System,pass,1,1,213,164,1,1,1,1,213,164,1,1
+HSI00000490,Holzer Health System,pass,2,2,172,153,2,2,2,2,172,153,2,2
+HSI00000491,HonorHealth,pass,7,6,1406,753,7,6,7,6,1406,753,7,6
+HSI00000492,HCA Healthcare,pass,185,167,37395,15120,185,167,185,167,37395,15120,185,167
+HSI00000496,Hospital Sisters Health System,pass,17,17,1705,761,17,17,17,17,1705,761,17,17
+HSI00000497,Houston Healthcare,pass,2,2,293,85,2,2,2,2,293,85,2,2
+HSI00000502,Hunterdon Healthcare System,pass,1,1,184,314,1,1,1,1,184,314,1,1
+HSI00000505,Hurley Medical Center,pass,1,1,369,184,1,1,1,1,369,184,1,1
+HSI00000507,Integris Health,pass,10,10,1169,673,10,10,10,10,1169,673,10,10
+HSI00000510,Indiana University Health,pass,14,13,2429,3440,14,13,14,13,2429,3440,14,13
+HSI00000511,Infirmary Health System,pass,5,4,769,359,5,4,5,4,769,359,5,4
+HSI00000513,Inova Health System,pass,5,5,1682,2093,5,5,5,5,1682,2093,5,5
+HSI00000514,Inspira Health Network,pass,4,4,679,302,4,4,4,4,679,302,4,4
+HSI00000515,Interfaith Medical Center,pass,1,1,,80,1,1,1,1,,80,1,1
+HSI00000516,Intermountain Healthcare,pass,33,31,3938,3903,33,31,33,31,3938,3903,33,31
+HSI00000518,Iredell Health System,pass,1,1,155,50,1,1,1,1,155,50,1,1
+HSI00000523,Jackson Health System,pass,3,1,1608,1291,3,1,3,1,1608,1291,3,1
+HSI00000526,Jefferson Healthcare,pass,2,1,25,61,2,1,2,1,25,61,2,1
+HSI00000527,Jefferson Hospital Association,pass,1,1,245,62,1,1,1,1,245,62,1,1
+HSI00000530,John Muir Health,pass,3,2,610,1117,3,2,3,2,610,1117,3,2
+HSI00000531,Johns Hopkins Health System,pass,6,6,2402,4638,6,6,6,6,2402,4638,6,6
+HSI00000536,Kaiser Permanente,pass,41,40,9337,25893,41,40,41,40,9337,25893,41,40
+HSI00000537,Kaleida Health,pass,4,4,1176,387,4,4,4,4,1176,387,4,4
+HSI00000538,Logan Health,pass,6,5,301,338,6,5,6,5,301,338,6,5
+HSI00000539,Katherine Shaw Bethea Hospital,pass,1,1,80,50,1,1,1,1,80,50,1,1
+HSI00000540,Kaweah Delta Health Care District,pass,1,1,430,261,1,1,1,1,430,261,1,1
+HSI00000546,Kettering Health,pass,8,7,1217,855,8,7,8,7,1217,855,8,7
+HSI00000553,Kootenai Health,pass,2,2,349,305,2,2,2,2,349,305,2,2
+HSI00000554,Kuakini Health System,pass,1,1,170,54,1,1,1,1,170,54,1,1
+HSI00000555,LCMC Health System,pass,11,10,1895,1120,11,10,11,10,1895,1120,11,10
+HSI00000559,LSU Healthcare Services Division,pass,1,1,24,1111,1,1,1,1,24,1111,1,1
+HSI00000564,Lake Charles Memorial Health System,pass,2,1,227,200,2,1,2,1,227,200,2,1
+HSI00000567,Lake Region Healthcare,pass,2,2,90,70,2,2,2,2,90,70,2,2
+HSI00000568,Lake Regional Health System,pass,1,1,105,82,1,1,1,1,105,82,1,1
+HSI00000569,Lakeland Regional Health,pass,1,1,764,281,1,1,1,1,764,281,1,1
+HSI00000575,Lee Health,pass,3,3,1659,583,3,3,3,3,1659,583,3,3
+HSI00000576,Legacy Health,pass,7,7,1005,1545,7,7,7,7,1005,1545,7,7
+HSI00000577,Lehigh Valley Health Network,pass,10,9,1679,1706,10,9,10,9,1679,1706,10,9
+HSI00000579,Lexington Medical Center,pass,1,1,541,492,1,1,1,1,541,492,1,1
+HSI00000581,Licking Memorial Health Systems,pass,1,1,219,144,1,1,1,1,219,144,1,1
+HSI00000582,LifeBridge Health,pass,6,4,817,727,6,4,6,4,817,727,6,4
+HSI00000584,Lifepoint Health,pass,79,61,5841,2898,79,61,79,61,5841,2898,79,61
+HSI00000585,Lifespan,pass,4,3,963,1486,4,3,4,3,963,1486,4,3
+HSI00000591,Loma Linda University Health,pass,4,3,912,1611,4,3,4,3,912,1611,4,3
+HSI00000593,Los Angeles County Department of Health Services,pass,4,3,1190,2216,4,3,4,3,1190,2216,4,3
+HSI00000608,Main Line Health,pass,5,4,1049,1084,5,4,5,4,1049,1084,5,4
+HSI00000610,MaineGeneral Health,pass,1,1,186,349,1,1,1,1,186,349,1,1
+HSI00000611,MaineHealth,pass,10,9,1134,1631,10,9,10,9,1134,1631,10,9
+HSI00000612,Major Health Partners,pass,1,1,46,76,1,1,1,1,46,76,1,1
+HSI00000613,Bitterroot Health,pass,1,1,25,66,1,1,1,1,25,66,1,1
+HSI00000614,Margaret Mary Health,pass,1,1,25,62,1,1,1,1,25,62,1,1
+HSI00000615,Valleywise Health,pass,1,1,301,389,1,1,1,1,301,389,1,1
+HSI00000616,MarinHealth,pass,1,1,310,239,1,1,1,1,310,239,1,1
+HSI00000619,Marshall Medical Center,pass,1,1,111,96,1,1,1,1,111,96,1,1
+HSI00000621,Marshfield Clinic Health System,pass,12,12,603,959,12,12,12,12,603,959,12,12
+HSI00000623,Mary Lanning Healthcare,pass,1,1,97,59,1,1,1,1,97,59,1,1
+HSI00000624,Mary Washington Healthcare,pass,3,2,502,333,3,2,3,2,502,333,3,2
+HSI00000630,Maury Regional Medical Center,pass,3,3,299,139,3,3,3,3,299,139,3,3
+HSI00000631,Mayo Clinic Health System,pass,26,25,2792,7577,26,25,26,25,2792,7577,26,25
+HSI00000636,McLaren Health Care Corporation,pass,13,11,1600,1331,13,11,13,11,1600,1331,13,11
+HSI00000637,McLeod Health,pass,6,5,846,587,6,5,6,5,846,587,6,5
+HSI00000639,Meadville Medical Center,pass,2,2,225,117,2,2,2,2,225,117,2,2
+HSI00000640,MedStar Health,pass,10,9,2405,3558,10,9,10,9,2405,3558,10,9
+HSI00000642,Medisys Health Network,pass,2,2,528,402,2,2,2,2,528,402,2,2
+HSI00000644,Medical University of South Carolina Medical Center,pass,8,8,1565,2831,8,8,8,8,1565,2831,8,8
+HSI00000648,Memorial Health System,pass,7,7,711,365,7,7,7,7,711,365,7,7
+HSI00000649,Memorial Health System,pass,3,3,219,230,3,3,3,3,219,230,3,3
+HSI00000652,Memorial Healthcare,pass,1,1,113,91,1,1,1,1,113,91,1,1
+HSI00000653,Memorial Healthcare System,pass,5,5,1697,982,5,5,5,5,1697,982,5,5
+HSI00000654,Memorial Hermann Healthcare System,pass,11,7,3548,1334,11,7,11,7,3548,1334,11,7
+HSI00000655,Memorial Hospital at Gulfport,pass,2,2,285,215,2,2,2,2,285,215,2,2
+HSI00000658,MemorialCare Health System,pass,4,4,1191,1876,4,4,4,4,1191,1876,4,4
+HSI00000660,Mercy,pass,45,37,4363,3277,45,37,45,37,4363,3277,45,37
+HSI00000663,Mercy Medical Center,pass,1,1,173,352,1,1,1,1,173,352,1,1
+HSI00000666,Mercy Medical Center,pass,1,1,216,193,1,1,1,1,216,193,1,1
+HSI00000667,Mercyhealth,pass,4,4,414,683,4,4,4,4,414,683,4,4
+HSI00000671,Meritus Health,pass,1,1,265,230,1,1,1,1,265,230,1,1
+HSI00000672,Methodist Health System,pass,3,3,540,505,3,3,3,3,540,505,3,3
+HSI00000673,Methodist Health System,pass,8,7,1266,454,8,7,8,7,1266,454,8,7
+HSI00000675,Methodist Le Bonheur Healthcare,pass,3,2,1395,828,3,2,3,2,1395,828,3,2
+HSI00000678,Nicklaus Childrens Health System,pass,1,1,278,456,1,1,1,1,278,456,1,1
+HSI00000683,Middlesex Health System,pass,1,1,187,257,1,1,1,1,187,257,1,1
+HSI00000684,Midland County Hospital District,pass,1,1,268,107,1,1,1,1,268,107,1,1
+HSI00000686,Lecom Health,pass,2,2,144,105,2,2,2,2,144,105,2,2
+HSI00000694,Missouri Delta Medical Center,pass,1,1,98,56,1,1,1,1,98,56,1,1
+HSI00000697,Mohawk Valley Health System,pass,1,1,346,192,1,1,1,1,346,192,1,1
+HSI00000700,Montefiore Medical Center,pass,8,7,2370,3042,8,7,8,7,2370,3042,8,7
+HSI00000705,Mosaic Life Care,pass,5,4,421,269,5,4,5,4,421,269,5,4
+HSI00000710,Mount Nittany Health System,pass,1,1,248,176,1,1,1,1,248,176,1,1
+HSI00000711,Mount Sinai Health System,pass,5,4,2429,4355,5,4,5,4,2429,4355,5,4
+HSI00000712,Mount Sinai Medical Center of Florida,pass,1,1,481,421,1,1,1,1,481,421,1,1
+HSI00000714,Multicare Health System,pass,11,9,1536,1499,11,9,11,9,1536,1499,11,9
+HSI00000715,Munson Healthcare,pass,10,10,624,137,10,10,10,10,624,137,10,10
+HSI00000716,NCH Healthcare System,pass,1,1,517,303,1,1,1,1,517,303,1,1
+HSI00000717,NYU Langone Health,pass,5,4,1780,4478,5,4,5,4,1780,4478,5,4
+HSI00000720,National Jewish Health,pass,1,1,13,153,1,1,1,1,13,153,1,1
+HSI00000722,Nationwide Childrens Hospital,pass,2,2,747,1173,2,2,2,2,747,1173,2,2
+HSI00000723,Natividad Medical Center,pass,1,1,144,199,1,1,1,1,144,199,1,1
+HSI00000725,Nemours Childrens Health,pass,2,2,352,983,2,2,2,2,352,983,2,2
+HSI00000729,New Liberty Hospital District of Clay County,pass,1,1,199,114,1,1,1,1,199,114,1,1
+HSI00000730,New York City Health and Hospitals Corporation,pass,12,11,3096,2972,12,11,12,11,3096,2972,12,11
+HSI00000731,New York Presbyterian Healthcare System,pass,8,7,3454,6652,8,7,8,7,3454,6652,8,7
+HSI00000737,Niagara Falls Memorial Medical Center,pass,1,1,133,54,1,1,1,1,133,54,1,1
+HSI00000743,Norman Regional Health System,pass,1,1,322,195,1,1,1,1,322,195,1,1
+HSI00000745,Broward Health,pass,4,4,1261,660,4,4,4,4,1261,660,4,4
+HSI00000748,North Kansas City Hospital,pass,1,1,383,319,1,1,1,1,383,319,1,1
+HSI00000749,North Memorial Health,pass,2,2,476,242,2,2,2,2,476,242,2,2
+HSI00000750,North Mississippi Health Services,pass,7,7,767,382,7,7,7,7,767,382,7,7
+HSI00000751,North Oaks Health System,pass,2,1,247,118,2,1,2,1,247,118,2,1
+HSI00000753,Great Plains Health,pass,1,1,96,74,1,1,1,1,96,74,1,1
+HSI00000755,Northbay Healthcare,pass,2,2,204,174,2,2,2,2,204,174,2,2
+HSI00000756,NorthShore � Edward-Elmhurst Health,pass,8,7,1398,2371,8,7,8,7,1398,2371,8,7
+HSI00000759,Northeast Georgia Health System,pass,5,5,771,630,5,5,5,5,771,630,5,5
+HSI00000761,Northern Arizona Healthcare,pass,2,2,329,280,2,2,2,2,329,280,2,2
+HSI00000765,Northfield Hospital and Clinics,pass,1,1,37,61,1,1,1,1,37,61,1,1
+HSI00000766,Northside Hospital,pass,5,5,1908,1325,5,5,5,5,1908,1325,5,5
+HSI00000767,Northwell Health,pass,19,18,5412,9784,19,18,19,18,5412,9784,19,18
+HSI00000770,Northwestern Medicine,pass,10,9,2272,3487,10,9,10,9,2272,3487,10,9
+HSI00000771,Norton Healthcare,pass,7,7,1665,1157,7,7,7,7,1665,1157,7,7
+HSI00000773,Novant Health,pass,13,12,2976,2341,13,12,13,12,2976,2341,13,12
+HSI00000776,OSF Healthcare System,pass,17,17,1808,1347,17,17,17,17,1808,1347,17,17
+HSI00000780,Ochsner Health System,pass,36,30,3280,3337,36,30,36,30,3280,3337,36,30
+HSI00000784,Ohiohealth,pass,14,14,2280,2114,14,14,14,14,2280,2114,14,14
+HSI00000789,Olmsted Medical Center,pass,1,1,61,116,1,1,1,1,61,116,1,1
+HSI00000792,Oneida Health,pass,1,1,101,65,1,1,1,1,101,65,1,1
+HSI00000795,Oregon Health and Science University,pass,2,2,662,2599,2,2,2,2,662,2599,2,2
+HSI00000796,Orlando Health,pass,5,5,2258,2013,5,5,5,5,2258,2013,5,5
+HSI00000798,Oswego Health,pass,1,1,132,50,1,1,1,1,132,50,1,1
+HSI00000802,Owensboro Health,pass,3,3,398,265,3,3,3,3,398,265,3,3
+HSI00000805,PIH Health,pass,3,3,846,1512,3,3,3,3,846,1512,3,3
+HSI00000809,Palomar Health,pass,3,2,387,311,3,2,3,2,387,311,3,2
+HSI00000811,Parkview Health System,pass,11,9,1072,829,11,9,11,9,1072,829,11,9
+HSI00000812,Parrish Medical Center,pass,1,1,208,57,1,1,1,1,208,57,1,1
+HSI00000813,Mass General Brigham,pass,15,9,2729,9121,15,9,15,9,2729,9121,15,9
+HSI00000814,Peacehealth,pass,10,10,1254,1500,10,10,10,10,1254,1500,10,10
+HSI00000815,Pella Regional Health Center,pass,1,1,25,55,1,1,1,1,25,55,1,1
+HSI00000818,TidalHealth Peninsula Regional,pass,3,3,322,332,3,3,3,3,322,332,3,3
+HSI00000819,Penn Highlands Healthcare,pass,8,8,633,341,8,8,8,8,633,341,8,8
+HSI00000820,University of Pennsylvania Health System,pass,9,6,2929,4336,9,6,9,6,2929,4336,9,6
+HSI00000821,Penn State Health Milton S Hershey Medical Center,pass,5,5,1061,1802,5,5,5,5,1061,1802,5,5
+HSI00000822,Peterson Health,pass,1,1,98,68,1,1,1,1,98,68,1,1
+HSI00000823,Phoebe Putney Health Systems,pass,5,5,465,271,5,5,5,5,465,271,5,5
+HSI00000824,Phoenix Childrens Hospital,pass,1,1,383,667,1,1,1,1,383,667,1,1
+HSI00000826,Piedmont Healthcare,pass,19,18,3643,1974,19,18,19,18,3643,1974,19,18
+HSI00000833,Pomona Valley Hospital Medical Center,pass,1,1,412,632,1,1,1,1,412,632,1,1
+HSI00000842,Premier Health,pass,3,3,1282,798,3,3,3,3,1282,798,3,3
+HSI00000843,Presbyterian Healthcare Services,pass,9,9,1222,795,9,9,9,9,1222,795,9,9
+HSI00000845,Prime Healthcare Services,pass,45,43,6324,1390,45,43,45,43,6324,1390,45,43
+HSI00000847,Prohealth Care,pass,3,2,328,397,3,2,3,2,328,397,3,2
+HSI00000848,ProMedica,pass,11,11,1272,1119,11,11,11,11,1272,1119,11,11
+HSI00000851,Prospect Medical Holdings,pass,13,12,1963,5255,13,12,13,12,1963,5255,13,12
+HSI00000852,Providence,pass,54,50,9256,10875,54,50,54,50,9256,10875,54,50
+HSI00000855,Public Hospital District 1A of Whitman County,pass,1,1,25,50,1,1,1,1,25,50,1,1
+HSI00000860,Quorum Health Corporation,pass,39,39,1631,1309,39,39,39,39,1631,1309,39,39
+HSI00000863,RWJBarnabas Health,pass,16,14,3966,2820,16,14,16,14,3966,2820,16,14
+HSI00000864,Rady Childrens Hospital San Diego,pass,1,1,401,673,1,1,1,1,401,673,1,1
+HSI00000866,Tower Health,pass,6,4,1064,964,6,4,6,4,1064,964,6,4
+HSI00000867,Redlands Community Hospital,pass,1,1,196,50,1,1,1,1,196,50,1,1
+HSI00000868,Monument Health,pass,10,9,522,370,10,9,10,9,522,370,10,9
+HSI00000870,Regional One Health,pass,2,1,291,161,2,1,2,1,291,161,2,1
+HSI00000871,Regional West Health Services,pass,3,3,132,117,3,3,3,3,132,117,3,3
+HSI00000873,Reid Health,pass,1,1,183,191,1,1,1,1,183,191,1,1
+HSI00000874,Renown Health,pass,3,2,592,620,3,2,3,2,592,620,3,2
+HSI00000879,Richmond University Medical Center,pass,1,1,209,140,1,1,1,1,209,140,1,1
+HSI00000881,Ridgeview Medical Center,pass,3,3,138,92,3,3,3,3,138,92,3,3
+HSI00000882,Riverside Health Care System,pass,2,2,319,88,2,2,2,2,319,88,2,2
+HSI00000883,Riverside Health System,pass,6,4,592,631,6,4,6,4,592,631,6,4
+HSI00000885,Riverside University Health System,pass,1,1,423,334,1,1,1,1,423,334,1,1
+HSI00000887,Riverview Hospital,pass,1,1,121,143,1,1,1,1,121,143,1,1
+HSI00000889,Rochester Regional Health System,pass,6,6,1057,1433,6,6,6,6,1057,1433,6,6
+HSI00000897,Rush System for Health,pass,3,3,975,2346,3,3,3,3,975,2346,3,3
+HSI00000900,Rutland Regional Health Services,pass,1,1,142,124,1,1,1,1,142,124,1,1
+HSI00000902,SSM Health,pass,40,37,4017,3563,40,37,40,37,4017,3563,40,37
+HSI00000903,SUNY Downstate Medical Center,pass,1,1,268,1379,1,1,1,1,268,1379,1,1
+HSI00000904,SUNY Upstate Medical University,pass,2,2,645,922,2,2,2,2,645,922,2,2
+HSI00000910,SBH Health System,pass,1,1,283,255,1,1,1,1,283,255,1,1
+HSI00000911,Saint Bernards Healthcare,pass,4,3,388,209,4,3,4,3,388,209,4,3
+HSI00000912,Saint Charles Health System,pass,4,4,340,330,4,4,4,4,340,330,4,4
+HSI00000913,Saint Clair Hospital,pass,1,1,297,155,1,1,1,1,297,155,1,1
+HSI00000914,Saint Claire Regional Medical Center,pass,1,1,100,85,1,1,1,1,100,85,1,1
+HSI00000917,Saint Elizabeth Healthcare,pass,5,5,755,715,5,5,5,5,755,715,5,5
+HSI00000919,Saint Francis Health System,pass,8,7,1382,1056,8,7,8,7,1382,1056,8,7
+HSI00000920,Saint Francis Healthcare System,pass,1,1,282,183,1,1,1,1,282,183,1,1
+HSI00000925,Saint Joseph Medical Center,pass,1,1,122,81,1,1,1,1,122,81,1,1
+HSI00000927,Saint Josephs Candler Health System,pass,2,2,451,172,2,2,2,2,451,172,2,2
+HSI00000929,Saint Josephs Health,pass,2,2,681,411,2,2,2,2,681,411,2,2
+HSI00000930,Saint Lawrence Health System,pass,3,3,144,133,3,3,3,3,144,133,3,3
+HSI00000933,Saint Lukes Episcopal Presbyterian Hospital,pass,2,2,445,407,2,2,2,2,445,407,2,2
+HSI00000934,Saint Lukes,pass,9,8,921,1025,9,8,9,8,921,1025,9,8
+HSI00000935,Saint Lukes Health System,pass,11,9,964,870,11,9,11,9,964,870,11,9
+HSI00000936,Saint Lukes University Health Network,pass,11,11,1292,1546,11,11,11,11,1292,1546,11,11
+HSI00000937,Saint Lukes Hospital of Duluth,pass,2,2,254,241,2,2,2,2,254,241,2,2
+HSI00000942,Saint Peters Healthcare System,pass,1,1,352,221,1,1,1,1,352,221,1,1
+HSI00000943,Saint Peters Health,pass,1,1,125,112,1,1,1,1,125,112,1,1
+HSI00000944,Slidell Memorial Hospital,pass,1,1,301,98,1,1,1,1,301,98,1,1
+HSI00000947,Salem Health Hospitals and Clinics,pass,2,2,559,269,2,2,2,2,559,269,2,2
+HSI00000948,Salina Regional Health Center,pass,4,3,206,132,4,3,4,3,206,132,4,3
+HSI00000949,Salinas Valley Memorial Healthcare System,pass,1,1,240,224,1,1,1,1,240,224,1,1
+HSI00000951,Samaritan Health Services,pass,5,5,298,636,5,5,5,5,298,636,5,5
+HSI00000952,Samaritan Health,pass,2,2,185,112,2,2,2,2,185,112,2,2
+HSI00000953,Samaritan Healthcare,pass,1,1,48,55,1,1,1,1,48,55,1,1
+HSI00000954,San Antonio Regional Hospital,pass,1,1,363,80,1,1,1,1,363,80,1,1
+HSI00000956,San Juan Regional Medical Center,pass,2,1,191,135,2,1,2,1,191,135,2,1
+HSI00000958,Sanford Health,pass,41,40,1925,2012,41,40,41,40,1925,2012,41,40
+HSI00000959,Santa Clara Valley Health and Hospital System,pass,3,3,805,784,3,3,3,3,805,784,3,3
+HSI00000961,Sarah Bush Lincoln Health System,pass,1,1,100,130,1,1,1,1,100,130,1,1
+HSI00000962,Sarasota Memorial Health Care System,pass,3,2,896,430,3,2,3,2,896,430,3,2
+HSI00000968,Scripps Health,pass,5,5,1219,1493,5,5,5,5,1219,1493,5,5
+HSI00000969,Seattle Childrens Hospital Research and Foundation,pass,1,1,370,959,1,1,1,1,370,959,1,1
+HSI00000972,Sentara Healthcare,pass,13,12,2314,1487,13,12,13,12,2314,1487,13,12
+HSI00000975,Shannon Health System,pass,2,2,340,244,2,2,2,2,340,244,2,2
+HSI00000977,Sharp Healthcare,pass,6,5,1601,1726,6,5,6,5,1601,1726,6,5
+HSI00000981,Shriners Hospitals for Children,pass,17,3,,273,17,3,17,3,,273,17,3
+HSI00000984,Signature Healthcare,pass,1,1,175,211,1,1,1,1,175,211,1,1
+HSI00000985,Silver Cross Hospital,pass,1,1,320,105,1,1,1,1,320,105,1,1
+HSI00000987,Sinai Health System,pass,4,3,391,271,4,3,4,3,391,271,4,3
+HSI00000988,Singing River Health System,pass,2,2,407,162,2,2,2,2,407,162,2,2
+HSI00000994,Sky Lakes Medical Center,pass,1,1,90,124,1,1,1,1,90,124,1,1
+HSI00000998,South County Health,pass,1,1,79,102,1,1,1,1,79,102,1,1
+HSI00000999,South Georgia Medical Center,pass,3,3,296,192,3,3,3,3,296,192,3,3
+HSI00001002,South Shore Health System,pass,1,1,374,749,1,1,1,1,374,749,1,1
+HSI00001003,Southeast Alaska Regional Health Consortium,pass,4,4,45,57,4,4,4,4,45,57,4,4
+HSI00001004,Southcoast Health System,pass,1,1,635,497,1,1,1,1,635,497,1,1
+HSI00001005,Southeast Health,pass,1,1,345,184,1,1,1,1,345,184,1,1
+HSI00001006,Southeast Georgia Health System,pass,2,2,340,188,2,2,2,2,340,188,2,2
+HSI00001007,Southeast Health,pass,2,2,275,114,2,2,2,2,275,114,2,2
+HSI00001009,Southern Illinois Healthcare,pass,4,4,325,212,4,4,4,4,325,212,4,4
+HSI00001020,Spartanburg Regional Healthcare System,pass,6,5,713,699,6,5,6,5,713,699,6,5
+HSI00001021,Corewell Health,pass,23,22,4623,4067,23,22,23,22,4623,4067,23,22
+HSI00001032,Stamford Health,pass,1,1,288,441,1,1,1,1,288,441,1,1
+HSI00001033,Stanford Health Care,pass,3,3,1253,3953,3,3,3,3,1253,3953,3,3
+HSI00001037,Steward Health Care System,pass,36,31,5050,2174,36,31,36,31,5050,2174,36,31
+HSI00001038,Stony Brook Medicine,pass,3,3,725,1274,3,3,3,3,725,1274,3,3
+HSI00001039,Stormont Vail Health,pass,2,2,442,339,2,2,2,2,442,339,2,2
+HSI00001041,Sturdy Memorial Hospital,pass,1,1,125,179,1,1,1,1,125,179,1,1
+HSI00001043,Summa Health System,pass,3,2,560,614,3,2,3,2,560,614,3,2
+HSI00001050,Sutter Health,pass,27,22,3440,5926,27,22,27,22,3440,5926,27,22
+HSI00001053,T J Regional Health,pass,2,2,161,106,2,2,2,2,161,106,2,2
+HSI00001055,TMC Healthcare,pass,3,3,519,262,3,3,3,3,519,262,3,3
+HSI00001059,Tahoe Forest Hospital District,pass,2,2,29,112,2,2,2,2,29,112,2,2
+HSI00001060,Tallahassee Memorial Healthcare,pass,3,3,551,447,3,3,3,3,551,447,3,3
+HSI00001061,Tanner Health System,pass,4,4,292,220,4,4,4,4,292,220,4,4
+HSI00001063,JPS Health Network,pass,1,1,446,504,1,1,1,1,446,504,1,1
+HSI00001065,Temple University Health System,pass,4,3,889,1281,4,3,4,3,889,1281,4,3
+HSI00001066,Tenet Healthcare,pass,77,57,12073,7218,77,57,77,57,12073,7218,77,57
+HSI00001069,Texas Childrens Hospital,pass,1,1,905,1692,1,1,1,1,905,1692,1,1
+HSI00001072,Texas Health Resources,pass,21,18,3165,1572,21,18,21,18,3165,1572,21,18
+HSI00001074,The Carle Foundation,pass,8,8,1083,1008,8,8,8,8,1083,1008,8,8
+HSI00001075,The Childrens Hospital of Philadelphia,pass,1,1,667,1793,1,1,1,1,667,1793,1,1
+HSI00001076,The Childrens Mercy Hospital,pass,2,2,370,963,2,2,2,2,370,963,2,2
+HSI00001077,The Christ Hospital Health Network,pass,1,1,444,557,1,1,1,1,444,557,1,1
+HSI00001078,Cleveland Clinic,pass,21,18,5048,6179,21,18,21,18,5048,6179,21,18
+HSI00001079,Cooper University Health Care,pass,1,1,578,1012,1,1,1,1,578,1012,1,1
+HSI00001080,The Erie County Medical Center Corporation,pass,1,1,410,270,1,1,1,1,410,270,1,1
+HSI00001081,Houston Methodist,pass,8,7,2653,1891,8,7,8,7,2653,1891,8,7
+HSI00001082,The Methodist Hospitals,pass,2,2,405,133,2,2,2,2,405,133,2,2
+HSI00001083,The Metrohealth System,pass,1,1,501,987,1,1,1,1,501,987,1,1
+HSI00001084,The Morris Hospital and Healthcare Centers,pass,1,1,89,84,1,1,1,1,89,84,1,1
+HSI00001085,The Nebraska Medical Center,pass,4,3,686,2198,4,3,4,3,686,2198,4,3
+HSI00001086,The Ohio State University Wexner Medical Center,pass,8,6,1194,2459,8,6,8,6,1194,2459,8,6
+HSI00001087,The Queens Health Systems,pass,4,4,722,751,4,4,4,4,722,751,4,4
+HSI00001089,The University of Chicago Medicine,pass,2,2,929,1841,2,2,2,2,929,1841,2,2
+HSI00001090,The University of Toledo Medical Center,pass,1,1,212,406,1,1,1,1,212,406,1,1
+HSI00001092,ThedaCare,pass,7,7,417,382,7,7,7,7,417,382,7,7
+HSI00001097,Tift Regional Medical Center,pass,2,2,189,117,2,2,2,2,189,117,2,2
+HSI00001104,TriHealth,pass,3,2,468,887,3,2,3,2,468,887,3,2
+HSI00001106,Trinity Health,pass,105,97,14914,11997,105,97,105,97,14914,11997,105,97
+HSI00001107,Trinity Health,pass,2,2,170,160,2,2,2,2,170,160,2,2
+HSI00001110,University Health,pass,2,2,375,608,2,2,2,2,375,608,2,2
+HSI00001112,Wellforce,pass,4,4,914,2408,4,4,4,4,914,2408,4,4
+HSI00001116,UAB Health System,pass,7,6,1473,2103,7,6,7,6,1473,2103,7,6
+HSI00001118,UC Health,pass,5,2,711,1547,5,2,5,2,711,1547,5,2
+HSI00001121,UF Health,pass,5,5,2417,3217,5,5,5,5,2417,3217,5,5
+HSI00001122,UMass Memorial Health Care,pass,6,6,1013,2193,6,6,6,6,1013,2193,6,6
+HSI00001123,UNC Health Care System,pass,15,15,3143,3877,15,15,15,15,3143,3877,15,15
+HSI00001125,UNM Health System,pass,2,2,614,1403,2,2,2,2,614,1403,2,2
+HSI00001126,UPMC,pass,34,32,5972,7437,34,32,34,32,5972,7437,34,32
+HSI00001132,UW Health,pass,3,2,968,2442,3,2,3,2,968,2442,3,2
+HSI00001133,UW Medicine,pass,4,4,1327,4279,4,4,4,4,1327,4279,4,4
+HSI00001137,Union Health,pass,2,2,285,207,2,2,2,2,285,207,2,2
+HSI00001138,United Health Services,pass,3,3,412,299,3,3,3,3,412,299,3,3
+HSI00001143,United Regional Health Care System,pass,1,1,244,95,1,1,1,1,244,95,1,1
+HSI00001145,Unity Health,pass,5,4,179,163,5,4,5,4,179,163,5,4
+HSI00001146,Unitypoint Health,pass,29,29,2413,1686,29,29,29,29,2413,1686,29,29
+HSI00001148,Universal Health Services,pass,158,27,6023,2127,158,27,158,27,6023,2127,158,27
+HSI00001153,University of Tennessee Medical Center,pass,1,1,698,868,1,1,1,1,698,868,1,1
+HSI00001154,University Hospital,pass,2,1,358,673,2,1,2,1,358,673,2,1
+HSI00001155,The University of Mississippi Medical Center,pass,3,3,819,1473,3,3,3,3,819,1473,3,3
+HSI00001156,University Hospitals,pass,17,15,2376,3008,17,15,17,15,2376,3008,17,15
+HSI00001159,UMC Health System,pass,1,1,422,312,1,1,1,1,422,312,1,1
+HSI00001160,University Medical Center of Southern Nevada,pass,1,1,537,325,1,1,1,1,537,325,1,1
+HSI00001165,The University of Texas System,pass,7,5,1672,11684,7,5,7,5,1672,11684,7,5
+HSI00001166,University of Arkansas for Medical Sciences,pass,1,1,521,1416,1,1,1,1,521,1416,1,1
+HSI00001168,University of California Health,pass,12,9,3497,14152,12,9,12,9,3497,14152,12,9
+HSI00001169,University of Colorado Health,pass,12,12,2036,4145,12,12,12,12,2036,4145,12,12
+HSI00001170,University of Connecticut Health Center,pass,1,1,141,1156,1,1,1,1,141,1156,1,1
+HSI00001171,UI Health,pass,1,1,395,1531,1,1,1,1,395,1531,1,1
+HSI00001172,University of Iowa Hospitals and Clinics,pass,2,2,752,1796,2,2,2,2,752,1796,2,2
+HSI00001173,The University of Kansas Health System,pass,5,5,1478,2613,5,5,5,5,1478,2613,5,5
+HSI00001174,University of Kentucky Healthcare,pass,5,4,1521,1905,5,4,5,4,1521,1905,5,4
+HSI00001175,University of Maryland Medical System,pass,13,11,2282,2800,13,11,13,11,2282,2800,13,11
+HSI00001176,University of Miami Health System,pass,3,1,,2062,3,1,3,1,,2062,3,1
+HSI00001177,University of Michigan Health System,pass,8,7,1697,4892,8,7,8,7,1697,4892,8,7
+HSI00001178,University of Missouri Health Care,pass,5,4,621,1440,5,4,5,4,621,1440,5,4
+HSI00001179,University of Rochester Medical Center,pass,6,6,1254,2434,6,6,6,6,1254,2434,6,6
+HSI00001180,University of South Alabama Hospitals,pass,3,3,858,774,3,3,3,3,858,774,3,3
+HSI00001181,University of Southern California,pass,4,3,767,1429,4,3,4,3,767,1429,4,3
+HSI00001184,University of Utah Hospitals and Clinics,pass,2,1,616,1802,2,1,2,1,616,1802,2,1
+HSI00001185,University of Vermont Health Network,pass,6,6,908,1554,6,6,6,6,908,1554,6,6
+HSI00001186,University of Virginia Health System,pass,5,4,885,1636,5,4,5,4,885,1636,5,4
+HSI00001188,Upper Peninsula Health Care Solutions,pass,4,4,72,90,4,4,4,4,72,90,4,4
+HSI00001213,VCU Health System,pass,6,3,965,1476,6,3,6,3,965,1476,6,3
+HSI00001214,Vail Health,pass,1,1,54,100,1,1,1,1,54,100,1,1
+HSI00001217,Valley Health,pass,6,6,580,376,6,6,6,6,580,376,6,6
+HSI00001218,Valley Health System,pass,1,1,385,369,1,1,1,1,385,369,1,1
+HSI00001219,Valley Health Systems,pass,1,1,201,150,1,1,1,1,201,150,1,1
+HSI00001222,Vanderbilt Health,pass,4,4,1292,2538,4,4,4,4,1292,2538,4,4
+HSI00001223,Ventura County Health Care Agency,pass,1,1,272,358,1,1,1,1,272,358,1,1
+HSI00001230,ECU Health,pass,9,9,1367,1138,9,9,9,9,1367,1138,9,9
+HSI00001233,Virtua Health,pass,5,5,1329,1032,5,5,5,5,1329,1032,5,5
+HSI00001236,WakeMed Health and Hospitals,pass,2,2,839,513,2,2,2,2,839,513,2,2
+HSI00001238,Washington Health System,pass,2,2,232,151,2,2,2,2,232,151,2,2
+HSI00001239,Washington Hospital Healthcare System,pass,1,1,415,148,1,1,1,1,415,148,1,1
+HSI00001240,Washington Regional,pass,1,1,377,161,1,1,1,1,377,161,1,1
+HSI00001242,Wayne Memorial Health System,pass,1,1,92,55,1,1,1,1,92,55,1,1
+HSI00001243,Wellspan Health,pass,8,6,1160,1380,8,6,8,6,1160,1380,8,6
+HSI00001244,WellStar Health System,pass,9,8,1882,1566,9,8,9,8,1882,1566,9,8
+HSI00001250,West Tennessee Healthcare,pass,8,7,824,253,8,7,8,7,824,253,8,7
+HSI00001251,West Virginia University Health System,pass,23,22,2370,2335,23,22,23,22,2370,2335,23,22
+HSI00001252,WMC Health,pass,8,7,1230,1003,8,7,8,7,1230,1003,8,7
+HSI00001253,Nuvance Health,pass,7,7,1086,1031,7,7,7,7,1086,1031,7,7
+HSI00001260,White River Health System,pass,2,2,195,90,2,2,2,2,195,90,2,2
+HSI00001263,Willis Knighton Health System,pass,3,3,720,404,3,3,3,3,720,404,3,3
+HSI00001264,Winona Health,pass,1,1,41,63,1,1,1,1,41,63,1,1
+HSI00001269,Witham Health Services,pass,1,1,50,93,1,1,1,1,50,93,1,1
+HSI00001272,Yale New Haven Health System,pass,7,7,2228,3683,7,7,7,7,2228,3683,7,7
+HSI00001274,York Hospital,pass,1,1,54,94,1,1,1,1,54,94,1,1
+HSI00001275,Yuma Regional Medical Center,pass,1,1,430,203,1,1,1,1,430,203,1,1
+HSI00001281,Astria Health System,pass,2,2,72,70,2,2,2,2,72,70,2,2
+HSI00001283,Auburn Community Hospital,pass,1,1,85,71,1,1,1,1,85,71,1,1
+HSI00001284,Ballad Health,pass,22,21,1635,744,22,21,22,21,1635,744,22,21
+HSI00001286,Bristol Hospital,pass,1,1,123,89,1,1,1,1,123,89,1,1
+HSI00001287,Broadlawns Medical Center,pass,1,1,113,133,1,1,1,1,113,133,1,1
+HSI00001288,Brookdale University Hospital And Medical Center,pass,1,1,498,243,1,1,1,1,498,243,1,1
+HSI00001301,Cuyuna Regional Medical Center,pass,2,2,25,58,2,2,2,2,25,58,2,2
+HSI00001309,Goshen Health,pass,1,1,103,104,1,1,1,1,103,104,1,1
+HSI00001314,Hancock Regional Hospital,pass,1,1,113,89,1,1,1,1,113,89,1,1
+HSI00001319,Holland Hospital,pass,1,1,189,107,1,1,1,1,189,107,1,1
+HSI00001324,Indiana Regional Medical Center,pass,1,1,134,95,1,1,1,1,134,95,1,1
+HSI00001334,Mountain View Hospital,pass,1,1,43,50,1,1,1,1,43,50,1,1
+HSI00001338,Northeastern Health System,pass,2,2,121,74,2,2,2,2,121,74,2,2
+HSI00001341,Parkview Medical Center,pass,1,1,253,204,1,1,1,1,253,204,1,1
+HSI00001350,Salem Regional Medical Center,pass,1,1,87,50,1,1,1,1,87,50,1,1
+HSI00001351,San Francisco Health Network,pass,2,1,284,728,2,1,2,1,284,728,2,1
+HSI00001352,Schneck Medical Center,pass,1,1,52,70,1,1,1,1,52,70,1,1
+HSI00001354,Self Regional Healthcare,pass,2,2,315,201,2,2,2,2,315,201,2,2
+HSI00001356,Island Hospital,pass,1,1,43,65,1,1,1,1,43,65,1,1
+HSI00001359,Stillwater Medical Center Authority,pass,4,4,147,105,4,4,4,4,147,105,4,4
+HSI00001365,Valley View Hospital Association,pass,1,1,31,102,1,1,1,1,31,102,1,1
+HSI00001369,AtlantiCare,pass,1,1,532,364,1,1,1,1,532,364,1,1
+HSI00001377,UofL Health,pass,7,5,1154,1330,7,5,7,5,1154,1330,7,5
+HSI00001378,Prisma Health,pass,12,10,2129,2596,12,10,12,10,2129,2596,12,10
+HSI00001381,Saint Marys Healthcare,pass,2,1,100,64,2,1,2,1,100,64,2,1
+HSI00001382,AnMed Health,pass,2,2,409,318,2,2,2,2,409,318,2,2
+HSI00001383,OU Health,pass,2,2,819,1521,2,2,2,2,819,1521,2,2
+HSI00001386,Crouse Health System,pass,1,1,502,182,1,1,1,1,502,182,1,1
+HSI00001389,Holy Name Medical Center,pass,1,1,289,192,1,1,1,1,289,192,1,1
+HSI00001396,Cape Regional Health System,pass,1,1,149,85,1,1,1,1,149,85,1,1
+HSI00001400,Summit Healthcare,pass,1,1,89,66,1,1,1,1,89,66,1,1
+HSI00001402,Tri State Memorial Hospital,pass,1,1,25,61,1,1,1,1,25,61,1,1
+HSI00001403,San Mateo County Health,pass,1,1,69,152,1,1,1,1,69,152,1,1
+HSI00001407,The Brooklyn Hospital Center,pass,1,1,236,216,1,1,1,1,236,216,1,1
+HSI00001409,El Paso County Hospital District,pass,1,1,296,121,1,1,1,1,296,121,1,1
+HSI00001412,Redington Fairview General Hospital,pass,1,1,25,52,1,1,1,1,25,52,1,1
+HSI00001415,LMH Health,pass,1,1,110,132,1,1,1,1,110,132,1,1
+HSI00001416,Beth Israel Lahey Health,pass,10,9,2146,4646,10,9,10,9,2146,4646,10,9
+HSI00001419,Jupiter Medical Center,pass,1,1,242,105,1,1,1,1,242,105,1,1
+HSI00001421,Wooster Community Hospital Health System,pass,1,1,112,75,1,1,1,1,112,75,1,1
+HSI00001423,Pikeville Medical Center,pass,1,1,328,160,1,1,1,1,328,160,1,1
+HSI00001424,Memorial Hospital of Sweetwater County,pass,1,1,58,89,1,1,1,1,58,89,1,1
+HSI00001427,CommonSpirit Health,pass,145,136,16679,11143,145,136,145,136,16679,11143,145,136
+HSI00001428,Bon Secours Mercy Health,pass,37,36,5641,3821,37,36,37,36,5641,3821,37,36
+HSI00001430,Catholic Health Systems,pass,5,5,1046,806,5,5,5,5,1046,806,5,5
+HSI00001431,Hays Medical Center,pass,2,2,160,101,2,2,2,2,160,101,2,2
+HSI00001436,Overlake Medical Center and Clinics,pass,1,1,296,326,1,1,1,1,296,326,1,1
+HSI00001441,South Central Regional Medical Center Health System,pass,1,1,268,86,1,1,1,1,268,86,1,1
+HSI00001442,Englewood Health,pass,1,1,274,517,1,1,1,1,274,517,1,1
+HSI00001443,Montage Health,pass,1,1,227,213,1,1,1,1,227,213,1,1
+HSI00001446,Foundation Health Partners,pass,1,1,122,104,1,1,1,1,122,104,1,1
+HSI00001447,North Country Healthcare,pass,3,3,50,52,3,3,3,3,50,52,3,3
+HSI00001449,Oaklawn Hospital,pass,1,1,78,63,1,1,1,1,78,63,1,1
+HSI00001450,Larkin Health System,pass,3,2,237,232,3,2,3,2,237,232,3,2
+HSI00001457,San Joaquin County Clinics,pass,1,1,206,182,1,1,1,1,206,182,1,1
+HSI00001458,Lawrence General Hospital,pass,1,1,186,332,1,1,1,1,186,332,1,1
+HSI00001464,MLK Community Healthcare,pass,1,1,152,65,1,1,1,1,152,65,1,1
+HSI00001473,Anderson Medical Group,pass,1,1,144,80,1,1,1,1,144,80,1,1
+HSI00001475,ScionHealth,pass,82,17,1803,660,82,17,82,17,1803,660,82,17
+HSI00001481,Southern Ohio Medical Center,pass,1,1,192,120,1,1,1,1,192,120,1,1
+HSI00001497,Valley Childrens Healthcare,pass,1,1,358,293,1,1,1,1,358,293,1,1
+HSI00001499,VHC Health,pass,1,1,385,243,1,1,1,1,385,243,1,1
+HSI00001500,Childrens Hospital Colorado,pass,1,1,497,756,1,1,1,1,497,756,1,1
+HSI00001501,Boone Hospital Center,pass,1,1,278,96,1,1,1,1,278,96,1,1
+HSI00001502,Antelope Valley Medical Center,pass,1,1,393,55,1,1,1,1,393,55,1,1
+HSI00001506,Tri City Healthcare District,pass,1,1,310,75,1,1,1,1,310,75,1,1
+HSI00001520,El Centro Regional Medical Center,pass,1,1,161,60,1,1,1,1,161,60,1,1
+HSI00001525,Williamson County Hospital District,pass,1,1,203,74,1,1,1,1,203,74,1,1
+HSI00001526,Advocate Health,pass,58,53,10615,10537,58,53,58,53,10615,10537,58,53
+HSI00001529,Ozarks Healthcare,pass,1,1,111,58,1,1,1,1,111,58,1,1
+HSI00001532,Shore Physicians Group,pass,1,1,199,87,1,1,1,1,199,87,1,1
+HSI00001533,Riverside Healthcare,pass,1,1,256,143,1,1,1,1,256,143,1,1
+HSI00001540,Western Wisconsin Health,pass,2,2,25,50,2,2,2,2,25,50,2,2
+HSI00001545,Cullman Regional Medical Center,pass,1,1,137,73,1,1,1,1,137,73,1,1
+HSI00001546,OroHealth Corporation,pass,1,1,153,92,1,1,1,1,153,92,1,1
+HSI00001560,Little Company of Mary Hospital of Indiana,pass,1,1,96,117,1,1,1,1,96,117,1,1
+HSI00001561,American Healthcare Systems,pass,3,3,623,127,3,3,3,3,623,127,3,3
+HSI00001571,Saint Tammany Health System,pass,1,1,213,106,1,1,1,1,213,106,1,1
+HSI00001580,Knox Community Hospital,pass,1,1,64,63,1,1,1,1,64,63,1,1
+HSI00001588,Saint Johns Health,pass,1,1,48,50,1,1,1,1,48,50,1,1

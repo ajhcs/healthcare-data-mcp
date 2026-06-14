@@ -56,6 +56,26 @@ def test_parse_ahrq_system_file(sample_ahrq_system_csv):
     assert df.iloc[0]["health_sys_name"] == "Jefferson Health"
 
 
+def test_parse_ahrq_system_file_preserves_snapshot_metric_fields(tmp_path):
+    csv_path = tmp_path / "system_2023.csv"
+    csv_path.write_text(
+        "health_sys_id,health_sys_name,health_sys_city,health_sys_state,total_mds,prim_care_mds,total_nps,total_pas,grp_cnt,hosp_cnt,acutehosp_cnt,sys_beds,sys_dsch\n"
+        "HSI00000123,Example Health,Example City,AL,012,5,7,3,4,2,1,090,1000\n",
+        encoding="utf-8",
+    )
+
+    df = parse_ahrq_system_file(csv_path)
+
+    row = df.iloc[0]
+    assert row["health_sys_id"] == "HSI00000123"
+    assert row["total_mds"] == 12
+    assert row["prim_care_mds"] == 5
+    assert row["grp_cnt"] == 4
+    assert row["phys_grp_count"] == 4
+    assert row["acutehosp_cnt"] == 1
+    assert row["sys_beds"] == 90
+
+
 def test_parse_ahrq_hospital_linkage(sample_ahrq_hospital_linkage_csv):
     df = parse_ahrq_hospital_linkage(sample_ahrq_hospital_linkage_csv)
     assert len(df) == 4
@@ -65,6 +85,25 @@ def test_parse_ahrq_hospital_linkage(sample_ahrq_hospital_linkage_csv):
     assert df.iloc[0]["hos_beds"] == 900
     jefferson = df[df["health_sys_id"] == "SYS_001"]
     assert len(jefferson) == 2
+
+
+def test_parse_ahrq_hospital_linkage_preserves_identifiers_and_leading_zeroes(tmp_path):
+    csv_path = tmp_path / "hospital_linkage_2023.csv"
+    csv_path.write_text(
+        "compendium_hospital_id,ccn,hospital_name,hospital_street,hospital_city,hospital_state,hospital_zip,acutehosp_flag,health_sys_id,hos_beds,hos_dsch\n"
+        "CHSP00000001,010001,Example Hospital,1 Main St,Dothan,AL,00301,1,HSI00000123,080,100\n"
+        "CHSP00000002,,Missing CCN Hospital,2 Main St,Dothan,AL,00302,0,HSI00000123,,50\n",
+        encoding="utf-8",
+    )
+
+    df = parse_ahrq_hospital_linkage(csv_path)
+
+    assert df.iloc[0]["compendium_hospital_id"] == "CHSP00000001"
+    assert df.iloc[0]["ccn"] == "010001"
+    assert df.iloc[0]["hospital_zip"] == "00301"
+    assert df.iloc[0]["hos_beds"] == 80
+    assert df.iloc[1]["ccn"] == ""
+    assert df.iloc[1]["hospital_zip"] == "00302"
 
 
 def test_parse_pos_file(sample_pos_csv):
