@@ -11,6 +11,7 @@ import pytest
 
 from servers.health_system_profiler.data_loaders import parse_ahrq_hospital_linkage, parse_ahrq_system_file
 from servers.health_system_profiler.system_metrics import (
+    build_snapshot_id,
     get_health_system_metric,
     is_missing_scalar,
     json_safe,
@@ -130,6 +131,73 @@ def test_list_health_system_metrics_returns_universe_metadata_and_cursor(systems
     )
     assert second["systems"][0]["system_id"] == "HSI00000002"
     assert second["pagination"]["next_cursor"] is None
+
+
+def test_cursor_rejects_filter_mismatch_but_allows_page_size_change(
+    systems_df: pd.DataFrame,
+    hospitals_df: pd.DataFrame,
+) -> None:
+    first = list_health_system_metric_rows(
+        systems_df=systems_df,
+        hospitals_df=hospitals_df,
+        page_size=1,
+        sort="health_sys_id",
+    )
+
+    changed_page_size = list_health_system_metric_rows(
+        systems_df=systems_df,
+        hospitals_df=hospitals_df,
+        cursor=first["pagination"]["next_cursor"],
+        page_size=100,
+        sort="health_sys_id",
+    )
+    assert changed_page_size["systems"][0]["system_id"] == "HSI00000002"
+
+    changed_sort = list_health_system_metric_rows(
+        systems_df=systems_df,
+        hospitals_df=hospitals_df,
+        cursor=first["pagination"]["next_cursor"],
+        page_size=1,
+        sort="bed_count",
+    )
+    assert changed_sort["error"]["code"] == "cursor_filter_mismatch"
+    assert changed_sort["error"]["data"]["mismatches"]["sort"]["cursor"] == "health_sys_id"
+    assert changed_sort["error"]["data"]["mismatches"]["sort"]["request"] == "bed_count"
+
+    state_first = list_health_system_metric_rows(
+        systems_df=systems_df,
+        hospitals_df=hospitals_df,
+        page_size=1,
+        state_scope="facility_presence",
+    )
+    changed_state_scope = list_health_system_metric_rows(
+        systems_df=systems_df,
+        hospitals_df=hospitals_df,
+        cursor=state_first["pagination"]["next_cursor"],
+        page_size=1,
+        state_scope="headquarters",
+    )
+    assert changed_state_scope["error"]["code"] == "cursor_filter_mismatch"
+    assert "state_scope" in changed_state_scope["error"]["data"]["mismatches"]
+
+
+def test_snapshot_id_uses_stable_content_hash(
+    systems_df: pd.DataFrame,
+    hospitals_df: pd.DataFrame,
+) -> None:
+    original = build_snapshot_id(systems_df, hospitals_df)
+    reordered = build_snapshot_id(
+        systems_df.iloc[::-1].reset_index(drop=True),
+        hospitals_df.iloc[::-1].reset_index(drop=True),
+    )
+    changed_systems = systems_df.copy()
+    changed_systems.loc[0, "sys_beds"] = 101
+    changed_hospitals = hospitals_df.copy()
+    changed_hospitals.loc[0, "ccn"] = "010099"
+
+    assert reordered == original
+    assert build_snapshot_id(changed_systems, hospitals_df) != original
+    assert build_snapshot_id(systems_df, changed_hospitals) != original
 
 
 def test_scalar_normalization_handles_pandas_and_numpy_missing_values() -> None:
@@ -298,6 +366,56 @@ def test_get_health_system_metrics_low_confidence_name_returns_candidates(
     assert result["error"]["code"] == "ambiguous_system_name"
     assert result["candidates"]
     assert "system_id" in result["candidates"][0]
+
+
+def test_get_health_system_metrics_duplicate_exact_name_returns_candidates(
+    systems_df: pd.DataFrame,
+    hospitals_df: pd.DataFrame,
+) -> None:
+    duplicate_systems = pd.DataFrame(
+        [
+            {
+                **systems_df.iloc[0].to_dict(),
+                "health_sys_id": "HSI00001106",
+                "health_sys_name": "Trinity Health",
+                "health_sys_city": "Livonia",
+                "health_sys_state": "MI",
+            },
+            {
+                **systems_df.iloc[1].to_dict(),
+                "health_sys_id": "HSI00001107",
+                "health_sys_name": "Trinity Health",
+                "health_sys_city": "Minot",
+                "health_sys_state": "ND",
+            },
+            {
+                **systems_df.iloc[1].to_dict(),
+                "health_sys_id": "HSI00000008",
+                "health_sys_name": "Adena Health System",
+            },
+        ]
+    )
+
+    ambiguous = get_health_system_metric(
+        systems_df=duplicate_systems,
+        hospitals_df=hospitals_df,
+        system_name="Trinity Health",
+    )
+    exact = get_health_system_metric(
+        systems_df=duplicate_systems,
+        hospitals_df=hospitals_df,
+        system_id="HSI00001107",
+    )
+    unique = get_health_system_metric(
+        systems_df=duplicate_systems,
+        hospitals_df=hospitals_df,
+        system_name="Adena Health System",
+    )
+
+    assert ambiguous["error"]["code"] == "ambiguous_system_name"
+    assert {candidate["system_id"] for candidate in ambiguous["candidates"]} == {"HSI00001106", "HSI00001107"}
+    assert exact["system"]["system_id"] == "HSI00001107"
+    assert unique["system"]["system_id"] == "HSI00000008"
 
 
 def test_medicare_public_clinician_roster_estimate_dedupes_by_npi(

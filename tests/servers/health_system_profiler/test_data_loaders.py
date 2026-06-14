@@ -70,6 +70,7 @@ def test_parse_ahrq_system_file_preserves_snapshot_metric_fields(tmp_path):
     assert row["health_sys_id"] == "HSI00000123"
     assert row["total_mds"] == 12
     assert row["prim_care_mds"] == 5
+    assert row["hosp_count"] == 2
     assert row["grp_cnt"] == 4
     assert row["phys_grp_count"] == 4
     assert row["acutehosp_cnt"] == 1

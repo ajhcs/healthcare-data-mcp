@@ -129,6 +129,23 @@ def list_health_system_metric_rows(
                 data={"cursor_snapshot_id": decoded.get("snapshot_id"), "expected_snapshot_id": snapshot_id},
             )
         )
+    cursor_filter_error = _cursor_filter_mismatch(
+        decoded,
+        sort=sort_key,
+        state=_state(state),
+        state_scope=scope,
+        as_of_mode=mode,
+    )
+    if cursor_filter_error:
+        return json_safe(
+            _error_payload(
+                "cursor_filter_mismatch",
+                "Cursor filters do not match the current request.",
+                mode=mode,
+                snapshot_id=snapshot_id,
+                data=cursor_filter_error,
+            )
+        )
 
     filtered_systems = _filter_systems(systems_df, hospitals_df, state=state, state_scope=scope)
     ordered = _sort_systems(filtered_systems, sort_key)
@@ -530,6 +547,40 @@ def build_snapshot_id(systems_df: pd.DataFrame, hospitals_df: pd.DataFrame) -> s
         "hospitals_rows": len(hospitals_df),
         "systems_columns": sorted(str(col) for col in systems_df.columns),
         "hospitals_columns": sorted(str(col) for col in hospitals_df.columns),
+        "systems_digest": _stable_frame_digest(
+            systems_df,
+            (
+                "health_sys_id",
+                "health_sys_name",
+                "health_sys_city",
+                "health_sys_state",
+                "hosp_cnt",
+                "acutehosp_cnt",
+                "sys_beds",
+                "total_mds",
+                "prim_care_mds",
+                "total_nps",
+                "total_pas",
+                "grp_cnt",
+            ),
+        ),
+        "hospitals_digest": _stable_frame_digest(
+            hospitals_df,
+            (
+                "compendium_hospital_id",
+                "health_sys_id",
+                "health_sys_name",
+                "ccn",
+                "hospital_name",
+                "hospital_street",
+                "hospital_city",
+                "hospital_state",
+                "hospital_zip",
+                "acutehosp_flag",
+                "hos_beds",
+                "hos_dsch",
+            ),
+        ),
     }
     return hashlib.sha256(json.dumps(payload, sort_keys=True).encode("utf-8")).hexdigest()[:16]
 
@@ -746,6 +797,15 @@ def _resolve_system_row(systems_df: pd.DataFrame, *, system_id: str | None, syst
         return {"status": "not_found"}
     if "health_sys_name" not in systems_df.columns:
         return {"status": "not_found"}
+    query_norm = _norm(system_name)
+    exact_indexes = [idx for idx, value in systems_df["health_sys_name"].items() if _norm(value) == query_norm]
+    if len(exact_indexes) == 1:
+        return {"status": "ok", "row": systems_df.loc[exact_indexes[0]].to_dict(), "match_score": 100.0, "matched_name": system_name}
+    if len(exact_indexes) > 1:
+        return {
+            "status": "candidates",
+            "candidates": [_candidate(systems_df.loc[idx], 100.0) for idx in exact_indexes[:5]],
+        }
     names = systems_df["health_sys_name"].astype(str).tolist()
     matches = process.extract(
         system_name,
@@ -757,10 +817,11 @@ def _resolve_system_row(systems_df: pd.DataFrame, *, system_id: str | None, syst
     if not matches:
         return {"status": "not_found"}
     best_name, score, idx = matches[0]
-    if score < 90:
+    high_confidence_ties = [item for item in matches if item[1] >= 90 and abs(float(item[1]) - float(score)) <= 2.0]
+    if score < 90 or len(high_confidence_ties) > 1:
         return {
             "status": "candidates",
-            "candidates": [_candidate(systems_df.iloc[item[2]], item[1]) for item in matches],
+            "candidates": [_candidate(systems_df.iloc[item[2]], item[1]) for item in (high_confidence_ties or matches)],
         }
     return {"status": "ok", "row": systems_df.iloc[idx].to_dict(), "match_score": score, "matched_name": best_name}
 
@@ -937,6 +998,49 @@ def _decode_cursor(cursor: str | None) -> dict[str, Any] | None:
         return json.loads(base64.urlsafe_b64decode(padded.encode("ascii")).decode("utf-8"))
     except Exception:
         return None
+
+
+def _cursor_filter_mismatch(
+    decoded: dict[str, Any] | None,
+    *,
+    sort: SortKey,
+    state: str,
+    state_scope: StateScope,
+    as_of_mode: UniverseMode,
+) -> dict[str, Any] | None:
+    if not decoded:
+        return None
+    expected = {
+        "sort": sort,
+        "state": state,
+        "state_scope": state_scope,
+        "as_of_mode": as_of_mode,
+    }
+    mismatches = {
+        key: {"cursor": decoded.get(key, ""), "request": value}
+        for key, value in expected.items()
+        if decoded.get(key, "") != value
+    }
+    if not mismatches:
+        return None
+    return {"mismatches": mismatches, "cursor": {key: decoded.get(key, "") for key in expected}}
+
+
+def _stable_frame_digest(frame: pd.DataFrame, columns: tuple[str, ...]) -> str:
+    available = [column for column in columns if column in frame.columns]
+    if not available:
+        return ""
+    records = []
+    for record in frame.loc[:, available].to_dict("records"):
+        records.append({key: _hash_value(value) for key, value in record.items()})
+    records.sort(key=lambda item: json.dumps(item, sort_keys=True, separators=(",", ":")))
+    return hashlib.sha256(json.dumps(records, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+
+
+def _hash_value(value: Any) -> str | None:
+    if is_missing_scalar(value):
+        return None
+    return _clean_string(value)
 
 
 def _normalize_mode(value: str) -> UniverseMode:

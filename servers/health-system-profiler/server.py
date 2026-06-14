@@ -495,6 +495,22 @@ async def _load_pos() -> pd.DataFrame:
     return await load_pos()
 
 
+def _legacy_int_or_zero(value: Any) -> int:
+    if value is None:
+        return 0
+    if isinstance(value, str) and value.strip() == "":
+        return 0
+    try:
+        if pd.isna(value):
+            return 0
+    except (TypeError, ValueError):
+        pass
+    try:
+        return int(float(str(value).strip()))
+    except (TypeError, ValueError):
+        return 0
+
+
 def _ahrq_cache_required_response(*, tool_name: str, query: dict[str, Any] | None = None) -> dict[str, Any] | None:
     required = [AHRQ_SYSTEM_CACHE, AHRQ_HOSPITAL_LINKAGE_CACHE]
     missing = [path for path in required if not path.exists()]
@@ -1208,7 +1224,7 @@ async def get_system_profile(
             ahrq_row = hospitals_df[hospitals_df["ccn"] == ccn]
             if not ahrq_row.empty:
                 r = ahrq_row.iloc[0]
-                beds = int(r.get("hos_beds", 0) or 0)
+                beds = _legacy_int_or_zero(r.get("hos_beds"))
                 total_beds += beds
                 facilities.append(FacilitySummary(
                     ccn=ccn,
@@ -1247,7 +1263,7 @@ async def get_system_profile(
 
     # Compute total discharges from AHRQ linkage
     sys_hospitals = hospitals_df[hospitals_df["health_sys_id"] == system_id]
-    total_dsch = int(sys_hospitals["hos_dsch"].sum()) if "hos_dsch" in sys_hospitals.columns else 0
+    total_dsch = sum(_legacy_int_or_zero(value) for value in sys_hospitals["hos_dsch"]) if "hos_dsch" in sys_hospitals.columns else 0
 
     # Build response
     profile = SystemProfileResponse(
@@ -1259,7 +1275,7 @@ async def get_system_profile(
             hospital_count=len(ccns),
             total_beds=total_beds,
             total_discharges=total_dsch,
-            physician_group_count=int(sys_info.get("phys_grp_count", 0) or 0),
+            physician_group_count=_legacy_int_or_zero(sys_info.get("phys_grp_count")),
         ),
         inpatient_facilities=[f.model_dump() for f in facilities],
         sub_entities=[s.model_dump() for s in sub_entities],

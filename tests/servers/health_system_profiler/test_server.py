@@ -142,6 +142,53 @@ async def test_get_system_profile(mock_ahrq_systems, mock_ahrq_hospitals, mock_p
 
 
 @pytest.mark.asyncio
+async def test_get_system_profile_handles_nullable_ahrq_legacy_counts(mock_pos):
+    systems = pd.DataFrame(
+        [
+            {
+                "health_sys_id": "HSI00000715",
+                "health_sys_name": "Munson Healthcare",
+                "health_sys_city": "Traverse City",
+                "health_sys_state": "MI",
+                "hosp_count": 1,
+                "phys_grp_count": pd.NA,
+            }
+        ]
+    )
+    systems["phys_grp_count"] = systems["phys_grp_count"].astype("Int64")
+    hospitals = pd.DataFrame(
+        [
+            {
+                "health_sys_id": "HSI00000715",
+                "ccn": "230097",
+                "hospital_name": "Munson Medical Center",
+                "hosp_city": "Traverse City",
+                "hosp_state": "MI",
+                "hosp_zip": "49684",
+                "hos_beds": pd.NA,
+                "hos_dsch": pd.NA,
+            }
+        ]
+    )
+    hospitals["hos_beds"] = hospitals["hos_beds"].astype("Int64")
+    hospitals["hos_dsch"] = hospitals["hos_dsch"].astype("Int64")
+
+    with (
+        patch.object(server, "_load_ahrq_systems", new_callable=AsyncMock, return_value=systems),
+        patch.object(server, "_load_ahrq_hospitals", new_callable=AsyncMock, return_value=hospitals),
+        patch.object(server, "_load_pos", new_callable=AsyncMock, return_value=mock_pos.iloc[0:0]),
+        patch.object(server, "_search_nppes", new_callable=AsyncMock, return_value=[]),
+    ):
+        result = await server.get_system_profile(system_id="HSI00000715", include_outpatient=False)
+
+    assert result["system"]["system_id"] == "HSI00000715"
+    assert result["system"]["physician_group_count"] == 0
+    assert result["system"]["total_beds"] == 0
+    assert result["system"]["total_discharges"] == 0
+    assert result["inpatient_facilities"][0]["beds"]["total"] == 0
+
+
+@pytest.mark.asyncio
 async def test_get_system_profile_outpatient_sites_have_nppes_row_evidence(
     mock_ahrq_systems,
     mock_ahrq_hospitals,

@@ -33,7 +33,7 @@
     "total_hospital_linkage_rows": 6800,
     "total_systems_in_universe": 639
   },
-  "elapsed_seconds": 90.066,
+  "elapsed_seconds": 93.453,
   "mcp_counts": {
     "duplicate_returned_system_ids": [],
     "extra_system_ids": [],
@@ -71,7 +71,7 @@
     ],
     "returned_systems": 639,
     "snapshot_ids": [
-      "2eafc7dba06db149"
+      "b2d74344a07c101a"
     ]
   },
   "mismatch_count": 0,

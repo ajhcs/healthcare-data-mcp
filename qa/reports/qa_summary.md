@@ -59,7 +59,7 @@ Status: PASS WITH WARNINGS
 
 ## Performance Notes
 
-- Full acceptance script elapsed seconds: 90.066
+- Full acceptance script elapsed seconds: 93.453
 
 ## Security / Read-Only Notes
 

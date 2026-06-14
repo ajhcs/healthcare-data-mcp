@@ -77,6 +77,7 @@ _AHRQ_SYSTEM_INT_COLUMNS = (
     "hhco_cnt_restricted",
     "sys_beds",
     "sys_dsch",
+    "hosp_count",
     "phys_grp_count",
 )
 
@@ -126,6 +127,8 @@ def parse_ahrq_system_file(path: Path) -> pd.DataFrame:
         col_map[phys_col] = "phys_grp_count"
 
     df = df.rename(columns=col_map)
+    if "hosp_count" not in df.columns and "hosp_cnt" in df.columns:
+        df["hosp_count"] = df["hosp_cnt"]
     if "phys_grp_count" not in df.columns and "grp_cnt" in df.columns:
         df["phys_grp_count"] = df["grp_cnt"]
 
