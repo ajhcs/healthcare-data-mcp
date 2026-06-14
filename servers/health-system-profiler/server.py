@@ -22,6 +22,8 @@ from shared.utils.mcp_response import error_response, evidence_receipt, to_struc
 # Support running both as a package and as a standalone script
 try:
     from .data_loaders import (
+        AHRQ_HOSPITAL_LINKAGE_CACHE,
+        AHRQ_SYSTEM_CACHE,
         load_ahrq_hospital_linkage,
         load_ahrq_systems,
         load_pos,
@@ -53,11 +55,14 @@ try:
     from .system_discovery import fuzzy_search_systems, resolve_system_ccns
     from .system_metrics import (
         get_health_system_metric as assemble_health_system_metric,
+        invalid_argument_payload,
         list_health_system_metric_rows,
     )
 except ImportError:
     sys.path.insert(0, str(Path(__file__).parent))
     from data_loaders import (
+        AHRQ_HOSPITAL_LINKAGE_CACHE,
+        AHRQ_SYSTEM_CACHE,
         load_ahrq_hospital_linkage,
         load_ahrq_systems,
         load_pos,
@@ -89,6 +94,7 @@ except ImportError:
     from system_discovery import fuzzy_search_systems, resolve_system_ccns
     from system_metrics import (
         get_health_system_metric as assemble_health_system_metric,
+        invalid_argument_payload,
         list_health_system_metric_rows,
     )
 
@@ -489,6 +495,80 @@ async def _load_pos() -> pd.DataFrame:
     return await load_pos()
 
 
+def _ahrq_cache_required_response(*, tool_name: str, query: dict[str, Any] | None = None) -> dict[str, Any] | None:
+    required = [AHRQ_SYSTEM_CACHE, AHRQ_HOSPITAL_LINKAGE_CACHE]
+    missing = [path for path in required if not path.exists()]
+    if not missing:
+        return None
+    return to_structured(
+        {
+            "ok": False,
+            "error_code": "AHRQ_CACHE_REQUIRED",
+            "status": "blocked_missing_required_cache",
+            "message": "AHRQ 2023 Compendium cache is required before national metrics can be served.",
+            "tool": tool_name,
+            "query": query or {},
+            "required_files": [path.name for path in required],
+            "missing_files": [path.name for path in missing],
+            "required_paths": [str(path) for path in required],
+            "recovery_steps": [
+                "Run hc-mcp doctor --check",
+                "Run python scripts/download_ahrq.py or the documented AHRQ cache setup command",
+                "Use the Excel download if CSV handling drops leading zeros",
+                "Retry list_health_system_metrics after cache setup",
+            ],
+            "source": "AHRQ Compendium 2023",
+            "source_metadata": [
+                {
+                    "source_name": "AHRQ Compendium of U.S. Health Systems, 2023",
+                    "dataset_id": "ahrq_health_system_compendium",
+                    "source_period": "2023 Compendium; September 2025 revised system file when available",
+                    "landing_page": "https://www.ahrq.gov/chsp/data-resources/compendium-2023.html",
+                    "cache_status": "missing_required_cache",
+                    "caveat": "National health-system metrics require local AHRQ system and hospital-linkage files.",
+                }
+            ],
+            "next_actions": [
+                "Populate the two required AHRQ cache files without changing CCN or ZIP strings.",
+                "Retry the same metrics tool after cache setup.",
+            ],
+        }
+    )
+
+
+async def _load_required_ahrq_metric_frames(*, tool_name: str, query: dict[str, Any] | None = None) -> tuple[pd.DataFrame, pd.DataFrame] | dict[str, Any]:
+    missing_response = _ahrq_cache_required_response(tool_name=tool_name, query=query)
+    if missing_response is not None:
+        return missing_response
+    try:
+        return await _load_ahrq_systems(), await _load_ahrq_hospitals()
+    except Exception as exc:
+        logger.warning("AHRQ metrics cache load failed for %s", tool_name, exc_info=True)
+        response = _ahrq_cache_required_response(tool_name=tool_name, query=query)
+        if response is not None:
+            return response
+        return to_structured(
+            {
+                "ok": False,
+                "error_code": "AHRQ_CACHE_REQUIRED",
+                "status": "blocked_required_cache_unavailable",
+                "message": "AHRQ 2023 Compendium cache could not be loaded.",
+                "tool": tool_name,
+                "query": query or {},
+                "required_files": [AHRQ_SYSTEM_CACHE.name, AHRQ_HOSPITAL_LINKAGE_CACHE.name],
+                "required_paths": [str(AHRQ_SYSTEM_CACHE), str(AHRQ_HOSPITAL_LINKAGE_CACHE)],
+                "recovery_steps": [
+                    "Run hc-mcp doctor --check",
+                    "Rebuild the AHRQ Compendium cache using the documented setup workflow",
+                    "Verify CSV files preserve leading-zero CCNs and ZIP codes",
+                    "Retry the metrics tool after cache setup",
+                ],
+                "source": "AHRQ Compendium 2023",
+                "detail": {"exception_type": type(exc).__name__},
+            }
+        )
+
+
 async def _load_hospital_general_info_overlay() -> pd.DataFrame:
     try:
         from shared.utils.cms_client import load_hospital_general_info
@@ -543,6 +623,12 @@ def _load_profile_provider_rows(ccns: list[str]) -> list[dict[str, Any]]:
         try:
             rows.extend(provider_loaders.query_ownership(ccn=ccn, limit=25))
             rows.extend(provider_loaders.query_chow(ccn=ccn, limit=25))
+        except ImportError as exc:
+            logger.warning(
+                "Skipping optional provider enrollment profile rows; parquet support is unavailable: %s",
+                exc,
+            )
+            break
         except Exception:
             logger.warning("Provider enrollment profile rows failed for CCN %s", ccn, exc_info=True)
     return rows[:250]
@@ -824,8 +910,20 @@ async def list_health_system_metrics(
     - Mixing current CMS address/type values into 2023 snapshot metrics without data_mode and candidate caveats.
     """
 
-    systems_df = await _load_ahrq_systems()
-    hospitals_df = await _load_ahrq_hospitals()
+    query = {
+        "cursor": cursor,
+        "page_size": page_size,
+        "sort": sort,
+        "state": state,
+        "state_scope": state_scope,
+        "as_of_mode": as_of_mode,
+        "include_facilities": include_facilities,
+        "include_medicare_public_clinician_roster_estimate": include_medicare_public_clinician_roster_estimate,
+    }
+    frames = await _load_required_ahrq_metric_frames(tool_name="list_health_system_metrics", query=query)
+    if isinstance(frames, dict):
+        return frames
+    systems_df, hospitals_df = frames
     hgi_df = await _load_hospital_general_info_overlay() if as_of_mode == "latest_public_overlay" else pd.DataFrame()
     pos_df = await _load_pos() if as_of_mode == "latest_public_overlay" else pd.DataFrame()
     clinicians_df = (
@@ -913,17 +1011,25 @@ async def get_health_system_metrics(
     """
 
     if not system_id and not system_name:
-        return _system_error_response(
-            "Provide system_id or system_name.",
-            code="invalid_params",
-            query={"system_id": system_id or "", "system_name": system_name or "", "as_of_mode": as_of_mode},
-            match_basis="missing_required_identifier",
-            confidence="not_evaluated",
-            next_step="Retry with an exact AHRQ health_sys_id or a system_name to search.",
+        return to_structured(
+            invalid_argument_payload(
+                "system_id",
+                system_id,
+                message="Provide system_id or system_name.",
+            )
         )
 
-    systems_df = await _load_ahrq_systems()
-    hospitals_df = await _load_ahrq_hospitals()
+    query = {
+        "system_id": system_id,
+        "system_name": system_name,
+        "as_of_mode": as_of_mode,
+        "include_facilities": include_facilities,
+        "include_medicare_public_clinician_roster_estimate": include_medicare_public_clinician_roster_estimate,
+    }
+    frames = await _load_required_ahrq_metric_frames(tool_name="get_health_system_metrics", query=query)
+    if isinstance(frames, dict):
+        return frames
+    systems_df, hospitals_df = frames
     hgi_df = await _load_hospital_general_info_overlay() if as_of_mode == "latest_public_overlay" else pd.DataFrame()
     pos_df = await _load_pos() if as_of_mode == "latest_public_overlay" else pd.DataFrame()
     clinicians_df = (

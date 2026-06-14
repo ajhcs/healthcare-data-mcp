@@ -90,6 +90,23 @@ async def test_search_health_systems(mock_ahrq_systems):
 
 
 @pytest.mark.asyncio
+async def test_list_health_system_metrics_missing_ahrq_cache_returns_structured_recovery(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(server, "AHRQ_SYSTEM_CACHE", tmp_path / "missing_system.csv")
+    monkeypatch.setattr(server, "AHRQ_HOSPITAL_LINKAGE_CACHE", tmp_path / "missing_linkage.csv")
+
+    result = await server.list_health_system_metrics(page_size=1)
+
+    assert result["ok"] is False
+    assert result["error_code"] == "AHRQ_CACHE_REQUIRED"
+    assert result["status"] == "blocked_missing_required_cache"
+    assert result["required_files"] == ["missing_system.csv", "missing_linkage.csv"]
+    assert "recovery_steps" in result
+
+
+@pytest.mark.asyncio
 async def test_get_system_profile(mock_ahrq_systems, mock_ahrq_hospitals, mock_pos):
     with (
         patch.object(server, "_load_ahrq_systems", new_callable=AsyncMock, return_value=mock_ahrq_systems),

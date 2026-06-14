@@ -3,14 +3,19 @@
 from __future__ import annotations
 
 from pathlib import Path
+import json
 
+import numpy as np
 import pandas as pd
 import pytest
 
 from servers.health_system_profiler.data_loaders import parse_ahrq_hospital_linkage, parse_ahrq_system_file
 from servers.health_system_profiler.system_metrics import (
     get_health_system_metric,
+    is_missing_scalar,
+    json_safe,
     list_health_system_metric_rows,
+    _int_or_none,
 )
 
 
@@ -125,6 +130,75 @@ def test_list_health_system_metrics_returns_universe_metadata_and_cursor(systems
     )
     assert second["systems"][0]["system_id"] == "HSI00000002"
     assert second["pagination"]["next_cursor"] is None
+
+
+def test_scalar_normalization_handles_pandas_and_numpy_missing_values() -> None:
+    assert is_missing_scalar(pd.NA)
+    assert is_missing_scalar(np.nan)
+    assert is_missing_scalar("")
+    assert is_missing_scalar(None)
+    assert _int_or_none(pd.NA) is None
+    assert _int_or_none(np.nan) is None
+    assert _int_or_none("") is None
+    assert _int_or_none(None) is None
+    assert _int_or_none("298") == 298
+    assert _int_or_none(298) == 298
+
+
+def test_metric_response_is_json_safe_with_nullable_values(
+    systems_df: pd.DataFrame,
+    hospitals_df: pd.DataFrame,
+) -> None:
+    nullable_systems = systems_df.copy()
+    nullable_systems["total_mds"] = pd.Series([10, pd.NA], dtype="Int64")
+    nullable_hospitals = hospitals_df.copy()
+    nullable_hospitals["hos_beds"] = pd.Series([90, pd.NA, 200], dtype="Int64")
+
+    result = list_health_system_metric_rows(
+        systems_df=nullable_systems,
+        hospitals_df=nullable_hospitals,
+        page_size=2,
+        include_facilities=True,
+    )
+
+    json.dumps(result)
+    assert json_safe(pd.NA) is None
+    assert result["systems"][1]["counts"]["physician_count"]["value"] is None
+    assert result["systems"][0]["hospitals"][1]["hospital_bed_count"]["primary"] is None
+
+
+def test_invalid_arguments_return_explicit_errors(systems_df: pd.DataFrame, hospitals_df: pd.DataFrame) -> None:
+    result = list_health_system_metric_rows(
+        systems_df=systems_df,
+        hospitals_df=hospitals_df,
+        as_of_mode="current",
+    )
+    assert result["error"]["code"] == "INVALID_ARGUMENT"
+    assert result["error"]["data"]["field"] == "as_of_mode"
+    assert result["error"]["data"]["allowed_values"] == ["compendium_snapshot", "latest_public_overlay"]
+
+    get_result = get_health_system_metric(
+        systems_df=systems_df,
+        hospitals_df=hospitals_df,
+        system_id=None,
+        system_name=None,
+    )
+    assert get_result["error"]["code"] == "INVALID_ARGUMENT"
+
+
+def test_include_facilities_false_omits_hospital_payload(
+    systems_df: pd.DataFrame,
+    hospitals_df: pd.DataFrame,
+) -> None:
+    result = get_health_system_metric(
+        systems_df=systems_df,
+        hospitals_df=hospitals_df,
+        system_id="HSI00000001",
+        include_facilities=False,
+    )
+
+    assert "hospitals" not in result["system"]
+    assert result["system"]["counts"]["linked_hospital_rows_count"]["value"] == 2
 
 
 def test_compendium_snapshot_uses_ahrq_address_type_and_beds_even_with_overlay(

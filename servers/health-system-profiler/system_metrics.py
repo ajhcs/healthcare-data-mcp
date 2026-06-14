@@ -5,9 +5,11 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import math
 import re
 from typing import Any, Literal
 
+import numpy as np
 import pandas as pd
 from rapidfuzz import fuzz, process
 
@@ -44,6 +46,33 @@ _AHRQ_DATASET = "ahrq_health_system_compendium"
 _CLINICIAN_DATASET = "cms_doctors_clinicians_national_downloadable_file"
 
 
+def invalid_argument_payload(
+    field: str,
+    received: Any,
+    *,
+    allowed_values: list[Any] | None = None,
+    message: str | None = None,
+) -> dict[str, Any]:
+    data: dict[str, Any] = {
+        "error_code": "INVALID_ARGUMENT",
+        "field": field,
+        "received": json_safe(received),
+    }
+    if allowed_values is not None:
+        data["allowed_values"] = allowed_values
+    return {
+        "error_code": "INVALID_ARGUMENT",
+        "status": "invalid_argument",
+        "error": {
+            "code": "INVALID_ARGUMENT",
+            "message": message or f"Invalid value for {field}.",
+            "recoverable": True,
+            "data": data,
+        },
+        "next_actions": ["Retry with one of the documented argument values."],
+    }
+
+
 def list_health_system_metric_rows(
     *,
     systems_df: pd.DataFrame,
@@ -62,19 +91,43 @@ def list_health_system_metric_rows(
 ) -> dict[str, Any]:
     """Return a cursor-paged national metrics payload."""
 
-    mode = _normalize_mode(as_of_mode)
-    scope = _normalize_state_scope(state_scope)
-    sort_key = _normalize_sort(sort)
-    bounded_size = max(1, min(int(page_size or 50), MAX_PAGE_SIZE))
+    validation = _validate_list_arguments(
+        cursor=cursor,
+        page_size=page_size,
+        sort=sort,
+        state_scope=state_scope,
+        as_of_mode=as_of_mode,
+        include_facilities=include_facilities,
+        include_medicare_public_clinician_roster_estimate=include_medicare_public_clinician_roster_estimate,
+    )
+    if validation:
+        return json_safe(validation)
+
+    mode = as_of_mode  # type: ignore[assignment]
+    scope = state_scope  # type: ignore[assignment]
+    sort_key = sort  # type: ignore[assignment]
+    bounded_size = int(page_size)
     snapshot_id = build_snapshot_id(systems_df, hospitals_df)
     decoded = _decode_cursor(cursor)
+    if cursor and decoded is None:
+        return json_safe(
+            _error_payload(
+                "invalid_cursor",
+                "Cursor is not a valid health-system metrics cursor.",
+                mode=mode,
+                snapshot_id=snapshot_id,
+                data={"field": "cursor", "received": cursor},
+            )
+        )
     if decoded and decoded.get("snapshot_id") != snapshot_id:
-        return _error_payload(
-            "cursor_snapshot_mismatch",
-            "Cursor belongs to a different AHRQ snapshot/cache state.",
-            mode=mode,
-            snapshot_id=snapshot_id,
-            data={"cursor_snapshot_id": decoded.get("snapshot_id"), "expected_snapshot_id": snapshot_id},
+        return json_safe(
+            _error_payload(
+                "cursor_snapshot_mismatch",
+                "Cursor belongs to a different AHRQ snapshot/cache state.",
+                mode=mode,
+                snapshot_id=snapshot_id,
+                data={"cursor_snapshot_id": decoded.get("snapshot_id"), "expected_snapshot_id": snapshot_id},
+            )
         )
 
     filtered_systems = _filter_systems(systems_df, hospitals_df, state=state, state_scope=scope)
@@ -151,7 +204,7 @@ def list_health_system_metric_rows(
             "Keep compendium_snapshot values separate from latest_public_overlay candidates in downstream reports.",
         ],
     }
-    return payload
+    return json_safe(payload)
 
 
 def get_health_system_metric(
@@ -169,18 +222,28 @@ def get_health_system_metric(
 ) -> dict[str, Any]:
     """Return one system metrics payload or a bounded candidate list."""
 
-    mode = _normalize_mode(as_of_mode)
+    validation = _validate_get_arguments(
+        system_id=system_id,
+        system_name=system_name,
+        as_of_mode=as_of_mode,
+        include_facilities=include_facilities,
+        include_medicare_public_clinician_roster_estimate=include_medicare_public_clinician_roster_estimate,
+    )
+    if validation:
+        return json_safe(validation)
+
+    mode = as_of_mode  # type: ignore[assignment]
     snapshot_id = build_snapshot_id(systems_df, hospitals_df)
     query = {
-        "system_id": str(system_id or ""),
-        "system_name": str(system_name or ""),
+        "system_id": _clean_string(system_id),
+        "system_name": _clean_string(system_name),
         "as_of_mode": mode,
         "include_facilities": include_facilities,
         "include_medicare_public_clinician_roster_estimate": include_medicare_public_clinician_roster_estimate,
     }
     row = _resolve_system_row(systems_df, system_id=system_id, system_name=system_name)
     if row.get("status") == "candidates":
-        return {
+        return json_safe({
             **universe_metadata(mode, snapshot_id),
             "error": {
                 "code": "ambiguous_system_name",
@@ -197,14 +260,16 @@ def get_health_system_metric(
                 include_clinician_roster=include_medicare_public_clinician_roster_estimate,
             ),
             "next_actions": ["Retry with one candidate's exact system_id."],
-        }
+        })
     if row.get("status") == "not_found":
-        return _error_payload(
-            "not_found",
-            "No AHRQ Compendium 2023 health system matched the provided identifier.",
-            mode=mode,
-            snapshot_id=snapshot_id,
-            data={"query": query},
+        return json_safe(
+            _error_payload(
+                "not_found",
+                "No AHRQ Compendium 2023 health system matched the provided identifier.",
+                mode=mode,
+                snapshot_id=snapshot_id,
+                data={"query": query},
+            )
         )
 
     hgi_index = _frame_by_ccn(hgi_df)
@@ -219,7 +284,7 @@ def get_health_system_metric(
         pos_index=pos_index,
         clinicians_df=clinicians_df,
     )
-    return {
+    return json_safe({
         **universe_metadata(mode, snapshot_id),
         "system": system,
         "coverage": coverage_summary(systems_df, hospitals_df, systems_returned=1, hgi_df=hgi_df, pos_df=pos_df),
@@ -234,7 +299,7 @@ def get_health_system_metric(
             "Use compendium_snapshot values for AHRQ 2023 reports.",
             "Use latest_public_overlay candidates only when a current public-data caveat is acceptable.",
         ],
-    }
+    })
 
 
 def build_system_metric(
@@ -250,7 +315,7 @@ def build_system_metric(
 ) -> dict[str, Any]:
     """Build one source-disciplined system metric object."""
 
-    system_id = str(system.get("health_sys_id") or "")
+    system_id = _clean_string(system.get("health_sys_id"))
     linked = _linked_hospitals(hospitals_df, system_id)
     acute_rows = [row for row in linked if _int_or_none(row.get("acutehosp_flag")) == 1]
     hospital_count_total = _int_or_none(system.get("hosp_cnt"))
@@ -265,16 +330,25 @@ def build_system_metric(
         system=system,
         acute_rows=acute_rows,
     )
-    facilities = [
-        build_hospital_metric(row, mode=mode, hgi_row=(hgi_index or {}).get(str(row.get("ccn") or "")), pos_row=(pos_index or {}).get(str(row.get("ccn") or "")))
-        for row in linked
-    ]
+    facilities = (
+        [
+            build_hospital_metric(
+                row,
+                mode=mode,
+                hgi_row=(hgi_index or {}).get(_clean_string(row.get("ccn"))),
+                pos_row=(pos_index or {}).get(_clean_string(row.get("ccn"))),
+            )
+            for row in linked
+        ]
+        if include_facilities or include_medicare_public_clinician_roster_estimate
+        else []
+    )
     payload = {
         "system_id": system_id,
-        "system_name": str(system.get("health_sys_name") or ""),
+        "system_name": _clean_string(system.get("health_sys_name")),
         "headquarters": {
-            "city": str(system.get("health_sys_city") or ""),
-            "state": str(system.get("health_sys_state") or ""),
+            "city": _clean_string(system.get("health_sys_city")),
+            "state": _clean_string(system.get("health_sys_state")),
         },
         "counts": {
             "hospital_count_total": _metric_value(hospital_count_total, "AHRQ hosp_cnt", "ahrq_system_file"),
@@ -300,12 +374,12 @@ def build_system_metric(
             "primary_care_physician_count": _metric_value(_int_or_none(system.get("prim_care_mds")), "AHRQ prim_care_mds", "ahrq_system_file"),
             "nurse_practitioner_count": _metric_value(_int_or_none(system.get("total_nps")), "AHRQ total_nps", "ahrq_system_file"),
             "physician_assistant_count": _metric_value(_int_or_none(system.get("total_pas")), "AHRQ total_pas", "ahrq_system_file"),
-            "physician_group_count": _metric_value(_int_or_none(system.get("grp_cnt") or system.get("phys_grp_count")), "AHRQ grp_cnt", "ahrq_system_file"),
+            "physician_group_count": _metric_value(_int_or_none(_first_non_missing(system.get("grp_cnt"), system.get("phys_grp_count"))), "AHRQ grp_cnt", "ahrq_system_file"),
         },
         "warnings": warnings,
         "source_vintage_policy": _vintage_policy(mode),
         "evidence": _evidence(
-            query={"system_id": system_id, "system_name": str(system.get("health_sys_name") or "")},
+            query={"system_id": system_id, "system_name": _clean_string(system.get("health_sys_name"))},
             match_basis="ahrq_system_metric_row",
             mode=mode,
         ),
@@ -326,7 +400,7 @@ def build_hospital_metric(
 ) -> dict[str, Any]:
     """Build one hospital-level metric row with candidates."""
 
-    ccn = str(row.get("ccn") or "")
+    ccn = _clean_string(row.get("ccn"))
     address = _hospital_address(row, mode=mode, hgi_row=hgi_row, pos_row=pos_row)
     hospital_type = _hospital_type(row, mode=mode, hgi_row=hgi_row, pos_row=pos_row)
     warnings = []
@@ -334,12 +408,12 @@ def build_hospital_metric(
         warnings.append({"code": "missing_ccn", "message": "AHRQ linkage row has no CCN; use compendium_hospital_id as row identity."})
     warnings.append({"code": "ccn_not_campus_identity", "message": SHARED_CCN_CAVEAT})
     return {
-        "compendium_hospital_id": str(row.get("compendium_hospital_id") or ""),
+        "compendium_hospital_id": _clean_string(row.get("compendium_hospital_id")),
         "ccn": ccn,
         "ccn_role": "join_key_not_guaranteed_campus_identity",
-        "hospital_name": str(row.get("hospital_name") or ""),
-        "system_id": str(row.get("health_sys_id") or ""),
-        "system_name": str(row.get("health_sys_name") or ""),
+        "hospital_name": _clean_string(row.get("hospital_name")),
+        "system_id": _clean_string(row.get("health_sys_id")),
+        "system_name": _clean_string(row.get("health_sys_name")),
         "hospital_bed_count": {
             "primary": _int_or_none(row.get("hos_beds")),
             "primary_basis": "compendium_snapshot",
@@ -375,7 +449,7 @@ def coverage_summary(
             complete += 1
     hgi_ccns = set(_frame_by_ccn(hgi_df))
     pos_ccns = set(_frame_by_ccn(pos_df))
-    linked_ccns = {str(value) for value in linked.get("ccn", []) if str(value)}
+    linked_ccns = {_clean_string(value) for value in linked.get("ccn", []) if not is_missing_scalar(value)}
     return {
         "total_systems_in_universe": len(systems_df),
         "systems_returned": systems_returned,
@@ -384,7 +458,11 @@ def coverage_summary(
         "linked_nonfederal_general_acute_hospitals": len(acute),
         "systems_with_all_required_counts": complete,
         "hospitals_with_hos_beds": int(pd.to_numeric(linked.get("hos_beds", pd.Series(dtype=str)), errors="coerce").notna().sum()) if not linked.empty else 0,
-        "hospitals_missing_hcris_bed_data": None,
+        "hospitals_missing_hcris_bed_data": {
+            "value": None,
+            "status": "unavailable",
+            "reason": "HCRIS bed-gap coverage was not computed for this cache state.",
+        },
         "hospitals_matched_to_cms_hgi": len(linked_ccns & hgi_ccns),
         "hospitals_matched_to_pos": len(linked_ccns & pos_ccns),
         "coverage_note": UNIVERSE_CAVEAT,
@@ -471,12 +549,20 @@ def _hospital_address(
             "address": _address_from_ahrq(row),
         }
     ]
-    if hgi_row:
+    if hgi_row is not None:
         candidates.append({"source": "CMS Hospital General Information", "dataset_id": _HGI_DATASET, "data_mode": "latest_public_overlay", "address": _address_from_hgi(hgi_row)})
-    if pos_row:
+    if pos_row is not None:
         candidates.append({"source": "CMS Provider of Services", "dataset_id": _POS_DATASET, "data_mode": "latest_public_overlay", "address": _address_from_pos(pos_row)})
     preferred_mode = "latest_public_overlay" if mode == "latest_public_overlay" else "compendium_snapshot"
-    primary = next((candidate for candidate in candidates if candidate["data_mode"] == preferred_mode and any(candidate["address"].values())), candidates[0])
+    primary = next(
+        (
+            candidate
+            for candidate in candidates
+            if candidate["data_mode"] == preferred_mode
+            and any(not is_missing_scalar(value) for value in candidate["address"].values())
+        ),
+        candidates[0],
+    )
     return {
         "primary": primary["address"],
         "primary_basis": preferred_mode,
@@ -496,14 +582,14 @@ def _hospital_type(
     pos_raw = _first_value(pos_row or {}, "PRVDR_CTGRY_CD", "PRVDR_CTGRY_SBTYP_CD", "GNRL_FAC_TYPE_CD")
     ahrq_acute = _int_or_none(row.get("acutehosp_flag"))
     inferred = "nonfederal_general_acute" if ahrq_acute == 1 else "non_acute_or_unknown" if ahrq_acute == 0 else "unknown"
-    primary_raw = (hgi_raw or pos_raw or inferred) if mode == "latest_public_overlay" else inferred
-    normalized = _normalize_hospital_type(str(primary_raw or inferred), ahrq_acute=ahrq_acute)
+    primary_raw = _first_non_missing(hgi_raw, pos_raw, inferred) if mode == "latest_public_overlay" else inferred
+    normalized = _normalize_hospital_type(_clean_string(_first_non_missing(primary_raw, inferred)), ahrq_acute=ahrq_acute)
     return {
         "normalized_type": normalized,
-        "primary_basis": "latest_public_overlay" if mode == "latest_public_overlay" and (hgi_raw or pos_raw) else "compendium_snapshot",
+        "primary_basis": "latest_public_overlay" if mode == "latest_public_overlay" and not is_missing_scalar(_first_non_missing(hgi_raw, pos_raw)) else "compendium_snapshot",
         "ahrq_acutehosp_flag": ahrq_acute,
-        "cms_hgi_hospital_type_raw": hgi_raw or None,
-        "cms_pos_provider_type_raw": pos_raw or None,
+        "cms_hgi_hospital_type_raw": None if is_missing_scalar(hgi_raw) else hgi_raw,
+        "cms_pos_provider_type_raw": None if is_missing_scalar(pos_raw) else pos_raw,
         "ccn_type_inferred": inferred,
         "conflicts": _type_conflicts(ahrq_acute, hgi_raw, pos_raw),
     }
@@ -520,7 +606,7 @@ def _hospital_bed_candidates(row: dict[str, Any], *, pos_row: dict[str, Any] | N
             "selected_for_compendium_snapshot": True,
         }
     ]
-    if pos_row:
+    if pos_row is not None:
         for field in ("BED_CNT", "CRTFD_BED_CNT"):
             value = _int_or_none(pos_row.get(field))
             if value is not None:
@@ -563,8 +649,8 @@ def _clinician_roster_estimate(
             "caveat": "Doctors and Clinicians rows are clinician/enrollment/group/address-level; load a cache before estimating.",
         }
     system_name = _norm(system.get("health_sys_name"))
-    states = {str(system.get("health_sys_state") or "").upper()}
-    states.update(str(f.get("hospital_address", {}).get("primary", {}).get("state") or "").upper() for f in facilities)
+    states = {_clean_string(system.get("health_sys_state")).upper()}
+    states.update(_clean_string(f.get("hospital_address", {}).get("primary", {}).get("state")).upper() for f in facilities)
     facility_names = {_norm(f.get("hospital_name")) for f in facilities}
     npi_col = _find_col(clinicians_df, "npi")
     spec_col = _find_col(clinicians_df, "pri_spec", "primary_specialty", "specialty")
@@ -575,10 +661,10 @@ def _clinician_roster_estimate(
         return {"status": "unavailable_public_cache", "value": None, "caveat": "Clinician file did not include an NPI column."}
     npis: set[str] = set()
     for _, row in clinicians_df.iterrows():
-        npi = str(row.get(npi_col) or "").strip()
+        npi = _clean_string(row.get(npi_col))
         if not npi:
             continue
-        state = str(row.get(state_col) or "").upper() if state_col else ""
+        state = _clean_string(row.get(state_col)).upper() if state_col else ""
         if states and state and state not in states:
             continue
         if not _looks_like_physician(row.get(spec_col) if spec_col else "", row.get(cred_col) if cred_col else ""):
@@ -597,7 +683,7 @@ def _clinician_roster_estimate(
 
 
 def _looks_like_physician(specialty: Any, credential: Any) -> bool:
-    text = f"{specialty or ''} {credential or ''}".upper()
+    text = f"{_clean_string(specialty)} {_clean_string(credential)}".upper()
     physician_markers = ("MD", "DO", "M.D", "D.O", "PHYSICIAN", "SURGERY", "CARDIOLOGY", "RADIOLOGY", "ANESTHESIOLOGY", "INTERNAL MEDICINE", "FAMILY PRACTICE", "GENERAL PRACTICE")
     excluded = ("NURSE", "PHYSICIAN ASSISTANT", "SOCIAL WORKER", "DIETITIAN", "PSYCHOLOGIST")
     return any(marker in text for marker in physician_markers) and not any(marker in text for marker in excluded)
@@ -681,10 +767,10 @@ def _resolve_system_row(systems_df: pd.DataFrame, *, system_id: str | None, syst
 
 def _candidate(row: pd.Series, score: float) -> dict[str, Any]:
     return {
-        "system_id": str(row.get("health_sys_id") or ""),
-        "system_name": str(row.get("health_sys_name") or ""),
-        "hq_city": str(row.get("health_sys_city") or ""),
-        "hq_state": str(row.get("health_sys_state") or ""),
+        "system_id": _clean_string(row.get("health_sys_id")),
+        "system_name": _clean_string(row.get("health_sys_name")),
+        "hq_city": _clean_string(row.get("health_sys_city")),
+        "hq_state": _clean_string(row.get("health_sys_state")),
         "match_score": round(float(score), 1),
     }
 
@@ -703,7 +789,7 @@ def _frame_by_ccn(frame: pd.DataFrame | None) -> dict[str, dict[str, Any]]:
         return {}
     index: dict[str, dict[str, Any]] = {}
     for _, row in frame.iterrows():
-        ccn = str(row.get(ccn_col) or "").strip()
+        ccn = _clean_string(row.get(ccn_col))
         if ccn:
             index[ccn.zfill(6)] = row.to_dict()
     return index
@@ -711,10 +797,10 @@ def _frame_by_ccn(frame: pd.DataFrame | None) -> dict[str, dict[str, Any]]:
 
 def _address_from_ahrq(row: dict[str, Any]) -> dict[str, str]:
     return {
-        "line1": str(row.get("hospital_street") or ""),
-        "city": str(row.get("hospital_city") or ""),
-        "state": str(row.get("hospital_state") or ""),
-        "zip_code": str(row.get("hospital_zip") or ""),
+        "line1": _clean_string(row.get("hospital_street")),
+        "city": _clean_string(row.get("hospital_city")),
+        "state": _clean_string(row.get("hospital_state")),
+        "zip_code": _clean_string(row.get("hospital_zip")),
     }
 
 
@@ -740,7 +826,7 @@ def _address_conflicts(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]
     seen: dict[str, list[str]] = {}
     for candidate in candidates:
         address = candidate.get("address") or {}
-        key = _norm(" ".join(str(address.get(part) or "") for part in ("line1", "city", "state", "zip_code")))
+        key = _norm(" ".join(_clean_string(address.get(part)) for part in ("line1", "city", "state", "zip_code")))
         if key:
             seen.setdefault(key, []).append(candidate["source"])
     if len(seen) <= 1:
@@ -750,9 +836,9 @@ def _address_conflicts(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]
 
 def _type_conflicts(ahrq_acute: int | None, hgi_raw: str, pos_raw: str) -> list[dict[str, Any]]:
     conflicts = []
-    if ahrq_acute == 1 and hgi_raw and "acute" not in hgi_raw.lower() and "critical access" not in hgi_raw.lower():
+    if ahrq_acute == 1 and not is_missing_scalar(hgi_raw) and "acute" not in hgi_raw.lower() and "critical access" not in hgi_raw.lower():
         conflicts.append({"code": "ahrq_acute_flag_cms_type_difference", "ahrq_acutehosp_flag": ahrq_acute, "cms_hgi_hospital_type_raw": hgi_raw})
-    if hgi_raw and pos_raw and _normalize_hospital_type(hgi_raw, ahrq_acute=None) != _normalize_hospital_type(pos_raw, ahrq_acute=None):
+    if not is_missing_scalar(hgi_raw) and not is_missing_scalar(pos_raw) and _normalize_hospital_type(hgi_raw, ahrq_acute=None) != _normalize_hospital_type(pos_raw, ahrq_acute=None):
         conflicts.append({"code": "cms_hgi_pos_type_difference", "cms_hgi_hospital_type_raw": hgi_raw, "cms_pos_provider_type_raw": pos_raw})
     return conflicts
 
@@ -783,7 +869,7 @@ def _metric_value(value: int | None, label: str, source_field: str, *, caveat: s
         "source_field": source_field,
         "dataset_id": _AHRQ_DATASET,
         "confidence": "compendium_snapshot_count",
-        "caveat": caveat or UNIVERSE_CAVEAT,
+        "caveat": caveat if caveat else UNIVERSE_CAVEAT,
     }
 
 
@@ -814,7 +900,7 @@ def _evidence(*, query: dict[str, Any], match_basis: str, mode: UniverseMode) ->
 
 
 def _identity_map(systems: list[dict[str, Any]]) -> dict[str, Any]:
-    ids = [str(system.get("system_id") or "") for system in systems if system.get("system_id")]
+    ids = [_clean_string(system.get("system_id")) for system in systems if _clean_string(system.get("system_id"))]
     return {
         "entity_scope": "ahrq_compendium_2023_health_system_metrics",
         "join_keys": [
@@ -843,14 +929,14 @@ def _encode_cursor(payload: dict[str, Any]) -> str:
     return base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
 
 
-def _decode_cursor(cursor: str | None) -> dict[str, Any]:
+def _decode_cursor(cursor: str | None) -> dict[str, Any] | None:
     if not cursor:
         return {}
     try:
         padded = cursor + "=" * (-len(cursor) % 4)
         return json.loads(base64.urlsafe_b64decode(padded.encode("ascii")).decode("utf-8"))
     except Exception:
-        return {}
+        return None
 
 
 def _normalize_mode(value: str) -> UniverseMode:
@@ -872,21 +958,124 @@ def _normalize_sort(value: str) -> SortKey:
 
 
 def _state(value: str | None) -> str:
-    return str(value or "").strip().upper()
+    return _clean_string(value).upper()
+
+
+def _validate_list_arguments(
+    *,
+    cursor: str | None,
+    page_size: int,
+    sort: str,
+    state_scope: str,
+    as_of_mode: str,
+    include_facilities: bool,
+    include_medicare_public_clinician_roster_estimate: bool,
+) -> dict[str, Any] | None:
+    if cursor is not None and not isinstance(cursor, str):
+        return invalid_argument_payload("cursor", cursor, message="cursor must be a string returned by a prior response.")
+    if as_of_mode not in VALID_MODES:
+        return invalid_argument_payload("as_of_mode", as_of_mode, allowed_values=sorted(VALID_MODES))
+    if state_scope not in VALID_STATE_SCOPES:
+        return invalid_argument_payload("state_scope", state_scope, allowed_values=sorted(VALID_STATE_SCOPES))
+    if sort not in VALID_SORTS:
+        return invalid_argument_payload("sort", sort, allowed_values=sorted(VALID_SORTS))
+    if not isinstance(page_size, int) or isinstance(page_size, bool):
+        return invalid_argument_payload("page_size", page_size, message="page_size must be an integer from 1 to 100.")
+    if page_size < 1 or page_size > MAX_PAGE_SIZE:
+        return invalid_argument_payload("page_size", page_size, message="page_size must be between 1 and 100.")
+    if not isinstance(include_facilities, bool):
+        return invalid_argument_payload("include_facilities", include_facilities, allowed_values=[False, True])
+    if not isinstance(include_medicare_public_clinician_roster_estimate, bool):
+        return invalid_argument_payload(
+            "include_medicare_public_clinician_roster_estimate",
+            include_medicare_public_clinician_roster_estimate,
+            allowed_values=[False, True],
+        )
+    return None
+
+
+def _validate_get_arguments(
+    *,
+    system_id: str | None,
+    system_name: str | None,
+    as_of_mode: str,
+    include_facilities: bool,
+    include_medicare_public_clinician_roster_estimate: bool,
+) -> dict[str, Any] | None:
+    if as_of_mode not in VALID_MODES:
+        return invalid_argument_payload("as_of_mode", as_of_mode, allowed_values=sorted(VALID_MODES))
+    if system_id is not None and not isinstance(system_id, str):
+        return invalid_argument_payload("system_id", system_id, message="system_id must be an AHRQ health_sys_id string.")
+    if system_name is not None and not isinstance(system_name, str):
+        return invalid_argument_payload("system_name", system_name, message="system_name must be a string.")
+    if not _clean_string(system_id) and not _clean_string(system_name):
+        return invalid_argument_payload("system_id", system_id, message="Provide system_id or system_name.")
+    if not isinstance(include_facilities, bool):
+        return invalid_argument_payload("include_facilities", include_facilities, allowed_values=[False, True])
+    if not isinstance(include_medicare_public_clinician_roster_estimate, bool):
+        return invalid_argument_payload(
+            "include_medicare_public_clinician_roster_estimate",
+            include_medicare_public_clinician_roster_estimate,
+            allowed_values=[False, True],
+        )
+    return None
+
+
+def is_missing_scalar(value: object) -> bool:
+    if value is None:
+        return True
+    if isinstance(value, str):
+        return value.strip() == ""
+    try:
+        missing = pd.isna(value)
+    except (TypeError, ValueError):
+        return False
+    if isinstance(missing, (bool, np.bool_)):
+        return bool(missing)
+    return False
 
 
 def _int_or_none(value: Any) -> int | None:
-    if value in (None, ""):
+    if is_missing_scalar(value):
         return None
-    try:
-        if pd.isna(value):
-            return None
-    except TypeError:
-        pass
     try:
         return int(float(str(value).strip()))
     except (TypeError, ValueError):
         return None
+
+
+def json_safe(value: Any) -> Any:
+    if is_missing_scalar(value):
+        return None
+    if isinstance(value, dict):
+        return {str(k): json_safe(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [json_safe(v) for v in value]
+    if isinstance(value, tuple):
+        return [json_safe(v) for v in value]
+    if isinstance(value, np.integer):
+        return int(value)
+    if isinstance(value, np.floating):
+        number = float(value)
+        return None if math.isnan(number) else number
+    if isinstance(value, np.bool_):
+        return bool(value)
+    if isinstance(value, float) and math.isnan(value):
+        return None
+    return value
+
+
+def _clean_string(value: Any) -> str:
+    if is_missing_scalar(value):
+        return ""
+    return str(value).strip()
+
+
+def _first_non_missing(*values: Any) -> Any:
+    for value in values:
+        if not is_missing_scalar(value):
+            return value
+    return None
 
 
 def _find_col(frame: pd.DataFrame, *candidates: str) -> str:
@@ -907,10 +1096,10 @@ def _first_value(row: dict[str, Any], *candidates: str) -> str:
         if key is None:
             continue
         value = row.get(key)
-        if value not in (None, ""):
-            return str(value).strip()
+        if not is_missing_scalar(value):
+            return _clean_string(value)
     return ""
 
 
 def _norm(value: Any) -> str:
-    return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9]+", " ", str(value or "").casefold())).strip()
+    return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9]+", " ", _clean_string(value).casefold())).strip()
