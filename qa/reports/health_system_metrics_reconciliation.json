@@ -1,0 +1,207 @@
+{
+  "checks": {
+    "all_639_systems_returned_once": true,
+    "all_system_metric_rows_reconcile": true,
+    "ccn_and_zip_are_strings": true,
+    "exact_id_lookup_works": true,
+    "fuzzy_exact_name_lookup_works": true,
+    "include_facilities_false_omits_payload": true,
+    "include_facilities_true_returns_rows": true,
+    "invalid_argument_error": true,
+    "legacy_build_profile_evidence_pack_works": true,
+    "legacy_get_system_profile_works": true,
+    "overlay_values_labeled": true,
+    "snapshot_id_stable": true,
+    "snapshot_values_primary": true,
+    "source_metadata_present": true,
+    "state_filter_returns_systems": true
+  },
+  "coverage": {
+    "coverage_note": "AHRQ Compendium 2023 is a public health-system snapshot aggregated to the highest ownership level. Subsidiary systems and individual campuses may not appear as separate systems.",
+    "hospitals_matched_to_cms_hgi": 0,
+    "hospitals_matched_to_pos": 0,
+    "hospitals_missing_hcris_bed_data": {
+      "reason": "HCRIS bed-gap coverage was not computed for this cache state.",
+      "status": "unavailable",
+      "value": null
+    },
+    "hospitals_with_hos_beds": 3719,
+    "linked_hospitals_to_systems": 4193,
+    "linked_nonfederal_general_acute_hospitals": 3602,
+    "systems_returned": 39,
+    "systems_with_all_required_counts": 635,
+    "total_hospital_linkage_rows": 6800,
+    "total_systems_in_universe": 639
+  },
+  "elapsed_seconds": 93.453,
+  "mcp_counts": {
+    "duplicate_returned_system_ids": [],
+    "extra_system_ids": [],
+    "missing_system_ids": [],
+    "page_count": 7,
+    "pagination_keys": [
+      [
+        "HSI00000008",
+        "HSI00000209"
+      ],
+      [
+        "HSI00000210",
+        "HSI00000428"
+      ],
+      [
+        "HSI00000430",
+        "HSI00000673"
+      ],
+      [
+        "HSI00000675",
+        "HSI00000913"
+      ],
+      [
+        "HSI00000914",
+        "HSI00001133"
+      ],
+      [
+        "HSI00001137",
+        "HSI00001423"
+      ],
+      [
+        "HSI00001424",
+        "HSI00001588"
+      ]
+    ],
+    "returned_systems": 639,
+    "snapshot_id_count": 1,
+    "snapshot_id_values_redacted": true
+  },
+  "mismatch_count": 0,
+  "mismatches": [],
+  "overlay_sample": {
+    "first_hospital_address_basis": "latest_public_overlay",
+    "first_hospital_address_candidate_modes": [
+      "compendium_snapshot",
+      "latest_public_overlay",
+      "latest_public_overlay"
+    ],
+    "first_hospital_bed_candidate_modes": [
+      "compendium_snapshot",
+      "latest_public_overlay",
+      "latest_public_overlay"
+    ],
+    "source_metadata_dataset_ids": [
+      "ahrq_health_system_compendium",
+      "cms_hospital_general_info",
+      "cms_provider_of_services"
+    ]
+  },
+  "raw_counts": {
+    "ahrq_hospital_linkage_rows": 6800,
+    "ahrq_system_rows": 639,
+    "duplicate_health_sys_ids": 0,
+    "linked_acute_hospitals": 3602,
+    "linked_ccns_with_leading_zero": 645,
+    "linked_hospitals": 4193,
+    "linked_hospitals_missing_ccn": 9,
+    "linked_hospitals_missing_hos_beds": 474,
+    "linked_hospitals_with_ccn": 4184,
+    "linked_hospitals_with_hos_beds": 3719,
+    "linked_zips_with_leading_zero": 253
+  },
+  "sample_facility": {
+    "first_hospital": {
+      "ccn": "361304",
+      "ccn_role": "join_key_not_guaranteed_campus_identity",
+      "compendium_hospital_id": "CHSP00000063",
+      "discharges": {
+        "caveat": "AHRQ Compendium 2023 is a public health-system snapshot aggregated to the highest ownership level. Subsidiary systems and individual campuses may not appear as separate systems.",
+        "confidence": "compendium_snapshot_count",
+        "dataset_id": "ahrq_health_system_compendium",
+        "label": "AHRQ hos_dsch",
+        "source_field": "ahrq_hospital_linkage",
+        "value": 147
+      },
+      "hospital_address": {
+        "candidates": [
+          {
+            "address": {
+              "city": "Greenfield",
+              "line1": "550 Mirabeau Street",
+              "state": "OH",
+              "zip_code": "45123"
+            },
+            "data_mode": "compendium_snapshot",
+            "dataset_id": "ahrq_health_system_compendium",
+            "source": "AHRQ hospital linkage"
+          }
+        ],
+        "conflicts": [],
+        "primary": {
+          "city": "Greenfield",
+          "line1": "550 Mirabeau Street",
+          "state": "OH",
+          "zip_code": "45123"
+        },
+        "primary_basis": "compendium_snapshot"
+      },
+      "hospital_bed_count": {
+        "candidates": [
+          {
+            "data_mode": "compendium_snapshot",
+            "dataset_id": "ahrq_health_system_compendium",
+            "selected_for_compendium_snapshot": true,
+            "source": "AHRQ hospital linkage",
+            "source_field": "hos_beds",
+            "value": 25
+          }
+        ],
+        "caveat": "In compendium_snapshot mode, AHRQ hospital linkage hos_beds is the primary hospital bed count.",
+        "dataset_id": "ahrq_health_system_compendium",
+        "primary": 25,
+        "primary_basis": "compendium_snapshot",
+        "source": "AHRQ hospital linkage hos_beds",
+        "source_field": "hos_beds"
+      },
+      "hospital_name": "Greenfield Area Medical Center",
+      "hospital_type": {
+        "ahrq_acutehosp_flag": 1,
+        "ccn_type_inferred": "nonfederal_general_acute",
+        "cms_hgi_hospital_type_raw": null,
+        "cms_pos_provider_type_raw": null,
+        "conflicts": [],
+        "normalized_type": "acute_care",
+        "primary_basis": "compendium_snapshot"
+      },
+      "system_id": "HSI00000008",
+      "system_name": "Adena Health System",
+      "warnings": [
+        {
+          "code": "ccn_not_campus_identity",
+          "message": "CCN is a join key, not guaranteed campus-level identity. AHRQ documents that multiple facilities or campuses sharing one CCN appear as a single linkage entry."
+        }
+      ]
+    },
+    "hospital_count": 4,
+    "system_id": "HSI00000008"
+  },
+  "source_files": {
+    "hospital_linkage": "/home/plumbob/.healthcare-data-mcp/cache/ahrq_hospital_linkage_2023.csv",
+    "system": "/home/plumbob/.healthcare-data-mcp/cache/ahrq_system_2023.csv"
+  },
+  "status": "PASS WITH WARNINGS",
+  "tool_acceptance": {
+    "build_profile_evidence_pack_has_workflow_id": true,
+    "build_profile_evidence_pack_required_field_sections": {
+      "addresses": true,
+      "hospital_bed_counts": true,
+      "identity": true,
+      "system_bed_count_candidates": true
+    },
+    "build_profile_evidence_pack_status": "ready",
+    "build_profile_evidence_pack_unavailable_public_findings_count": 2,
+    "get_system_profile_has_system": true,
+    "get_system_profile_status": null
+  },
+  "warnings": [
+    "HCRIS bed-gap coverage is explicitly unavailable for this cache state.",
+    "Profile evidence pack reported optional unavailable public findings."
+  ]
+}

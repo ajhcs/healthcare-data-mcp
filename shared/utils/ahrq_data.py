@@ -62,11 +62,45 @@ def _find_column(df: pd.DataFrame, candidates: list[str]) -> str | None:
 # AHRQ Compendium loaders
 # ============================================================
 
+_AHRQ_SYSTEM_INT_COLUMNS = (
+    "total_mds",
+    "prim_care_mds",
+    "total_nps",
+    "total_pas",
+    "grp_cnt",
+    "grp_cnt_restricted",
+    "hosp_cnt",
+    "acutehosp_cnt",
+    "nh_cnt",
+    "nh_cnt_restricted",
+    "hhco_cnt",
+    "hhco_cnt_restricted",
+    "sys_beds",
+    "sys_dsch",
+    "hosp_count",
+    "phys_grp_count",
+)
+
+_AHRQ_HOSPITAL_INT_COLUMNS = (
+    "acutehosp_flag",
+    "hos_beds",
+    "hos_dsch",
+    "hos_children",
+    "hos_majteach",
+    "hos_vmajteach",
+)
+
+
+def _nullable_int_column(df: pd.DataFrame, column: str) -> None:
+    if column in df.columns:
+        df[column] = pd.to_numeric(df[column], errors="coerce").astype("Int64")
+
+
 def parse_ahrq_system_file(path: Path) -> pd.DataFrame:
     """Parse the AHRQ Compendium system file.
 
-    Returns DataFrame with columns: health_sys_id, health_sys_name,
-    health_sys_city, health_sys_state, hosp_count, phys_grp_count.
+    Returns a normalized DataFrame that preserves source snapshot fields used
+    for source-disciplined health-system metrics.
     """
     df = pd.read_csv(path, dtype=str, keep_default_na=False, encoding_errors="replace")
     df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
@@ -77,7 +111,7 @@ def parse_ahrq_system_file(path: Path) -> pd.DataFrame:
     city_col = _find_column(df, ["health_sys_city", "sys_city", "city"])
     state_col = _find_column(df, ["health_sys_state", "sys_state", "state"])
     hosp_col = _find_column(df, ["hosp_count", "hospital_count", "num_hospitals", "n_hosp"])
-    phys_col = _find_column(df, ["phys_grp_count", "physician_group_count", "n_phys_grp"])
+    phys_col = _find_column(df, ["phys_grp_count", "physician_group_count", "n_phys_grp", "grp_cnt"])
 
     if id_col:
         col_map[id_col] = "health_sys_id"
@@ -89,14 +123,17 @@ def parse_ahrq_system_file(path: Path) -> pd.DataFrame:
         col_map[state_col] = "health_sys_state"
     if hosp_col:
         col_map[hosp_col] = "hosp_count"
-    if phys_col:
+    if phys_col and phys_col != "grp_cnt":
         col_map[phys_col] = "phys_grp_count"
 
     df = df.rename(columns=col_map)
+    if "hosp_count" not in df.columns and "hosp_cnt" in df.columns:
+        df["hosp_count"] = df["hosp_cnt"]
+    if "phys_grp_count" not in df.columns and "grp_cnt" in df.columns:
+        df["phys_grp_count"] = df["grp_cnt"]
 
-    for int_col in ["hosp_count", "phys_grp_count"]:
-        if int_col in df.columns:
-            df[int_col] = pd.to_numeric(df[int_col], errors="coerce").fillna(0).astype(int)
+    for int_col in _AHRQ_SYSTEM_INT_COLUMNS:
+        _nullable_int_column(df, int_col)
 
     return df
 
@@ -104,25 +141,43 @@ def parse_ahrq_system_file(path: Path) -> pd.DataFrame:
 def parse_ahrq_hospital_linkage(path: Path) -> pd.DataFrame:
     """Parse the AHRQ Compendium hospital linkage file.
 
-    Returns DataFrame with columns: health_sys_id, ccn, hospital_name,
-    hosp_city, hosp_state, hosp_zip, hos_beds, hos_dsch, ownership, teaching.
+    Returns a normalized DataFrame with source identifiers preserved as strings.
     """
     df = pd.read_csv(path, dtype=str, keep_default_na=False, encoding_errors="replace")
     df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
 
     col_map = {}
     ccn_col = _find_column(df, ["ccn", "medicare_provider_number", "provider_number", "prvdr_num"])
+    street_col = _find_column(df, ["hospital_street", "hosp_addr", "hospital_address", "address"])
+    city_col = _find_column(df, ["hospital_city", "hosp_city", "city"])
+    state_col = _find_column(df, ["hospital_state", "hosp_state", "state"])
+    zip_col = _find_column(df, ["hospital_zip", "hosp_zip", "zip", "zip_code"])
+    ownership_col = _find_column(df, ["hos_ownership", "ownership"])
+    teaching_col = _find_column(df, ["hos_teachint", "teaching"])
     if ccn_col:
         col_map[ccn_col] = "ccn"
+    if street_col and street_col != "hospital_street":
+        col_map[street_col] = "hospital_street"
+    if city_col and city_col != "hospital_city":
+        col_map[city_col] = "hospital_city"
+    if state_col and state_col != "hospital_state":
+        col_map[state_col] = "hospital_state"
+    if zip_col and zip_col != "hospital_zip":
+        col_map[zip_col] = "hospital_zip"
+    if ownership_col and ownership_col != "hos_ownership":
+        col_map[ownership_col] = "hos_ownership"
+    if teaching_col and teaching_col != "hos_teachint":
+        col_map[teaching_col] = "hos_teachint"
 
     df = df.rename(columns=col_map)
 
     if "ccn" in df.columns:
-        df["ccn"] = df["ccn"].astype(str).str.strip().str.zfill(6)
+        df["ccn"] = df["ccn"].astype(str).str.strip().map(lambda value: value.zfill(6) if value else "")
+    if "hospital_zip" in df.columns:
+        df["hospital_zip"] = df["hospital_zip"].astype(str).str.strip()
 
-    for int_col in ["hos_beds", "hos_dsch"]:
-        if int_col in df.columns:
-            df[int_col] = pd.to_numeric(df[int_col], errors="coerce").fillna(0).astype(int)
+    for int_col in _AHRQ_HOSPITAL_INT_COLUMNS:
+        _nullable_int_column(df, int_col)
 
     return df
 

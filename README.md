@@ -28,7 +28,7 @@ curl -fsSL https://raw.githubusercontent.com/ajhcs/healthcare-data-mcp/main/inst
 
 Healthcare data is public, but it is scattered across CMS, CDC, NIH, HHS OIG, SAM.gov, Census, HUD, SEC, IRS, hospital MRFs, and other systems. Healthcare Data MCP turns those sources into focused MCP tools with local caches, structured responses, source metadata, recovery hints, per-server discovery resources, and client-friendly server discovery.
 
-Latest release: `v0.3.1` adds the read-only Profile Evidence Pack workflow for Healthcare Toolkit profile population, including source-backed facility rosters, identifiers, geography, bed candidates, affiliation review, official count evidence, conflicts, and unavailable-public findings. See [v0.3.1 release notes](docs/release-notes/2026-05-30-v0.3.1-profile-evidence-pack.md).
+Latest release: `v0.4.0` adds source-disciplined AHRQ Compendium 2023 health-system metrics, including hospital counts, bed counts, physician counts, hospital-level bed/address/type details, snapshot metadata, coverage summaries, cursor pagination, and explicit current-CMS overlay candidates. See [v0.4.0 release notes](docs/release-notes/2026-06-15-v0.4.0-health-system-metrics.md).
 
 | If your agent needs to... | Use these servers |
 | --- | --- |
@@ -98,7 +98,7 @@ used by setup, docs, and distribution checks.
 | Preset | Servers | Workflows |
 | --- | ---: | --- |
 | `compliance` | 4 | `compliance_exclusion_screening`, `ownership_chow_trace` |
-| `market-strategy` | 10 | `facility_profile`, `quality_profile`, `finance_profile`, `hospital_competitive_profile`, `system_reconciliation`, `profile_evidence_pack`, `market_community_health_scan`, `referral_leakage_readiness` |
+| `market-strategy` | 10 | `facility_profile`, `quality_profile`, `finance_profile`, `hospital_competitive_profile`, `system_reconciliation`, `profile_evidence_pack`, `health_system_metrics`, `market_community_health_scan`, `referral_leakage_readiness` |
 | `metadata-only` | 2 | `quality_measure_lookup` |
 | `research` | 3 | `research_trials_activity_profile` |
 
@@ -124,7 +124,7 @@ used by setup, docs, and distribution checks.
 | `drive-time` | 8004 | Routing, drive-time matrices, and access scoring | `cms_hospital_general_info` |
 | `hospital-quality` | 8005 | CMS quality, readmission, and safety data | `cms_cost_report`, `cms_hospital_general_info`, `cms_hospital_quality` |
 | `cms-facility` | 8006 | CMS facility master data and NPPES lookup | `cms_hospital_general_info`, `cms_provider_of_services`, `nppes_registry` |
-| `health-system-profiler` | 8007 | Health system discovery and facility enrichment | `ahrq_health_system_compendium`, `cms_provider_of_services`, `nppes_registry` |
+| `health-system-profiler` | 8007 | Health system discovery and facility enrichment | `ahrq_health_system_compendium`, `cms_hospital_general_info`, `cms_provider_of_services`, `cms_doctors_clinicians_national_downloadable_file`, `nppes_registry` |
 | `financial-intelligence` | 8008 | IRS 990, SEC EDGAR, and nonprofit finance intelligence | `ahrq_hfmd`, `nj_hospital_public_data`, `state_health_data` |
 | `price-transparency` | 8009 | Hospital MRF and benchmark pricing | `cms_price_transparency_mrf` |
 | `physician-referral-network` | 8010 | NPPES, physician mix, referral network, and leakage analysis | `dartmouth_hsa_hrr`, `docgraph_referrals`, `nppes_registry`, `physician_compare_utilization` |
@@ -196,7 +196,7 @@ docker compose up --build
 Each server is exposed at `http://localhost:<port>/mcp`. Compose publishes ports on `127.0.0.1` by default.
 
 Generated Compose files assign the local build a package-versioned image tag
-such as `healthcare-data-mcp:0.3.1`. To run a published image instead of
+such as `healthcare-data-mcp:0.4.0`. To run a published image instead of
 building locally, set `HC_MCP_IMAGE` to the trusted image reference before
 starting Compose; Compose uses `pull_policy: missing` so normal startup can
 reuse or pull the tagged image unless you explicitly pass `--build`.

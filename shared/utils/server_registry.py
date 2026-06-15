@@ -138,8 +138,15 @@ SERVER_REGISTRY: tuple[ServerCapability, ...] = (
             "ownership_chow_trace",
             "system_reconciliation",
             "profile_evidence_pack",
+            "health_system_metrics",
         ),
-        dataset_ids=("ahrq_health_system_compendium", "cms_provider_of_services", "nppes_registry"),
+        dataset_ids=(
+            "ahrq_health_system_compendium",
+            "cms_hospital_general_info",
+            "cms_provider_of_services",
+            "cms_doctors_clinicians_national_downloadable_file",
+            "nppes_registry",
+        ),
     ),
     ServerCapability(
         "financial-intelligence",
@@ -406,6 +413,7 @@ WORKFLOW_PRESETS: dict[str, tuple[str, ...]] = {
     "referral_leakage_readiness": ("physician-referral-network", "claims-analytics", "drive-time"),
     "system_reconciliation": ("health-system-profiler", "cms-facility", "provider-enrollment", "web-intelligence"),
     "profile_evidence_pack": ("health-system-profiler", "cache-manager", "provider-enrollment", "web-intelligence"),
+    "health_system_metrics": ("health-system-profiler", "cache-manager"),
 }
 
 CURATED_PRESETS: dict[str, CuratedPreset] = {
@@ -440,6 +448,7 @@ CURATED_PRESETS: dict[str, CuratedPreset] = {
             "hospital_competitive_profile",
             "system_reconciliation",
             "profile_evidence_pack",
+            "health_system_metrics",
             "market_community_health_scan",
             "referral_leakage_readiness",
         ),
