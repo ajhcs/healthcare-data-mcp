@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 from pathlib import Path
 import json
 
@@ -16,6 +17,7 @@ from servers.health_system_profiler.system_metrics import (
     is_missing_scalar,
     json_safe,
     list_health_system_metric_rows,
+    _frame_by_ccn,
     _int_or_none,
 )
 
@@ -179,6 +181,55 @@ def test_cursor_rejects_filter_mismatch_but_allows_page_size_change(
     )
     assert changed_state_scope["error"]["code"] == "cursor_filter_mismatch"
     assert "state_scope" in changed_state_scope["error"]["data"]["mismatches"]
+
+
+def test_cursor_rejects_decoded_non_object_or_bad_offset(
+    systems_df: pd.DataFrame,
+    hospitals_df: pd.DataFrame,
+) -> None:
+    scalar_cursor = base64.urlsafe_b64encode(b"1").decode("ascii").rstrip("=")
+    bad_offset_cursor = base64.urlsafe_b64encode(
+        json.dumps(
+            {
+                "snapshot_id": build_snapshot_id(systems_df, hospitals_df),
+                "offset": "1",
+                "sort": "health_sys_id",
+                "state": "",
+                "state_scope": "headquarters",
+                "as_of_mode": "compendium_snapshot",
+            }
+        ).encode("utf-8")
+    ).decode("ascii").rstrip("=")
+
+    scalar = list_health_system_metric_rows(
+        systems_df=systems_df,
+        hospitals_df=hospitals_df,
+        cursor=scalar_cursor,
+    )
+    bad_offset = list_health_system_metric_rows(
+        systems_df=systems_df,
+        hospitals_df=hospitals_df,
+        cursor=bad_offset_cursor,
+    )
+
+    assert scalar["error"]["code"] == "invalid_cursor"
+    assert bad_offset["error"]["code"] == "invalid_cursor"
+
+
+def test_frame_by_ccn_can_filter_to_requested_ccns() -> None:
+    frame = pd.DataFrame(
+        [
+            {"facility_id": "010001", "address": "Included"},
+            {"facility_id": "010002", "address": "Skipped"},
+            {"facility_id": "100001", "address": "Also Included"},
+        ]
+    )
+
+    index = _frame_by_ccn(frame, include_ccns={"010001", "100001"})
+
+    assert set(index) == {"010001", "100001"}
+    assert index["010001"]["address"] == "Included"
+    assert "010002" not in index
 
 
 def test_snapshot_id_uses_stable_content_hash(

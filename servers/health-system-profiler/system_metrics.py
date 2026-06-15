@@ -153,8 +153,10 @@ def list_health_system_metric_rows(
     end = start + bounded_size
     page = ordered.iloc[start:end]
 
-    hgi_index = _frame_by_ccn(hgi_df)
-    pos_index = _frame_by_ccn(pos_df)
+    page_system_ids = {_clean_string(row.get("health_sys_id")) for _, row in page.iterrows()}
+    page_ccns = _linked_ccns_for_systems(hospitals_df, page_system_ids)
+    hgi_index = _frame_by_ccn(hgi_df, include_ccns=page_ccns)
+    pos_index = _frame_by_ccn(pos_df, include_ccns=page_ccns)
     systems = [
         build_system_metric(
             row.to_dict(),
@@ -289,8 +291,10 @@ def get_health_system_metric(
             )
         )
 
-    hgi_index = _frame_by_ccn(hgi_df)
-    pos_index = _frame_by_ccn(pos_df)
+    system_id_resolved = _clean_string(row["row"].get("health_sys_id"))
+    system_ccns = _linked_ccns_for_systems(hospitals_df, {system_id_resolved})
+    hgi_index = _frame_by_ccn(hgi_df, include_ccns=system_ccns)
+    pos_index = _frame_by_ccn(pos_df, include_ccns=system_ccns)
     system = build_system_metric(
         row["row"],
         hospitals_df,
@@ -464,9 +468,9 @@ def coverage_summary(
     for _, row in systems_df.iterrows():
         if all(_int_or_none(row.get(field)) is not None for field in count_fields):
             complete += 1
-    hgi_ccns = set(_frame_by_ccn(hgi_df))
-    pos_ccns = set(_frame_by_ccn(pos_df))
     linked_ccns = {_clean_string(value) for value in linked.get("ccn", []) if not is_missing_scalar(value)}
+    hgi_ccns = set(_frame_by_ccn(hgi_df, include_ccns=linked_ccns))
+    pos_ccns = set(_frame_by_ccn(pos_df, include_ccns=linked_ccns))
     return {
         "total_systems_in_universe": len(systems_df),
         "systems_returned": systems_returned,
@@ -842,14 +846,31 @@ def _linked_hospitals(hospitals_df: pd.DataFrame, system_id: str) -> list[dict[s
     return hospitals_df[hospitals_df["health_sys_id"].astype(str) == str(system_id)].to_dict("records")
 
 
-def _frame_by_ccn(frame: pd.DataFrame | None) -> dict[str, dict[str, Any]]:
+def _linked_ccns_for_systems(hospitals_df: pd.DataFrame, system_ids: set[str]) -> set[str]:
+    if hospitals_df.empty or "health_sys_id" not in hospitals_df.columns or "ccn" not in hospitals_df.columns:
+        return set()
+    system_ids = {_clean_string(system_id) for system_id in system_ids if _clean_string(system_id)}
+    if not system_ids:
+        return set()
+    matches = hospitals_df[hospitals_df["health_sys_id"].astype(str).str.strip().isin(system_ids)]
+    return {_clean_string(ccn).zfill(6) for ccn in matches["ccn"] if _clean_string(ccn)}
+
+
+def _frame_by_ccn(frame: pd.DataFrame | None, *, include_ccns: set[str] | None = None) -> dict[str, dict[str, Any]]:
     if frame is None or frame.empty:
         return {}
     ccn_col = _find_col(frame, "ccn", "facility_id", "prvdr_num", "provider_number", "cms_certification_number")
     if not ccn_col:
         return {}
+    filtered = frame
+    if include_ccns is not None:
+        normalized_include = {_clean_string(ccn).zfill(6) for ccn in include_ccns if _clean_string(ccn)}
+        if not normalized_include:
+            return {}
+        ccn_values = frame[ccn_col].map(lambda value: _clean_string(value).zfill(6) if _clean_string(value) else "")
+        filtered = frame[ccn_values.isin(normalized_include)]
     index: dict[str, dict[str, Any]] = {}
-    for _, row in frame.iterrows():
+    for _, row in filtered.iterrows():
         ccn = _clean_string(row.get(ccn_col))
         if ccn:
             index[ccn.zfill(6)] = row.to_dict()
@@ -995,9 +1016,15 @@ def _decode_cursor(cursor: str | None) -> dict[str, Any] | None:
         return {}
     try:
         padded = cursor + "=" * (-len(cursor) % 4)
-        return json.loads(base64.urlsafe_b64decode(padded.encode("ascii")).decode("utf-8"))
+        decoded = json.loads(base64.urlsafe_b64decode(padded.encode("ascii")).decode("utf-8"))
     except Exception:
         return None
+    if not isinstance(decoded, dict):
+        return None
+    offset = decoded.get("offset", 0)
+    if not isinstance(offset, int) or isinstance(offset, bool) or offset < 0:
+        return None
+    return decoded
 
 
 def _cursor_filter_mismatch(
