@@ -70,9 +70,8 @@
       ]
     ],
     "returned_systems": 639,
-    "snapshot_ids": [
-      "b2d74344a07c101a"
-    ]
+    "snapshot_id_count": 1,
+    "snapshot_id_values_redacted": true
   },
   "mismatch_count": 0,
   "mismatches": [],
