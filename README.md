@@ -28,7 +28,7 @@ curl -fsSL https://raw.githubusercontent.com/ajhcs/healthcare-data-mcp/main/inst
 
 Healthcare data is public, but it is scattered across CMS, CDC, NIH, HHS OIG, SAM.gov, Census, HUD, SEC, IRS, hospital MRFs, and other systems. Healthcare Data MCP turns those sources into focused MCP tools with local caches, structured responses, source metadata, recovery hints, per-server discovery resources, and client-friendly server discovery.
 
-Latest release: `v0.3.1` adds the read-only Profile Evidence Pack workflow for Healthcare Toolkit profile population, including source-backed facility rosters, identifiers, geography, bed candidates, affiliation review, official count evidence, conflicts, and unavailable-public findings. See [v0.3.1 release notes](docs/release-notes/2026-05-30-v0.3.1-profile-evidence-pack.md).
+Latest release: `v0.4.0` adds source-disciplined AHRQ Compendium 2023 health-system metrics, including hospital counts, bed counts, physician counts, hospital-level bed/address/type details, snapshot metadata, coverage summaries, cursor pagination, and explicit current-CMS overlay candidates. See [v0.4.0 release notes](docs/release-notes/2026-06-15-v0.4.0-health-system-metrics.md).
 
 | If your agent needs to... | Use these servers |
 | --- | --- |
@@ -196,7 +196,7 @@ docker compose up --build
 Each server is exposed at `http://localhost:<port>/mcp`. Compose publishes ports on `127.0.0.1` by default.
 
 Generated Compose files assign the local build a package-versioned image tag
-such as `healthcare-data-mcp:0.3.1`. To run a published image instead of
+such as `healthcare-data-mcp:0.4.0`. To run a published image instead of
 building locally, set `HC_MCP_IMAGE` to the trusted image reference before
 starting Compose; Compose uses `pull_policy: missing` so normal startup can
 reuse or pull the tagged image unless you explicitly pass `--build`.

@@ -1,5 +1,26 @@
 # Changelog
 
+## v0.4.0 - Source-disciplined health-system metrics
+
+Released: 2026-06-15
+
+- Added health-system-profiler.list_health_system_metrics and
+  health-system-profiler.get_health_system_metrics using the AHRQ Compendium
+  2023 health-system universe as the canonical public snapshot.
+- Added explicit source-vintage metadata, data modes, deterministic snapshot
+  IDs, cursor pagination, state-filter caveats, and coverage summaries.
+- Returns AHRQ hospital counts, nonfederal general acute hospital counts,
+  linked hospital rows, system and hospital bed counts, and AHRQ Compendium
+  physician counts without silently replacing them with current CMS overlays.
+- Adds latest_public_overlay candidates for CMS HGI/POS/HCRIS/state values,
+  hospital address/type conflict reporting, CCN identity caveats, and optional
+  Medicare public clinician roster NPI-deduped estimates.
+- Hardened nullable AHRQ parsing, legacy profiler compatibility, ambiguous
+  system-name resolution, cursor filter validation, and snapshot ID hashing.
+- Added QA artifacts and regression coverage for source-vintage discipline,
+  row-count reconciliation, nullable metrics, cursor mismatches, duplicate
+  names, leading-zero identifiers, and clinician roster deduplication.
+
 ## v0.3.1 - Profile evidence pack workflow
 
 Released: 2026-05-30
