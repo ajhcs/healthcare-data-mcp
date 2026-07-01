@@ -4539,6 +4539,39 @@ async def get_sam_exclusions_metadata() -> dict[str, Any]:
             match_basis="source_metadata_lookup",
             confidence="api_metadata",
         )
+        payload["identity_map"] = {
+            "entity_scope": "public_records_source_metadata",
+            "join_keys": [
+                {
+                    "field": "dataset_id",
+                    "values": ["sam_gov_exclusions"],
+                    "status": "source_metadata",
+                    "used_by": ["sam_gov_exclusions_metadata"],
+                },
+                {
+                    "field": "source_name",
+                    "values": [payload["source_name"]],
+                    "status": "source_metadata",
+                    "used_by": ["sam_gov_exclusions_metadata"],
+                },
+            ],
+            "source_claims": [
+                _public_source_claim(
+                    collection="sam_gov_exclusions_metadata",
+                    dataset_id="sam_gov_exclusions",
+                    match_policy="source_metadata_lookup_no_entity_match_claim",
+                    identity_paths=["source_name", "source_url", "evidence.query"],
+                )
+            ],
+            "conflict_policy": [
+                "Treat this metadata-only response as source status and query context, not an entity exclusion match.",
+                "Use SAM.gov Exclusions search or identifier tools for candidate-level screening claims.",
+            ],
+            "missing_data_policy": (
+                "Metadata availability describes SAM.gov Exclusions source configuration only; "
+                "it is not evidence that an entity is or is not excluded."
+            ),
+        }
         return to_structured(payload)
     except Exception as e:
         logger.exception("get_sam_exclusions_metadata failed")

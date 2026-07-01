@@ -216,10 +216,14 @@ async def test_live_gateway_http_routes_authenticated_domain_tool_with_provenanc
     assert result["live_gateway_policy"]["tool"] == "get_sam_exclusions_metadata"
     assert result["live_gateway_policy"]["source_caveat_class"] == "exclusion_screening"
     assert result["live_gateway_policy"]["provenance_status"]["status"] == "evidence_receipt_valid"
+    assert result["live_gateway_policy"]["provenance_status"]["source_claim_paths_status"] == "source_claim_paths_valid"
+    assert result["live_gateway_policy"]["provenance_status"]["source_claim_paths_valid"] is True
     event = next(event for event in reversed(audit["events"]) if event["tool"] == "get_sam_exclusions_metadata")
     assert event["outcome"] == "allowed"
     assert event["reason"] == "policy_passed"
     assert event["provenance_status"] == "evidence_receipt_valid"
+    assert event["source_claim_paths_status"] == "source_claim_paths_valid"
+    assert event["source_claim_paths_valid"] is True
     assert event["source_metadata_present"] is True
     assert "source_metadata" not in event
     assert "evidence" not in event

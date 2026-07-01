@@ -8,6 +8,7 @@ import pytest
 
 from servers.public_records import server
 from shared.utils.mcp_response import validate_evidence_receipt
+from shared.utils.source_backed_result import validate_source_claim_paths
 
 
 SAM_METADATA = {
@@ -263,4 +264,6 @@ async def test_get_sam_exclusions_metadata(monkeypatch: pytest.MonkeyPatch) -> N
     assert response["evidence"]["confidence"] == "api_metadata"
     assert response["evidence"]["retrieved_at"] == "2026-04-23T00:00:00+00:00"
     assert response["evidence"]["cache_status"] == "live_api"
+    assert response["identity_map"]["source_claims"][0]["collection"] == "sam_gov_exclusions_metadata"
+    assert validate_source_claim_paths(response, require_boundary_traceability=True)["valid"] is True
     validate_evidence_receipt(response["evidence"], require_content=True)

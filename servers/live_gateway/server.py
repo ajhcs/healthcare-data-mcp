@@ -37,6 +37,7 @@ from shared.utils.mcp_response import (
     to_structured,
 )
 from shared.utils.server_registry import SERVER_BY_ID
+from shared.utils.source_backed_result import validate_source_claim_paths
 
 logger = logging.getLogger(__name__)
 
@@ -562,11 +563,14 @@ async def list_live_tools() -> dict[str, Any]:
                 "source_caveat_class": "<source_caveat_class>",
                 "provenance_status": (
                     "evidence_receipt_valid|evidence_receipt_invalid|"
-                    "evidence_receipt_missing|non_object_result"
+                    "evidence_receipt_missing|source_claim_paths_invalid|non_object_result"
                 ),
                 "evidence_present": "<bool>",
                 "source_metadata_present": "<bool>",
                 "identity_present": "<bool>",
+                "source_claim_paths_status": "source_claim_paths_valid|source_claim_paths_invalid",
+                "source_claim_paths_valid": "<bool>",
+                "source_claim_path_issues": "<path validation defects when source-claim traceability fails>",
                 "sensitive_argument_keys": "<redacted_key_names_when_blocked>",
                 "invalid_evidence_paths": "<paths_and_errors_when_nested_or_top_level_receipts_fail_validation>",
                 "subject": "<caller_identity_when_auth_available>",
@@ -580,6 +584,7 @@ async def list_live_tools() -> dict[str, Any]:
                 "Malformed upstream evidence receipts are blocked before results leave live-gateway, including nested row receipts.",
                 "Structurally valid but empty upstream evidence receipts are blocked; live routed receipts must include source identity, match basis, confidence, caveat, and next step.",
                 "Missing upstream evidence receipts are blocked for live tools that require provenance.",
+                "Live-routed results must pass strict source-claim-path validation before leaving live-gateway.",
                 "HTTP/SSE auth cannot be disabled for live-gateway startup.",
                 "HTTP/SSE wildcard network binds require explicit opt-in, HTTPS public URL, and locked Host/Origin allow-lists.",
                 "Batch screening tools require the additional mcp:bulk scope.",
@@ -751,6 +756,21 @@ async def call_live_tool(
         )
         raise_tool_error(
             f"{spec.tool_name} returned an invalid evidence receipt; live-gateway requires valid provenance when evidence is present",
+            code="policy_denied",
+        )
+    if provenance_status.get("status") == "source_claim_paths_invalid":
+        _record_audit(
+            spec=spec,
+            outcome="blocked",
+            reason="invalid_source_claim_paths",
+            subject=subject,
+            request_size_bytes=request_size,
+            result_size_bytes=result_size,
+            result_count=result_count,
+            **_audit_provenance_fields(provenance_status),
+        )
+        raise_tool_error(
+            f"{spec.tool_name} returned invalid source claim paths; live-gateway requires boundary traceability",
             code="policy_denied",
         )
     if spec.require_provenance and provenance_status.get("status") in {"evidence_receipt_missing", "non_object_result"}:
@@ -995,18 +1015,28 @@ def _provenance_status(result: Any) -> dict[str, Any]:
             "evidence_valid": False,
             "source_metadata_present": False,
             "identity_present": False,
+            "source_claim_paths_status": "not_evaluated",
+            "source_claim_paths_valid": False,
         }
 
     evidence_summary = evidence_receipt_validation_summary(payload, require_content=True)
+    source_claim_summary = validate_source_claim_paths(payload, require_boundary_traceability=True)
+    source_claim_paths_valid = bool(source_claim_summary.get("valid"))
     result_status = {
         "status": evidence_summary["status"],
         "evidence_present": evidence_summary["evidence_present"],
         "evidence_valid": evidence_summary["evidence_valid"],
         "source_metadata_present": bool(_nested_values_for_keys(payload, {"source_metadata"})),
         "identity_present": bool(_nested_values_for_keys(payload, {"identity", "identities", "entity", "entities"})),
+        "source_claim_paths_status": source_claim_summary["status"],
+        "source_claim_paths_valid": source_claim_paths_valid,
     }
     if evidence_summary.get("invalid_evidence_paths"):
         result_status["invalid_evidence_paths"] = evidence_summary["invalid_evidence_paths"]
+    if not source_claim_paths_valid:
+        result_status["source_claim_path_issues"] = source_claim_summary.get("issues", [])
+        if evidence_summary["status"] == "evidence_receipt_valid":
+            result_status["status"] = "source_claim_paths_invalid"
     return result_status
 
 
@@ -1033,6 +1063,11 @@ def _audit_provenance_fields(provenance_status: Mapping[str, Any]) -> dict[str, 
     }
     if provenance_status.get("invalid_evidence_paths"):
         fields["invalid_evidence_paths"] = provenance_status["invalid_evidence_paths"]
+    if provenance_status.get("source_claim_paths_status"):
+        fields["source_claim_paths_status"] = provenance_status["source_claim_paths_status"]
+        fields["source_claim_paths_valid"] = bool(provenance_status.get("source_claim_paths_valid"))
+    if provenance_status.get("source_claim_path_issues"):
+        fields["source_claim_path_issues"] = provenance_status["source_claim_path_issues"]
     return fields
 
 

@@ -34,6 +34,36 @@ def _valid_evidence(match_basis: str = "unit_test") -> dict:
     )
 
 
+def _valid_source_metadata() -> dict:
+    return {
+        "source_name": "CMS Provider Enrollment",
+        "source_url": "https://data.cms.gov/provider-enrollment",
+        "dataset_id": "cms-provider-enrollment",
+    }
+
+
+def _valid_identity_map(*, evidence_path: str = "evidence", row_evidence_paths: list[str] | None = None) -> dict:
+    claim: dict = {
+        "collection": "unit_test_collection",
+        "identity_paths": [evidence_path],
+        "evidence_path": evidence_path,
+        "source_metadata_path": "source_metadata",
+        "match_policy": "unit_test_exact_match",
+    }
+    if row_evidence_paths:
+        claim["row_evidence_paths"] = row_evidence_paths
+    return {"source_claims": [claim]}
+
+
+def _valid_gateway_payload(**fields) -> dict:
+    return {
+        "evidence": _valid_evidence(),
+        "source_metadata": _valid_source_metadata(),
+        "identity_map": _valid_identity_map(),
+        **fields,
+    }
+
+
 @pytest.mark.asyncio
 async def test_live_gateway_registers_allowlisted_tools() -> None:
     tools = await server.mcp.list_tools()
@@ -410,7 +440,7 @@ def test_live_gateway_env_prefix_maps_auth_settings() -> None:
 @pytest.mark.asyncio
 async def test_live_gateway_exposes_callable_tool_alias_through_policy_wrapper(monkeypatch: pytest.MonkeyPatch) -> None:
     async def fake_search_provider_enrollment(**kwargs):
-        return {"called": "search_provider_enrollment", "kwargs": kwargs, "evidence": _valid_evidence()}
+        return _valid_gateway_payload(called="search_provider_enrollment", kwargs=kwargs)
 
     server._AUDIT_EVENTS.clear()
     server._RATE_LIMIT_WINDOWS.clear()
@@ -440,7 +470,7 @@ async def test_live_gateway_policy_wrapper_uses_authenticated_token_context(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     async def fake_screen_leie_batch(**kwargs):
-        return {"called": "screen_leie_batch", "kwargs": kwargs, "evidence": _valid_evidence()}
+        return _valid_gateway_payload(called="screen_leie_batch", kwargs=kwargs)
 
     access_token = AccessToken(
         token="token-one-fingerprint",
@@ -498,7 +528,7 @@ async def test_live_gateway_policy_wrapper_does_not_let_call_arguments_grant_sco
 @pytest.mark.asyncio
 async def test_live_gateway_preserves_upstream_provenance_receipts(monkeypatch: pytest.MonkeyPatch) -> None:
     async def fake_search_provider_enrollment(**kwargs):
-        return {
+        result = {
             "results": [{"npi": kwargs["npi"], "provider_name": "Example Hospital"}],
             "source_metadata": {
                 "source_name": "CMS Provider Enrollment",
@@ -523,7 +553,33 @@ async def test_live_gateway_preserves_upstream_provenance_receipts(monkeypatch: 
                 "match_basis": "npi_exact",
                 "confidence": "high",
             },
+            "identity_map": {
+                "source_claims": [
+                    {
+                        "collection": "enrollments",
+                        "identity_paths": ["evidence.query"],
+                        "evidence_path": "evidence",
+                        "source_metadata_path": "source_metadata",
+                        "row_evidence_paths": ["results[].evidence"],
+                        "match_policy": "npi_exact",
+                    }
+                ]
+            },
         }
+        for row in result["results"]:
+            row["evidence"] = evidence_receipt(
+                source_name="CMS Provider Enrollment",
+                source_url="https://data.cms.gov/provider-enrollment",
+                dataset_id="cms-provider-enrollment",
+                source_period="current public file",
+                retrieved_at="2026-05-22T00:00:00Z",
+                cache_status="hit",
+                match_basis="npi_exact_row",
+                confidence="high",
+                caveat="Public enrollment rows require source-system verification before operational decisions.",
+                next_step="Review the returned enrollment detail and ownership rows.",
+            )
+        return result
 
     server._AUDIT_EVENTS.clear()
     server._RATE_LIMIT_WINDOWS.clear()
@@ -540,6 +596,8 @@ async def test_live_gateway_preserves_upstream_provenance_receipts(monkeypatch: 
         "evidence_valid": True,
         "source_metadata_present": True,
         "identity_present": True,
+        "source_claim_paths_status": "source_claim_paths_valid",
+        "source_claim_paths_valid": True,
     }
     audit_event = server._AUDIT_EVENTS[-1]
     assert audit_event["outcome"] == "allowed"
@@ -547,8 +605,40 @@ async def test_live_gateway_preserves_upstream_provenance_receipts(monkeypatch: 
     assert audit_event["evidence_present"] is True
     assert audit_event["source_metadata_present"] is True
     assert audit_event["identity_present"] is True
+    assert audit_event["source_claim_paths_status"] == "source_claim_paths_valid"
+    assert audit_event["source_claim_paths_valid"] is True
     assert "source_metadata" not in audit_event
     assert "evidence" not in audit_event
+
+
+@pytest.mark.asyncio
+async def test_live_gateway_blocks_missing_source_claim_paths(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def fake_search_provider_enrollment(**kwargs):
+        return {
+            "results": [{"npi": kwargs["npi"], "provider_name": "Example Hospital"}],
+            "source_metadata": {
+                "source_name": "CMS Provider Enrollment",
+                "dataset_id": "cms-provider-enrollment",
+                "source_url": "https://data.cms.gov/provider-enrollment",
+            },
+            "evidence": _valid_evidence(match_basis="npi_exact"),
+            "identity": {"entity_type": "provider", "npi": kwargs["npi"]},
+        }
+
+    server._AUDIT_EVENTS.clear()
+    server._RATE_LIMIT_WINDOWS.clear()
+    monkeypatch.setitem(server._LIVE_TOOL_CALLABLES, "search_provider_enrollment", fake_search_provider_enrollment)
+
+    with pytest.raises(ToolError, match="source claim paths"):
+        await server.call_live_tool("search_provider_enrollment", {"npi": "1234567893", "limit": 1})
+
+    audit_event = server._AUDIT_EVENTS[-1]
+    assert audit_event["outcome"] == "blocked"
+    assert audit_event["reason"] == "invalid_source_claim_paths"
+    assert audit_event["provenance_status"] == "source_claim_paths_invalid"
+    assert audit_event["source_claim_paths_status"] == "source_claim_paths_invalid"
+    assert audit_event["source_claim_paths_valid"] is False
+    assert audit_event["source_claim_path_issues"][0]["reason"] == "missing_identity_map"
 
 
 @pytest.mark.asyncio
@@ -696,11 +786,11 @@ async def test_live_gateway_accepts_nested_row_evidence_without_top_level_receip
                     "identity": {"npi": kwargs["npi"]},
                 }
             ],
-            "source_metadata": {
-                "source_name": "CMS Provider Enrollment",
-                "dataset_id": "cms-provider-enrollment",
-                "source_url": "https://data.cms.gov/provider-enrollment",
-            },
+            "source_metadata": _valid_source_metadata(),
+            "identity_map": _valid_identity_map(
+                evidence_path="results[].evidence",
+                row_evidence_paths=["results[].evidence"],
+            ),
         }
 
     server._AUDIT_EVENTS.clear()
@@ -718,11 +808,10 @@ async def test_live_gateway_accepts_nested_row_evidence_without_top_level_receip
 @pytest.mark.asyncio
 async def test_live_gateway_overwrites_upstream_policy_metadata(monkeypatch: pytest.MonkeyPatch) -> None:
     async def fake_search_provider_enrollment(**kwargs):
-        return {
-            "called": "search_provider_enrollment",
-            "evidence": _valid_evidence(),
-            "live_gateway_policy": {"gateway": "spoofed", "tool": "wrong"},
-        }
+        return _valid_gateway_payload(
+            called="search_provider_enrollment",
+            live_gateway_policy={"gateway": "spoofed", "tool": "wrong"},
+        )
 
     server._AUDIT_EVENTS.clear()
     server._RATE_LIMIT_WINDOWS.clear()
@@ -934,7 +1023,7 @@ async def test_live_gateway_blocks_result_bytes_above_policy(monkeypatch: pytest
 @pytest.mark.asyncio
 async def test_live_gateway_blocks_final_response_bytes_after_policy_metadata(monkeypatch: pytest.MonkeyPatch) -> None:
     async def fake_search_provider_enrollment(**kwargs):
-        return {"summary": "x" * 16, "evidence": _valid_evidence()}
+        return _valid_gateway_payload(summary="x" * 16)
 
     spec = server.LIVE_TOOL_BY_NAME["search_provider_enrollment"]
     narrow_spec = server.LiveToolSpec(
@@ -958,7 +1047,7 @@ async def test_live_gateway_blocks_final_response_bytes_after_policy_metadata(mo
 @pytest.mark.asyncio
 async def test_live_gateway_enforces_bulk_scope(monkeypatch: pytest.MonkeyPatch) -> None:
     async def fake_screen_leie_batch(**kwargs):
-        return {"results": [], "evidence": _valid_evidence()}
+        return _valid_gateway_payload(results=[])
 
     server._AUDIT_EVENTS.clear()
     monkeypatch.setitem(server._LIVE_TOOL_CALLABLES, "screen_leie_batch", fake_screen_leie_batch)
@@ -978,7 +1067,7 @@ async def test_live_gateway_enforces_bulk_scope(monkeypatch: pytest.MonkeyPatch)
 @pytest.mark.asyncio
 async def test_live_gateway_rate_limits_by_tool_class(monkeypatch: pytest.MonkeyPatch) -> None:
     async def fake_search_provider_enrollment(**kwargs):
-        return {"results": [], "evidence": _valid_evidence()}
+        return _valid_gateway_payload(results=[])
 
     server._AUDIT_EVENTS.clear()
     server._RATE_LIMIT_WINDOWS.clear()
@@ -995,7 +1084,7 @@ async def test_live_gateway_rate_limits_by_tool_class(monkeypatch: pytest.Monkey
 @pytest.mark.asyncio
 async def test_live_gateway_rate_limits_are_subject_scoped(monkeypatch: pytest.MonkeyPatch) -> None:
     async def fake_search_provider_enrollment(**kwargs):
-        return {"results": [], "evidence": _valid_evidence()}
+        return _valid_gateway_payload(results=[])
 
     server._AUDIT_EVENTS.clear()
     server._RATE_LIMIT_WINDOWS.clear()
