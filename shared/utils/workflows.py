@@ -7,6 +7,7 @@ import os
 import ast
 import importlib.util
 import shlex
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
@@ -1622,6 +1623,13 @@ def format_workflow_plan(plan: dict[str, Any]) -> str:
             mode = validation_modes.get(mode_name)
             if mode:
                 lines.append(f"  {mode_name}: {mode['python_call']}")
+    source_claim_validation = plan.get("report_ingest_contract", {}).get("source_claim_path_validation", {})
+    if source_claim_validation:
+        lines.extend(["", "Source claim path validation:"])
+        for mode_name in ("template", "final_report"):
+            mode = source_claim_validation.get(mode_name)
+            if mode:
+                lines.append(f"  {mode_name}: {mode['python_call']}")
     lines.extend(["", "Caveats:"])
     for caveat in plan["caveats"]:
         lines.append(f"  - {caveat}")
@@ -2824,24 +2832,21 @@ def _report_ingest_contract(workflow: WorkflowDefinition, inputs: dict[str, Any]
             ),
             next_step="Run the value_path tool and copy its evidence receipt into this report fact row.",
         )
-        fact_rows.append(
-            {
-                "label": row.get("label", ""),
-                "value_path": row.get("value_path", ""),
-                "identity_path": row.get("identity_path")
-                or _identity_path_from_value_path(str(row.get("value_path", ""))),
-                "identity_map_path": row.get("identity_map_path")
-                or _identity_map_path_from_value_path(str(row.get("value_path", ""))),
-                "evidence_path": row.get("evidence_path")
-                or _evidence_path_from_value_path(str(row.get("value_path", ""))),
-                "source_metadata_path": row.get("source_metadata_path")
-                or _source_metadata_path_from_value_path(str(row.get("value_path", ""))),
-                "identity_fields": list(row.get("identity_fields", ())),
-                "required_evidence_fields": list(REPORT_SOURCE_METADATA_FIELDS),
-                "contract_status": "template_requires_tool_execution",
-                **receipt,
-            }
-        )
+        value_path = str(row.get("value_path") or "")
+        fact_row = {
+            "label": row.get("label", ""),
+            "value_path": value_path,
+            "identity_path": row.get("identity_path") or _identity_path_from_value_path(value_path),
+            "identity_map_path": row.get("identity_map_path") or _identity_map_path_from_value_path(value_path),
+            "evidence_path": row.get("evidence_path") or _evidence_path_from_value_path(value_path),
+            "source_metadata_path": row.get("source_metadata_path") or _source_metadata_path_from_value_path(value_path),
+            "identity_fields": list(row.get("identity_fields", ())),
+            "required_evidence_fields": list(REPORT_SOURCE_METADATA_FIELDS),
+            "contract_status": "template_requires_tool_execution",
+            **receipt,
+        }
+        fact_row["source_claim_path_contract"] = _report_fact_source_claim_path_contract(fact_row)
+        fact_rows.append(fact_row)
 
     return {
         "workflow_id": workflow.workflow_id,
@@ -2871,13 +2876,60 @@ def _report_ingest_contract(workflow: WorkflowDefinition, inputs: dict[str, Any]
                 "purpose": "Validate cited report rows after evidence and identity context are copied from tool results.",
             },
         },
+        "source_claim_path_validation": {
+            "template": {
+                "function": "validate_workflow_contracts",
+                "status": "static_template_paths_checked",
+                "arguments": {"workflow_id": workflow.workflow_id},
+                "python_call": f"validate_workflow_contracts({workflow.workflow_id!r})",
+                "purpose": (
+                    "Planner templates contain placeholder receipts; validate that every fact row points at "
+                    "the owning step's advertised evidence, identity, and source-claim paths."
+                ),
+            },
+            "final_report": {
+                "function": "validate_source_claim_paths",
+                "arguments": {"require_boundary_traceability": True},
+                "python_call": "validate_source_claim_paths(payload, require_boundary_traceability=True)",
+                "purpose": (
+                    "After report builders copy executed tool results and identity_map.source_claims, "
+                    "validate source claim paths before treating rows as report-ready facts."
+                ),
+            },
+        },
         "fact_rows": fact_rows,
         "instructions": [
             "Use these rows as report-builder templates, not source facts.",
             "Before citing a fact, run the value_path tool and replace copy_from_tool_evidence.* placeholders.",
             "Keep identity_fields, identity_path, and identity_map_path next to every fact row so cross-server joins remain auditable.",
+            "Copy the owning tool identity_map.source_claims and run final_report source claim path validation before report-ready citation.",
             "Run final_report validation after copying tool evidence and identity context into cited report rows.",
         ],
+    }
+
+
+def _report_fact_source_claim_path_contract(row: Mapping[str, Any]) -> dict[str, Any]:
+    """Describe how one report fact row links back to executed tool source claims."""
+
+    evidence_path = str(row.get("evidence_path") or "")
+    value_path = str(row.get("value_path") or "")
+    result_level_evidence_path = ".".join((*value_path.split(".")[:2], "evidence")) if value_path else ""
+    row_evidence_paths = []
+    if evidence_path and evidence_path != result_level_evidence_path:
+        row_evidence_paths.append(evidence_path)
+
+    identity_path = str(row.get("identity_path") or "")
+    identity_paths = [identity_path] if identity_path else []
+    identity_map_path = str(row.get("identity_map_path") or "")
+    return {
+        "status": "template_requires_tool_execution",
+        "identity_map_path": identity_map_path,
+        "source_claims_path": f"{identity_map_path}.source_claims" if identity_map_path else "",
+        "evidence_path": evidence_path,
+        "source_metadata_path": str(row.get("source_metadata_path") or ""),
+        "identity_paths": identity_paths,
+        "row_evidence_paths": row_evidence_paths,
+        "copy_rule": "Copy the executed tool source claim paths that support this fact row before final citation.",
     }
 
 

@@ -927,6 +927,17 @@ def test_all_workflows_have_identity_strategy_and_report_rows() -> None:
             "require_identity_context": True,
         }
         assert "require_identity_context=True" in validation_modes["final_report"]["python_call"]
+        source_claim_validation = plan["report_ingest_contract"]["source_claim_path_validation"]
+        assert source_claim_validation["template"]["function"] == "validate_workflow_contracts"
+        assert source_claim_validation["template"]["status"] == "static_template_paths_checked"
+        assert source_claim_validation["final_report"]["function"] == "validate_source_claim_paths"
+        assert source_claim_validation["final_report"]["arguments"] == {
+            "require_boundary_traceability": True,
+        }
+        assert (
+            "validate_source_claim_paths(payload, require_boundary_traceability=True)"
+            in source_claim_validation["final_report"]["python_call"]
+        )
         validate_report_ingest_payload(plan["report_ingest_contract"])
         for step in plan["steps"]:
             assert step["stdio_command"] == f"hc-mcp {step['server']}", workflow_id
@@ -963,6 +974,15 @@ def test_all_workflows_have_identity_strategy_and_report_rows() -> None:
             assert row["identity_path"], workflow_id
             assert row["identity_map_path"], workflow_id
             assert row["identity_fields"], workflow_id
+            source_claim_contract = row["source_claim_path_contract"]
+            assert source_claim_contract["status"] == "template_requires_tool_execution", workflow_id
+            assert source_claim_contract["identity_map_path"] == row["identity_map_path"], workflow_id
+            assert source_claim_contract["source_claims_path"] == f"{row['identity_map_path']}.source_claims", workflow_id
+            assert source_claim_contract["evidence_path"] == row["evidence_path"], workflow_id
+            assert source_claim_contract["source_metadata_path"] == row["source_metadata_path"], workflow_id
+            assert source_claim_contract["identity_paths"] == [row["identity_path"]], workflow_id
+            if row["evidence_path"] != ".".join((*row["value_path"].split(".")[:2], "evidence")):
+                assert source_claim_contract["row_evidence_paths"] == [row["evidence_path"]], workflow_id
 
 
 def test_workflow_examples_satisfy_required_planner_inputs(monkeypatch) -> None:
@@ -1038,6 +1058,9 @@ def test_format_workflow_plan_is_operator_readable() -> None:
         "final_report: validate_report_ingest_payload(payload, require_content=True, "
         "allow_placeholders=False, require_identity_context=True)"
     ) in text
+    assert "Source claim path validation:" in text
+    assert "template: validate_workflow_contracts('quality_measure_lookup')" in text
+    assert "final_report: validate_source_claim_paths(payload, require_boundary_traceability=True)" in text
     assert "Adjacent HRRP/HAC/PHC4" in text
 
 

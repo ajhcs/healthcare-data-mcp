@@ -215,6 +215,8 @@ def test_ci_product_readiness_gates_cover_security_distribution_and_runtime_smok
         "--expect-structured-path-all report_ingest_contract.fact_rows[].source_metadata_path",
         "--expect-structured-path-all report_ingest_contract.fact_rows[].identity_path",
         "--expect-structured-path-all report_ingest_contract.fact_rows[].identity_map_path",
+        "--expect-structured-path-all report_ingest_contract.fact_rows[].source_claim_path_contract",
+        "--expect-structured-path report_ingest_contract.source_claim_path_validation.final_report",
         "--expect-structured-path-all workflow_summaries[].identity_join_keys",
         "--expect-structured-path-all workflow_summaries[].source_resolution",
         "scripts/mcp_inspector_smoke.sh",
@@ -329,6 +331,10 @@ def test_mcp_smoke_runner_validates_executable_workflow_plan() -> None:
             "report_ingest_contract.fact_rows[].identity_path",
             "--expect-structured-path-all",
             "report_ingest_contract.fact_rows[].identity_map_path",
+            "--expect-structured-path-all",
+            "report_ingest_contract.fact_rows[].source_claim_path_contract",
+            "--expect-structured-path",
+            "report_ingest_contract.source_claim_path_validation.final_report",
         ],
         cwd=REPO_ROOT,
         check=True,
@@ -347,7 +353,9 @@ def test_mcp_smoke_runner_validates_executable_workflow_plan() -> None:
         "report_ingest_contract.fact_rows[].source_metadata_path",
         "report_ingest_contract.fact_rows[].identity_path",
         "report_ingest_contract.fact_rows[].identity_map_path",
+        "report_ingest_contract.fact_rows[].source_claim_path_contract",
     } <= set(payload["structured_paths_all"])
+    assert "report_ingest_contract.source_claim_path_validation.final_report" in payload["structured_paths"]
 
 
 def test_mcp_smoke_runner_validates_cross_server_identity_workflow() -> None:
@@ -385,6 +393,10 @@ def test_mcp_smoke_runner_validates_cross_server_identity_workflow() -> None:
             "report_ingest_contract.fact_rows[].evidence_path",
             "--expect-structured-path-all",
             "report_ingest_contract.fact_rows[].identity_map_path",
+            "--expect-structured-path-all",
+            "report_ingest_contract.fact_rows[].source_claim_path_contract",
+            "--expect-structured-path",
+            "report_ingest_contract.source_claim_path_validation.final_report",
         ],
         cwd=REPO_ROOT,
         check=True,
@@ -404,7 +416,9 @@ def test_mcp_smoke_runner_validates_cross_server_identity_workflow() -> None:
         "steps[].source_resolution",
         "report_ingest_contract.fact_rows[].evidence_path",
         "report_ingest_contract.fact_rows[].identity_map_path",
+        "report_ingest_contract.fact_rows[].source_claim_path_contract",
     } <= set(payload["structured_paths_all"])
+    assert "report_ingest_contract.source_claim_path_validation.final_report" in payload["structured_paths"]
 
 
 def test_mcp_smoke_structured_path_all_requires_every_list_item() -> None:
