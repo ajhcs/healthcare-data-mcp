@@ -218,7 +218,7 @@ async def test_reconcile_system_facilities_tool_uses_generic_path_without_stale_
     _assert_identity_map(result["identity_map"], expected_system_id="SYS_999", expected_ccns={"390901", "390902"})
     claim = _source_claim(result["identity_map"], "facilities")
     assert "facilities[].evidence" in claim["row_evidence_paths"]
-    assert "merger_evidence[].evidence" in claim["row_evidence_paths"]
+    assert "merger_evidence[].evidence" not in claim["row_evidence_paths"]
 
 
 @pytest.mark.asyncio

@@ -6,6 +6,7 @@ import pytest
 
 from servers.geo_demographics import server
 from shared.utils.mcp_response import validate_evidence_receipt
+from shared.utils.source_backed_result import validate_source_claim_paths
 from tests.helpers import parse_tool_result
 
 
@@ -57,6 +58,11 @@ def _assert_receipt(result: dict, *, dataset_id: str, match_basis: str) -> None:
     validate_evidence_receipt(result["evidence"], require_content=True)
 
 
+def _assert_boundary_traceability(result: dict) -> None:
+    assert result["identity_map"]["source_claims"]
+    assert validate_source_claim_paths(result, require_boundary_traceability=True)["valid"] is True
+
+
 @pytest.mark.asyncio
 async def test_get_zcta_demographics_returns_evidence_and_identity(monkeypatch) -> None:
     async def fake_get(zcta: str, year: int = 2023) -> dict:
@@ -88,6 +94,7 @@ async def test_get_zcta_demographics_batch_returns_collection_evidence(monkeypat
     assert result["results"][0]["evidence"]["query"]["zcta"] == "19107"
     _assert_receipt(result, dataset_id="census_acs5_zcta_demographics", match_basis="zcta_exact_batch_acs5_api_rows")
     assert {entity["zip_code"] for entity in result["identity_map"]["entities"]} == {"19107", "19104"}
+    _assert_boundary_traceability(result)
 
 
 @pytest.mark.asyncio
@@ -108,6 +115,7 @@ async def test_get_zcta_adjacency_returns_tiger_evidence(monkeypatch) -> None:
     assert result["adjacent_zcta_rows"][0]["evidence"]["query"]["adjacent_zcta"] == "19103"
     _assert_receipt(result, dataset_id="census_tiger_zcta_adjacency", match_basis="zcta_exact_tiger_adjacency_cache")
     assert {entity["zip_code"] for entity in result["identity_map"]["entities"]} == {"19103", "19106"}
+    _assert_boundary_traceability(result)
 
 
 @pytest.mark.asyncio
@@ -168,3 +176,4 @@ async def test_crosswalk_zip_returns_hud_evidence_and_identity_map(monkeypatch) 
     _assert_receipt(result, dataset_id="hud_usps_zip_crosswalk", match_basis="zip_exact_hud_usps_crosswalk")
     assert result["identity"]["zip_code"] == "19107"
     assert result["identity_map"]["entities"][0]["unresolved_identifiers"][0] == {"type": "county", "value": "42101"}
+    _assert_boundary_traceability(result)

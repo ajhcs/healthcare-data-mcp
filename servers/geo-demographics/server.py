@@ -16,6 +16,7 @@ from shared.utils.mcp_observability import observe_tool
 from shared.utils.mcp_resources import register_standard_resources
 from shared.utils.healthcare_identity import identity_from_public_record
 from shared.utils.mcp_response import collection_response, error_response, evidence_receipt, to_structured
+from shared.utils.source_backed_result import source_claim
 
 from . import data_loaders as gv_loaders
 from . import geography as geo_shapes
@@ -168,10 +169,27 @@ def _geography_identity(
     return identity
 
 
-def _geography_identity_map(entities: list[dict[str, Any]], *, match_basis: str) -> dict[str, Any]:
+def _geography_identity_map(
+    entities: list[dict[str, Any]],
+    *,
+    match_basis: str,
+    source_metadata: dict[str, Any],
+    row_evidence_paths: tuple[str, ...] = (),
+) -> dict[str, Any]:
     return {
         "entities": entities,
         "match_basis": match_basis,
+        "source_claims": [
+            source_claim(
+                collection=str(source_metadata.get("dataset_id") or "geography"),
+                source_name=str(source_metadata.get("source_name") or ""),
+                source_url=str(source_metadata.get("source_url") or ""),
+                evidence_path="evidence",
+                source_metadata_path="source_metadata",
+                row_evidence_paths=row_evidence_paths,
+                match_policy=match_basis,
+            )
+        ],
         "conflict_policy": "Join geography records by exact geography type and code; names and allocation ratios are context only.",
     }
 
@@ -349,6 +367,8 @@ async def get_zcta_demographics_batch(zctas: list[str], year: int = 2023) -> dic
                     for row in rows
                 ],
                 match_basis="acs_zcta_exact_batch",
+                source_metadata=source_metadata,
+                row_evidence_paths=("results[].evidence",),
             ),
         )
     except httpx.HTTPStatusError as e:
@@ -462,6 +482,8 @@ async def get_zcta_adjacency(zcta: str) -> dict[str, Any]:
                 for neighbor in neighbors
             ],
             match_basis="tiger_adjacent_zcta_exact_codes",
+            source_metadata=source_metadata,
+            row_evidence_paths=("adjacent_zcta_rows[].evidence",),
         )
         return payload
     except FileNotFoundError as e:
@@ -839,6 +861,8 @@ async def crosswalk_zip(zip_code: str, target: str = "county") -> dict[str, Any]
                 if row.get("target_code")
             ],
             match_basis="hud_zip_crosswalk_target_codes",
+            source_metadata=source_metadata,
+            row_evidence_paths=("results[].evidence",),
         )
         return payload
 

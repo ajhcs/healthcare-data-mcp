@@ -13,6 +13,7 @@ from mcp.server.fastmcp import FastMCP
 from shared.utils.mcp_observability import observe_tool
 from shared.utils.mcp_resources import register_standard_resources
 from shared.utils.mcp_response import error_response, evidence_receipt, to_structured
+from shared.utils.source_backed_result import values_at_path
 from shared.utils import ahrq_data
 from shared.utils.bed_resolver import resolve_hospital_bed_source
 from shared.utils.cost_report import load_cost_report_row
@@ -100,6 +101,13 @@ def _attach_workforce_source_metadata(payload: dict[str, Any]) -> dict[str, Any]
     evidence = payload.get("evidence")
     if isinstance(evidence, dict):
         payload["source_metadata"] = _workforce_source_metadata(evidence)
+    identity_map = payload.get("identity_map")
+    if isinstance(identity_map, dict) and isinstance(identity_map.get("source_claims"), list):
+        identity_map["source_claims"] = [
+            _normalize_workforce_source_claim(payload, claim)
+            for claim in identity_map["source_claims"]
+            if isinstance(claim, dict)
+        ]
     return payload
 
 
@@ -638,7 +646,19 @@ def _workforce_source_claims(*, dataset_id: str, payload: dict[str, Any]) -> lis
                 "match_policy": "exact_public_identifier_required_for_workforce_operations_fact",
             }
         ]
-    return claims
+    return [_normalize_workforce_source_claim(payload, claim) for claim in claims]
+
+
+def _normalize_workforce_source_claim(payload: dict[str, Any], claim: dict[str, Any]) -> dict[str, Any]:
+    normalized = dict(claim)
+    normalized["identity_paths"] = ["evidence.query"]
+    normalized["source_metadata_path"] = "source_metadata"
+    row_paths = [path for path in normalized.get("row_evidence_paths", []) if values_at_path(payload, str(path))]
+    if row_paths:
+        normalized["row_evidence_paths"] = row_paths
+    else:
+        normalized.pop("row_evidence_paths", None)
+    return normalized
 
 
 def _workforce_join_key_usage(field: str, source_claims: list[dict[str, Any]]) -> list[str]:
@@ -1345,6 +1365,11 @@ async def get_acgme_source_status() -> dict[str, Any]:
             cache_freshness=str(payload.get("cache_freshness") or payload.get("source_caveat") or "local import status reported by source_status"),
             match_basis="local_acgme_import_status",
             confidence="source_status_only",
+        )
+        payload["identity_map"] = _workforce_identity_map(
+            query={},
+            payload=payload,
+            dataset_id="acgme_program_search_public_export",
         )
         return to_structured(_attach_workforce_source_metadata(payload))
     except Exception as e:

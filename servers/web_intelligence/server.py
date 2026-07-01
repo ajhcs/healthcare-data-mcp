@@ -21,6 +21,7 @@ from shared.utils.mcp_resources import register_standard_resources
 from shared.utils.mcp_response import error_response, evidence_receipt, to_structured
 from shared.utils.healthcare_identity import MatchDecision, identity_from_public_record
 from shared.utils.identity import normalize_ccn, normalize_name
+from shared.utils.source_backed_result import values_at_path
 
 from . import data_loaders, search_client, proxycurl_client  # pyright: ignore[reportAttributeAccessIssue]
 from .models import (  # pyright: ignore[reportAttributeAccessIssue]
@@ -406,7 +407,7 @@ def _web_identity_map(
         "source_url": _web_identity_values("source_url", *source_urls),
         "result_url": _web_identity_values("result_url", *result_urls),
     }
-    source_claims = _web_source_claims(dataset_id=effective_dataset_id)
+    source_claims = _web_source_claims(dataset_id=effective_dataset_id, payload=data)
     return {
         "entity_scope": "web_osint",
         "join_keys": [
@@ -487,7 +488,7 @@ def _normalize_web_identity_value(field: str, value: Any) -> str:
     return str(value).strip()
 
 
-def _web_source_claims(*, dataset_id: str) -> list[dict[str, Any]]:
+def _web_source_claims(*, dataset_id: str, payload: dict[str, Any]) -> list[dict[str, Any]]:
     claims_by_dataset = {
         "google_cse_public_web_search": [
             {
@@ -567,7 +568,7 @@ def _web_source_claims(*, dataset_id: str) -> list[dict[str, Any]]:
             }
         ],
     }
-    return claims_by_dataset.get(
+    claims = claims_by_dataset.get(
         dataset_id,
         [
             {
@@ -578,9 +579,42 @@ def _web_source_claims(*, dataset_id: str) -> list[dict[str, Any]]:
             }
         ],
     )
+    return [_normalize_web_source_claim(payload, claim) for claim in claims]
+
+
+def _normalize_web_source_claim(payload: dict[str, Any], claim: dict[str, Any]) -> dict[str, Any]:
+    normalized = dict(claim)
+    normalized["identity_paths"] = ["evidence.query"]
+    normalized["source_metadata_path"] = "source_metadata"
+    row_paths = [path for path in normalized.get("row_evidence_paths", []) if values_at_path(payload, str(path))]
+    if row_paths:
+        normalized["row_evidence_paths"] = row_paths
+    else:
+        normalized.pop("row_evidence_paths", None)
+    return normalized
 
 
 def _web_join_key_usage(field: str, source_claims: list[dict[str, Any]]) -> list[str]:
+    collections_by_field = {
+        "canonical_name": {
+            "public_web_system_profile",
+            "cms_pi_and_public_web_ehr_search",
+            "public_web_executive_profiles",
+            "public_news_search",
+            "bundled_gpo_directory_public_web",
+        },
+        "ccn": {"cms_promoting_interoperability_hospital", "cms_pi_and_public_web_ehr_search"},
+        "system_domain": {"google_cse_public_web_search", "public_web_system_profile", "public_web_executive_profiles"},
+        "query_text": {"google_cse_public_web_search", "public_web_source_query"},
+        "source_url": {"public_web_page_fetch", "cms_pi_and_public_web_ehr_search"},
+        "result_url": {
+            "google_cse_public_web_search",
+            "public_web_system_profile",
+            "public_web_executive_profiles",
+            "public_news_search",
+            "bundled_gpo_directory_public_web",
+        },
+    }.get(field, set())
     path_tokens = {
         "canonical_name": ("system_name", "entity_name"),
         "ccn": ("ccn",),
@@ -591,9 +625,13 @@ def _web_join_key_usage(field: str, source_claims: list[dict[str, Any]]) -> list
     }[field]
     used_by = []
     for claim in source_claims:
+        collection = str(claim.get("collection") or "")
+        if collection in collections_by_field:
+            used_by.append(collection)
+            continue
         paths = " ".join(str(path) for path in claim.get("identity_paths", []))
         if any(token in paths for token in path_tokens):
-            used_by.append(str(claim.get("collection") or ""))
+            used_by.append(collection)
     return sorted(item for item in used_by if item)
 
 _BLOCKED_HOSTNAMES = {

@@ -4,6 +4,12 @@ import pytest
 
 from servers.provider_enrollment import data_loaders, server
 from shared.utils.mcp_response import validate_evidence_receipt
+from shared.utils.source_backed_result import validate_source_claim_paths
+
+
+def assert_boundary_traceability(result: dict) -> None:
+    assert result["identity_map"]["source_claims"]
+    assert validate_source_claim_paths(result, require_boundary_traceability=True)["valid"] is True
 
 
 def assert_provider_source_metadata(result: dict) -> None:
@@ -125,6 +131,7 @@ async def test_search_provider_enrollment(provider_cache) -> None:
     assert enrollment["cache_status"] == "ready"
     assert enrollment["cache_freshness"]
     assert result["identity"]["npi"] == "1234567893"
+    assert_boundary_traceability(result)
     identity_map = result["identity_map"]
     by_field = {entry["field"]: entry for entry in identity_map["join_keys"]}
     assert by_field["npi"]["values"] == ["1234567893"]
@@ -148,6 +155,7 @@ async def test_search_provider_enrollment_no_match_has_zero_result_evidence(prov
     assert "Verify the identifier" in result["evidence"]["next_step"]
     assert_provider_source_metadata(result)
     assert result["identity"]["npi"] == "1999999984"
+    assert_boundary_traceability(result)
     by_field = {entry["field"]: entry for entry in result["identity_map"]["join_keys"]}
     assert by_field["npi"]["values"] == ["1999999984"]
     assert by_field["ccn"]["status"] == "missing"
@@ -166,6 +174,7 @@ async def test_get_provider_enrollment_detail_links_owners_and_chow(provider_cac
     validate_evidence_receipt(result["ownership"][0]["evidence"], require_content=True)
     validate_evidence_receipt(result["chow_history"][0]["evidence"], require_content=True)
     assert_provider_source_metadata(result)
+    assert_boundary_traceability(result)
 
 
 @pytest.mark.asyncio
@@ -180,6 +189,7 @@ async def test_get_provider_enrollment_detail_no_match_has_zero_result_evidence(
     validate_evidence_receipt(result["evidence"], require_content=True)
     assert_provider_source_metadata(result)
     assert result["identity"]["npi"] == "1999999984"
+    assert_boundary_traceability(result)
 
 
 @pytest.mark.asyncio
@@ -196,6 +206,7 @@ async def test_get_facility_ownership(provider_cache) -> None:
     assert result["evidence"]["match_basis"] == "ccn_exact"
     assert_provider_source_metadata(result)
     assert result["identity"]["ccn"] == "390001"
+    assert_boundary_traceability(result)
     by_field = {entry["field"]: entry for entry in result["identity_map"]["join_keys"]}
     assert by_field["ccn"]["values"] == ["390001"]
     assert by_field["pecos_enrollment_id"]["values"] == ["ENR1"]
@@ -215,6 +226,7 @@ async def test_get_facility_ownership_no_match_has_zero_result_evidence(provider
     assert result["evidence"]["confidence"] == "no_matching_rows_in_loaded_cms_provider_enrollment_public_files"
     assert_provider_source_metadata(result)
     assert result["identity"]["ccn"] == "390999"
+    assert_boundary_traceability(result)
 
 
 @pytest.mark.asyncio
@@ -234,6 +246,7 @@ async def test_trace_owner_network(provider_cache) -> None:
     assert result["edges"][0]["evidence"]["match_basis"] == "cms_provider_owner_graph_edge_row"
     assert result["edges"][0]["evidence"]["query"]["graph_edge_relationship"] == "owns_or_controls"
     assert_provider_source_metadata(result)
+    assert_boundary_traceability(result)
 
 
 @pytest.mark.asyncio
@@ -246,11 +259,9 @@ async def test_trace_owner_network_no_match_has_zero_result_evidence(provider_ca
     assert result["evidence"]["confidence"] == "no_matching_rows_in_loaded_cms_provider_enrollment_public_files"
     assert_provider_source_metadata(result)
     assert result["identity"]["canonical_name"] == "NO SUCH OWNER"
+    assert_boundary_traceability(result)
     assert result["identity_map"]["source_claims"][0]["collection"] == "owner_network"
-    assert result["identity_map"]["source_claims"][0]["row_evidence_paths"] == [
-        "nodes[].evidence",
-        "edges[].evidence",
-    ]
+    assert "row_evidence_paths" not in result["identity_map"]["source_claims"][0]
 
 
 @pytest.mark.asyncio
@@ -272,6 +283,7 @@ async def test_search_change_of_ownership(provider_cache) -> None:
     assert result["events"][0]["evidence"]["dataset_id"] == "hospital_chow"
     assert result["events"][0]["evidence"]["match_basis"] == "cms_provider_chow_row"
     assert result["events"][0]["evidence"]["query"]["transaction_date"] == "2026-04-01"
+    assert_boundary_traceability(result)
 
 
 @pytest.mark.asyncio
@@ -284,6 +296,7 @@ async def test_search_change_of_ownership_no_match_has_zero_result_evidence(prov
     assert result["evidence"]["confidence"] == "no_matching_rows_in_loaded_cms_provider_enrollment_public_files"
     assert_provider_source_metadata(result)
     assert result["identity"]["ccn"] == "390999"
+    assert_boundary_traceability(result)
 
 
 @pytest.mark.asyncio
@@ -303,6 +316,7 @@ async def test_profile_provider_control(provider_cache) -> None:
     assert result["evidence"]["match_basis"] == "ccn_exact"
     assert_provider_source_metadata(result)
     assert result["identity"]["ccn"] == "390001"
+    assert_boundary_traceability(result)
     by_field = {entry["field"]: entry for entry in result["identity_map"]["join_keys"]}
     assert by_field["ccn"]["values"] == ["390001"]
     assert by_field["owner_id"]["values"] == ["OWN1"]
@@ -313,7 +327,7 @@ async def test_profile_provider_control(provider_cache) -> None:
         "owner_network",
     }
     claims = {claim["collection"]: claim for claim in result["identity_map"]["source_claims"]}
-    assert claims["enrollment"]["row_evidence_paths"] == ["enrollment[].evidence"]
+    assert "row_evidence_paths" not in claims["enrollment"]
     assert claims["ownership"]["row_evidence_paths"] == ["ownership[].evidence"]
     assert claims["chow_history"]["row_evidence_paths"] == ["chow_history[].evidence"]
     assert claims["owner_network"]["row_evidence_paths"] == [
@@ -333,6 +347,7 @@ async def test_profile_provider_control_no_match_has_zero_result_evidence(provid
     assert result["evidence"]["confidence"] == "no_matching_rows_in_loaded_cms_provider_enrollment_public_files"
     assert_provider_source_metadata(result)
     assert result["identity"]["ccn"] == "390999"
+    assert_boundary_traceability(result)
 
 
 @pytest.mark.asyncio

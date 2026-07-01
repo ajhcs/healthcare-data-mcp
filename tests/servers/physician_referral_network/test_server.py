@@ -6,6 +6,7 @@ import pytest
 
 from servers.physician_referral_network import server
 from shared.utils.mcp_response import validate_evidence_receipt
+from shared.utils.source_backed_result import validate_source_claim_paths
 
 
 def _assert_receipt(result: dict, *, dataset_id: str, match_basis: str) -> None:
@@ -56,6 +57,7 @@ async def test_search_physicians_returns_evidence_and_identity_map(monkeypatch):
     assert result["physicians"][0]["evidence"]["query"]["row_npi"] == "1234567893"
     assert result["identity_map"]["entities"][0]["npi"] == "1234567893"
     assert result["identity_map"]["entities"][0]["state"] == "PA"
+    assert validate_source_claim_paths(result, require_boundary_traceability=True)["valid"] is True
 
 
 @pytest.mark.asyncio

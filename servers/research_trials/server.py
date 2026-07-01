@@ -335,6 +335,16 @@ def _inventory_identity_map(records: list[dict[str, Any]], *, kind: str) -> dict
     return {
         "entities": entities,
         "match_basis": "clinicaltrials_public_inventory_grouping",
+        "source_claims": [
+            {
+                "collection": f"clinicaltrials_{kind}_inventory",
+                "identity_paths": ["evidence.query"],
+                "evidence_path": "evidence",
+                "source_metadata_path": "source_metadata",
+                "row_evidence_paths": ["records[].evidence"] if records else [],
+                "match_policy": "clinicaltrials_inventory_grouping_requires_source_row_review",
+            }
+        ],
         "conflict_policy": "Do not merge sponsors or sites without matching role/geography identifiers and source review.",
     }
 

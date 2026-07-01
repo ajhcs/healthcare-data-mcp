@@ -8,6 +8,12 @@ import pytest
 
 from servers.public_records import server
 from shared.utils.mcp_response import validate_evidence_receipt
+from shared.utils.source_backed_result import validate_source_claim_paths
+
+
+def _assert_boundary_traceability(response: dict) -> None:
+    assert response["identity_map"]["source_claims"]
+    assert validate_source_claim_paths(response, require_boundary_traceability=True)["valid"] is True
 
 
 @pytest.mark.asyncio
@@ -63,6 +69,7 @@ async def test_search_usaspending_returns_evidence_and_candidate_identity(
     assert "EXAMPLE HEALTH" in by_field["canonical_name"]["values"]
     assert "EXAMPLE HEALTH SYSTEM" in by_field["canonical_name"]["values"]
     assert response["identity_map"]["source_claims"][0]["match_policy"] == "candidate_public_records_search_not_identity_proof"
+    _assert_boundary_traceability(response)
 
 
 @pytest.mark.asyncio
@@ -121,6 +128,7 @@ async def test_search_sam_gov_returns_evidence_without_treating_keyword_as_exclu
         "opportunities[].notice_id",
         "opportunities[].solicitation_number",
     ]
+    _assert_boundary_traceability(response)
 
 
 @pytest.mark.asyncio

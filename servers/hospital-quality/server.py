@@ -388,13 +388,11 @@ def _quality_source_claims(
         "collection": collection,
         "source_name": _QUALITY_DATASET_NAMES.get(dataset, dataset),
         "identity_paths": [
-            "query.ccn",
-            f"{dataset}.facility_id",
-            f"{dataset}.provider_id",
-            f"{dataset}.facility_name",
-            f"{dataset}.measure_id",
+            "identity.ccn",
+            "identity.canonical_name",
         ],
         "evidence_path": "evidence",
+        "source_metadata_path": "source_metadata",
         "match_policy": "ccn_required_for_hospital_quality_join_measure_id_required_for_named_measure_fact",
     }
     if row_evidence_paths:

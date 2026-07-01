@@ -6,6 +6,7 @@ import pytest
 
 from servers.research_trials import server
 from shared.utils.mcp_response import validate_evidence_receipt
+from shared.utils.source_backed_result import validate_source_claim_paths
 
 
 @pytest.mark.asyncio
@@ -271,6 +272,7 @@ async def test_inventory_clinical_trial_sponsors_separates_roles_and_counts() ->
     assert result["evidence"]["dataset_id"] == "clinicaltrials_gov"
     assert result["evidence"]["match_basis"] == "clinicaltrials_sponsor_inventory_grouping"
     assert result["identity_map"]["entities"]
+    assert validate_source_claim_paths(result, require_boundary_traceability=True)["valid"] is True
     validate_evidence_receipt(result["evidence"], require_content=True)
     validate_evidence_receipt(records["EXAMPLE HEALTH"]["evidence"], require_content=True)
     assert records["EXAMPLE HEALTH"]["evidence"]["match_basis"] == "clinicaltrials_sponsor_inventory_row"
@@ -309,6 +311,7 @@ async def test_inventory_clinical_trial_sites_keys_facility_by_geography_and_unr
     assert {record["state"] for record in result["records"]} == {"PA", "NJ"}
     assert result["evidence"]["match_basis"] == "clinicaltrials_site_inventory_grouping"
     assert {entity["state"] for entity in result["identity_map"]["entities"]} == {"PA", "NJ"}
+    assert validate_source_claim_paths(result, require_boundary_traceability=True)["valid"] is True
     validate_evidence_receipt(result["evidence"], require_content=True)
     validate_evidence_receipt(result["records"][0]["evidence"], require_content=True)
     assert result["records"][0]["evidence"]["match_basis"] == "clinicaltrials_site_inventory_row"

@@ -7,6 +7,7 @@ import pytest
 
 from servers.service_area import server
 from shared.utils.mcp_response import validate_evidence_receipt
+from shared.utils.source_backed_result import validate_source_claim_paths
 from tests.helpers import parse_tool_result
 
 
@@ -54,6 +55,11 @@ def _assert_receipt(result: dict, *, dataset_id: str, match_basis: str) -> None:
     validate_evidence_receipt(result["evidence"], require_content=True)
 
 
+def _assert_boundary_traceability(result: dict) -> None:
+    assert result["identity_map"]["source_claims"]
+    assert validate_source_claim_paths(result, require_boundary_traceability=True)["valid"] is True
+
+
 @pytest.mark.asyncio
 async def test_compute_service_area_returns_evidence_and_identity(monkeypatch, hsaf_frame: pd.DataFrame) -> None:
     async def fake_hsaf() -> pd.DataFrame:
@@ -68,6 +74,7 @@ async def test_compute_service_area_returns_evidence_and_identity(monkeypatch, h
     _assert_receipt(result, dataset_id="cms_hospital_service_area_file", match_basis="ccn_exact_hsaf_zip_discharge_rows")
     assert result["identity"]["ccn"] == "390001"
     assert {entity["entity_type"] for entity in result["identity_map"]["entities"]} == {"facility", "zip_geography"}
+    _assert_boundary_traceability(result)
 
 
 @pytest.mark.asyncio
@@ -92,6 +99,7 @@ async def test_get_market_share_returns_hospital_identity_map(monkeypatch, hsaf_
     _assert_receipt(result, dataset_id="cms_hospital_service_area_file", match_basis="zip_exact_hsaf_discharge_rows")
     assert result["identity"]["zip_code"] == "19107"
     assert {entity["ccn"] for entity in result["identity_map"]["entities"]} == {"390001", "390002"}
+    _assert_boundary_traceability(result)
 
 
 @pytest.mark.asyncio
@@ -107,6 +115,7 @@ async def test_get_hsa_hrr_mapping_returns_dartmouth_evidence(monkeypatch, dartm
     assert result["hrr_number"] == 201
     _assert_receipt(result, dataset_id="dartmouth_atlas_zip_hsa_hrr_crosswalk", match_basis="zip_exact_dartmouth_crosswalk_row")
     assert result["identity_map"]["entities"][0]["hsa_number"] == "101"
+    _assert_boundary_traceability(result)
 
 
 @pytest.mark.asyncio
@@ -131,3 +140,4 @@ async def test_compare_to_dartmouth_returns_combined_evidence(
     _assert_receipt(result, dataset_id="service_area_dartmouth_overlap", match_basis="ccn_exact_hsaf_rows_plus_top_zip_dartmouth_crosswalk")
     assert result["source_metadata"]["sources"][0]["dataset_id"] == "cms_hospital_service_area_file"
     assert result["identity"]["ccn"] == "390001"
+    _assert_boundary_traceability(result)

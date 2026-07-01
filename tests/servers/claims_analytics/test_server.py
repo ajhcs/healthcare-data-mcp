@@ -10,6 +10,7 @@ import pytest
 
 from servers.claims_analytics import server, data_loaders
 from shared.utils.mcp_response import validate_evidence_receipt
+from shared.utils.source_backed_result import validate_source_claim_paths
 
 
 # ---------------------------------------------------------------------------
@@ -306,6 +307,8 @@ async def test_analyze_market_volumes_includes_evidence_and_identity_map():
     identity_ccns = {entity["ccn"] for entity in result["identity_map"]["entities"]}
     assert identity_ccns == {"390223", "390226"}
     assert result["identity_map"]["match_basis"] == "ccn_exact_provider_set"
+    assert result["identity_map"]["source_claims"][0]["source_metadata_path"] == "source_metadata"
+    assert validate_source_claim_paths(result, require_boundary_traceability=True)["valid"] is True
     assert_claims_row_receipt(
         result["provider_shares"][0]["evidence"],
         dataset_id="cms_medicare_inpatient_puf",

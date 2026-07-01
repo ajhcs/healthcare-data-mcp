@@ -8,6 +8,12 @@ import pytest
 
 from servers.public_records import server
 from shared.utils.mcp_response import validate_evidence_receipt
+from shared.utils.source_backed_result import validate_source_claim_paths
+
+
+def _assert_boundary_traceability(response: dict) -> None:
+    assert response["identity_map"]["source_claims"]
+    assert validate_source_claim_paths(response, require_boundary_traceability=True)["valid"] is True
 
 
 @pytest.mark.asyncio
@@ -64,6 +70,7 @@ async def test_get_accreditation_returns_evidence_and_identity_map(
     assert by_field["ccn"]["values"] == ["390001"]
     assert by_field["canonical_name"]["values"] == ["EXAMPLE HOSPITAL"]
     assert response["identity_map"]["source_claims"][0]["dataset_id"] == "cms_provider_of_services"
+    _assert_boundary_traceability(response)
 
 
 @pytest.mark.asyncio
@@ -118,6 +125,7 @@ async def test_get_interop_status_returns_evidence_identity_map_and_cyber_caveat
     by_field = {entry["field"]: entry for entry in response["identity_map"]["join_keys"]}
     assert by_field["ccn"]["values"] == ["390001"]
     assert response["identity_map"]["source_claims"][0]["collection"] == "records"
+    _assert_boundary_traceability(response)
 
 
 @pytest.mark.asyncio
@@ -142,3 +150,4 @@ async def test_get_interop_status_no_match_keeps_source_scoped_receipt(
     assert response["source_metadata"]["dataset_id"] == response["evidence"]["dataset_id"]
     assert response["identity"]["ccn"] == "390999"
     assert response["identity_map"]["missing_data_policy"].startswith("No-match public-record regulatory responses")
+    _assert_boundary_traceability(response)

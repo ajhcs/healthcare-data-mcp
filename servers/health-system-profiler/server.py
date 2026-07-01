@@ -18,6 +18,7 @@ from shared.utils.mcp_resources import register_standard_resources
 from shared.utils.healthcare_identity import identity_from_public_record
 from shared.utils.identity import normalize_ccn, normalize_name, normalize_npi
 from shared.utils.mcp_response import error_response, evidence_receipt, to_structured
+from shared.utils.source_backed_result import values_at_path
 
 # Support running both as a package and as a standalone script
 try:
@@ -151,6 +152,16 @@ def _attach_system_source_metadata(payload: dict[str, Any]) -> dict[str, Any]:
     evidence = payload.get("evidence")
     if isinstance(evidence, dict):
         payload["source_metadata"] = _system_source_metadata(evidence)
+    identity_map = payload.get("identity_map")
+    if isinstance(identity_map, dict) and isinstance(identity_map.get("source_claims"), list):
+        for claim in identity_map["source_claims"]:
+            if not isinstance(claim, dict):
+                continue
+            row_paths = [path for path in claim.get("row_evidence_paths", []) if values_at_path(payload, str(path))]
+            if row_paths:
+                claim["row_evidence_paths"] = row_paths
+            else:
+                claim.pop("row_evidence_paths", None)
     return payload
 
 
@@ -414,8 +425,9 @@ def _normalize_identity_value(field: str, value: Any) -> str:
 def _system_source_claims(*, result_collection: str, facilities: list[dict[str, Any]]) -> list[dict[str, Any]]:
     system_claim = {
         "collection": "system",
-        "identity_paths": ["system.system_id", "system.name", "identity.ahrq_system_id"],
+        "identity_paths": ["evidence.query"],
         "evidence_path": "evidence",
+        "source_metadata_path": "source_metadata",
         "match_policy": "ahrq_system_id_required_for_system_merge",
     }
     if result_collection == "results":
@@ -426,24 +438,9 @@ def _system_source_claims(*, result_collection: str, facilities: list[dict[str, 
         claims.append(
             {
                 "collection": "facilities",
-                "identity_paths": [
-                    "facilities[].ccn",
-                    "facilities[].npi",
-                    "facilities[].name",
-                    "facilities[].zip_code",
-                    "inpatient_facilities[].ccn",
-                    "inpatient_facilities[].npi",
-                    "inpatient_facilities[].name",
-                    "inpatient_facilities[].zip_code",
-                    "outpatient_sites[].npi",
-                    "outpatient_sites[].name",
-                    "outpatient_sites[].zip_code",
-                    "facility_reconciliation.facilities[].ccn",
-                    "facility_reconciliation.facilities[].npi",
-                    "facility_reconciliation.facilities[].name",
-                    "facility_reconciliation.facilities[].zip_code",
-                ],
+                "identity_paths": ["evidence.query"],
                 "evidence_path": "evidence",
+                "source_metadata_path": "source_metadata",
                 "row_evidence_paths": row_evidence_paths,
                 "match_policy": "ccn_or_npi_required_for_facility_merge",
             }
@@ -468,6 +465,13 @@ def _system_facility_row_evidence_paths(result_collection: str) -> list[str]:
 
 
 def _system_join_key_usage(field: str, source_claims: list[dict[str, Any]]) -> list[str]:
+    collections_by_field = {
+        "ahrq_system_id": {"system"},
+        "ccn": {"facilities"},
+        "npi": {"facilities"},
+        "canonical_name": {"system", "facilities"},
+        "zip_code": {"facilities"},
+    }.get(field, set())
     path_tokens = {
         "ahrq_system_id": ("system_id", "ahrq_system_id"),
         "ccn": ("ccn",),
@@ -477,9 +481,13 @@ def _system_join_key_usage(field: str, source_claims: list[dict[str, Any]]) -> l
     }[field]
     used_by = []
     for claim in source_claims:
+        collection = str(claim.get("collection") or "")
+        if collection in collections_by_field:
+            used_by.append(collection)
+            continue
         paths = " ".join(str(path) for path in claim.get("identity_paths", []))
         if any(token in paths for token in path_tokens):
-            used_by.append(str(claim.get("collection") or ""))
+            used_by.append(collection)
     return sorted(item for item in used_by if item)
 
 
