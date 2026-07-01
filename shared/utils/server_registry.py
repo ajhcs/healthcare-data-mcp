@@ -264,7 +264,7 @@ SERVER_REGISTRY: tuple[ServerCapability, ...] = (
         zero_config=False,
         profiles=("web", "osint"),
         gateway_exposure=("metadata",),
-        workflow_roles=("system_reconciliation",),
+        workflow_roles=("system_reconciliation", "profile_evidence_pack"),
         dataset_ids=("web_intelligence",),
         safety_notes=("Fetched web content is untrusted and should be validated against source pages.",),
     ),
@@ -309,7 +309,12 @@ SERVER_REGISTRY: tuple[ServerCapability, ...] = (
         cache_needs=("cms-pecos-enrollment", "cms-pecos-ownership", "cms-pecos-chow"),
         profiles=("ownership", "identity", "compliance"),
         gateway_exposure=("metadata", "live"),
-        workflow_roles=("ownership_chow_trace", "compliance_exclusion_screening", "system_reconciliation"),
+        workflow_roles=(
+            "ownership_chow_trace",
+            "compliance_exclusion_screening",
+            "system_reconciliation",
+            "profile_evidence_pack",
+        ),
         dataset_ids=(
             "cms_pecos_hospital_chow",
             "cms_pecos_hospital_enrollments",
@@ -383,6 +388,7 @@ SERVER_REGISTRY: tuple[ServerCapability, ...] = (
         ),
         profiles=("cache", "operations"),
         gateway_exposure=(),
+        workflow_roles=("profile_evidence_pack", "health_system_metrics"),
         dataset_ids=(),
         safety_notes=(
             "Read-only inspection and planning are safe by default; mutating tools are dataset allowlisted and cache-root scoped.",

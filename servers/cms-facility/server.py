@@ -17,6 +17,7 @@ from shared.utils.mcp_resources import register_standard_resources
 from shared.utils.healthcare_identity import identity_from_public_record
 from shared.utils.input_normalization import normalize_ccn, normalize_npi
 from shared.utils.mcp_response import error_response, evidence_receipt, invalid_argument_response, not_found_response, to_structured
+from shared.utils.source_backed_result import source_claim
 from shared.utils.bed_resolver import resolve_hospital_bed_source
 
 # Support running both as a package and as a standalone script
@@ -204,6 +205,7 @@ def _cms_facility_identity_map(
     identity_paths: tuple[str, ...],
     evidence_path: str = "evidence",
     row_evidence_path: str = "",
+    source_metadata_path: str = "source_metadata",
 ) -> dict[str, Any]:
     dataset_id = str(source_metadata.get("dataset_id") or "")
     source_name = str(source_metadata.get("source_name") or "")
@@ -227,21 +229,21 @@ def _cms_facility_identity_map(
             }
         )
 
-    source_claim = {
-        "collection": dataset_id,
-        "source_name": source_name,
-        "source_url": source_url,
-        "identity_paths": list(identity_paths),
-        "evidence_path": evidence_path,
-        "match_policy": match_basis,
-    }
-    if row_evidence_path:
-        source_claim["row_evidence_path"] = row_evidence_path
+    claim = source_claim(
+        collection=dataset_id,
+        source_name=source_name,
+        source_url=source_url,
+        identity_paths=identity_paths,
+        evidence_path=evidence_path,
+        source_metadata_path=source_metadata_path,
+        row_evidence_paths=(row_evidence_path,) if row_evidence_path else (),
+        match_policy=match_basis,
+    )
 
     return {
         "entity_scope": "cms_facility_or_provider_public_identity",
         "join_keys": join_keys,
-        "source_claims": [source_claim],
+        "source_claims": [claim],
         "conflict_policy": [
             "Use exact CCN for CMS hospital facility joins when available.",
             "Use exact NPI for NPPES provider or organization joins when available.",
