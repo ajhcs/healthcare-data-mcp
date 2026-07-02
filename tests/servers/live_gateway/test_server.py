@@ -137,7 +137,7 @@ async def test_list_live_tools_returns_inventory() -> None:
 def test_live_gateway_policy_specs_are_valid() -> None:
     server._validate_live_policy_specs()
     assert {
-        server._effective_source_caveat_class(spec)
+        server.effective_source_caveat_class(spec)
         for spec in server.LIVE_TOOL_SPECS
     } <= set(server.SOURCE_CAVEAT_CLASSES)
 

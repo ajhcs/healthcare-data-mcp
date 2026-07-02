@@ -1134,6 +1134,7 @@ def _live_gateway_policy_validation() -> dict[str, Any]:
     """Statically validate live-gateway policy wiring without starting the gateway."""
 
     module_name = "servers.live_gateway.server"
+    policy_runner_module_name = "servers.live_gateway.policy_runner"
     module_spec = importlib.util.find_spec(module_name)
     issues: list[dict[str, Any]] = []
     if module_spec is None or not module_spec.origin:
@@ -1183,12 +1184,44 @@ def _live_gateway_policy_validation() -> dict[str, Any]:
             "issue_count": 1,
         }
 
+    policy_runner_tree: ast.AST | None = None
+    policy_runner_spec = importlib.util.find_spec(policy_runner_module_name)
+    if policy_runner_spec is None or not policy_runner_spec.origin:
+        issues.append(
+            {
+                "status": "policy_runner_module_not_found",
+                "module": policy_runner_module_name,
+                "message": "Could not find live-gateway policy runner module source.",
+            }
+        )
+    else:
+        policy_runner_path = Path(policy_runner_spec.origin)
+        try:
+            policy_runner_tree = ast.parse(
+                policy_runner_path.read_text(encoding="utf-8"),
+                filename=str(policy_runner_path),
+            )
+        except Exception as exc:
+            issues.append(
+                {
+                    "status": "policy_runner_module_parse_failed",
+                    "module": policy_runner_module_name,
+                    "message": f"{type(exc).__name__}: {exc}",
+                }
+            )
+
     specs = _live_tool_specs_from_tree(tree)
     rate_limit_policies = _literal_assignment(tree, "_RATE_LIMIT_POLICIES", default={})
     allowed_live_scopes = _literal_assignment(tree, "_ALLOWED_LIVE_SCOPES", default={"mcp:read", "mcp:bulk"})
-    source_caveat_classes = _literal_assignment(tree, "SOURCE_CAVEAT_CLASSES", default={})
-    category_caveat_class = _literal_assignment(tree, "_CATEGORY_CAVEAT_CLASS", default={})
+    policy_tree = policy_runner_tree or tree
+    source_caveat_classes = _literal_assignment(policy_tree, "SOURCE_CAVEAT_CLASSES", default={})
+    category_caveat_class = _literal_assignment(policy_tree, "_CATEGORY_CAVEAT_CLASS", default={})
     shared_evidence_validation_call_count = _ast_call_count(tree, "evidence_receipt_validation_summary")
+    if policy_runner_tree is not None:
+        shared_evidence_validation_call_count += _ast_call_count(
+            policy_runner_tree,
+            "evidence_receipt_validation_summary",
+        )
     shared_evidence_validation = {
         "status": "ok" if shared_evidence_validation_call_count else "missing",
         "call_count": shared_evidence_validation_call_count,
@@ -1324,6 +1357,7 @@ def _live_gateway_policy_validation() -> dict[str, Any]:
         "status": "ok" if not issues else "issues_found",
         "method": "live_gateway_static_policy_ast",
         "module": module_name,
+        "policy_runner_module": policy_runner_module_name,
         "tool_count": len(specs),
         "live_server_count": len(live_servers),
         "bulk_tool_count": bulk_tool_count,

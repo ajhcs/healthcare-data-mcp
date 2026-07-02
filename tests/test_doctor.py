@@ -48,6 +48,7 @@ def test_doctor_report_includes_operator_readiness_sections(tmp_path, monkeypatc
     assert report["summary"]["evidence_contract_issues"] == 0
     assert report["live_gateway_policy_validation"]["status"] == "ok"
     assert report["live_gateway_policy_validation"]["method"] == "live_gateway_static_policy_ast"
+    assert report["live_gateway_policy_validation"]["policy_runner_module"] == "servers.live_gateway.policy_runner"
     assert report["live_gateway_policy_validation"]["tool_count"] >= 50
     assert report["live_gateway_policy_validation"]["bulk_tool_count"] >= 2
     assert report["live_gateway_policy_validation"]["provenance_required_tool_count"] == (
