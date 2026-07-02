@@ -51,6 +51,7 @@ from .models import (
     SAMExclusionSearchResponse,
     SAMExclusionsSourceMetadata,
 )
+from .source_claims import public_source_claim as _public_source_claim
 from shared.utils.healthcare_identity import MatchDecision, identity_from_public_record
 from shared.utils.identity import normalize_ccn, normalize_name, normalize_npi, normalize_state
 
@@ -659,28 +660,6 @@ def _public_facility_identity_map(
             "they are not proof of no accreditation, no PI participation, or no certified health IT."
         ),
 }
-
-
-def _public_source_claim(
-    *,
-    collection: str,
-    dataset_id: str = "",
-    match_policy: str,
-    identity_paths: list[str] | None = None,
-    row_evidence_paths: list[str] | None = None,
-) -> dict[str, Any]:
-    claim: dict[str, Any] = {
-        "collection": collection,
-        "identity_paths": identity_paths or ["evidence.query"],
-        "evidence_path": "evidence",
-        "source_metadata_path": "source_metadata",
-        "match_policy": match_policy,
-    }
-    if dataset_id:
-        claim["dataset_id"] = dataset_id
-    if row_evidence_paths:
-        claim["row_evidence_paths"] = row_evidence_paths
-    return claim
 
 
 def _public_no_match_basis(match_basis: str) -> str:
