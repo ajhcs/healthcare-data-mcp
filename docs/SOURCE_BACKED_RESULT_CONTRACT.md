@@ -71,3 +71,4 @@ Migrate one tool or server at a time.
 Do not start by moving large server files. Add traceability through the shared module first, then refactor behind that seam.
 
 See [Source-Backed Result Migration Plan](SOURCE_BACKED_RESULT_MIGRATION_PLAN.md) for the parallel migration waves and test gates.
+See [Source-Backed Result Post-Migration Plan](SOURCE_BACKED_RESULT_POST_MIGRATION_PLAN.md) for Waves 6-12 hardening.
