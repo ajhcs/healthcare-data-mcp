@@ -86,7 +86,13 @@ def source_caveat(spec: LiveToolSpec) -> str:
     return SOURCE_CAVEAT_CLASSES[effective_source_caveat_class(spec)]
 
 
-def attach_gateway_policy(spec: LiveToolSpec, result: Any, *, provenance_status: Mapping[str, Any] | None = None) -> Any:
+def attach_gateway_policy(
+    spec: LiveToolSpec,
+    result: Any,
+    *,
+    provenance_status: Mapping[str, Any] | None = None,
+    audit_evidence: Mapping[str, Any] | None = None,
+) -> Any:
     registry_spec = SERVER_BY_ID[spec.server]
     policy = {
         "gateway": "live-gateway",
@@ -106,6 +112,8 @@ def attach_gateway_policy(spec: LiveToolSpec, result: Any, *, provenance_status:
         "requires_provenance": spec.require_provenance,
         "provenance_status": dict(provenance_status or evaluate_provenance_status(result)),
     }
+    if audit_evidence:
+        policy["audit_evidence"] = dict(audit_evidence)
     if isinstance(result, dict):
         response = dict(result)
         response["live_gateway_policy"] = policy
@@ -164,6 +172,74 @@ def audit_provenance_fields(provenance_status: Mapping[str, Any]) -> dict[str, A
     return fields
 
 
+def build_audit_evidence_export(
+    spec: LiveToolSpec,
+    *,
+    provenance_status: Mapping[str, Any] | None,
+    trace_id: str,
+    outcome: str,
+    reason: str,
+) -> dict[str, Any]:
+    """Return compact non-secret evidence for one live-gateway policy decision."""
+
+    status = provenance_status or {}
+    provenance = {
+        "status": status.get("status") or "not_evaluated",
+        "source_claim_paths_status": status.get("source_claim_paths_status") or "not_evaluated",
+        "source_claim_paths_valid": bool(status.get("source_claim_paths_valid")),
+        "evidence_present": bool(status.get("evidence_present")),
+        "evidence_valid": bool(status.get("evidence_valid")),
+        "source_metadata_present": bool(status.get("source_metadata_present")),
+        "identity_present": bool(status.get("identity_present")),
+    }
+    blocked_reasons = _policy_decision_reasons(
+        provenance_status=status,
+        outcome=outcome,
+        reason=reason,
+    )
+    degraded_reasons = []
+    if outcome == "allowed" and provenance["status"] not in {"evidence_receipt_valid", "not_evaluated"}:
+        degraded_reasons.append(str(provenance["status"]))
+
+    return {
+        "trace_id": trace_id,
+        "gateway": "live-gateway",
+        "tool": spec.tool_name,
+        "server": spec.server,
+        "requested_scopes": list(spec.scopes),
+        "rate_limit_class": spec.rate_limit_class,
+        "source_caveat_class": effective_source_caveat_class(spec),
+        "provenance": provenance,
+        "blocked_reasons": blocked_reasons if outcome == "blocked" else [],
+        "degraded_reasons": degraded_reasons,
+    }
+
+
+def _policy_decision_reasons(
+    *,
+    provenance_status: Mapping[str, Any],
+    outcome: str,
+    reason: str,
+) -> list[str]:
+    if outcome != "blocked":
+        return []
+    reasons = [reason]
+    provenance_reason = str(provenance_status.get("status") or "").strip()
+    if provenance_reason and provenance_reason not in set(reasons):
+        reasons.append(provenance_reason)
+    for issue in provenance_status.get("source_claim_path_issues") or []:
+        if isinstance(issue, Mapping):
+            issue_reason = str(issue.get("reason") or "").strip()
+            if issue_reason and issue_reason not in set(reasons):
+                reasons.append(issue_reason)
+    for issue in provenance_status.get("invalid_evidence_paths") or []:
+        if isinstance(issue, Mapping):
+            issue_error = str(issue.get("error") or "").strip()
+            if issue_error and issue_error not in set(reasons):
+                reasons.append(issue_error)
+    return reasons
+
+
 def _nested_values_for_keys(value: Any, keys: set[str], *, path: str = "result") -> list[tuple[str, Any]]:
     matches: list[tuple[str, Any]] = []
     if isinstance(value, Mapping):
@@ -183,6 +259,7 @@ __all__ = [
     "SOURCE_CAVEAT_CLASSES",
     "attach_gateway_policy",
     "audit_provenance_fields",
+    "build_audit_evidence_export",
     "effective_source_caveat_class",
     "evaluate_provenance_status",
     "source_caveat",

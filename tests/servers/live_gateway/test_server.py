@@ -607,6 +607,13 @@ async def test_live_gateway_preserves_upstream_provenance_receipts(monkeypatch: 
     assert audit_event["identity_present"] is True
     assert audit_event["source_claim_paths_status"] == "source_claim_paths_valid"
     assert audit_event["source_claim_paths_valid"] is True
+    assert audit_event["trace_id"]
+    assert result["live_gateway_policy"]["audit_evidence"]["trace_id"] == audit_event["trace_id"]
+    assert result["live_gateway_policy"]["audit_evidence"] == audit_event["audit_evidence"]
+    assert audit_event["audit_evidence"]["requested_scopes"] == ["mcp:read"]
+    assert audit_event["audit_evidence"]["provenance"]["source_claim_paths_status"] == "source_claim_paths_valid"
+    assert audit_event["audit_evidence"]["blocked_reasons"] == []
+    assert audit_event["audit_evidence"]["degraded_reasons"] == []
     assert "source_metadata" not in audit_event
     assert "evidence" not in audit_event
 
@@ -639,6 +646,17 @@ async def test_live_gateway_blocks_missing_source_claim_paths(monkeypatch: pytes
     assert audit_event["source_claim_paths_status"] == "source_claim_paths_invalid"
     assert audit_event["source_claim_paths_valid"] is False
     assert audit_event["source_claim_path_issues"][0]["reason"] == "missing_identity_map"
+    assert audit_event["audit_evidence"]["trace_id"] == audit_event["trace_id"]
+    assert audit_event["audit_evidence"]["requested_scopes"] == ["mcp:read"]
+    assert audit_event["audit_evidence"]["provenance"]["source_claim_paths_status"] == "source_claim_paths_invalid"
+    assert audit_event["audit_evidence"]["provenance"]["source_claim_paths_valid"] is False
+    assert audit_event["audit_evidence"]["blocked_reasons"] == [
+        "invalid_source_claim_paths",
+        "source_claim_paths_invalid",
+        "missing_identity_map",
+    ]
+    assert "source_metadata" not in audit_event["audit_evidence"]
+    assert "evidence" not in audit_event["audit_evidence"]
 
 
 @pytest.mark.asyncio

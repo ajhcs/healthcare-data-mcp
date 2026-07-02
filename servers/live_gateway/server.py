@@ -10,6 +10,7 @@ import json
 import logging
 import os
 import time
+import uuid
 from collections import defaultdict, deque
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from functools import wraps
@@ -37,6 +38,7 @@ from servers.live_gateway.policy_runner import (
     LiveToolSpec,
     attach_gateway_policy,
     audit_provenance_fields,
+    build_audit_evidence_export,
     effective_source_caveat_class,
     evaluate_provenance_status,
     source_caveat,
@@ -593,9 +595,16 @@ async def call_live_tool(
 ) -> Any:
     """Call an allowlisted live tool through the gateway policy enforcement path."""
 
+    trace_id = _new_trace_id()
     spec = LIVE_TOOL_BY_NAME.get(tool_name)
     if spec is None:
-        _record_audit(tool_name=tool_name, outcome="blocked", reason="tool_not_allowlisted", subject=subject)
+        _record_audit(
+            tool_name=tool_name,
+            outcome="blocked",
+            reason="tool_not_allowlisted",
+            subject=subject,
+            trace_id=trace_id,
+        )
         raise_tool_error(f"{tool_name!r} is not exposed by live-gateway", code="policy_denied")
 
     kwargs = dict(arguments or {})
@@ -606,6 +615,7 @@ async def call_live_tool(
             outcome="blocked",
             reason="sensitive_argument_key_rejected",
             subject=subject,
+            trace_id=trace_id,
             sensitive_argument_keys=sensitive_keys,
         )
         raise_tool_error(
@@ -624,6 +634,7 @@ async def call_live_tool(
             outcome="blocked",
             reason="request_size_limit_exceeded",
             subject=subject,
+            trace_id=trace_id,
             request_size_bytes=request_size,
         )
         raise_tool_error(
@@ -631,16 +642,23 @@ async def call_live_tool(
             code="policy_denied",
         )
 
-    _enforce_argument_limits(spec, kwargs, subject=subject)
-    _enforce_scopes(spec, caller_scopes, subject=subject)
-    _enforce_rate_limit(spec, subject=subject)
+    _enforce_argument_limits(spec, kwargs, subject=subject, trace_id=trace_id)
+    _enforce_scopes(spec, caller_scopes, subject=subject, trace_id=trace_id)
+    _enforce_rate_limit(spec, subject=subject, trace_id=trace_id)
 
     tool = _LIVE_TOOL_CALLABLES[spec.tool_name]
     try:
         raw_result = tool(**kwargs)
         result = await raw_result if inspect.isawaitable(raw_result) else raw_result
     except Exception:
-        _record_audit(spec=spec, outcome="error", reason="owning_tool_error", subject=subject, request_size_bytes=request_size)
+        _record_audit(
+            spec=spec,
+            outcome="error",
+            reason="owning_tool_error",
+            subject=subject,
+            trace_id=trace_id,
+            request_size_bytes=request_size,
+        )
         raise
 
     structured = to_structured(result)
@@ -651,6 +669,7 @@ async def call_live_tool(
             outcome="blocked",
             reason="result_limit_exceeded",
             subject=subject,
+            trace_id=trace_id,
             request_size_bytes=request_size,
             result_count=result_count,
         )
@@ -666,6 +685,7 @@ async def call_live_tool(
             outcome="blocked",
             reason="result_size_limit_exceeded",
             subject=subject,
+            trace_id=trace_id,
             request_size_bytes=request_size,
             result_size_bytes=result_size,
         )
@@ -681,6 +701,8 @@ async def call_live_tool(
             outcome="blocked",
             reason="invalid_evidence_receipt",
             subject=subject,
+            trace_id=trace_id,
+            provenance_status_payload=provenance_status,
             request_size_bytes=request_size,
             result_size_bytes=result_size,
             result_count=result_count,
@@ -696,6 +718,8 @@ async def call_live_tool(
             outcome="blocked",
             reason="invalid_source_claim_paths",
             subject=subject,
+            trace_id=trace_id,
+            provenance_status_payload=provenance_status,
             request_size_bytes=request_size,
             result_size_bytes=result_size,
             result_count=result_count,
@@ -711,6 +735,8 @@ async def call_live_tool(
             outcome="blocked",
             reason="missing_evidence_receipt",
             subject=subject,
+            trace_id=trace_id,
+            provenance_status_payload=provenance_status,
             request_size_bytes=request_size,
             result_size_bytes=result_size,
             result_count=result_count,
@@ -720,7 +746,19 @@ async def call_live_tool(
             f"{spec.tool_name} returned no evidence receipt; live-gateway requires source provenance before routing results",
             code="policy_denied",
         )
-    response = attach_gateway_policy(spec, structured, provenance_status=provenance_status)
+    audit_evidence = build_audit_evidence_export(
+        spec,
+        provenance_status=provenance_status,
+        trace_id=trace_id,
+        outcome="allowed",
+        reason="policy_passed",
+    )
+    response = attach_gateway_policy(
+        spec,
+        structured,
+        provenance_status=provenance_status,
+        audit_evidence=audit_evidence,
+    )
     response_size = _json_size(response)
     if response_size > spec.result_size_limit_bytes:
         _record_audit(
@@ -728,6 +766,8 @@ async def call_live_tool(
             outcome="blocked",
             reason="response_size_limit_exceeded",
             subject=subject,
+            trace_id=trace_id,
+            provenance_status_payload=provenance_status,
             request_size_bytes=request_size,
             result_size_bytes=response_size,
             result_count=result_count,
@@ -743,6 +783,9 @@ async def call_live_tool(
         outcome="allowed",
         reason="policy_passed",
         subject=subject,
+        trace_id=trace_id,
+        provenance_status_payload=provenance_status,
+        audit_evidence=audit_evidence,
         request_size_bytes=request_size,
         result_size_bytes=response_size,
         result_count=result_count,
@@ -751,7 +794,13 @@ async def call_live_tool(
     return response
 
 
-def _enforce_argument_limits(spec: LiveToolSpec, arguments: Mapping[str, Any], *, subject: str) -> None:
+def _enforce_argument_limits(
+    spec: LiveToolSpec,
+    arguments: Mapping[str, Any],
+    *,
+    subject: str,
+    trace_id: str,
+) -> None:
     for key in ("limit", "size", "page_size", "max_results"):
         value = arguments.get(key)
         requested_limit = _coerce_result_limit_argument(value)
@@ -761,6 +810,7 @@ def _enforce_argument_limits(spec: LiveToolSpec, arguments: Mapping[str, Any], *
                 outcome="blocked",
                 reason=f"{key}_argument_below_minimum",
                 subject=subject,
+                trace_id=trace_id,
             )
             raise_tool_error(
                 f"{spec.tool_name} argument {key}={value!r} must be at least 1",
@@ -772,6 +822,7 @@ def _enforce_argument_limits(spec: LiveToolSpec, arguments: Mapping[str, Any], *
                 outcome="blocked",
                 reason=f"{key}_argument_exceeds_result_limit",
                 subject=subject,
+                trace_id=trace_id,
             )
             raise_tool_error(
                 f"{spec.tool_name} argument {key}={value!r} exceeds live-gateway result_limit={spec.result_limit}",
@@ -785,6 +836,7 @@ def _enforce_argument_limits(spec: LiveToolSpec, arguments: Mapping[str, Any], *
             outcome="blocked",
             reason="argument_list_exceeds_result_limit",
             subject=subject,
+            trace_id=trace_id,
             oversized_argument_lists=oversized_lists,
         )
         first = oversized_lists[0]
@@ -843,7 +895,13 @@ def _normalize_argument_key(value: str) -> str:
     return "".join(character.lower() if character.isalnum() else "_" for character in value).strip("_")
 
 
-def _enforce_scopes(spec: LiveToolSpec, caller_scopes: Sequence[str] | None, *, subject: str) -> None:
+def _enforce_scopes(
+    spec: LiveToolSpec,
+    caller_scopes: Sequence[str] | None,
+    *,
+    subject: str,
+    trace_id: str,
+) -> None:
     granted = set(caller_scopes if caller_scopes is not None else _security_config.required_scopes)
     missing = sorted(set(spec.scopes) - granted)
     if missing:
@@ -852,6 +910,7 @@ def _enforce_scopes(spec: LiveToolSpec, caller_scopes: Sequence[str] | None, *, 
             outcome="blocked",
             reason="missing_scope",
             subject=subject,
+            trace_id=trace_id,
             missing_scopes=missing,
         )
         raise_tool_error(
@@ -861,7 +920,7 @@ def _enforce_scopes(spec: LiveToolSpec, caller_scopes: Sequence[str] | None, *, 
         )
 
 
-def _enforce_rate_limit(spec: LiveToolSpec, *, subject: str) -> None:
+def _enforce_rate_limit(spec: LiveToolSpec, *, subject: str, trace_id: str) -> None:
     calls, window_seconds = _RATE_LIMIT_POLICIES.get(spec.rate_limit_class, _RATE_LIMIT_POLICIES["standard"])
     now = time.monotonic()
     key = f"{spec.rate_limit_class}:{spec.tool_name}:{_rate_limit_subject(subject)}"
@@ -875,6 +934,7 @@ def _enforce_rate_limit(spec: LiveToolSpec, *, subject: str) -> None:
             outcome="blocked",
             reason="rate_limit_exceeded",
             subject=subject,
+            trace_id=trace_id,
             retry_after_seconds=retry_after,
         )
         raise_tool_error(
@@ -915,6 +975,10 @@ def _json_size(value: Any) -> int:
     return len(json.dumps(to_structured(value), separators=(",", ":"), sort_keys=True, default=str).encode("utf-8"))
 
 
+def _new_trace_id() -> str:
+    return uuid.uuid4().hex
+
+
 def _max_list_length(value: Any) -> int:
     if isinstance(value, list):
         child_lengths = [_max_list_length(item) for item in value]
@@ -931,11 +995,16 @@ def _record_audit(
     outcome: str,
     reason: str,
     subject: str = "configured_gateway_principal",
+    trace_id: str | None = None,
+    provenance_status_payload: Mapping[str, Any] | None = None,
+    audit_evidence: Mapping[str, Any] | None = None,
     **fields: Any,
 ) -> None:
+    event_trace_id = trace_id or _new_trace_id()
     event = {
         "event": "tool_call",
         "gateway": "live-gateway",
+        "trace_id": event_trace_id,
         "tool": spec.tool_name if spec else tool_name or "",
         "server": spec.server if spec else "",
         "category": spec.category if spec else "",
@@ -947,9 +1016,34 @@ def _record_audit(
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
     event.update({key: value for key, value in fields.items() if value not in (None, "")})
+    if spec:
+        event["audit_evidence"] = dict(
+            audit_evidence
+            or build_audit_evidence_export(
+                spec,
+                provenance_status=provenance_status_payload or _provenance_status_from_audit_fields(event),
+                trace_id=event_trace_id,
+                outcome=outcome,
+                reason=reason,
+            )
+        )
     _AUDIT_EVENTS.append(event)
     _append_audit_log(event)
     logger.info("live_gateway_audit %s", json.dumps(event, sort_keys=True, default=str))
+
+
+def _provenance_status_from_audit_fields(event: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "status": event.get("provenance_status") or "not_evaluated",
+        "evidence_present": bool(event.get("evidence_present")),
+        "evidence_valid": event.get("provenance_status") == "evidence_receipt_valid",
+        "source_metadata_present": bool(event.get("source_metadata_present")),
+        "identity_present": bool(event.get("identity_present")),
+        "source_claim_paths_status": event.get("source_claim_paths_status") or "not_evaluated",
+        "source_claim_paths_valid": bool(event.get("source_claim_paths_valid")),
+        "source_claim_path_issues": event.get("source_claim_path_issues") or [],
+        "invalid_evidence_paths": event.get("invalid_evidence_paths") or [],
+    }
 
 
 def _audit_log_path() -> Path | None:

@@ -6,6 +6,7 @@ from servers.live_gateway.policy_runner import (
     LiveToolSpec,
     attach_gateway_policy,
     audit_provenance_fields,
+    build_audit_evidence_export,
     evaluate_provenance_status,
 )
 from shared.utils.mcp_response import evidence_receipt
@@ -76,6 +77,54 @@ def test_policy_runner_evaluates_boundary_traceability_and_audit_fields() -> Non
     }
 
 
+def test_policy_runner_builds_compact_audit_evidence_export() -> None:
+    spec = LiveToolSpec(
+        "provider-enrollment",
+        "servers.provider_enrollment.server",
+        "search_provider_enrollment",
+        "provider_enrollment",
+    )
+    provenance_status = {
+        "status": "source_claim_paths_invalid",
+        "evidence_present": True,
+        "evidence_valid": True,
+        "source_metadata_present": True,
+        "identity_present": True,
+        "source_claim_paths_status": "source_claim_paths_invalid",
+        "source_claim_paths_valid": False,
+        "source_claim_path_issues": [{"path": "identity_map", "reason": "missing_identity_map"}],
+    }
+
+    export = build_audit_evidence_export(
+        spec,
+        provenance_status=provenance_status,
+        trace_id="trace-unit-test",
+        outcome="blocked",
+        reason="invalid_source_claim_paths",
+    )
+
+    assert export == {
+        "trace_id": "trace-unit-test",
+        "gateway": "live-gateway",
+        "tool": "search_provider_enrollment",
+        "server": "provider-enrollment",
+        "requested_scopes": ["mcp:read"],
+        "rate_limit_class": "standard",
+        "source_caveat_class": "provider_enrollment_public_record",
+        "provenance": {
+            "status": "source_claim_paths_invalid",
+            "source_claim_paths_status": "source_claim_paths_invalid",
+            "source_claim_paths_valid": False,
+            "evidence_present": True,
+            "evidence_valid": True,
+            "source_metadata_present": True,
+            "identity_present": True,
+        },
+        "blocked_reasons": ["invalid_source_claim_paths", "source_claim_paths_invalid", "missing_identity_map"],
+        "degraded_reasons": [],
+    }
+
+
 def test_policy_runner_attaches_policy_without_rewriting_result_shape() -> None:
     payload = _boundary_ready_payload()
     spec = LiveToolSpec(
@@ -85,7 +134,19 @@ def test_policy_runner_attaches_policy_without_rewriting_result_shape() -> None:
         "provider_enrollment",
     )
 
-    response = attach_gateway_policy(spec, payload, provenance_status=evaluate_provenance_status(payload))
+    audit_evidence = build_audit_evidence_export(
+        spec,
+        provenance_status=evaluate_provenance_status(payload),
+        trace_id="trace-allowed",
+        outcome="allowed",
+        reason="policy_passed",
+    )
+    response = attach_gateway_policy(
+        spec,
+        payload,
+        provenance_status=evaluate_provenance_status(payload),
+        audit_evidence=audit_evidence,
+    )
 
     assert response["results"] == payload["results"]
     assert response["source_metadata"] == payload["source_metadata"]
@@ -94,3 +155,4 @@ def test_policy_runner_attaches_policy_without_rewriting_result_shape() -> None:
     assert response["live_gateway_policy"]["tool"] == "search_provider_enrollment"
     assert response["live_gateway_policy"]["source_caveat_class"] == "provider_enrollment_public_record"
     assert response["live_gateway_policy"]["provenance_status"]["source_claim_paths_valid"] is True
+    assert response["live_gateway_policy"]["audit_evidence"] == audit_evidence
