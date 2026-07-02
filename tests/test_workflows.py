@@ -113,6 +113,17 @@ def test_build_workflow_plan_returns_tool_sequence_evidence_and_identity(monkeyp
     assert "npi" in plan["identity_map"]["merge_policy"]["exact_identifier_fields"]
     assert plan["identity_map"]["merge_policy"]["merge_rule"] == "merge_exact_identifiers_only_when_non_conflicting"
     assert plan["identity_map"]["conflict_policy"]
+    review_routing = plan["identity_map"]["review_routing"]
+    assert review_routing["status"] == "route_conflicts_and_candidate_context"
+    assert "npi" in review_routing["exact_conflict_fields"]
+    assert "entity_name" in review_routing["candidate_review_fields"]
+    assert "ccn" in review_routing["missing_exact_fields"]
+    assert any(route["route"] == "candidate_context_review" for route in review_routing["routes"])
+    assert any(
+        step_route["qualified_tool"] == "public-records.search_leie_entity"
+        and step_route["route"] == "candidate_context_review"
+        for step_route in review_routing["step_routes"]
+    )
     assert plan["workflow_contract_validation"]["status"] == "ok"
     assert plan["tool_reference_validation"]["status"] == "ok"
     assert {
@@ -540,6 +551,13 @@ def test_system_reconciliation_workflow_has_ordered_identity_resolution_plan() -
     assert resolution_by_tool["scrape_system_profile"]["merge_action"] == "record_candidate_alias_requires_source_review"
     assert resolution_by_tool["scrape_system_profile"]["exact_join_fields"] == []
     assert "canonical_name" in resolution_by_tool["scrape_system_profile"]["candidate_fields"]
+    web_review_route = next(
+        route
+        for route in plan["identity_map"]["review_routing"]["step_routes"]
+        if route["qualified_tool"] == "web-intelligence.scrape_system_profile"
+    )
+    assert web_review_route["route"] == "candidate_context_review"
+    assert "canonical_name" in web_review_route["fields"]
     assert "result.identity_map" in by_tool["scrape_system_profile"]["identity_contract"]["output_paths"]
     assert "result.locations[].evidence" in by_tool["scrape_system_profile"]["evidence_contract"]["row_evidence_paths"]
     assert "result.items[].evidence" in by_tool["scrape_system_profile"]["evidence_contract"]["row_evidence_paths"]
@@ -950,6 +968,9 @@ def test_all_workflows_have_identity_strategy_and_report_rows() -> None:
         assert plan["identity_map"]["identity_strategy"], workflow_id
         assert plan["identity_map"]["source_claims"], workflow_id
         assert plan["identity_map"]["resolution_plan"], workflow_id
+        assert plan["identity_map"]["review_routing"], workflow_id
+        assert plan["identity_map"]["review_routing"]["routes"], workflow_id
+        assert plan["identity_map"]["review_routing"]["step_routes"], workflow_id
         assert plan["source_resolution"], workflow_id
         assert plan["report_fact_rows"], workflow_id
         assert plan["report_ingest_contract"]["fact_rows"], workflow_id

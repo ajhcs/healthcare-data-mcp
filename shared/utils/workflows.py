@@ -3332,6 +3332,9 @@ def _workflow_identity_map(
             }
         )
 
+    resolution_plan = _identity_resolution_plan(workflow)
+    merge_policy = _workflow_identity_merge_policy(workflow)
+
     return {
         "seed_identity": identity,
         "join_keys": join_keys,
@@ -3345,8 +3348,8 @@ def _workflow_identity_map(
             }
             for step in workflow.steps
         ],
-        "resolution_plan": _identity_resolution_plan(workflow),
-        "merge_policy": _workflow_identity_merge_policy(workflow),
+        "resolution_plan": resolution_plan,
+        "merge_policy": merge_policy,
         "identity_strategy": list(workflow.identity_strategy),
         "conflict_policy": [
             "Prefer exact public identifiers over names for joins.",
@@ -3354,6 +3357,11 @@ def _workflow_identity_map(
             "Carry conflicts forward in the identity map instead of overwriting identifiers.",
             "Do not substitute adjacent records for exact source-backed facts.",
         ],
+        "review_routing": _workflow_review_routing(
+            join_keys=join_keys,
+            resolution_plan=resolution_plan,
+            merge_policy=merge_policy,
+        ),
         "unresolved_identifiers": identity.get("unresolved_identifiers", []),
     }
 
@@ -3389,6 +3397,92 @@ def _workflow_identity_merge_policy(workflow: WorkflowDefinition) -> dict[str, A
         "candidate_rule": "record_name_address_zip_and_state_as_alias_or_conflict_context",
         "conflict_rule": "preserve_conflicts_in_identity_map_do_not_overwrite_source_identifiers",
         "reporting_rule": "report fact rows must keep the owning tool evidence receipt and identity_fields together",
+    }
+
+
+def _workflow_review_routing(
+    *,
+    join_keys: list[dict[str, Any]],
+    resolution_plan: list[dict[str, Any]],
+    merge_policy: dict[str, Any],
+) -> dict[str, Any]:
+    """Return manual-review routes for identity conflicts and candidate aliases."""
+
+    exact_conflict_fields = list(merge_policy.get("exact_identifier_fields", []))
+    candidate_review_fields = list(merge_policy.get("candidate_alias_fields", []))
+    missing_exact_fields = [
+        str(row["field"])
+        for row in join_keys
+        if row.get("field") in exact_conflict_fields and row.get("status") == "missing"
+    ]
+    routes = [
+        {
+            "route": "exact_identifier_conflict",
+            "target": "manual_review",
+            "fields": exact_conflict_fields,
+            "action": "Flag exact identifier disagreement before merging source-scoped identity claims.",
+        },
+        {
+            "route": "candidate_context_review",
+            "target": "manual_review",
+            "fields": candidate_review_fields,
+            "action": "Preserve candidate names, addresses, and contextual fields as aliases until source review.",
+        },
+    ]
+    if missing_exact_fields:
+        routes.append(
+            {
+                "route": "missing_exact_identifier",
+                "target": "source_status_or_follow_up",
+                "fields": missing_exact_fields,
+                "action": "Record the missing exact identifier and defer report-ready joins that require it.",
+            }
+        )
+
+    return {
+        "status": "route_conflicts_and_candidate_context",
+        "exact_conflict_fields": exact_conflict_fields,
+        "candidate_review_fields": candidate_review_fields,
+        "missing_exact_fields": missing_exact_fields,
+        "routes": routes,
+        "step_routes": [_identity_step_review_route(step) for step in resolution_plan],
+    }
+
+
+def _identity_step_review_route(resolution_step: dict[str, Any]) -> dict[str, Any]:
+    merge_action = resolution_step.get("merge_action")
+    tool = str(resolution_step.get("tool") or "")
+    is_candidate_lookup = tool.startswith(("search_", "scrape_"))
+    if merge_action == "merge_on_exact_identifier" and not is_candidate_lookup:
+        route = "exact_identifier_conflict"
+        target = "manual_review"
+        fields = list(resolution_step.get("exact_join_fields", []))
+    elif merge_action in {"merge_on_exact_identifier", "record_candidate_alias_requires_source_review"}:
+        route = "candidate_context_review"
+        target = "manual_review"
+        fields = list(
+            dict.fromkeys(
+                (
+                    *resolution_step.get("candidate_fields", []),
+                    *resolution_step.get("exact_join_fields", []),
+                )
+            )
+        )
+    else:
+        route = "context_only_no_entity_merge"
+        target = "context_only"
+        fields = list(resolution_step.get("candidate_fields", []))
+
+    return {
+        "order": resolution_step.get("order"),
+        "server": resolution_step.get("server"),
+        "tool": resolution_step.get("tool"),
+        "qualified_tool": resolution_step.get("qualified_tool"),
+        "route": route,
+        "target": target,
+        "fields": fields,
+        "conflict_checks": list(resolution_step.get("conflict_checks", [])),
+        "identity_output_paths": list(resolution_step.get("identity_output_paths", [])),
     }
 
 
