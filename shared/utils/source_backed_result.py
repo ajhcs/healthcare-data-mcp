@@ -105,7 +105,7 @@ def validate_source_claim_paths(
 
 
 def values_at_path(payload: Any, path: str) -> list[Any]:
-    """Resolve a dotted source claim path with ``[]`` list wildcards."""
+    """Resolve a dotted source claim path with list and mapping wildcards."""
 
     if not path:
         return []
@@ -116,6 +116,10 @@ def values_at_path(payload: Any, path: str) -> list[Any]:
         next_values: list[Any] = []
         key, selector = _parse_part(part)
         for value in values:
+            if key == "*":
+                if isinstance(value, Mapping):
+                    next_values.extend(value.values())
+                continue
             if not isinstance(value, Mapping) or key not in value:
                 continue
             child = value[key]

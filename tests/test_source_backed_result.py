@@ -55,6 +55,28 @@ def test_values_at_path_resolves_result_prefix_and_list_wildcards() -> None:
     assert values_at_path(payload, "rows[].missing") == []
 
 
+def test_values_at_path_resolves_mapping_wildcards() -> None:
+    payload = {
+        "metric_evidence": {
+            "hcris": _receipt("hcris_metric"),
+            "form990": _receipt("form990_metric"),
+        },
+        "sources": {
+            "hcris": {"metric_evidence": {"operating_margin": _receipt("operating_margin")}},
+            "ahrq": {"metric_evidence": {"total_margin": _receipt("total_margin")}},
+        },
+    }
+
+    assert values_at_path(payload, "metric_evidence.*") == [
+        payload["metric_evidence"]["hcris"],
+        payload["metric_evidence"]["form990"],
+    ]
+    assert values_at_path(payload, "sources.*.metric_evidence.*") == [
+        payload["sources"]["hcris"]["metric_evidence"]["operating_margin"],
+        payload["sources"]["ahrq"]["metric_evidence"]["total_margin"],
+    ]
+
+
 def test_compatibility_mode_accepts_legacy_source_claims_when_declared_paths_exist() -> None:
     payload = {
         "evidence": _receipt(),
