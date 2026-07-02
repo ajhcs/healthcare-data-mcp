@@ -11,7 +11,6 @@ import json
 import logging
 import os as _os
 from pathlib import Path
-import re
 
 
 from shared.utils.http_client import resilient_request
@@ -19,6 +18,7 @@ from mcp.server.fastmcp import FastMCP
 from shared.utils.mcp_observability import observe_tool
 from shared.utils.mcp_resources import register_standard_resources
 from shared.utils.mcp_response import error_response, evidence_receipt, to_structured
+from shared.utils.tabular_normalization import normalize_tabular_key
 from shared import state_health_data
 
 from . import data_loaders, usaspending_client, sam_client, sam_exclusions_client  # pyright: ignore[reportAttributeAccessIssue]
@@ -250,12 +250,8 @@ def _leie_identity(
     )
 
 
-def _normalized_key(value: object) -> str:
-    return re.sub(r"[^a-z0-9]+", "_", str(value).strip().lower()).strip("_")
-
-
 def _contains_sensitive_identifier_keys(payload: dict[str, Any]) -> bool:
-    return bool(_SENSITIVE_IDENTIFIER_KEYS & {_normalized_key(key) for key in payload})
+    return bool(_SENSITIVE_IDENTIFIER_KEYS & {normalize_tabular_key(key) for key in payload})
 
 
 # ---------------------------------------------------------------------------

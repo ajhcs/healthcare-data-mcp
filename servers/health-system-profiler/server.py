@@ -19,6 +19,7 @@ from shared.utils.healthcare_identity import identity_from_public_record
 from shared.utils.identity import normalize_ccn, normalize_name, normalize_npi
 from shared.utils.mcp_response import error_response, evidence_receipt, to_structured
 from shared.utils.source_backed_result import values_at_path
+from shared.utils.tabular_normalization import read_csv_strings
 
 # Support running both as a package and as a standalone script
 try:
@@ -618,7 +619,7 @@ def _load_medicare_public_clinicians_overlay() -> pd.DataFrame:
         if not path.exists():
             continue
         try:
-            return pd.read_csv(path, dtype=str, keep_default_na=False, encoding_errors="replace", low_memory=False)
+            return read_csv_strings(path, low_memory=False)
         except Exception:
             logger.warning("CMS Doctors and Clinicians overlay cache read failed for %s", path, exc_info=True)
     return pd.DataFrame()
@@ -763,7 +764,7 @@ def _read_official_profile_evidence_path(path: Path) -> list[dict[str, Any]]:
         rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
         return [dict(row) for row in rows if isinstance(row, dict)]
     if path.suffix == ".csv":
-        frame = pd.read_csv(path, dtype=str, keep_default_na=False)
+        frame = read_csv_strings(path)
         return frame.to_dict(orient="records")
     return []
 

@@ -42,6 +42,40 @@ class SourceManifest:
         return cls(**known)
 
 
+@dataclass(frozen=True, slots=True)
+class PublicSourceCatalog:
+    """Loaded public-source catalogs with deterministic resolver methods."""
+
+    cms_catalog: dict[str, Any] | None = None
+    socrata_catalog: dict[str, Any] | None = None
+
+    def resolve_cms_dataset(
+        self,
+        title: str,
+        *,
+        landing_page_slug: str | None = None,
+    ) -> SourceManifest:
+        return resolve_cms_dataset(
+            title,
+            landing_page_slug=landing_page_slug,
+            catalog_data=self.cms_catalog,
+        )
+
+    def resolve_socrata_dataset(
+        self,
+        title: str,
+        *,
+        release: str | None = None,
+        domain: str | None = None,
+    ) -> SourceManifest:
+        return resolve_socrata_dataset(
+            title,
+            release=release,
+            domain=domain,
+            catalog_data=self.socrata_catalog,
+        )
+
+
 def read_source_manifest(path: str | Path) -> SourceManifest:
     """Read a source manifest from JSON."""
     with Path(path).open("r", encoding="utf-8") as handle:
