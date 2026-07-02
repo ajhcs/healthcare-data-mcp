@@ -11,6 +11,7 @@ from pathlib import Path
 import shared.utils.workflows as workflows
 from shared.utils.mcp_response import REPORT_SOURCE_METADATA_FIELDS, validate_report_ingest_payload
 from shared.utils.workflows import (
+    build_workflow_fact_manifest,
     build_workflow_plan,
     format_workflow_plan,
     list_workflow_plans,
@@ -45,6 +46,9 @@ def test_list_workflow_plans_includes_flagship_screening() -> None:
         assert workflow["validation"]["report_contracts"]["status"] == "ok", workflow
         assert workflow["validation"]["report_contracts"]["issue_count"] == 0, workflow
         assert workflow["validation"]["report_contracts"]["method"] == "workflow_report_contract_static", workflow
+        assert workflow["validation"]["fact_manifest"]["status"] == "ok", workflow
+        assert workflow["validation"]["fact_manifest"]["issue_count"] == 0, workflow
+        assert workflow["validation"]["fact_manifest"]["method"] == "workflow_fact_manifest_static", workflow
         examples = workflow["examples"]
         assert examples["inputs"]
         assert examples["cli_command"].startswith(f"hc-mcp workflow {workflow['workflow_id']} --input ")
@@ -155,6 +159,40 @@ def test_build_workflow_plan_returns_tool_sequence_evidence_and_identity(monkeyp
     assert "cache_freshness" in leie_fact["required_evidence_fields"]
     validate_report_ingest_payload(plan["report_ingest_contract"])
     json.dumps(plan)
+
+
+def test_workflow_fact_manifest_names_owner_step_and_traceability_paths() -> None:
+    manifest = build_workflow_fact_manifest("compliance_exclusion_screening")
+
+    assert manifest["status"] == "ok"
+    assert manifest["method"] == "workflow_fact_manifest_static"
+    assert manifest["issue_count"] == 0
+    assert manifest["workflow_count"] == 1
+    assert manifest["fact_row_count"] == 4
+
+    rows_by_label = {row["label"]: row for row in manifest["fact_rows"]}
+    leie_status = rows_by_label["LEIE screening status"]
+    assert leie_status["workflow_id"] == "compliance_exclusion_screening"
+    assert leie_status["owner_step_key"] == "public_records.check_leie_npi"
+    assert leie_status["owner_server"] == "public-records"
+    assert leie_status["owner_tool"] == "check_leie_npi"
+    assert leie_status["paths"] == {
+        "value_path": "public_records.check_leie_npi.status",
+        "evidence_path": "public_records.check_leie_npi.evidence",
+        "source_metadata_path": "public_records.check_leie_npi.source_metadata",
+        "identity_path": "public_records.check_leie_npi.identity",
+        "identity_map_path": "public_records.check_leie_npi.identity_map",
+    }
+    assert leie_status["source_claim_path_contract"]["source_claims_path"] == (
+        "public_records.check_leie_npi.identity_map.source_claims"
+    )
+
+    plan = build_workflow_plan(
+        "compliance_exclusion_screening",
+        inputs={"npi": "1234567893", "entity_name": "Thomas Jefferson University Hospitals"},
+    )
+    assert plan["report_fact_manifest"]["fact_rows"] == manifest["fact_rows"]
+    assert plan["report_ingest_contract"]["fact_manifest"]["manifest_rows"] == manifest["fact_rows"]
 
 
 def test_parse_workflow_inputs_merges_json_and_key_value_overrides() -> None:
