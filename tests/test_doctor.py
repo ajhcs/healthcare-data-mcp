@@ -60,6 +60,11 @@ def test_doctor_report_includes_operator_readiness_sections(tmp_path, monkeypatc
     assert shared_evidence_validation["status"] == "ok"
     assert shared_evidence_validation["call_count"] >= 1
     assert shared_evidence_validation["helper"] == "shared.utils.mcp_response.evidence_receipt_validation_summary"
+    audit_evidence_export = report["live_gateway_policy_validation"]["audit_evidence_export"]
+    assert audit_evidence_export["status"] == "ok"
+    assert audit_evidence_export["helper"] == "servers.live_gateway.policy_runner.build_audit_evidence_export"
+    assert audit_evidence_export["helper_defined"] is True
+    assert audit_evidence_export["call_count"] >= 1
     assert report["summary"]["live_gateway_policy_issues"] == 0
     evidence_surfaces = {
         surface["surface"]: surface
@@ -232,6 +237,7 @@ def test_doctor_report_formats_as_actionable_text(tmp_path, monkeypatch) -> None
     assert "ci_product_readiness_gates: ok" in text
     assert "Live-gateway policy validation:" in text
     assert "rate-limit classes: bulk, standard" in text
+    assert "audit evidence export: ok" in text
     assert "step readiness:" in text
     assert "hc-mcp workflow compliance_exclusion_screening --json" in text
     assert "hc-mcp public-records" in text

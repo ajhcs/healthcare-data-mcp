@@ -26,6 +26,17 @@ Report-ready facts crossing the live gateway provenance boundary require:
 
 Use `shared.utils.source_backed_result.validate_source_claim_paths(..., require_boundary_traceability=True)` before a result crosses the boundary.
 
+## Operator Surfaces
+
+The post-migration hardening waves make the contract discoverable through:
+
+- Standard MCP resources, including each server's `source-ledger` resource.
+- Workflow `report_fact_manifest` ownership paths and `report_ingest_contract` templates.
+- Normalized source-status fields for cache/source readiness surfaces.
+- Workflow `identity_map.review_routing` for exact conflict, candidate review, and missing-identifier handoffs.
+- Live-gateway `audit_evidence` with trace IDs, requested scopes, provenance status, and blocked/degraded reasons.
+- Deterministic `scripts/evals/cache_manager_eval.py` scenarios with remediation hints for source-substitution, source-status recovery, workflow handoff, and live-gateway refusal cases.
+
 ## Top-Level Fact
 
 ```python

@@ -584,6 +584,13 @@ def format_doctor_report(report: dict[str, Any]) -> str:
         lines.append("  rate-limit classes: " + ", ".join(live_policy["rate_limit_classes"]))
     if live_policy.get("scope_sets"):
         lines.append("  scope sets: " + "; ".join(live_policy["scope_sets"]))
+    audit_evidence = live_policy.get("audit_evidence_export", {})
+    if audit_evidence:
+        lines.append(
+            "  audit evidence export: "
+            f"{audit_evidence.get('status', 'unknown')} "
+            f"({audit_evidence.get('helper', 'unknown helper')})"
+        )
     for issue in live_policy.get("issues", [])[:5]:
         lines.append(f"  CHECK {issue.get('tool', issue.get('server', 'policy'))}: {issue.get('status')}")
 
@@ -1086,6 +1093,14 @@ def _ast_call_count(tree: ast.AST, function_name: str) -> int:
     return count
 
 
+def _ast_function_count(tree: ast.AST, function_name: str) -> int:
+    return sum(
+        1
+        for child in ast.walk(tree)
+        if isinstance(child, ast.AsyncFunctionDef | ast.FunctionDef) and child.name == function_name
+    )
+
+
 def _module_fastmcp_tools(module_name: str) -> dict[str, Any]:
     spec = importlib.util.find_spec(module_name)
     if spec is None or not spec.origin:
@@ -1233,6 +1248,19 @@ def _live_gateway_policy_validation() -> dict[str, Any]:
         "call_count": shared_evidence_validation_call_count,
         "helper": "shared.utils.mcp_response.evidence_receipt_validation_summary",
     }
+    audit_evidence_helper_defined = bool(
+        policy_runner_tree is not None
+        and _ast_function_count(policy_runner_tree, "build_audit_evidence_export")
+    )
+    audit_evidence_attach_count = _ast_call_count(tree, "build_audit_evidence_export")
+    if policy_runner_tree is not None:
+        audit_evidence_attach_count += _ast_call_count(policy_runner_tree, "build_audit_evidence_export")
+    audit_evidence_export = {
+        "status": "ok" if audit_evidence_helper_defined and audit_evidence_attach_count else "missing",
+        "helper": "servers.live_gateway.policy_runner.build_audit_evidence_export",
+        "helper_defined": audit_evidence_helper_defined,
+        "call_count": audit_evidence_attach_count,
+    }
     if not shared_evidence_validation_call_count:
         issues.append(
             {
@@ -1242,6 +1270,14 @@ def _live_gateway_policy_validation() -> dict[str, Any]:
                     "live-gateway must use the shared nested evidence receipt validator "
                     "instead of a private provenance traversal."
                 ),
+            }
+        )
+    if audit_evidence_export["status"] != "ok":
+        issues.append(
+            {
+                "status": "live_gateway_audit_evidence_export_missing",
+                "module": policy_runner_module_name,
+                "message": "live-gateway must expose compact non-secret audit evidence with trace IDs for policy decisions.",
             }
         )
     rate_limit_names = set(rate_limit_policies) if isinstance(rate_limit_policies, dict) else set()
@@ -1372,6 +1408,7 @@ def _live_gateway_policy_validation() -> dict[str, Any]:
         "source_caveat_classes": sorted(source_caveat_names),
         "scope_sets": sorted(scope_sets),
         "shared_evidence_validation": shared_evidence_validation,
+        "audit_evidence_export": audit_evidence_export,
         "issues": issues,
         "issue_count": len(issues),
     }
