@@ -124,6 +124,13 @@ def test_doctor_report_includes_operator_readiness_sections(tmp_path, monkeypatc
     assert "docs:workflow-catalog" in artifact_names
     assert report["client_config_hints"]
     assert report["remote_gateway"]["metadata_gateway"] == "search/fetch metadata only"
+    not_ready_source_status = report["cache"]["not_ready_examples"][0]["source_status"]
+    assert not_ready_source_status["source_url"]
+    assert not_ready_source_status["source_period"]
+    assert not_ready_source_status["cache_status"]
+    assert not_ready_source_status["cache_freshness"]
+    assert not_ready_source_status["retrieval_method"] == "cache"
+    assert not_ready_source_status["caveat"]
 
 
 def test_priority_evidence_contracts_cover_live_gateway_provenance_tools() -> None:

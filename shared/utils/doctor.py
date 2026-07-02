@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from shared.utils.server_registry import SERVER_BY_ID, SERVER_REGISTRY, WORKFLOW_PRESETS, ServerCapability
+from shared.utils.source_status import normalize_source_status
 from shared.utils.workflows import build_workflow_plan, validate_workflow_contracts, validate_workflow_tool_references
 
 
@@ -730,6 +731,11 @@ def _cache_report(cache_root: str | Path | None) -> dict[str, Any]:
                 "report_eligible": bool(entry.get("report_eligible", False)),
                 "next_action": str(entry.get("next_action", "")),
                 "ttl_days": entry.get("ttl_days"),
+                "source_status": normalize_source_status(
+                    entry,
+                    retrieval_method="cache",
+                    caveat=str(entry.get("next_action") or "Cache/source status is reported by discovery metadata."),
+                ),
             }
             for entry in entries
             if (entry.get("readiness_status") or entry.get("status")) != "ready"
