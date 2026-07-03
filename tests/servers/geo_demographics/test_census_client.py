@@ -20,6 +20,7 @@ def test_all_variables_include_public_alpha_race_ethnicity_fields():
     assert "B02001_002E" in variables
     assert "B02001_003E" in variables
     assert "B03003_003E" in variables
+    assert len(variables) > census_client.CENSUS_MAX_VARIABLES_PER_REQUEST
 
 
 def test_parse_demographics_includes_race_ethnicity_and_density_inputs():
@@ -65,11 +66,39 @@ def test_parse_gazetteer_text_returns_land_area_by_zcta():
 
 
 @pytest.mark.asyncio
+async def test_query_acs_merged_combines_variable_chunks_by_zcta(monkeypatch):
+    async def fake_query_acs(variables, zcta="*", year=2023, api_key=None):
+        assert len(variables) <= census_client.CENSUS_MAX_VARIABLES_PER_REQUEST
+        return [
+            {
+                "NAME": "ZCTA5 19107",
+                "zip code tabulation area": "19107",
+                **{variable: f"value-{variable}" for variable in variables},
+            }
+        ]
+
+    monkeypatch.setattr(census_client, "query_acs", fake_query_acs)
+
+    rows = await census_client.query_acs_merged(
+        [f"VAR_{index}" for index in range(census_client.CENSUS_MAX_VARIABLES_PER_REQUEST + 2)],
+        zcta="19107",
+        year=2023,
+    )
+
+    assert len(rows) == 1
+    assert rows[0]["VAR_0"] == "value-VAR_0"
+    assert rows[0][f"VAR_{census_client.CENSUS_MAX_VARIABLES_PER_REQUEST + 1}"] == (
+        f"value-VAR_{census_client.CENSUS_MAX_VARIABLES_PER_REQUEST + 1}"
+    )
+
+
+@pytest.mark.asyncio
 async def test_get_demographics_batch_chunks_large_requests(monkeypatch):
-    calls: list[str] = []
+    calls: list[tuple[str, tuple[str, ...]]] = []
 
     async def fake_query_acs(variables, zcta="*", year=2023, api_key=None):
-        calls.append(zcta)
+        assert len(variables) <= census_client.CENSUS_MAX_VARIABLES_PER_REQUEST
+        calls.append((zcta, tuple(variables)))
         requested = zcta.split(",")
         return [
             {
@@ -105,16 +134,20 @@ async def test_get_demographics_batch_chunks_large_requests(monkeypatch):
     zctas = [str(i).zfill(5) for i in range(25)]
     results = await census_client.get_demographics_batch(zctas, year=2023)
 
-    assert len(calls) == 3
-    assert calls == [
+    zcta_calls = [zcta for zcta, _variables in calls]
+    assert len(calls) == 6
+    assert zcta_calls == [
+        "00000,00001,00002,00003,00004,00005,00006,00007,00008,00009",
         "00000,00001,00002,00003,00004,00005,00006,00007,00008,00009",
         "00010,00011,00012,00013,00014,00015,00016,00017,00018,00019",
+        "00010,00011,00012,00013,00014,00015,00016,00017,00018,00019",
+        "00020,00021,00022,00023,00024",
         "00020,00021,00022,00023,00024",
     ]
     assert len(results) == 25
     assert results[0]["zcta"] == "00000"
     assert results[-1]["zcta"] == "00024"
-    assert "*" not in calls
+    assert "*" not in zcta_calls
 
 
 @pytest.mark.asyncio

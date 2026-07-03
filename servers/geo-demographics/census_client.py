@@ -17,6 +17,8 @@ GAZETTEER_URL = "https://www2.census.gov/geo/docs/maps-data/data/gazetteer/2023_
 GAZETTEER_LANDING_PAGE = "https://www.census.gov/geographies/reference-files/time-series/geo/gazetteer-files.html"
 GAZETTEER_SOURCE_PERIOD = "2023"
 SQUARE_METERS_PER_SQUARE_MILE = 2_589_988.110336
+CENSUS_MAX_GET_FIELDS = 50
+CENSUS_MAX_VARIABLES_PER_REQUEST = CENSUS_MAX_GET_FIELDS - 1  # NAME is always requested.
 
 # ACS 5-Year variable mapping
 # B01003: Total Population
@@ -225,7 +227,10 @@ def parse_demographics(
         "race_ethnicity": _race_ethnicity(row),
         "land_area": land_area,
         "population_density": {
-            "people_per_square_mile": _density(total_pop, land_area["land_area_square_miles"] if isinstance(land_area["land_area_square_miles"], float) else None),
+            "people_per_square_mile": _density(
+                total_pop,
+                land_area["land_area_square_miles"] if isinstance(land_area["land_area_square_miles"], float) else None,
+            ),
             "population_input": total_pop,
             "land_area_input_square_miles": land_area["land_area_square_miles"],
             "source_dataset_id": "census_acs5_zcta_demographics+census_gazetteer_zcta",
@@ -295,7 +300,7 @@ async def query_acs(
 async def get_demographics_for_zcta(zcta: str, year: int = 2023) -> dict:
     """Fetch and parse demographics for a single ZCTA."""
     variables = _all_variable_codes()
-    rows = await query_acs(variables, zcta=zcta, year=year)
+    rows = await query_acs_merged(variables, zcta=zcta, year=year)
     if not rows:
         return no_data_demographics(zcta, year, f"No ACS5 data found for ZCTA {zcta}")
     land_areas = await get_zcta_land_areas([zcta])
@@ -318,7 +323,7 @@ async def get_demographics_batch(zctas: list[str], year: int = 2023) -> list[dic
     land_areas = await get_zcta_land_areas(unique_zctas)
     for zcta_chunk in _chunked(unique_zctas, size=10):
         zcta_param = ",".join(zcta_chunk)
-        rows = await query_acs(variables, zcta=zcta_param, year=year)
+        rows = await query_acs_merged(variables, zcta=zcta_param, year=year)
 
         for row in rows:
             row_zcta = row.get("zip code tabulation area", "")
@@ -334,6 +339,28 @@ async def get_demographics_batch(zctas: list[str], year: int = 2023) -> list[dic
         results_by_zcta.get(zcta, no_data_demographics(zcta, year, f"No ACS5 data found for ZCTA {zcta}"))
         for zcta in unique_zctas
     ]
+
+
+async def query_acs_merged(
+    variables: list[str],
+    zcta: str = "*",
+    year: int = 2023,
+    api_key: str | None = None,
+) -> list[dict[str, str]]:
+    """Query ACS variables in API-safe chunks and merge rows by ZCTA."""
+    merged_rows: dict[str, dict[str, str]] = {}
+    row_order: list[str] = []
+    for variable_chunk in _chunked(variables, size=CENSUS_MAX_VARIABLES_PER_REQUEST):
+        rows = await query_acs(variable_chunk, zcta=zcta, year=year, api_key=api_key)
+        for row in rows:
+            row_zcta = row.get("zip code tabulation area", "")
+            if not row_zcta:
+                continue
+            if row_zcta not in merged_rows:
+                merged_rows[row_zcta] = {}
+                row_order.append(row_zcta)
+            merged_rows[row_zcta].update(row)
+    return [merged_rows[row_zcta] for row_zcta in row_order]
 
 
 async def get_zcta_land_areas(zctas: list[str]) -> dict[str, float]:
