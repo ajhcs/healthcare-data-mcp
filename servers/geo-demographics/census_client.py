@@ -20,6 +20,11 @@ SQUARE_METERS_PER_SQUARE_MILE = 2_589_988.110336
 CENSUS_MAX_GET_FIELDS = 50
 CENSUS_MAX_VARIABLES_PER_REQUEST = CENSUS_MAX_GET_FIELDS - 1  # NAME is always requested.
 
+
+class CensusApiConfigurationError(RuntimeError):
+    """Raised when Census API access is not configured for keyed retrieval."""
+
+
 # ACS 5-Year variable mapping
 # B01003: Total Population
 # B01001: Sex by Age
@@ -269,13 +274,15 @@ async def query_acs(
         variables: List of Census variable codes to retrieve.
         zcta: ZCTA code or "*" for all ZCTAs.
         year: ACS year (default 2023).
-        api_key: Census API key (optional but recommended).
+        api_key: Census API key. Defaults to CENSUS_API_KEY.
 
     Returns:
         List of dicts mapping variable names to string values.
     """
     if api_key is None:
         api_key = os.environ.get("CENSUS_API_KEY")
+    if not api_key:
+        raise CensusApiConfigurationError("CENSUS_API_KEY is required for ACS5 ZCTA retrieval.")
 
     url = f"{CENSUS_BASE}/{year}/acs/acs5"
     var_str = ",".join(["NAME"] + variables)
@@ -283,10 +290,11 @@ async def query_acs(
         "get": var_str,
         "for": f"zip code tabulation area:{zcta}",
     }
-    if api_key:
-        params["key"] = api_key
+    params["key"] = api_key
 
     resp = await resilient_request("GET", url, params=params, timeout=60.0)
+    if "missing_key" in str(resp.url):
+        raise CensusApiConfigurationError("Census API rejected the request because the API key is missing or invalid.")
     data = resp.json()
 
     # First row is header, rest is data

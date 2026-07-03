@@ -66,6 +66,14 @@ def test_parse_gazetteer_text_returns_land_area_by_zcta():
 
 
 @pytest.mark.asyncio
+async def test_query_acs_requires_configured_api_key(monkeypatch):
+    monkeypatch.delenv("CENSUS_API_KEY", raising=False)
+
+    with pytest.raises(census_client.CensusApiConfigurationError, match="CENSUS_API_KEY"):
+        await census_client.query_acs(["B01003_001E"], zcta="19107", year=2023)
+
+
+@pytest.mark.asyncio
 async def test_query_acs_merged_combines_variable_chunks_by_zcta(monkeypatch):
     async def fake_query_acs(variables, zcta="*", year=2023, api_key=None):
         assert len(variables) <= census_client.CENSUS_MAX_VARIABLES_PER_REQUEST
