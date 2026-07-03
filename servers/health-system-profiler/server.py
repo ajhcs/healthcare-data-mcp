@@ -57,6 +57,9 @@ try:
     from .physician_platform_evidence_pack import (
         build_physician_platform_evidence_pack as assemble_physician_platform_evidence_pack,
     )
+    from .patient_volume_evidence_pack import (
+        build_patient_volume_evidence_pack as assemble_patient_volume_evidence_pack,
+    )
     from .system_discovery import fuzzy_search_systems, resolve_system_ccns
     from .system_metrics import (
         get_health_system_metric as assemble_health_system_metric,
@@ -98,6 +101,9 @@ except ImportError:
     )
     from physician_platform_evidence_pack import (
         build_physician_platform_evidence_pack as assemble_physician_platform_evidence_pack,
+    )
+    from patient_volume_evidence_pack import (
+        build_patient_volume_evidence_pack as assemble_patient_volume_evidence_pack,
     )
     from system_discovery import fuzzy_search_systems, resolve_system_ccns
     from system_metrics import (
@@ -1705,6 +1711,34 @@ async def build_physician_platform_evidence_pack(
         state=state,
         source_rows=source_rows,
         required_definition_bases=required_definition_bases,
+    )
+
+
+@mcp.tool(structured_output=True)
+@observe_tool("health-system-profiler")
+async def build_patient_volume_evidence_pack(
+    region_slug: str,
+    systems: list[dict[str, Any]] | None = None,
+    source_rows: list[dict[str, Any]] | None = None,
+    required_system_slugs: list[str] | None = None,
+    denominator_scope: str = "medicare_inpatient",
+) -> dict[str, Any]:
+    """Normalize Public Alpha PSA/ELMS patient-volume input rows.
+
+    This read-only workflow supports Healthcare Toolkit methodology review for
+    `geography.primary_service_area` and `market.effective_local_market_share`.
+    It returns source hierarchy, denominator scope, ZIP/ZCTA demand rows,
+    competitor/access-point rows, distance/friction rows, attractiveness input
+    rows, coverage blockers, confidence inputs, and row-level receipts. It does
+    not calculate PSA, ELMS, HHI, or write `profile_metric_values`.
+    """
+
+    return assemble_patient_volume_evidence_pack(
+        region_slug=region_slug,
+        systems=systems,
+        source_rows=source_rows,
+        required_system_slugs=required_system_slugs,
+        denominator_scope=denominator_scope,
     )
 
 
