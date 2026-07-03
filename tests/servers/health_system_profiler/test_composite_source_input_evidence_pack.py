@@ -44,6 +44,7 @@ async def test_composite_source_input_evidence_pack_normalizes_fsi_and_scale_row
     assert revenue["status"] == "supported"
     assert revenue["metric_key"] == "finance.ushso_financial_strength_index"
     assert revenue["field"] == "total_operating_revenue_usd"
+    assert revenue["input_field"] == "total_operating_revenue_usd"
     assert revenue["value"]["input_value"] == 1200000000
     assert revenue["value"]["retrieval_owner"] == "financial-intelligence"
     assert revenue["value"]["confidence_inputs"]["source_rank"] == 1
@@ -123,6 +124,8 @@ async def test_composite_source_input_evidence_pack_requires_source_row_receipts
                 "dataset_id": "",
                 "source_period": "",
                 "source_url": "",
+                "source_row_id": "",
+                "definition_basis": "",
                 "identity_join_strength": "",
             }
         ],
@@ -135,6 +138,8 @@ async def test_composite_source_input_evidence_pack_requires_source_row_receipts
     assert "dataset_id" in row["value"]["missing_reasons"]
     assert "source_period" in row["value"]["missing_reasons"]
     assert "source_url_or_landing_page" in row["value"]["missing_reasons"]
+    assert "source_row_id" in row["value"]["missing_reasons"]
+    assert "definition_basis" in row["value"]["missing_reasons"]
     assert "identity_join_strength" in row["value"]["missing_reasons"]
     assert row["value"]["confidence_inputs"]["row_receipt_complete"] is False
     assert validate_source_claim_paths(result, require_boundary_traceability=True)["valid"] is True

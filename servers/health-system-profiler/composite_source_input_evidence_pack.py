@@ -234,6 +234,8 @@ def _candidate(row: dict[str, Any], *, query: dict[str, Any], retrieved_at: str)
     allowed_fields = _allowed_fields(source_family)
     source_period = str(row.get("source_period") or row.get("year") or row.get("period") or "")
     source_url = str(row.get("source_url") or row.get("url") or "")
+    source_row_id = str(row.get("source_row_id") or row.get("id") or "")
+    definition_basis = str(row.get("definition_basis") or "")
     missingness_state = str(row.get("missingness_state") or "")
     row_value = _value(row.get("value", row.get("input_value")))
     missing_reasons = []
@@ -259,8 +261,12 @@ def _candidate(row: dict[str, Any], *, query: dict[str, Any], retrieved_at: str)
         missing_reasons.append("source_period")
     if not (source_url or row.get("landing_page")):
         missing_reasons.append("source_url_or_landing_page")
+    if not source_row_id:
+        missing_reasons.append("source_row_id")
     if not row.get("identity_join_strength"):
         missing_reasons.append("identity_join_strength")
+    if not definition_basis:
+        missing_reasons.append("definition_basis")
 
     status = "supported"
     if missingness_state in MISSINGNESS_STATES:
@@ -276,8 +282,8 @@ def _candidate(row: dict[str, Any], *, query: dict[str, Any], retrieved_at: str)
         "input_value": row_value,
         "unit": row.get("unit") or "",
         "source_period": source_period,
-        "source_row_id": row.get("source_row_id") or row.get("id") or "",
-        "definition_basis": row.get("definition_basis") or "",
+        "source_row_id": source_row_id,
+        "definition_basis": definition_basis,
         "identity_join_strength": row.get("identity_join_strength") or "",
         "identity_join_keys": row.get("identity_join_keys") or {},
         "retrieval_owner": retrieval_owner,
@@ -311,6 +317,7 @@ def _candidate(row: dict[str, Any], *, query: dict[str, Any], retrieved_at: str)
     )
     return {
         "field": input_field,
+        "input_field": input_field,
         "metric_key": metric_key,
         "value": value,
         "status": status,
@@ -324,7 +331,15 @@ def _candidate(row: dict[str, Any], *, query: dict[str, Any], retrieved_at: str)
     }
 
 
-ROW_RECEIPT_REASONS = {"source_name", "dataset_id", "source_period", "source_url_or_landing_page", "identity_join_strength"}
+ROW_RECEIPT_REASONS = {
+    "source_name",
+    "dataset_id",
+    "source_period",
+    "source_url_or_landing_page",
+    "source_row_id",
+    "identity_join_strength",
+    "definition_basis",
+}
 
 
 def _coverage(rows: list[dict[str, Any]], metric_keys: list[str], *, query: dict[str, Any], retrieved_at: str) -> dict[str, Any]:
