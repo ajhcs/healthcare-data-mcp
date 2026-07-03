@@ -96,6 +96,61 @@ async def test_physician_platform_evidence_pack_no_rows_is_not_yet_researched() 
     assert validate_source_claim_paths(result, require_boundary_traceability=True)["valid"] is True
 
 
+@pytest.mark.asyncio
+async def test_physician_platform_evidence_pack_blocks_disallowed_source_definition_pair() -> None:
+    result = await server.build_physician_platform_evidence_pack(
+        system_slug="example-health",
+        system_name="Example Health",
+        state="PA",
+        source_rows=[
+            {
+                "source_family": "nppes_individual_provider_registry",
+                "source_name": "NPPES registry",
+                "dataset_id": "nppes_registry",
+                "source_period": "2026-07",
+                "source_url": "https://npiregistry.cms.hhs.gov/",
+                "count_value": 12,
+                "definition_basis": "total",
+                "identity_join_strength": "exact_npi",
+                "deduplication_basis": "npi_exact",
+            }
+        ],
+    )
+
+    row = result["physician_platform_evidence_rows"][0]
+    assert result["status"] == "needs_review"
+    assert row["status"] == "needs_review"
+    assert "definition_basis_not_allowed_for_source_family" in row["value"]["missing_reasons"]
+    assert row["value"]["confidence_inputs"]["allowed_definition_bases"] == ["normalized"]
+    assert validate_source_claim_paths(result, require_boundary_traceability=True)["valid"] is True
+
+
+@pytest.mark.asyncio
+async def test_physician_platform_evidence_pack_blocks_unknown_source_family() -> None:
+    result = await server.build_physician_platform_evidence_pack(
+        system_slug="example-health",
+        system_name="Example Health",
+        state="PA",
+        source_rows=[
+            {
+                "source_family": "unreviewed_scrape",
+                "source_name": "Unreviewed scrape",
+                "dataset_id": "unreviewed_scrape",
+                "source_period": "2026",
+                "source_url": "https://example.org/scrape",
+                "count_value": 12,
+                "definition_basis": "total",
+            }
+        ],
+    )
+
+    row = result["physician_platform_evidence_rows"][0]
+    assert row["status"] == "needs_review"
+    assert "source_family" in row["value"]["missing_reasons"]
+    assert row["value"]["confidence_inputs"]["source_rank"] is None
+    assert validate_source_claim_paths(result, require_boundary_traceability=True)["valid"] is True
+
+
 def _source_row(*, count_value: int, source_url: str) -> dict[str, object]:
     return {
         "source_family": "official_system_physician_enterprise_disclosure",

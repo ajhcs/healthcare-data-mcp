@@ -80,13 +80,7 @@ def build_physician_platform_evidence_pack(
         retrieved_at=retrieved_at,
         required_definition_bases=query["required_definition_bases"],
     )
-    status = "needs_review"
-    if any(row.get("status") == "blocked_source_conflict" for row in conflicts):
-        status = "blocked_source_conflict"
-    elif normalized_rows:
-        status = "source_candidates_ready"
-    elif unavailable:
-        status = str(unavailable[0].get("status") or "unavailable_public")
+    status = _pack_status(normalized_rows, conflicts, unavailable)
 
     evidence = _receipt(
         source_family="physician_platform_evidence_workflow",
@@ -153,6 +147,8 @@ def _candidate(row: dict[str, Any], *, query: dict[str, Any], retrieved_at: str)
     definition_basis = _definition_basis(row.get("definition_basis"))
     count_value = _int_or_none(row.get("count_value"))
     source_family = str(row.get("source_family") or "official_system_physician_enterprise_disclosure")
+    source_rank = _source_rank(source_family)
+    allowed_definition_bases = _allowed_definition_bases(source_family)
     source_name = str(row.get("source_name") or "Public physician-platform source")
     dataset_id = str(row.get("dataset_id") or source_family)
     source_period = str(row.get("source_period") or row.get("period") or "")
@@ -161,8 +157,12 @@ def _candidate(row: dict[str, Any], *, query: dict[str, Any], retrieved_at: str)
     missingness_state = str(row.get("missingness_state") or "")
     status = "supported"
     missing_reasons = []
+    if source_rank is None:
+        missing_reasons.append("source_family")
     if definition_basis not in DEFINITION_BASES:
         missing_reasons.append("definition_basis")
+    elif allowed_definition_bases and definition_basis not in allowed_definition_bases:
+        missing_reasons.append("definition_basis_not_allowed_for_source_family")
     if count_value is None and not missingness_state:
         missing_reasons.append("count_value")
     if not source_period:
@@ -187,7 +187,8 @@ def _candidate(row: dict[str, Any], *, query: dict[str, Any], retrieved_at: str)
         "deduplication_basis": row.get("deduplication_basis") or "unresolved",
         "coverage_notes": row.get("coverage_notes") or "",
         "confidence_inputs": {
-            "source_rank": _source_rank(source_family),
+            "source_rank": source_rank,
+            "allowed_definition_bases": allowed_definition_bases,
             "identity_join_strength": identity_join_strength,
             "definition_basis": definition_basis,
             "deduplication_basis": row.get("deduplication_basis") or "unresolved",
@@ -305,6 +306,28 @@ def _unavailable_findings(
                 )
             )
     return findings
+
+
+def _pack_status(
+    rows: list[dict[str, Any]],
+    conflicts: list[dict[str, Any]],
+    unavailable_findings: list[dict[str, Any]],
+) -> str:
+    if any(row.get("status") == "blocked_source_conflict" for row in conflicts):
+        return "blocked_source_conflict"
+    row_statuses = {str(row.get("status") or "") for row in rows}
+    if "blocked_source_conflict" in row_statuses:
+        return "blocked_source_conflict"
+    if "supported" in row_statuses:
+        return "source_candidates_ready"
+    missingness_statuses = row_statuses.intersection(MISSINGNESS_STATES)
+    if row_statuses and row_statuses == missingness_statuses and len(missingness_statuses) == 1:
+        return next(iter(missingness_statuses))
+    if rows:
+        return "needs_review"
+    if unavailable_findings:
+        return str(unavailable_findings[0].get("status") or "unavailable_public")
+    return "needs_review"
 
 
 def _finding(
@@ -486,6 +509,13 @@ def _source_rank(source_family: str) -> int | None:
         if source["source_family"] == source_family:
             return int(source["rank"])
     return None
+
+
+def _allowed_definition_bases(source_family: str) -> list[str]:
+    for source in SOURCE_HIERARCHY:
+        if source["source_family"] == source_family:
+            return [str(basis) for basis in source["definition_basis_allowed"]]
+    return []
 
 
 def _int_or_none(value: Any) -> int | None:
