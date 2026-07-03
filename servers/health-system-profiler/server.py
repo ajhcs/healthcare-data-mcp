@@ -54,6 +54,9 @@ try:
         osm_geocode_address,
         reverse_geocode_coordinates,
     )
+    from .physician_platform_evidence_pack import (
+        build_physician_platform_evidence_pack as assemble_physician_platform_evidence_pack,
+    )
     from .system_discovery import fuzzy_search_systems, resolve_system_ccns
     from .system_metrics import (
         get_health_system_metric as assemble_health_system_metric,
@@ -92,6 +95,9 @@ except ImportError:
         census_geocode_address,
         osm_geocode_address,
         reverse_geocode_coordinates,
+    )
+    from physician_platform_evidence_pack import (
+        build_physician_platform_evidence_pack as assemble_physician_platform_evidence_pack,
     )
     from system_discovery import fuzzy_search_systems, resolve_system_ccns
     from system_metrics import (
@@ -1672,6 +1678,33 @@ async def build_profile_evidence_pack(
         census_geocoder=_census_geocode_address,
         osm_geocoder=_osm_geocode_address,
         reverse_geocoder=_reverse_geocode_coordinates,
+    )
+
+
+@mcp.tool(structured_output=True)
+@observe_tool("health-system-profiler")
+async def build_physician_platform_evidence_pack(
+    system_slug: str,
+    system_name: str,
+    state: str = "",
+    source_rows: list[dict[str, Any]] | None = None,
+    required_definition_bases: list[str] | None = None,
+) -> dict[str, Any]:
+    """Normalize Public Alpha physician-platform evidence rows and receipts.
+
+    This read-only workflow supports Healthcare Toolkit population review for
+    `system.physician_count`. It returns candidate evidence rows, definition
+    basis, source hierarchy, identity join policy, confidence inputs, conflicts,
+    missingness states, and row-level receipts. It does not calculate the public
+    physician-count metric or write `profile_metric_values`.
+    """
+
+    return assemble_physician_platform_evidence_pack(
+        system_slug=system_slug,
+        system_name=system_name,
+        state=state,
+        source_rows=source_rows,
+        required_definition_bases=required_definition_bases,
     )
 
 
