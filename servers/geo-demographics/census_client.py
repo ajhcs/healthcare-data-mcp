@@ -1,14 +1,22 @@
 """Census ACS API wrapper for querying demographic data by ZCTA."""
 
 from collections.abc import Iterable
+import csv
+import io
 import logging
 import os
+from pathlib import Path
+import zipfile
 
 from shared.utils.http_client import resilient_request
 
 logger = logging.getLogger(__name__)
 
 CENSUS_BASE = "https://api.census.gov/data"
+GAZETTEER_URL = "https://www2.census.gov/geo/docs/maps-data/data/gazetteer/2023_Gazetteer/2023_Gaz_zcta_national.zip"
+GAZETTEER_LANDING_PAGE = "https://www.census.gov/geographies/reference-files/time-series/geo/gazetteer-files.html"
+GAZETTEER_SOURCE_PERIOD = "2023"
+SQUARE_METERS_PER_SQUARE_MILE = 2_589_988.110336
 
 # ACS 5-Year variable mapping
 # B01003: Total Population
@@ -24,6 +32,15 @@ SINGLE_VARS = {
     "male_total": "B01001_002E",
     "female_total": "B01001_026E",
     "median_income": "B19013_001E",
+    "white_alone": "B02001_002E",
+    "black_alone": "B02001_003E",
+    "american_indian_alaska_native_alone": "B02001_004E",
+    "asian_alone": "B02001_005E",
+    "native_hawaiian_pacific_islander_alone": "B02001_006E",
+    "some_other_race_alone": "B02001_007E",
+    "two_or_more_races": "B02001_008E",
+    "hispanic_latino": "B03003_003E",
+    "not_hispanic_latino": "B03003_002E",
 }
 
 # Age group variables: under 18 (male + female)
@@ -123,9 +140,50 @@ def _safe_float(value: str | None) -> float | None:
         return None
 
 
-def parse_demographics(row: dict[str, str], zcta: str, year: int) -> dict:
+def _density(total_pop: int, land_area_square_miles: float | None) -> float | None:
+    if land_area_square_miles is None or land_area_square_miles <= 0:
+        return None
+    return round(total_pop / land_area_square_miles, 2)
+
+
+def _race_ethnicity(row: dict[str, str]) -> dict[str, int]:
+    return {
+        "white_alone": _safe_int(row.get("B02001_002E")),
+        "black_alone": _safe_int(row.get("B02001_003E")),
+        "american_indian_alaska_native_alone": _safe_int(row.get("B02001_004E")),
+        "asian_alone": _safe_int(row.get("B02001_005E")),
+        "native_hawaiian_pacific_islander_alone": _safe_int(row.get("B02001_006E")),
+        "some_other_race_alone": _safe_int(row.get("B02001_007E")),
+        "two_or_more_races": _safe_int(row.get("B02001_008E")),
+        "hispanic_latino": _safe_int(row.get("B03003_003E")),
+        "not_hispanic_latino": _safe_int(row.get("B03003_002E")),
+    }
+
+
+def _land_area_payload(land_area_square_meters: float | None) -> dict[str, float | None | str]:
+    land_area_square_miles = (
+        round(land_area_square_meters / SQUARE_METERS_PER_SQUARE_MILE, 6)
+        if land_area_square_meters is not None
+        else None
+    )
+    return {
+        "land_area_square_meters": land_area_square_meters,
+        "land_area_square_miles": land_area_square_miles,
+        "source_dataset_id": "census_gazetteer_zcta",
+        "source_period": GAZETTEER_SOURCE_PERIOD,
+    }
+
+
+def parse_demographics(
+    row: dict[str, str],
+    zcta: str,
+    year: int,
+    *,
+    land_area_square_meters: float | None = None,
+) -> dict:
     """Parse a single row of Census ACS data into a demographics dict."""
     total_pop = _safe_int(row.get("B01003_001E"))
+    land_area = _land_area_payload(land_area_square_meters)
 
     # Age groups
     under_18 = sum(_safe_int(row.get(v)) for v in UNDER_18_VARS)
@@ -164,6 +222,14 @@ def parse_demographics(row: dict[str, str], zcta: str, year: int) -> dict:
             "age_18_to_64": age_18_to_64,
             "age_65_plus": over_65,
         },
+        "race_ethnicity": _race_ethnicity(row),
+        "land_area": land_area,
+        "population_density": {
+            "people_per_square_mile": _density(total_pop, land_area["land_area_square_miles"] if isinstance(land_area["land_area_square_miles"], float) else None),
+            "population_input": total_pop,
+            "land_area_input_square_miles": land_area["land_area_square_miles"],
+            "source_dataset_id": "census_acs5_zcta_demographics+census_gazetteer_zcta",
+        },
         "median_household_income": _safe_int(row.get("B19013_001E")) or None,
         "insurance": {
             "private": private,
@@ -172,6 +238,17 @@ def parse_demographics(row: dict[str, str], zcta: str, year: int) -> dict:
             "uninsured": uninsured,
             "uninsured_pct": uninsured_pct,
         },
+    }
+
+
+def no_data_demographics(zcta: str, year: int, reason: str) -> dict:
+    """Return an explicit no-data result for a ZCTA."""
+    return {
+        "zcta": zcta,
+        "year": year,
+        "status": "no_data",
+        "missingness_state": "unavailable_public",
+        "error": reason,
     }
 
 
@@ -220,8 +297,9 @@ async def get_demographics_for_zcta(zcta: str, year: int = 2023) -> dict:
     variables = _all_variable_codes()
     rows = await query_acs(variables, zcta=zcta, year=year)
     if not rows:
-        return {"zcta": zcta, "year": year, "error": f"No data found for ZCTA {zcta}"}
-    return parse_demographics(rows[0], zcta, year)
+        return no_data_demographics(zcta, year, f"No ACS5 data found for ZCTA {zcta}")
+    land_areas = await get_zcta_land_areas([zcta])
+    return parse_demographics(rows[0], zcta, year, land_area_square_meters=land_areas.get(zcta))
 
 
 async def get_demographics_batch(zctas: list[str], year: int = 2023) -> list[dict]:
@@ -237,6 +315,7 @@ async def get_demographics_batch(zctas: list[str], year: int = 2023) -> list[dic
         return []
 
     results_by_zcta: dict[str, dict] = {}
+    land_areas = await get_zcta_land_areas(unique_zctas)
     for zcta_chunk in _chunked(unique_zctas, size=10):
         zcta_param = ",".join(zcta_chunk)
         rows = await query_acs(variables, zcta=zcta_param, year=year)
@@ -244,9 +323,54 @@ async def get_demographics_batch(zctas: list[str], year: int = 2023) -> list[dic
         for row in rows:
             row_zcta = row.get("zip code tabulation area", "")
             if row_zcta:
-                results_by_zcta[row_zcta] = parse_demographics(row, row_zcta, year)
+                results_by_zcta[row_zcta] = parse_demographics(
+                    row,
+                    row_zcta,
+                    year,
+                    land_area_square_meters=land_areas.get(row_zcta),
+                )
 
-    return [results_by_zcta[zcta] for zcta in unique_zctas if zcta in results_by_zcta]
+    return [
+        results_by_zcta.get(zcta, no_data_demographics(zcta, year, f"No ACS5 data found for ZCTA {zcta}"))
+        for zcta in unique_zctas
+    ]
+
+
+async def get_zcta_land_areas(zctas: list[str]) -> dict[str, float]:
+    """Return Census Gazetteer land area in square meters for requested ZCTAs."""
+    requested = {z.strip().zfill(5) for z in zctas}
+    if not requested:
+        return {}
+    rows = await _load_gazetteer_rows()
+    return {zcta: area for zcta, area in rows.items() if zcta in requested}
+
+
+async def _load_gazetteer_rows() -> dict[str, float]:
+    fixture = os.environ.get("CENSUS_GAZETTEER_ZCTA_PATH")
+    if fixture:
+        return _parse_gazetteer_text(Path(fixture).read_text(encoding="utf-8"))
+
+    cache_dir = Path(os.environ.get("GEO_DEMOGRAPHICS_CACHE_DIR", ".cache/geo-demographics"))
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    cache_path = cache_dir / "2023_Gaz_zcta_national.txt"
+    if not cache_path.exists():
+        resp = await resilient_request("GET", GAZETTEER_URL, timeout=120.0)
+        with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
+            txt_files = [name for name in zf.namelist() if name.endswith(".txt")]
+            content = zf.read(txt_files[0] if txt_files else zf.namelist()[0])
+        cache_path.write_bytes(content)
+    return _parse_gazetteer_text(cache_path.read_text(encoding="utf-8"))
+
+
+def _parse_gazetteer_text(text: str) -> dict[str, float]:
+    rows: dict[str, float] = {}
+    reader = csv.DictReader(io.StringIO(text), delimiter="\t")
+    for row in reader:
+        zcta = str(row.get("GEOID", "")).strip().zfill(5)
+        aland = _safe_float(row.get("ALAND"))
+        if zcta and aland is not None:
+            rows[zcta] = aland
+    return rows
 
 
 def _chunked(values: Iterable[str], size: int) -> list[list[str]]:
