@@ -25,6 +25,7 @@ from shared.utils.duckdb_safe import safe_parquet_sql
 
 from shared.utils.cache import write_atomic_bytes, write_atomic_json
 from shared.utils.http_client import resilient_request
+from shared.utils.tabular_normalization import normalize_tabular_columns, normalize_tabular_key, read_csv_strings
 import pandas as pd
 
 logger = logging.getLogger(__name__)
@@ -225,21 +226,13 @@ def _read_parquet_dataframe(path: Path) -> pd.DataFrame:
         con.close()
 
 
-def _normalized_key(value: object) -> str:
-    return re.sub(r"[^a-z0-9]+", "_", str(value).strip().lower()).strip("_")
-
-
-def _normalize_columns(columns: list[object]) -> list[str]:
-    return [_normalized_key(column) for column in columns]
-
-
 def _has_sensitive_identifier_key(payload: dict) -> bool:
-    return bool(_SENSITIVE_IDENTIFIER_KEYS & {_normalized_key(key) for key in payload})
+    return bool(_SENSITIVE_IDENTIFIER_KEYS & {normalize_tabular_key(key) for key in payload})
 
 
 def _normalize_leie_date(value: object) -> str:
     """Normalize LEIE eight-digit dates to ISO strings, preserving blanks."""
-    digits = re.sub(r"\D+", "", "" if value is None else str(value).strip())
+    digits = "".join(character for character in ("" if value is None else str(value).strip()) if character.isdigit())
     if not digits or digits in {"00000000", "99999999"}:
         return ""
     if len(digits) != 8:
@@ -395,11 +388,7 @@ async def ensure_pos_cached() -> bool:
         csv_path = _CACHE_DIR / "pos_raw.csv"
         write_atomic_bytes(csv_path, resp.content)
 
-        df = pd.read_csv(
-            csv_path, dtype=str, keep_default_na=False,
-            low_memory=False, encoding_errors="replace",
-        )
-        df.columns = [re.sub(r"[^a-z0-9]+", "_", c.strip().lower()).strip("_") for c in df.columns]
+        df = read_csv_strings(csv_path, normalize_columns=True, low_memory=False)
         _write_dataframe_parquet(df, _POS_PARQUET, compression="zstd")
 
         csv_path.unlink(missing_ok=True)
@@ -426,11 +415,7 @@ async def ensure_pi_cached() -> bool:
         csv_path = _CACHE_DIR / "pi_raw.csv"
         write_atomic_bytes(csv_path, resp.content)
 
-        df = pd.read_csv(
-            csv_path, dtype=str, keep_default_na=False,
-            low_memory=False, encoding_errors="replace",
-        )
-        df.columns = [re.sub(r"[^a-z0-9]+", "_", c.strip().lower()).strip("_") for c in df.columns]
+        df = read_csv_strings(csv_path, normalize_columns=True, low_memory=False)
         _write_dataframe_parquet(df, _PI_PARQUET, compression="zstd")
 
         csv_path.unlink(missing_ok=True)
@@ -479,11 +464,7 @@ def ensure_breach_loaded() -> bool:
 
     logger.info("Converting HIPAA breach CSV to Parquet ...")
     try:
-        df = pd.read_csv(
-            _BREACH_CSV, dtype=str, keep_default_na=False,
-            low_memory=False, encoding_errors="replace",
-        )
-        df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
+        df = read_csv_strings(_BREACH_CSV, normalize_columns=True, low_memory=False)
         _write_dataframe_parquet(df, _BREACH_PARQUET, compression="zstd")
 
         logger.info("Breach data cached: %d records -> %s", len(df), _BREACH_PARQUET.name)
@@ -542,7 +523,7 @@ def _fixture_files(source_dir: Path) -> list[Path]:
 
 
 def _first_value(payload: dict, candidates: tuple[str, ...]) -> str:
-    normalized = {_normalized_key(key): value for key, value in payload.items()}
+    normalized = {normalize_tabular_key(key): value for key, value in payload.items()}
     for candidate in candidates:
         value = normalized.get(candidate)
         if value not in (None, ""):
@@ -561,8 +542,7 @@ def _plain_text_from_html(raw: str) -> tuple[str, str]:
 def _records_from_file(path: Path, source_type: str) -> list[dict]:
     suffix = path.suffix.lower()
     if suffix == ".csv":
-        df = pd.read_csv(path, dtype=str, keep_default_na=False, encoding_errors="replace")
-        df.columns = _normalize_columns(list(df.columns))
+        df = read_csv_strings(path, normalize_columns=True)
         return [dict(row) | {"source_file": str(path), "source_type": source_type} for row in df.to_dict("records")]
 
     if suffix == ".json":
@@ -603,7 +583,7 @@ def _records_from_file(path: Path, source_type: str) -> list[dict]:
 def _normalize_cyber_records(records: list[dict], source_type: str) -> pd.DataFrame:
     normalized: list[dict[str, object]] = []
     for record in records:
-        normalized_record = {_normalized_key(key): value for key, value in record.items()}
+        normalized_record = {normalize_tabular_key(key): value for key, value in record.items()}
         title = _first_value(normalized_record, ("title", "case_title", "filing_title", "document_title"))
         entity_name = _first_value(normalized_record, ("entity_name", "company_name", "issuer_name", "covered_entity"))
         summary = _first_value(normalized_record, ("summary", "description", "web_description", "text", "content"))
@@ -632,7 +612,7 @@ def _normalize_cyber_records(records: list[dict], source_type: str) -> pd.DataFr
 
     df = pd.DataFrame(normalized).astype(str) if normalized else pd.DataFrame()
     if not df.empty:
-        df.columns = _normalize_columns(list(df.columns))
+        df.columns = normalize_tabular_columns(list(df.columns))
     return df
 
 
@@ -914,8 +894,7 @@ def import_state_breach_notices(state: str, source_path: Path, *, source_url: st
     if not source_path.exists():
         raise FileNotFoundError(source_path)
 
-    df = pd.read_csv(source_path, dtype=str, keep_default_na=False)
-    df.columns = _normalize_columns(list(df.columns))
+    df = read_csv_strings(source_path, normalize_columns=True)
     if "entity_name" not in df.columns:
         raise ValueError("State breach notice imports require an entity_name column.")
     if "state" not in df.columns:
@@ -1112,12 +1091,9 @@ async def ensure_leie_cached(force_refresh: bool = False) -> dict:
 
 def parse_leie_csv(csv_path: Path) -> pd.DataFrame:
     """Parse and normalize an HHS OIG LEIE CSV using the documented layout."""
-    df = pd.read_csv(
+    df = read_csv_strings(
         csv_path,
-        dtype=str,
-        keep_default_na=False,
         low_memory=False,
-        encoding_errors="replace",
     )
     raw_columns = [str(c).strip().upper() for c in df.columns]
     missing = [col for col in LEIE_LAYOUT_COLUMNS if col not in raw_columns]

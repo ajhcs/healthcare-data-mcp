@@ -198,11 +198,23 @@ def _physician_identity(record: dict[str, Any]) -> dict[str, Any]:
 
 
 def _physician_identity_map(records: list[dict[str, Any]], *, match_basis: str) -> dict[str, Any]:
-    return {
+    identity_map = {
         "entities": [_physician_identity(record) for record in records if record.get("npi")],
         "match_basis": match_basis,
+        "source_claims": [
+            {
+                "collection": "nppes_physician_search",
+                "identity_paths": ["evidence.query"],
+                "evidence_path": "evidence",
+                "source_metadata_path": "source_metadata",
+                "match_policy": "npi_required_for_physician_identity_facts_name_search_returns_candidates",
+            }
+        ],
         "conflict_policy": "Join physicians by exact NPI first; names, specialty, city, and state are labels or candidate context only.",
     }
+    if records:
+        identity_map["source_claims"][0]["row_evidence_paths"] = ["physicians[].evidence"]
+    return identity_map
 
 
 def _system_identity(system_name: str, *, state: str = "", match_basis: str) -> dict[str, Any]:

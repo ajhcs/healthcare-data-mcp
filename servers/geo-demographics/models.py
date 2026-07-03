@@ -21,6 +21,38 @@ class InsuranceCoverage(BaseModel):
     uninsured_pct: float = 0.0
 
 
+class RaceEthnicity(BaseModel):
+    """ACS race and Hispanic/Latino origin estimates for a ZCTA."""
+
+    white_alone: int = 0
+    black_alone: int = 0
+    american_indian_alaska_native_alone: int = 0
+    asian_alone: int = 0
+    native_hawaiian_pacific_islander_alone: int = 0
+    some_other_race_alone: int = 0
+    two_or_more_races: int = 0
+    hispanic_latino: int = 0
+    not_hispanic_latino: int = 0
+
+
+class LandArea(BaseModel):
+    """ZCTA land area input used for density calculations."""
+
+    land_area_square_meters: float | None = None
+    land_area_square_miles: float | None = None
+    source_dataset_id: str = ""
+    source_period: str = ""
+
+
+class PopulationDensity(BaseModel):
+    """Population density calculation inputs for a ZCTA."""
+
+    people_per_square_mile: float | None = None
+    population_input: int = 0
+    land_area_input_square_miles: float | None = None
+    source_dataset_id: str = ""
+
+
 class ZctaDemographics(BaseModel):
     """Census ACS demographic profile for a single ZCTA."""
 
@@ -31,6 +63,9 @@ class ZctaDemographics(BaseModel):
     male_population: int = 0
     female_population: int = 0
     age_distribution: AgeDistribution = Field(default_factory=AgeDistribution)
+    race_ethnicity: RaceEthnicity = Field(default_factory=RaceEthnicity)
+    land_area: LandArea = Field(default_factory=LandArea)
+    population_density: PopulationDensity = Field(default_factory=PopulationDensity)
     median_household_income: int | None = None
     insurance: InsuranceCoverage = Field(default_factory=InsuranceCoverage)
 

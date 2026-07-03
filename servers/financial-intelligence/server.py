@@ -14,6 +14,7 @@ from mcp.server.fastmcp import FastMCP
 from shared.utils.mcp_observability import observe_tool
 from shared.utils.mcp_resources import register_standard_resources
 from shared.utils.mcp_response import error_response, evidence_receipt, to_structured
+from shared.utils.source_backed_result import values_at_path
 from shared.utils.cost_report import load_cost_report_row
 from shared.utils.healthcare_identity import MatchDecision, identity_from_public_record
 from shared.utils.identity import normalize_ccn, normalize_name
@@ -802,7 +803,19 @@ def _financial_source_claims(payload: dict[str, Any]) -> list[dict[str, Any]]:
                 "match_policy": "exact_identifier_required_for_financial_fact",
             }
         )
-    return claims
+    return [_normalize_financial_source_claim(payload, claim) for claim in claims]
+
+
+def _normalize_financial_source_claim(payload: dict[str, Any], claim: dict[str, Any]) -> dict[str, Any]:
+    normalized = dict(claim)
+    normalized["identity_paths"] = ["evidence.query"]
+    normalized["source_metadata_path"] = "source_metadata"
+    row_paths = [path for path in normalized.get("row_evidence_paths", []) if values_at_path(payload, str(path))]
+    if row_paths:
+        normalized["row_evidence_paths"] = row_paths
+    else:
+        normalized.pop("row_evidence_paths", None)
+    return normalized
 
 
 def _financial_join_key_usage(field: str, source_claims: list[dict[str, Any]]) -> list[str]:

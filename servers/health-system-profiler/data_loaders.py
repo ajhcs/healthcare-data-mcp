@@ -7,6 +7,7 @@ from pathlib import Path
 
 from shared.utils.cache import CacheMetadata, write_atomic_bytes, write_cache_metadata
 from shared.utils.http_client import resilient_request
+from shared.utils.tabular_normalization import read_csv_strings
 import pandas as pd
 
 logger = logging.getLogger(__name__)
@@ -96,8 +97,7 @@ def parse_ahrq_system_file(path: Path) -> pd.DataFrame:
     Returns a normalized DataFrame that preserves the source snapshot fields
     used for source-disciplined system metrics.
     """
-    df = pd.read_csv(path, dtype=str, keep_default_na=False, encoding_errors="replace")
-    df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
+    df = read_csv_strings(path, normalize_columns=True)
 
     col_map = {}
     id_col = _find_column(df, ["health_sys_id", "sys_id", "system_id", "id"])
@@ -137,8 +137,7 @@ def parse_ahrq_hospital_linkage(path: Path) -> pd.DataFrame:
 
     Returns a normalized DataFrame with source identifiers preserved as strings.
     """
-    df = pd.read_csv(path, dtype=str, keep_default_na=False, encoding_errors="replace")
-    df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
+    df = read_csv_strings(path, normalize_columns=True)
 
     col_map = {}
     ccn_col = _find_column(df, ["ccn", "medicare_provider_number", "provider_number", "prvdr_num"])
@@ -247,8 +246,8 @@ def parse_pos_file(path: Path) -> pd.DataFrame:
     Reads with dtype=str to avoid type issues, then converts numeric columns.
     POS has 470+ columns — we read all with dtype=str and filter later.
     """
-    df = pd.read_csv(path, dtype=str, keep_default_na=False, encoding_errors="replace", low_memory=False)
-    df.columns = [c.strip() for c in df.columns]
+    df = read_csv_strings(path, low_memory=False)
+    df.columns = [str(c).strip() for c in df.columns]
     return df
 
 

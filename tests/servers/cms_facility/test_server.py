@@ -11,6 +11,7 @@ import pytest
 
 from servers.cms_facility import server
 from shared.utils.mcp_response import validate_evidence_receipt
+from shared.utils.source_backed_result import validate_source_claim_paths
 
 
 # ---------------------------------------------------------------------------
@@ -92,7 +93,9 @@ async def test_search_facilities_by_name(mock_hospital_df):
     assert result["results"][0]["identity"]["ccn"] == "390223"
     assert result["identity_map"]["join_keys"][0]["field"] == "ccn"
     assert result["identity_map"]["join_keys"][0]["values"] == ["390223"]
-    assert result["identity_map"]["source_claims"][0]["row_evidence_path"] == "results[].evidence"
+    assert result["identity_map"]["source_claims"][0]["source_metadata_path"] == "source_metadata"
+    assert result["identity_map"]["source_claims"][0]["row_evidence_paths"] == ["results[].evidence"]
+    assert validate_source_claim_paths(result, require_boundary_traceability=True)["valid"] is True
     validate_evidence_receipt(result["results"][0]["evidence"], require_content=True)
     assert result["results"][0]["evidence"]["dataset_id"] == "cms_hospital_general_info"
     assert result["results"][0]["evidence"]["match_basis"] == "cms_hospital_general_info_search_row"
@@ -141,6 +144,8 @@ async def test_get_facility_found(mock_hospital_df):
     assert result["identity"]["canonical_name"] == "THOMAS JEFFERSON UNIVERSITY HOSPITAL"
     assert result["identity_map"]["join_keys"][0]["values"] == ["390223"]
     assert "identity.ccn" in result["identity_map"]["source_claims"][0]["identity_paths"]
+    assert result["identity_map"]["source_claims"][0]["source_metadata_path"] == "source_metadata"
+    assert validate_source_claim_paths(result, require_boundary_traceability=True)["valid"] is True
     assert result["source_metadata"]["dataset_id"] == "cms_hospital_general_info"
     assert result["evidence"]["match_basis"] == "ccn_exact"
     assert result["evidence"]["confidence"] == "high_for_cms_hospital_general_info_row"
@@ -177,6 +182,9 @@ async def test_search_npi_returns_results(mock_nppes_results):
     assert result["identity_map"]["join_keys"][1]["field"] == "npi"
     assert result["identity_map"]["join_keys"][1]["values"] == ["1234567893"]
     assert "results[].identity.npi" in result["identity_map"]["source_claims"][0]["identity_paths"]
+    assert result["identity_map"]["source_claims"][0]["source_metadata_path"] == "source_metadata"
+    assert result["identity_map"]["source_claims"][0]["row_evidence_paths"] == ["results[].evidence"]
+    assert validate_source_claim_paths(result, require_boundary_traceability=True)["valid"] is True
     validate_evidence_receipt(result["results"][0]["evidence"], require_content=True)
     assert result["results"][0]["evidence"]["dataset_id"] == "nppes_npi_registry"
     assert result["results"][0]["evidence"]["match_basis"] == "nppes_result_row"
@@ -184,6 +192,22 @@ async def test_search_npi_returns_results(mock_nppes_results):
     assert result["evidence"]["dataset_id"] == "nppes_npi_registry"
     assert result["evidence"]["match_basis"] == "nppes_search_filters"
     validate_evidence_receipt(result["evidence"], require_content=True)
+
+
+@pytest.mark.asyncio
+async def test_search_npi_exact_lookup_has_boundary_traceability(mock_nppes_results):
+    with patch.object(server.data_loaders, "search_nppes", new_callable=AsyncMock, return_value=mock_nppes_results):
+        result = parse_tool_result(await server.search_npi(npi="1234567893"))
+
+    assert result["count"] == 1
+    assert result["results"][0]["identity"]["npi"] == "1234567893"
+    assert result["identity_map"]["source_claims"][0]["match_policy"] == "npi_exact"
+    assert result["identity_map"]["source_claims"][0]["source_metadata_path"] == "source_metadata"
+    assert result["identity_map"]["source_claims"][0]["row_evidence_paths"] == ["results[].evidence"]
+    assert validate_source_claim_paths(result, require_boundary_traceability=True)["valid"] is True
+    assert result["results"][0]["evidence"]["confidence"] == "high_for_exact_npi"
+    assert result["evidence"]["match_basis"] == "npi_exact"
+    assert result["evidence"]["confidence"] == "high_for_exact_npi"
 
 
 @pytest.mark.asyncio
@@ -227,6 +251,8 @@ async def test_get_facility_financials_includes_identity_and_evidence():
     assert result["identity"]["ccn"] == "390223"
     assert result["identity_map"]["join_keys"][0]["values"] == ["390223"]
     assert result["identity_map"]["source_claims"][0]["match_policy"] == "ccn_exact_cost_report_row"
+    assert result["identity_map"]["source_claims"][0]["source_metadata_path"] == "source_metadata"
+    assert validate_source_claim_paths(result, require_boundary_traceability=True)["valid"] is True
     assert result["evidence"]["dataset_id"] == "cms_cost_report"
     assert result["evidence"]["source_period"] == "2023-12-31"
     assert result["evidence"]["match_basis"] == "ccn_exact_cost_report_row"
@@ -242,6 +268,8 @@ async def test_get_hospital_info_includes_identity_and_evidence(mock_hospital_df
     assert result["identity"]["ccn"] == "390223"
     assert result["identity_map"]["join_keys"][0]["values"] == ["390223"]
     assert result["identity_map"]["source_claims"][0]["collection"] == "cms_hospital_general_info"
+    assert result["identity_map"]["source_claims"][0]["source_metadata_path"] == "source_metadata"
+    assert validate_source_claim_paths(result, require_boundary_traceability=True)["valid"] is True
     assert result["source_metadata"]["dataset_id"] == "cms_hospital_general_info"
     assert result["evidence"]["match_basis"] == "ccn_exact"
     validate_evidence_receipt(result["evidence"], require_content=True)

@@ -7,6 +7,7 @@ import pytest
 
 from servers.drive_time import server
 from shared.utils.mcp_response import validate_evidence_receipt
+from shared.utils.source_backed_result import validate_source_claim_paths
 from tests.helpers import parse_tool_result
 
 
@@ -51,6 +52,11 @@ def _assert_receipt(result: dict, *, dataset_id: str, match_basis: str) -> None:
     validate_evidence_receipt(result["evidence"], require_content=True)
 
 
+def _assert_boundary_traceability(result: dict) -> None:
+    assert result["identity_map"]["source_claims"]
+    assert validate_source_claim_paths(result, require_boundary_traceability=True)["valid"] is True
+
+
 @pytest.mark.asyncio
 async def test_compute_drive_time_returns_evidence_and_coordinate_identity(monkeypatch) -> None:
     monkeypatch.setattr(server, "_get_osrm", lambda: FakeOSRM())
@@ -64,6 +70,7 @@ async def test_compute_drive_time_returns_evidence_and_coordinate_identity(monke
         "origin_coordinate",
         "destination_coordinate",
     }
+    _assert_boundary_traceability(result)
 
 
 @pytest.mark.asyncio
@@ -86,6 +93,7 @@ async def test_compute_drive_time_matrix_returns_evidence_and_location_map(monke
         "market_zip_19107",
         "hospital_390001",
     }
+    _assert_boundary_traceability(result)
 
 
 @pytest.mark.asyncio
@@ -140,6 +148,7 @@ async def test_find_competing_facilities_returns_evidence_and_facility_identity(
     )
     assert result["identity_map"]["entities"][0]["ccn"] == "390001"
     assert result["source_metadata"]["sources"][0]["dataset_id"] == "cms_hospital_general_information"
+    _assert_boundary_traceability(result)
 
 
 @pytest.mark.asyncio
@@ -191,6 +200,7 @@ async def test_compute_accessibility_score_returns_evidence_and_input_identity_m
         "demand_coordinate",
         "supply_coordinate",
     }
+    _assert_boundary_traceability(result)
 
 
 @pytest.mark.asyncio

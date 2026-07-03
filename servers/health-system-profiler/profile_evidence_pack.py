@@ -16,6 +16,7 @@ from shared.utils.healthcare_identity import identity_from_public_record
 from shared.utils.http_client import resilient_request
 from shared.utils.identity import normalize_ccn, normalize_name
 from shared.utils.mcp_response import evidence_receipt, to_structured
+from shared.utils.source_backed_result import values_at_path
 
 MCP_SERVER = "health-system-profiler"
 MCP_TOOL = "build_profile_evidence_pack"
@@ -1298,7 +1299,14 @@ def _identity_map(pack: dict[str, Any], query: dict[str, Any]) -> dict[str, Any]
             {"field": "ccn", "values": ccns or query.get("ccns", []), "status": "provided" if (ccns or query.get("ccns")) else "missing", "used_by": [MCP_TOOL]},
         ],
         "source_claims": [
-            {"collection": "profile_evidence_pack", "evidence_path": "evidence", "row_evidence_paths": _row_evidence_paths(), "match_policy": "exact_identifiers_before_names"},
+            {
+                "collection": "profile_evidence_pack",
+                "identity_paths": ["evidence.query"],
+                "evidence_path": "evidence",
+                "source_metadata_path": "source_metadata",
+                "row_evidence_paths": [path for path in _row_evidence_paths() if values_at_path(pack, path)],
+                "match_policy": "exact_identifiers_before_names",
+            },
         ],
         "conflict_policy": [
             "Do not overwrite Healthcare Toolkit profile fields from source_conflict, unavailable_public, or needs_review rows.",

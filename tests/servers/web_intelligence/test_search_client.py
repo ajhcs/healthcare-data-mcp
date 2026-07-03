@@ -6,6 +6,7 @@ import pytest
 from servers.web_intelligence import search_client
 from servers.web_intelligence import server
 from shared.utils.mcp_response import validate_evidence_receipt
+from shared.utils.source_backed_result import validate_source_claim_paths
 
 
 def _assert_web_identity_map(
@@ -815,3 +816,4 @@ def _assert_web_source_metadata(result: dict, *, dataset_id: str) -> None:
     assert metadata["cache_freshness"] == evidence["cache_freshness"]
     assert metadata["entity_scope"] == "web_osint"
     assert metadata["source_type"] == "public_web_osint"
+    assert validate_source_claim_paths(result, require_boundary_traceability=True)["valid"] is True

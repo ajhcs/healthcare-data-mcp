@@ -173,6 +173,14 @@ section as the handoff contract between facility profile, ownership trace,
 quality, finance, workforce, system reconciliation, and compliance screening
 steps.
 
+The `identity_map.review_routing` section turns that merge policy into
+agent-followable routing: exact identifier conflicts go to manual review,
+candidate searches and public-web context stay in candidate review, and missing
+exact identifiers are recorded as follow-up/source-status work instead of being
+filled from adjacent sources. Preserve `review_routing.step_routes` when
+handing a workflow to another agent so cross-server joins keep their original
+tool, fields, conflict checks, and identity output paths.
+
 Workflow plans also expose `identity_map.merge_policy`, which points agents to
 the shared conservative helper
 `shared.utils.healthcare_identity.merge_healthcare_identities`. That helper

@@ -7,6 +7,7 @@ import os
 import ast
 import importlib.util
 import shlex
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
@@ -1326,6 +1327,7 @@ def list_workflow_plans() -> dict[str, Any]:
 
     tool_validation = validate_workflow_tool_references()
     contract_validation = validate_workflow_contracts()
+    fact_manifest = build_workflow_fact_manifest()
     return {
         "workflow_count": len(WORKFLOW_DEFINITIONS),
         "workflows": [
@@ -1345,6 +1347,7 @@ def list_workflow_plans() -> dict[str, Any]:
                     workflow.workflow_id,
                     tool_validation=tool_validation,
                     contract_validation=contract_validation,
+                    fact_manifest=fact_manifest,
                 ),
                 "examples": _workflow_examples(workflow.workflow_id),
             }
@@ -1376,6 +1379,7 @@ def build_workflow_plan(
     identity_map = _workflow_identity_map(workflow, identity.to_dict(), input_payload)
     tool_reference_validation = validate_workflow_tool_references(workflow.workflow_id)
     workflow_contract_validation = validate_workflow_contracts(workflow.workflow_id)
+    fact_manifest = build_workflow_fact_manifest(workflow.workflow_id)
     workflow_payload = asdict(workflow)
     cache_entries = _workflow_cache_entries(cache_status)
     workflow_payload["steps"] = [
@@ -1411,6 +1415,7 @@ def build_workflow_plan(
             "source_resolution": _workflow_source_resolution(workflow),
             "cache_readiness": _workflow_cache_readiness(workflow, cache_entries),
             "examples": _workflow_examples(workflow.workflow_id),
+            "report_fact_manifest": fact_manifest,
             "evidence": evidence_receipt(
                 source_name="healthcare-data-mcp workflow registry",
                 dataset_id=f"workflow:{workflow.workflow_id}",
@@ -1421,9 +1426,114 @@ def build_workflow_plan(
                 caveat="Workflow plans describe source-backed steps; they do not execute tools or assert facts by themselves.",
                 next_step="Run the listed tools in order and preserve each tool's evidence receipt in report fact rows.",
             ),
-            "report_ingest_contract": _report_ingest_contract(workflow, input_payload),
+            "report_ingest_contract": _report_ingest_contract(workflow, input_payload, fact_manifest=fact_manifest),
         }
     )
+
+
+def build_workflow_fact_manifest(workflow_id: str | None = None) -> dict[str, Any]:
+    """Return static report fact-row ownership and traceability path metadata."""
+
+    workflow_ids = [workflow_id.strip().lower().replace("-", "_")] if workflow_id else sorted(WORKFLOW_DEFINITIONS)
+    issues: list[dict[str, Any]] = []
+    fact_rows: list[dict[str, Any]] = []
+    workflow_statuses: dict[str, dict[str, Any]] = {}
+
+    for current_workflow_id in workflow_ids:
+        workflow = WORKFLOW_DEFINITIONS.get(current_workflow_id)
+        if workflow is None:
+            issues.append(
+                {
+                    "workflow_id": current_workflow_id,
+                    "status": "workflow_not_found",
+                    "message": "Workflow id is not defined.",
+                }
+            )
+            continue
+
+        step_by_key = {_step_value_path_key(step): step for step in workflow.steps}
+        allowed_identity_fields = set(workflow.identity_join_keys) | {"canonical_name", "address", "zip_code"}
+        workflow_issues: list[dict[str, Any]] = []
+        workflow_rows: list[dict[str, Any]] = []
+        for index, row in enumerate(workflow.report_fact_rows, start=1):
+            workflow_rows.append(
+                _workflow_fact_manifest_row(
+                    workflow=workflow,
+                    row=row,
+                    row_index=index,
+                    step_by_key=step_by_key,
+                )
+            )
+            workflow_issues.extend(
+                _validate_report_fact_row(
+                    workflow=workflow,
+                    row=row,
+                    row_index=index,
+                    step_by_key=step_by_key,
+                    allowed_identity_fields=allowed_identity_fields,
+                )
+            )
+
+        if not workflow.report_fact_rows:
+            workflow_issues.append(
+                {
+                    "workflow_id": workflow.workflow_id,
+                    "status": "missing_report_fact_rows",
+                    "message": "Workflow must define at least one report-ready fact-row template.",
+                }
+            )
+
+        fact_rows.extend(workflow_rows)
+        workflow_statuses[workflow.workflow_id] = {
+            "status": "ok" if not workflow_issues else "issues_found",
+            "issue_count": len(workflow_issues),
+            "fact_row_count": len(workflow_rows),
+            "step_count": len(workflow.steps),
+        }
+        issues.extend(workflow_issues)
+
+    return {
+        "status": "ok" if not issues else "issues_found",
+        "checked_workflows": workflow_ids,
+        "workflow_count": len(workflow_statuses),
+        "fact_row_count": len(fact_rows),
+        "fact_rows": fact_rows,
+        "issue_count": len(issues),
+        "issues": issues,
+        "workflows": workflow_statuses,
+        "method": "workflow_fact_manifest_static",
+    }
+
+
+def _workflow_fact_manifest_row(
+    *,
+    workflow: WorkflowDefinition,
+    row: Mapping[str, Any],
+    row_index: int,
+    step_by_key: dict[str, WorkflowToolStep],
+) -> dict[str, Any]:
+    value_path = str(row.get("value_path") or "")
+    owner_step_key = _value_path_step_key(value_path)
+    owner_step = step_by_key.get(owner_step_key)
+    path_row = {
+        "value_path": value_path,
+        "evidence_path": str(row.get("evidence_path") or _evidence_path_from_value_path(value_path)),
+        "source_metadata_path": str(row.get("source_metadata_path") or _source_metadata_path_from_value_path(value_path)),
+        "identity_path": str(row.get("identity_path") or _identity_path_from_value_path(value_path)),
+        "identity_map_path": str(row.get("identity_map_path") or _identity_map_path_from_value_path(value_path)),
+    }
+    return {
+        "workflow_id": workflow.workflow_id,
+        "row_id": f"{workflow.workflow_id}:{row_index}",
+        "label": str(row.get("label") or f"row_{row_index}"),
+        "owner_step_key": owner_step_key,
+        "owner_server": owner_step.server if owner_step else "",
+        "owner_tool": owner_step.tool if owner_step else "",
+        "required_evidence": str(row.get("required_evidence") or ""),
+        "identity_fields": list(row.get("identity_fields", ())),
+        "paths": path_row,
+        "source_claim_path_contract": _report_fact_source_claim_path_contract(path_row),
+    }
 
 
 def _workflow_list_validation_summary(
@@ -1431,6 +1541,7 @@ def _workflow_list_validation_summary(
     *,
     tool_validation: dict[str, Any],
     contract_validation: dict[str, Any],
+    fact_manifest: dict[str, Any],
 ) -> dict[str, Any]:
     tool_issues = [
         issue
@@ -1439,6 +1550,8 @@ def _workflow_list_validation_summary(
     ]
     contract_status = (contract_validation.get("workflows") or {}).get(workflow_id, {})
     contract_issue_count = int(contract_status.get("issue_count", 0) or 0)
+    manifest_status = (fact_manifest.get("workflows") or {}).get(workflow_id, {})
+    manifest_issue_count = int(manifest_status.get("issue_count", 0) or 0)
     return {
         "tool_references": {
             "status": "ok" if not tool_issues else "issues_found",
@@ -1449,6 +1562,11 @@ def _workflow_list_validation_summary(
             "status": contract_status.get("status", "not_checked"),
             "issue_count": contract_issue_count,
             "method": contract_validation.get("method", "workflow_report_contract_static"),
+        },
+        "fact_manifest": {
+            "status": manifest_status.get("status", "not_checked"),
+            "issue_count": manifest_issue_count,
+            "method": fact_manifest.get("method", "workflow_fact_manifest_static"),
         },
     }
 
@@ -1620,6 +1738,13 @@ def format_workflow_plan(plan: dict[str, Any]) -> str:
         lines.extend(["", "Report validation:"])
         for mode_name in ("template", "final_report"):
             mode = validation_modes.get(mode_name)
+            if mode:
+                lines.append(f"  {mode_name}: {mode['python_call']}")
+    source_claim_validation = plan.get("report_ingest_contract", {}).get("source_claim_path_validation", {})
+    if source_claim_validation:
+        lines.extend(["", "Source claim path validation:"])
+        for mode_name in ("template", "final_report"):
+            mode = source_claim_validation.get(mode_name)
             if mode:
                 lines.append(f"  {mode_name}: {mode['python_call']}")
     lines.extend(["", "Caveats:"])
@@ -2794,7 +2919,12 @@ def _step_identity_output_paths(step: WorkflowToolStep) -> list[str]:
     return ["result.evidence.query", "result.source_metadata"]
 
 
-def _report_ingest_contract(workflow: WorkflowDefinition, inputs: dict[str, Any]) -> dict[str, Any]:
+def _report_ingest_contract(
+    workflow: WorkflowDefinition,
+    inputs: dict[str, Any],
+    *,
+    fact_manifest: dict[str, Any],
+) -> dict[str, Any]:
     """Return fact-row templates that satisfy the shared report ingest contract.
 
     These rows are not executed facts. They show how an agent should copy each
@@ -2824,24 +2954,21 @@ def _report_ingest_contract(workflow: WorkflowDefinition, inputs: dict[str, Any]
             ),
             next_step="Run the value_path tool and copy its evidence receipt into this report fact row.",
         )
-        fact_rows.append(
-            {
-                "label": row.get("label", ""),
-                "value_path": row.get("value_path", ""),
-                "identity_path": row.get("identity_path")
-                or _identity_path_from_value_path(str(row.get("value_path", ""))),
-                "identity_map_path": row.get("identity_map_path")
-                or _identity_map_path_from_value_path(str(row.get("value_path", ""))),
-                "evidence_path": row.get("evidence_path")
-                or _evidence_path_from_value_path(str(row.get("value_path", ""))),
-                "source_metadata_path": row.get("source_metadata_path")
-                or _source_metadata_path_from_value_path(str(row.get("value_path", ""))),
-                "identity_fields": list(row.get("identity_fields", ())),
-                "required_evidence_fields": list(REPORT_SOURCE_METADATA_FIELDS),
-                "contract_status": "template_requires_tool_execution",
-                **receipt,
-            }
-        )
+        value_path = str(row.get("value_path") or "")
+        fact_row = {
+            "label": row.get("label", ""),
+            "value_path": value_path,
+            "identity_path": row.get("identity_path") or _identity_path_from_value_path(value_path),
+            "identity_map_path": row.get("identity_map_path") or _identity_map_path_from_value_path(value_path),
+            "evidence_path": row.get("evidence_path") or _evidence_path_from_value_path(value_path),
+            "source_metadata_path": row.get("source_metadata_path") or _source_metadata_path_from_value_path(value_path),
+            "identity_fields": list(row.get("identity_fields", ())),
+            "required_evidence_fields": list(REPORT_SOURCE_METADATA_FIELDS),
+            "contract_status": "template_requires_tool_execution",
+            **receipt,
+        }
+        fact_row["source_claim_path_contract"] = _report_fact_source_claim_path_contract(fact_row)
+        fact_rows.append(fact_row)
 
     return {
         "workflow_id": workflow.workflow_id,
@@ -2871,14 +2998,68 @@ def _report_ingest_contract(workflow: WorkflowDefinition, inputs: dict[str, Any]
                 "purpose": "Validate cited report rows after evidence and identity context are copied from tool results.",
             },
         },
+        "source_claim_path_validation": {
+            "template": {
+                "function": "validate_workflow_contracts",
+                "status": "static_template_paths_checked",
+                "arguments": {"workflow_id": workflow.workflow_id},
+                "python_call": f"validate_workflow_contracts({workflow.workflow_id!r})",
+                "purpose": (
+                    "Planner templates contain placeholder receipts; validate that every fact row points at "
+                    "the owning step's advertised evidence, identity, and source-claim paths."
+                ),
+            },
+            "final_report": {
+                "function": "validate_source_claim_paths",
+                "arguments": {"require_boundary_traceability": True},
+                "python_call": "validate_source_claim_paths(payload, require_boundary_traceability=True)",
+                "purpose": (
+                    "After report builders copy executed tool results and identity_map.source_claims, "
+                    "validate source claim paths before treating rows as report-ready facts."
+                ),
+            },
+        },
         "fact_rows": fact_rows,
+        "fact_manifest": _report_ingest_fact_manifest(fact_manifest),
         "instructions": [
             "Use these rows as report-builder templates, not source facts.",
             "Before citing a fact, run the value_path tool and replace copy_from_tool_evidence.* placeholders.",
             "Keep identity_fields, identity_path, and identity_map_path next to every fact row so cross-server joins remain auditable.",
+            "Copy the owning tool identity_map.source_claims and run final_report source claim path validation before report-ready citation.",
             "Run final_report validation after copying tool evidence and identity context into cited report rows.",
         ],
     }
+
+
+def _report_fact_source_claim_path_contract(row: Mapping[str, Any]) -> dict[str, Any]:
+    """Describe how one report fact row links back to executed tool source claims."""
+
+    evidence_path = str(row.get("evidence_path") or "")
+    value_path = str(row.get("value_path") or "")
+    result_level_evidence_path = ".".join((*value_path.split(".")[:2], "evidence")) if value_path else ""
+    row_evidence_paths = []
+    if evidence_path and evidence_path != result_level_evidence_path:
+        row_evidence_paths.append(evidence_path)
+
+    identity_path = str(row.get("identity_path") or "")
+    identity_paths = [identity_path] if identity_path else []
+    identity_map_path = str(row.get("identity_map_path") or "")
+    return {
+        "status": "template_requires_tool_execution",
+        "identity_map_path": identity_map_path,
+        "source_claims_path": f"{identity_map_path}.source_claims" if identity_map_path else "",
+        "evidence_path": evidence_path,
+        "source_metadata_path": str(row.get("source_metadata_path") or ""),
+        "identity_paths": identity_paths,
+        "row_evidence_paths": row_evidence_paths,
+        "copy_rule": "Copy the executed tool source claim paths that support this fact row before final citation.",
+    }
+
+
+def _report_ingest_fact_manifest(fact_manifest: Mapping[str, Any]) -> dict[str, Any]:
+    payload = dict(fact_manifest)
+    payload["manifest_rows"] = list(payload.pop("fact_rows", []))
+    return payload
 
 
 def _dataset_id_from_required_evidence(required_evidence: str) -> str:
@@ -3151,6 +3332,9 @@ def _workflow_identity_map(
             }
         )
 
+    resolution_plan = _identity_resolution_plan(workflow)
+    merge_policy = _workflow_identity_merge_policy(workflow)
+
     return {
         "seed_identity": identity,
         "join_keys": join_keys,
@@ -3164,8 +3348,8 @@ def _workflow_identity_map(
             }
             for step in workflow.steps
         ],
-        "resolution_plan": _identity_resolution_plan(workflow),
-        "merge_policy": _workflow_identity_merge_policy(workflow),
+        "resolution_plan": resolution_plan,
+        "merge_policy": merge_policy,
         "identity_strategy": list(workflow.identity_strategy),
         "conflict_policy": [
             "Prefer exact public identifiers over names for joins.",
@@ -3173,6 +3357,11 @@ def _workflow_identity_map(
             "Carry conflicts forward in the identity map instead of overwriting identifiers.",
             "Do not substitute adjacent records for exact source-backed facts.",
         ],
+        "review_routing": _workflow_review_routing(
+            join_keys=join_keys,
+            resolution_plan=resolution_plan,
+            merge_policy=merge_policy,
+        ),
         "unresolved_identifiers": identity.get("unresolved_identifiers", []),
     }
 
@@ -3208,6 +3397,92 @@ def _workflow_identity_merge_policy(workflow: WorkflowDefinition) -> dict[str, A
         "candidate_rule": "record_name_address_zip_and_state_as_alias_or_conflict_context",
         "conflict_rule": "preserve_conflicts_in_identity_map_do_not_overwrite_source_identifiers",
         "reporting_rule": "report fact rows must keep the owning tool evidence receipt and identity_fields together",
+    }
+
+
+def _workflow_review_routing(
+    *,
+    join_keys: list[dict[str, Any]],
+    resolution_plan: list[dict[str, Any]],
+    merge_policy: dict[str, Any],
+) -> dict[str, Any]:
+    """Return manual-review routes for identity conflicts and candidate aliases."""
+
+    exact_conflict_fields = list(merge_policy.get("exact_identifier_fields", []))
+    candidate_review_fields = list(merge_policy.get("candidate_alias_fields", []))
+    missing_exact_fields = [
+        str(row["field"])
+        for row in join_keys
+        if row.get("field") in exact_conflict_fields and row.get("status") == "missing"
+    ]
+    routes = [
+        {
+            "route": "exact_identifier_conflict",
+            "target": "manual_review",
+            "fields": exact_conflict_fields,
+            "action": "Flag exact identifier disagreement before merging source-scoped identity claims.",
+        },
+        {
+            "route": "candidate_context_review",
+            "target": "manual_review",
+            "fields": candidate_review_fields,
+            "action": "Preserve candidate names, addresses, and contextual fields as aliases until source review.",
+        },
+    ]
+    if missing_exact_fields:
+        routes.append(
+            {
+                "route": "missing_exact_identifier",
+                "target": "source_status_or_follow_up",
+                "fields": missing_exact_fields,
+                "action": "Record the missing exact identifier and defer report-ready joins that require it.",
+            }
+        )
+
+    return {
+        "status": "route_conflicts_and_candidate_context",
+        "exact_conflict_fields": exact_conflict_fields,
+        "candidate_review_fields": candidate_review_fields,
+        "missing_exact_fields": missing_exact_fields,
+        "routes": routes,
+        "step_routes": [_identity_step_review_route(step) for step in resolution_plan],
+    }
+
+
+def _identity_step_review_route(resolution_step: dict[str, Any]) -> dict[str, Any]:
+    merge_action = resolution_step.get("merge_action")
+    tool = str(resolution_step.get("tool") or "")
+    is_candidate_lookup = tool.startswith(("search_", "scrape_"))
+    if merge_action == "merge_on_exact_identifier" and not is_candidate_lookup:
+        route = "exact_identifier_conflict"
+        target = "manual_review"
+        fields = list(resolution_step.get("exact_join_fields", []))
+    elif merge_action in {"merge_on_exact_identifier", "record_candidate_alias_requires_source_review"}:
+        route = "candidate_context_review"
+        target = "manual_review"
+        fields = list(
+            dict.fromkeys(
+                (
+                    *resolution_step.get("candidate_fields", []),
+                    *resolution_step.get("exact_join_fields", []),
+                )
+            )
+        )
+    else:
+        route = "context_only_no_entity_merge"
+        target = "context_only"
+        fields = list(resolution_step.get("candidate_fields", []))
+
+    return {
+        "order": resolution_step.get("order"),
+        "server": resolution_step.get("server"),
+        "tool": resolution_step.get("tool"),
+        "qualified_tool": resolution_step.get("qualified_tool"),
+        "route": route,
+        "target": target,
+        "fields": fields,
+        "conflict_checks": list(resolution_step.get("conflict_checks", [])),
+        "identity_output_paths": list(resolution_step.get("identity_output_paths", [])),
     }
 
 
@@ -3376,6 +3651,7 @@ __all__ = [
     "WORKFLOW_DEFINITIONS",
     "WorkflowDefinition",
     "WorkflowToolStep",
+    "build_workflow_fact_manifest",
     "build_workflow_plan",
     "format_workflow_plan",
     "list_workflow_plans",

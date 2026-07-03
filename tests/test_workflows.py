@@ -11,6 +11,7 @@ from pathlib import Path
 import shared.utils.workflows as workflows
 from shared.utils.mcp_response import REPORT_SOURCE_METADATA_FIELDS, validate_report_ingest_payload
 from shared.utils.workflows import (
+    build_workflow_fact_manifest,
     build_workflow_plan,
     format_workflow_plan,
     list_workflow_plans,
@@ -45,6 +46,9 @@ def test_list_workflow_plans_includes_flagship_screening() -> None:
         assert workflow["validation"]["report_contracts"]["status"] == "ok", workflow
         assert workflow["validation"]["report_contracts"]["issue_count"] == 0, workflow
         assert workflow["validation"]["report_contracts"]["method"] == "workflow_report_contract_static", workflow
+        assert workflow["validation"]["fact_manifest"]["status"] == "ok", workflow
+        assert workflow["validation"]["fact_manifest"]["issue_count"] == 0, workflow
+        assert workflow["validation"]["fact_manifest"]["method"] == "workflow_fact_manifest_static", workflow
         examples = workflow["examples"]
         assert examples["inputs"]
         assert examples["cli_command"].startswith(f"hc-mcp workflow {workflow['workflow_id']} --input ")
@@ -109,6 +113,17 @@ def test_build_workflow_plan_returns_tool_sequence_evidence_and_identity(monkeyp
     assert "npi" in plan["identity_map"]["merge_policy"]["exact_identifier_fields"]
     assert plan["identity_map"]["merge_policy"]["merge_rule"] == "merge_exact_identifiers_only_when_non_conflicting"
     assert plan["identity_map"]["conflict_policy"]
+    review_routing = plan["identity_map"]["review_routing"]
+    assert review_routing["status"] == "route_conflicts_and_candidate_context"
+    assert "npi" in review_routing["exact_conflict_fields"]
+    assert "entity_name" in review_routing["candidate_review_fields"]
+    assert "ccn" in review_routing["missing_exact_fields"]
+    assert any(route["route"] == "candidate_context_review" for route in review_routing["routes"])
+    assert any(
+        step_route["qualified_tool"] == "public-records.search_leie_entity"
+        and step_route["route"] == "candidate_context_review"
+        for step_route in review_routing["step_routes"]
+    )
     assert plan["workflow_contract_validation"]["status"] == "ok"
     assert plan["tool_reference_validation"]["status"] == "ok"
     assert {
@@ -155,6 +170,40 @@ def test_build_workflow_plan_returns_tool_sequence_evidence_and_identity(monkeyp
     assert "cache_freshness" in leie_fact["required_evidence_fields"]
     validate_report_ingest_payload(plan["report_ingest_contract"])
     json.dumps(plan)
+
+
+def test_workflow_fact_manifest_names_owner_step_and_traceability_paths() -> None:
+    manifest = build_workflow_fact_manifest("compliance_exclusion_screening")
+
+    assert manifest["status"] == "ok"
+    assert manifest["method"] == "workflow_fact_manifest_static"
+    assert manifest["issue_count"] == 0
+    assert manifest["workflow_count"] == 1
+    assert manifest["fact_row_count"] == 4
+
+    rows_by_label = {row["label"]: row for row in manifest["fact_rows"]}
+    leie_status = rows_by_label["LEIE screening status"]
+    assert leie_status["workflow_id"] == "compliance_exclusion_screening"
+    assert leie_status["owner_step_key"] == "public_records.check_leie_npi"
+    assert leie_status["owner_server"] == "public-records"
+    assert leie_status["owner_tool"] == "check_leie_npi"
+    assert leie_status["paths"] == {
+        "value_path": "public_records.check_leie_npi.status",
+        "evidence_path": "public_records.check_leie_npi.evidence",
+        "source_metadata_path": "public_records.check_leie_npi.source_metadata",
+        "identity_path": "public_records.check_leie_npi.identity",
+        "identity_map_path": "public_records.check_leie_npi.identity_map",
+    }
+    assert leie_status["source_claim_path_contract"]["source_claims_path"] == (
+        "public_records.check_leie_npi.identity_map.source_claims"
+    )
+
+    plan = build_workflow_plan(
+        "compliance_exclusion_screening",
+        inputs={"npi": "1234567893", "entity_name": "Thomas Jefferson University Hospitals"},
+    )
+    assert plan["report_fact_manifest"]["fact_rows"] == manifest["fact_rows"]
+    assert plan["report_ingest_contract"]["fact_manifest"]["manifest_rows"] == manifest["fact_rows"]
 
 
 def test_parse_workflow_inputs_merges_json_and_key_value_overrides() -> None:
@@ -502,6 +551,13 @@ def test_system_reconciliation_workflow_has_ordered_identity_resolution_plan() -
     assert resolution_by_tool["scrape_system_profile"]["merge_action"] == "record_candidate_alias_requires_source_review"
     assert resolution_by_tool["scrape_system_profile"]["exact_join_fields"] == []
     assert "canonical_name" in resolution_by_tool["scrape_system_profile"]["candidate_fields"]
+    web_review_route = next(
+        route
+        for route in plan["identity_map"]["review_routing"]["step_routes"]
+        if route["qualified_tool"] == "web-intelligence.scrape_system_profile"
+    )
+    assert web_review_route["route"] == "candidate_context_review"
+    assert "canonical_name" in web_review_route["fields"]
     assert "result.identity_map" in by_tool["scrape_system_profile"]["identity_contract"]["output_paths"]
     assert "result.locations[].evidence" in by_tool["scrape_system_profile"]["evidence_contract"]["row_evidence_paths"]
     assert "result.items[].evidence" in by_tool["scrape_system_profile"]["evidence_contract"]["row_evidence_paths"]
@@ -912,6 +968,9 @@ def test_all_workflows_have_identity_strategy_and_report_rows() -> None:
         assert plan["identity_map"]["identity_strategy"], workflow_id
         assert plan["identity_map"]["source_claims"], workflow_id
         assert plan["identity_map"]["resolution_plan"], workflow_id
+        assert plan["identity_map"]["review_routing"], workflow_id
+        assert plan["identity_map"]["review_routing"]["routes"], workflow_id
+        assert plan["identity_map"]["review_routing"]["step_routes"], workflow_id
         assert plan["source_resolution"], workflow_id
         assert plan["report_fact_rows"], workflow_id
         assert plan["report_ingest_contract"]["fact_rows"], workflow_id
@@ -927,6 +986,17 @@ def test_all_workflows_have_identity_strategy_and_report_rows() -> None:
             "require_identity_context": True,
         }
         assert "require_identity_context=True" in validation_modes["final_report"]["python_call"]
+        source_claim_validation = plan["report_ingest_contract"]["source_claim_path_validation"]
+        assert source_claim_validation["template"]["function"] == "validate_workflow_contracts"
+        assert source_claim_validation["template"]["status"] == "static_template_paths_checked"
+        assert source_claim_validation["final_report"]["function"] == "validate_source_claim_paths"
+        assert source_claim_validation["final_report"]["arguments"] == {
+            "require_boundary_traceability": True,
+        }
+        assert (
+            "validate_source_claim_paths(payload, require_boundary_traceability=True)"
+            in source_claim_validation["final_report"]["python_call"]
+        )
         validate_report_ingest_payload(plan["report_ingest_contract"])
         for step in plan["steps"]:
             assert step["stdio_command"] == f"hc-mcp {step['server']}", workflow_id
@@ -963,6 +1033,15 @@ def test_all_workflows_have_identity_strategy_and_report_rows() -> None:
             assert row["identity_path"], workflow_id
             assert row["identity_map_path"], workflow_id
             assert row["identity_fields"], workflow_id
+            source_claim_contract = row["source_claim_path_contract"]
+            assert source_claim_contract["status"] == "template_requires_tool_execution", workflow_id
+            assert source_claim_contract["identity_map_path"] == row["identity_map_path"], workflow_id
+            assert source_claim_contract["source_claims_path"] == f"{row['identity_map_path']}.source_claims", workflow_id
+            assert source_claim_contract["evidence_path"] == row["evidence_path"], workflow_id
+            assert source_claim_contract["source_metadata_path"] == row["source_metadata_path"], workflow_id
+            assert source_claim_contract["identity_paths"] == [row["identity_path"]], workflow_id
+            if row["evidence_path"] != ".".join((*row["value_path"].split(".")[:2], "evidence")):
+                assert source_claim_contract["row_evidence_paths"] == [row["evidence_path"]], workflow_id
 
 
 def test_workflow_examples_satisfy_required_planner_inputs(monkeypatch) -> None:
@@ -1038,6 +1117,9 @@ def test_format_workflow_plan_is_operator_readable() -> None:
         "final_report: validate_report_ingest_payload(payload, require_content=True, "
         "allow_placeholders=False, require_identity_context=True)"
     ) in text
+    assert "Source claim path validation:" in text
+    assert "template: validate_workflow_contracts('quality_measure_lookup')" in text
+    assert "final_report: validate_source_claim_paths(payload, require_boundary_traceability=True)" in text
     assert "Adjacent HRRP/HAC/PHC4" in text
 
 

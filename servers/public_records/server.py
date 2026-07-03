@@ -11,7 +11,6 @@ import json
 import logging
 import os as _os
 from pathlib import Path
-import re
 
 
 from shared.utils.http_client import resilient_request
@@ -19,6 +18,7 @@ from mcp.server.fastmcp import FastMCP
 from shared.utils.mcp_observability import observe_tool
 from shared.utils.mcp_resources import register_standard_resources
 from shared.utils.mcp_response import error_response, evidence_receipt, to_structured
+from shared.utils.tabular_normalization import normalize_tabular_key
 from shared import state_health_data
 
 from . import data_loaders, usaspending_client, sam_client, sam_exclusions_client  # pyright: ignore[reportAttributeAccessIssue]
@@ -51,6 +51,7 @@ from .models import (
     SAMExclusionSearchResponse,
     SAMExclusionsSourceMetadata,
 )
+from .source_claims import public_source_claim as _public_source_claim
 from shared.utils.healthcare_identity import MatchDecision, identity_from_public_record
 from shared.utils.identity import normalize_ccn, normalize_name, normalize_npi, normalize_state
 
@@ -250,12 +251,8 @@ def _leie_identity(
     )
 
 
-def _normalized_key(value: object) -> str:
-    return re.sub(r"[^a-z0-9]+", "_", str(value).strip().lower()).strip("_")
-
-
 def _contains_sensitive_identifier_keys(payload: dict[str, Any]) -> bool:
-    return bool(_SENSITIVE_IDENTIFIER_KEYS & {_normalized_key(key) for key in payload})
+    return bool(_SENSITIVE_IDENTIFIER_KEYS & {normalize_tabular_key(key) for key in payload})
 
 
 # ---------------------------------------------------------------------------
@@ -646,13 +643,12 @@ def _public_facility_identity_map(
             },
         ],
         "source_claims": [
-            {
-                "collection": collection,
-                "dataset_id": dataset_id,
-                "identity_paths": [f"{collection}[].ccn", f"{collection}[].provider_name", f"{collection}[].facility_name"],
-                "evidence_path": "evidence",
-                "match_policy": "ccn_exact_required_for_facility_identity_claim",
-            }
+            _public_source_claim(
+                collection=collection,
+                dataset_id=dataset_id,
+                match_policy="ccn_exact_required_for_facility_identity_claim",
+                row_evidence_paths=[f"{collection}[].evidence"] if rows else [],
+            )
         ],
         "conflict_policy": [
             "Use CCN as the exact public facility join key when present.",
@@ -663,7 +659,7 @@ def _public_facility_identity_map(
             "No-match public-record regulatory responses identify the searched CMS public-source scope; "
             "they are not proof of no accreditation, no PI participation, or no certified health IT."
         ),
-    }
+}
 
 
 def _public_no_match_basis(match_basis: str) -> str:
@@ -765,6 +761,8 @@ def _public_api_search_identity_map(
                 "dataset_id": dataset_id,
                 "identity_paths": identity_paths,
                 "evidence_path": "evidence",
+                "source_metadata_path": "source_metadata",
+                "row_evidence_paths": [f"{collection}[].evidence"],
                 "match_policy": "candidate_public_records_search_not_identity_proof",
             }
         ],
@@ -1013,6 +1011,7 @@ def _phc4_identity_map(payload: dict[str, Any], *, query: dict[str, Any]) -> dic
                     "table_rows.source_artifact",
                 ],
                 "evidence_path": "evidence",
+                "source_metadata_path": "source_metadata",
                 "match_policy": "public_report_index_and_extracted_rows_are_source_scoped_candidate_context",
             }
         ],
@@ -1138,7 +1137,7 @@ def _cyber_identity_map(
             else (),
         ),
     }
-    source_claims = _cyber_source_claims(dataset_id=effective_dataset_id)
+    source_claims = _cyber_source_claims(dataset_id=effective_dataset_id, payload=data)
     return {
         "entity_scope": "public_cyber_breach_records",
         "join_keys": [
@@ -1197,79 +1196,68 @@ def _normalize_cyber_identity_value(field: str, value: Any) -> str:
     return str(value).strip()
 
 
-def _cyber_source_claims(*, dataset_id: str) -> list[dict[str, Any]]:
+def _cyber_source_claims(*, dataset_id: str, payload: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    data = payload or {}
+    has_breaches = bool(data.get("breaches"))
+    has_records = bool(data.get("records"))
+    has_incidents = bool(data.get("incidents"))
     claims_by_dataset = {
         "hhs_ocr_breach_portal": [
-            {
-                "collection": "hhs_ocr_breach_portal",
-                "identity_paths": ["query.entity_name", "query.state", "breaches.entity_name", "breaches.state", "breaches.breach_submission_date"],
-                "evidence_path": "evidence",
-                "row_evidence_paths": ["breaches[].evidence"],
-                "match_policy": "entity_name_state_filter_returns_public_large_breach_candidates",
-            }
+            _public_source_claim(
+                collection="hhs_ocr_breach_portal",
+                match_policy="entity_name_state_filter_returns_public_large_breach_candidates",
+                row_evidence_paths=["breaches[].evidence"] if has_breaches else [],
+            )
         ],
         "hhs_ocr_enforcement_actions": [
-            {
-                "collection": "hhs_ocr_enforcement_actions",
-                "identity_paths": ["query.entity_name", "query.state", "records.entity_name", "records.state", "records.source_url"],
-                "evidence_path": "evidence",
-                "row_evidence_paths": ["records[].evidence"],
-                "match_policy": "public_page_index_search_returns_candidate_enforcement_pages",
-            }
+            _public_source_claim(
+                collection="hhs_ocr_enforcement_actions",
+                match_policy="public_page_index_search_returns_candidate_enforcement_pages",
+                row_evidence_paths=["records[].evidence"] if has_records else [],
+            )
         ],
         "sec_cyber_disclosures": [
-            {
-                "collection": "sec_cyber_disclosures",
-                "identity_paths": ["query.entity_name", "query.cik", "records.cik", "records.accession_number", "records.source_url"],
-                "evidence_path": "evidence",
-                "row_evidence_paths": ["records[].evidence"],
-                "match_policy": "cik_and_accession_anchor_sec_issuer_disclosure_facts",
-            }
+            _public_source_claim(
+                collection="sec_cyber_disclosures",
+                match_policy="cik_and_accession_anchor_sec_issuer_disclosure_facts",
+                row_evidence_paths=["records[].evidence"] if has_records else [],
+            )
         ],
         "state_ag_breach_notices": [
-            {
-                "collection": "state_ag_breach_notices",
-                "identity_paths": ["query.entity_name", "query.state", "records.entity_name", "records.state", "records.source_url"],
-                "evidence_path": "evidence",
-                "row_evidence_paths": ["records[].evidence"],
-                "match_policy": "reviewed_state_import_search_returns_source_scoped_notice_candidates",
-            }
+            _public_source_claim(
+                collection="state_ag_breach_notices",
+                match_policy="reviewed_state_import_search_returns_source_scoped_notice_candidates",
+                row_evidence_paths=["records[].evidence"] if has_records else [],
+            )
         ],
         "public_cyber_incident_profile": [
-            {
-                "collection": "public_cyber_incident_profile",
-                "identity_paths": ["query.entity_name", "query.state", "incidents.entity_name", "incidents.state", "sources.*.status"],
-                "evidence_path": "evidence",
-                "row_evidence_paths": ["incidents[].evidence"],
-                "match_policy": "aggregates_adjacent_public_record_sources_without_attestation_or_assurance_claims",
-            }
+            _public_source_claim(
+                collection="public_cyber_incident_profile",
+                match_policy="aggregates_adjacent_public_record_sources_without_attestation_or_assurance_claims",
+                row_evidence_paths=["incidents[].evidence"] if has_incidents else [],
+            )
         ],
         "unsupported_cybersecurity_attestation": [
-            {
-                "collection": "unsupported_cybersecurity_attestation",
-                "identity_paths": ["supported_adjacent_sources.source_type", "evidence.dataset_id"],
-                "evidence_path": "evidence",
-                "match_policy": "source_status_only_no_reviewed_attestation_field_configured",
-            }
+            _public_source_claim(
+                collection="unsupported_cybersecurity_attestation",
+                match_policy="source_status_only_no_reviewed_attestation_field_configured",
+            )
         ],
         "cisa_kev_context": [
-            {
-                "collection": "cisa_kev_context",
-                "identity_paths": ["status", "attribution_used"],
-                "evidence_path": "evidence",
-                "match_policy": "vulnerability_context_only_not_entity_attribution",
-            }
+            _public_source_claim(
+                collection="cisa_kev_context",
+                match_policy="vulnerability_context_only_not_entity_attribution",
+            )
         ],
     }
     return claims_by_dataset.get(
         dataset_id,
         [
-            {
-                "collection": "public_cyber_source_query",
-                "identity_paths": ["query.entity_name", "query.state", "query.cik", "records.source_url"],
-                "evidence_path": "evidence",
-                "match_policy": "source_scoped_public_record_search_not_entity_assurance",
-            }
+            _public_source_claim(
+                collection="public_cyber_source_query",
+                match_policy="source_scoped_public_record_search_not_entity_assurance",
+                row_evidence_paths=["records[].evidence"] if has_records else [],
+            )
         ],
     )
 
@@ -4526,6 +4514,39 @@ async def get_sam_exclusions_metadata() -> dict[str, Any]:
             match_basis="source_metadata_lookup",
             confidence="api_metadata",
         )
+        payload["identity_map"] = {
+            "entity_scope": "public_records_source_metadata",
+            "join_keys": [
+                {
+                    "field": "dataset_id",
+                    "values": ["sam_gov_exclusions"],
+                    "status": "source_metadata",
+                    "used_by": ["sam_gov_exclusions_metadata"],
+                },
+                {
+                    "field": "source_name",
+                    "values": [payload["source_name"]],
+                    "status": "source_metadata",
+                    "used_by": ["sam_gov_exclusions_metadata"],
+                },
+            ],
+            "source_claims": [
+                _public_source_claim(
+                    collection="sam_gov_exclusions_metadata",
+                    dataset_id="sam_gov_exclusions",
+                    match_policy="source_metadata_lookup_no_entity_match_claim",
+                    identity_paths=["source_name", "source_url", "evidence.query"],
+                )
+            ],
+            "conflict_policy": [
+                "Treat this metadata-only response as source status and query context, not an entity exclusion match.",
+                "Use SAM.gov Exclusions search or identifier tools for candidate-level screening claims.",
+            ],
+            "missing_data_policy": (
+                "Metadata availability describes SAM.gov Exclusions source configuration only; "
+                "it is not evidence that an entity is or is not excluded."
+            ),
+        }
         return to_structured(payload)
     except Exception as e:
         logger.exception("get_sam_exclusions_metadata failed")

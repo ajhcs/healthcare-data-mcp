@@ -6,6 +6,7 @@ import pytest
 
 from servers.public_records import data_loaders, server
 from shared.utils.mcp_response import validate_evidence_receipt
+from shared.utils.source_backed_result import validate_source_claim_paths
 
 
 def _assert_cyber_identity_map(
@@ -54,6 +55,7 @@ def _assert_cyber_source_metadata(response: dict) -> None:
     assert metadata["query"] == evidence["query"]
     assert metadata["cache_key"] == evidence["cache_key"]
     assert metadata["source_type"] == "public_cyber_breach_record"
+    assert validate_source_claim_paths(response, require_boundary_traceability=True)["valid"] is True
 
 
 @pytest.fixture

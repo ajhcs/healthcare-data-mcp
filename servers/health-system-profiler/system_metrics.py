@@ -990,6 +990,15 @@ def _identity_map(systems: list[dict[str, Any]]) -> dict[str, Any]:
             {"field": "compendium_hospital_id", "values": [], "status": "row_level_in_hospitals", "used_by": [_AHRQ_DATASET]},
             {"field": "ccn", "values": [], "status": "facility_join_key_not_campus_identity", "used_by": [_AHRQ_DATASET, _HGI_DATASET, _POS_DATASET]},
         ],
+        "source_claims": [
+            {
+                "collection": "ahrq_health_system_metrics",
+                "identity_paths": ["evidence.query"],
+                "evidence_path": "evidence",
+                "source_metadata_path": "source_metadata[]",
+                "match_policy": "health_sys_id_required_for_system_metric_facts",
+            }
+        ],
         "conflict_policy": [
             "Use health_sys_id for AHRQ system joins.",
             "Use compendium_hospital_id as the AHRQ hospital linkage row identity.",

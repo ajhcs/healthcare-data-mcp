@@ -11,6 +11,7 @@ import pytest
 
 from servers.hospital_quality import server
 from shared.utils.mcp_response import validate_evidence_receipt
+from shared.utils.source_backed_result import validate_source_claim_paths
 
 
 def assert_quality_receipt(result: dict, *, ccn: str = "390223") -> None:
@@ -20,6 +21,7 @@ def assert_quality_receipt(result: dict, *, ccn: str = "390223") -> None:
     assert_quality_source_metadata(result)
     assert result["identity"]["ccn"] == ccn
     assert_quality_identity_map(result["identity_map"], ccn=ccn)
+    assert validate_source_claim_paths(result, require_boundary_traceability=True)["valid"] is True
 
 
 def assert_quality_no_data_receipt(result: dict, *, ccn: str, match_basis: str) -> None:
@@ -32,6 +34,7 @@ def assert_quality_no_data_receipt(result: dict, *, ccn: str, match_basis: str) 
     assert_quality_source_metadata(result)
     assert result["identity"]["ccn"] == ccn
     assert_quality_identity_map(result["identity_map"], ccn=ccn)
+    assert validate_source_claim_paths(result, require_boundary_traceability=True)["valid"] is True
 
 
 def assert_quality_source_metadata(result: dict) -> None:
@@ -59,6 +62,7 @@ def assert_quality_identity_map(identity_map: dict, *, ccn: str) -> None:
     assert "measure_id" in by_field
     assert identity_map["source_claims"]
     assert identity_map["source_claims"][0]["evidence_path"] == "evidence"
+    assert identity_map["source_claims"][0]["source_metadata_path"] == "source_metadata"
     assert identity_map["conflict_policy"]
     assert identity_map["missing_data_policy"].startswith("No-match or missing hospital-quality responses")
 

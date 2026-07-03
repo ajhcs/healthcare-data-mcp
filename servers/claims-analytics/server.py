@@ -1028,6 +1028,20 @@ async def analyze_market_volumes(
                 match_basis="service_line_market_total_row",
                 confidence="derived_provider_set_market_aggregate",
             )
+        payload["identity_map"]["source_claims"] = [
+            {
+                "collection": "cms_medicare_inpatient_market_volumes",
+                "identity_paths": ["evidence.query"],
+                "evidence_path": "evidence",
+                "source_metadata_path": "source_metadata",
+                "row_evidence_paths": [
+                    "provider_shares[].evidence",
+                    "provider_shares[].service_line_breakdown[].evidence",
+                    "service_line_totals[].evidence",
+                ],
+                "match_policy": "provider_ccn_set_required_for_public_market_volume_facts",
+            }
+        ]
         return to_structured(payload)
 
     except Exception as e:

@@ -65,11 +65,14 @@ report extraction preserves exact NPI, edge, classification, specialty,
 source-vintage, and readiness caveat context. Service-area outputs expose receipts for CMS
 Hospital Service Area File PSA/SSA and market-share facts, Dartmouth Atlas
 HSA/HRR crosswalks, and HSAF-to-Dartmouth overlap context.
-Geo-demographics outputs expose receipts for Census ACS ZCTA estimates, CMS
-Medicare Geographic Variation geography aggregates, Census TIGER/ZCTA
-adjacency, and HUD USPS ZIP crosswalk allocations. ACS batch rows, TIGER
-adjacent-ZCTA rows, and HUD ZIP crosswalk allocation rows carry row-level
-receipts for report extraction. Price-transparency outputs
+Geo-demographics outputs expose receipts for Census ACS ZCTA estimates, Census
+Gazetteer ZCTA land-area inputs, CMS Medicare Geographic Variation geography
+aggregates, Census TIGER/ZCTA adjacency, and HUD USPS ZIP crosswalk allocations.
+ACS batch rows include row-level ACS receipts, land-area receipts when
+available, fixed source period/vintage metadata, race/ethnicity fields, density
+inputs, and explicit no-data states for unresolved ZCTAs. TIGER adjacent-ZCTA
+rows and HUD ZIP crosswalk allocation rows carry row-level receipts for report
+extraction. Price-transparency outputs
 expose receipts for CMS/MRF discovery, hospital MRF cache rows, rate
 dispersion, candidate system comparisons, and Medicare/peer benchmark context.
 Drive-time outputs expose receipts for OSRM routes/matrices, OpenRouteService

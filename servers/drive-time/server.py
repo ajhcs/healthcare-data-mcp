@@ -28,6 +28,7 @@ from shared.utils.mcp_observability import observe_tool
 from shared.utils.mcp_resources import register_standard_resources
 from shared.utils.healthcare_identity import identity_from_public_record
 from shared.utils.mcp_response import error_response, evidence_receipt, to_structured
+from shared.utils.source_backed_result import source_claim
 
 from .accessibility import compute_e2sfca, summarize_scores
 from .models import (
@@ -238,6 +239,24 @@ def _drive_time_row_evidence(
     )
 
 
+def _drive_time_source_claim(
+    source_metadata: dict[str, Any],
+    *,
+    collection: str = "",
+    row_evidence_paths: tuple[str, ...] = (),
+    match_policy: str,
+) -> dict[str, Any]:
+    return source_claim(
+        collection=collection or str(source_metadata.get("dataset_id") or "drive_time"),
+        source_name=str(source_metadata.get("source_name") or ""),
+        source_url=str(source_metadata.get("source_url") or ""),
+        evidence_path="evidence",
+        source_metadata_path="source_metadata",
+        row_evidence_paths=row_evidence_paths,
+        match_policy=match_policy,
+    )
+
+
 def _coordinate_identity(*, entity_id: str, lat: float, lon: float, entity_type: str = "coordinate") -> dict[str, Any]:
     return {
         "canonical_name": str(entity_id or ""),
@@ -286,6 +305,10 @@ def _facility_identity(row: pd.Series | dict[str, Any]) -> dict[str, Any]:
 def _location_identity_map(
     origins: list[dict[str, Any]],
     destinations: list[dict[str, Any]],
+    *,
+    source_metadata: dict[str, Any],
+    row_evidence_paths: tuple[str, ...] = (),
+    match_policy: str,
 ) -> dict[str, Any]:
     entities = [
         _coordinate_identity(
@@ -305,7 +328,16 @@ def _location_identity_map(
         )
         for index, destination in enumerate(destinations)
     )
-    return {"entities": entities}
+    return {
+        "entities": entities,
+        "source_claims": [
+            _drive_time_source_claim(
+                source_metadata,
+                row_evidence_paths=row_evidence_paths,
+                match_policy=match_policy,
+            )
+        ],
+    }
 
 
 async def _load_facilities() -> pd.DataFrame:
@@ -504,7 +536,13 @@ async def compute_drive_time(
         "entities": [
             _coordinate_identity(entity_id="origin", lat=origin_lat, lon=origin_lon, entity_type="origin_coordinate"),
             _coordinate_identity(entity_id="destination", lat=dest_lat, lon=dest_lon, entity_type="destination_coordinate"),
-        ]
+        ],
+        "source_claims": [
+            _drive_time_source_claim(
+                source_metadata,
+                match_policy="caller_supplied_coordinates_osrm_route",
+            )
+        ],
     }
     return to_structured(response)
 
@@ -645,7 +683,13 @@ async def compute_drive_time_matrix(
             confidence="high_for_configured_routing_engine",
             next_step="Retain caller-supplied IDs with the returned matrix before joining to healthcare entities.",
         ),
-        "identity_map": _location_identity_map(origins, destinations),
+        "identity_map": _location_identity_map(
+            origins,
+            destinations,
+            source_metadata=source_metadata,
+            row_evidence_paths=("matrix[].evidence",),
+            match_policy="caller_supplied_coordinate_ids_osrm_table",
+        ),
     }
     return to_structured(result)
 
@@ -833,7 +877,17 @@ async def find_competing_facilities(
             "evidence": evidence,
             "source_metadata": {"sources": source_metadata["sources"]},
             "identity": _coordinate_identity(entity_id="origin", lat=lat, lon=lon, entity_type="origin_coordinate"),
-            "identity_map": {"entities": []},
+            "identity_map": {
+                "entities": [],
+                "source_claims": [
+                    _drive_time_source_claim(
+                        source_metadata,
+                        collection="drive_time_competing_facilities",
+                        row_evidence_paths=("facilities[].evidence",),
+                        match_policy="cms_facility_location_candidates_plus_osrm_drive_time_threshold",
+                    )
+                ],
+            },
         })
 
     # Cap at 100 facilities per OSRM table request to avoid overloading
@@ -906,7 +960,17 @@ async def find_competing_facilities(
         "evidence": evidence,
         "source_metadata": {"sources": source_metadata["sources"]},
         "identity": _coordinate_identity(entity_id="origin", lat=lat, lon=lon, entity_type="origin_coordinate"),
-        "identity_map": {"entities": facility_identities},
+        "identity_map": {
+            "entities": facility_identities,
+            "source_claims": [
+                _drive_time_source_claim(
+                    source_metadata,
+                    collection="drive_time_competing_facilities",
+                    row_evidence_paths=("facilities[].evidence",),
+                    match_policy="cms_facility_location_candidates_plus_osrm_drive_time_threshold",
+                )
+            ],
+        },
     })
 
 
@@ -1115,7 +1179,15 @@ async def compute_accessibility_score(
                 entity_type="supply_coordinate",
             )
             for index, point in enumerate(supply_points)
-        ]
+        ],
+        "source_claims": [
+            _drive_time_source_claim(
+                source_metadata,
+                collection="drive_time_e2sfca_accessibility",
+                row_evidence_paths=("results[].evidence",),
+                match_policy="caller_supplied_demand_supply_coordinates_osrm_table_e2sfca",
+            )
+        ],
     }
     return to_structured(response)
 

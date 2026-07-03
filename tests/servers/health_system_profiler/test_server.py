@@ -10,6 +10,7 @@ import pytest
 
 from servers.health_system_profiler import server
 from shared.utils.mcp_response import validate_evidence_receipt
+from shared.utils.source_backed_result import validate_source_claim_paths
 
 
 @pytest.fixture
@@ -343,6 +344,7 @@ def _assert_system_source_metadata(result: dict) -> None:
     assert metadata["query"] == evidence["query"]
     assert metadata["cache_key"] == evidence["cache_key"]
     assert metadata["source_type"] == "ahrq_cms_nppes_health_system_public_sources"
+    assert validate_source_claim_paths(result, require_boundary_traceability=True)["valid"] is True
 
 
 def _assert_system_identity_map(

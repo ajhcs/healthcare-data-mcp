@@ -16,6 +16,7 @@ from shared.utils.mcp_observability import observe_tool
 from shared.utils.mcp_resources import register_standard_resources
 from shared.utils.healthcare_identity import identity_from_public_record
 from shared.utils.mcp_response import error_response, evidence_receipt, to_structured
+from shared.utils.source_backed_result import source_claim
 
 # Support running both as a package and as a standalone script
 try:
@@ -144,6 +145,24 @@ def _zip_identity(zip_code: str, *, source_name: str, source_url: str) -> dict[s
     return identity
 
 
+def _service_area_source_claim(
+    source_metadata: dict[str, Any],
+    *,
+    collection: str = "",
+    row_evidence_paths: tuple[str, ...] = (),
+    match_policy: str,
+) -> dict[str, Any]:
+    return source_claim(
+        collection=collection or str(source_metadata.get("dataset_id") or "service_area"),
+        source_name=str(source_metadata.get("source_name") or ""),
+        source_url=str(source_metadata.get("source_url") or ""),
+        evidence_path="evidence",
+        source_metadata_path="source_metadata",
+        row_evidence_paths=row_evidence_paths,
+        match_policy=match_policy,
+    )
+
+
 def _hsa_hrr_identity_map(mapping: HsaHrrMapping) -> dict[str, Any]:
     source = _dartmouth_source_metadata()
     zip_identity = _zip_identity(mapping.zip_code, source_name=source["source_name"], source_url=source["source_url"])
@@ -152,14 +171,31 @@ def _hsa_hrr_identity_map(mapping: HsaHrrMapping) -> dict[str, Any]:
     return {
         "entities": [zip_identity],
         "match_basis": "dartmouth_zip_exact_crosswalk",
+        "source_claims": [
+            _service_area_source_claim(source, match_policy="dartmouth_zip_exact_crosswalk")
+        ],
         "conflict_policy": "Join ZIP geographies by exact five-digit ZIP and crosswalk vintage; HSA/HRR numbers are geography labels.",
     }
 
 
-def _facility_identity_map(hospitals: list[dict[str, Any]], *, match_basis: str) -> dict[str, Any]:
+def _facility_identity_map(
+    hospitals: list[dict[str, Any]],
+    *,
+    match_basis: str,
+    source_metadata: dict[str, Any] | None = None,
+    row_evidence_paths: tuple[str, ...] = (),
+) -> dict[str, Any]:
+    source = source_metadata or _hsaf_source_metadata()
     return {
         "entities": [_facility_identity(str(row.get("ccn", "")), str(row.get("facility_name", ""))) for row in hospitals],
         "match_basis": match_basis,
+        "source_claims": [
+            _service_area_source_claim(
+                source,
+                row_evidence_paths=row_evidence_paths,
+                match_policy=match_basis,
+            )
+        ],
         "conflict_policy": "Join hospitals by exact CCN; facility names from HSAF/name lookup are labels.",
     }
 
@@ -289,6 +325,9 @@ async def compute_service_area(
     payload["identity_map"] = {
         "entities": [payload["identity"], *[_zip_identity(zip_code, source_name=source_metadata["source_name"], source_url=source_metadata["source_url"]) for zip_code in payload.get("psa_zips", []) + payload.get("ssa_zips", [])]],
         "match_basis": "ccn_exact_with_hsaf_zip_rows",
+        "source_claims": [
+            _service_area_source_claim(source_metadata, match_policy="ccn_exact_with_hsaf_zip_rows")
+        ],
         "conflict_policy": "Keep facility CCN identity separate from ZIP geography identities; ZIPs are service-area components, not facilities.",
     }
     return payload
@@ -388,7 +427,12 @@ async def get_market_share(zip_code: str, limit: int = 20) -> dict[str, Any]:
         next_step="Use hospital CCNs for follow-up and do not generalize Medicare inpatient share to all-payer market share.",
     )
     payload["identity"] = _zip_identity(zip_code, source_name=source_metadata["source_name"], source_url=source_metadata["source_url"])
-    payload["identity_map"] = _facility_identity_map(payload.get("hospitals", []), match_basis="hsaf_market_share_hospital_ccns")
+    payload["identity_map"] = _facility_identity_map(
+        payload.get("hospitals", []),
+        match_basis="hsaf_market_share_hospital_ccns",
+        source_metadata=source_metadata,
+        row_evidence_paths=("hospitals[].evidence",),
+    )
     return payload
 
 
@@ -618,6 +662,13 @@ async def compare_to_dartmouth(ccn: str) -> dict[str, Any]:
             _zip_identity(top_zip, source_name=dartmouth_source["source_name"], source_url=dartmouth_source["source_url"]),
         ],
         "match_basis": "facility_ccn_exact_plus_top_zip_crosswalk",
+        "source_claims": [
+            _service_area_source_claim(
+                hsaf_source,
+                collection="service_area_dartmouth_overlap",
+                match_policy="facility_ccn_exact_plus_top_zip_crosswalk",
+            )
+        ],
         "conflict_policy": "Keep facility and geography identities separate; top ZIP is a service-area proxy from discharge volume.",
     }
     return payload

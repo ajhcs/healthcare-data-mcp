@@ -997,76 +997,69 @@ def _normalize_identity_value(field: str, value: Any) -> str:
 def _provider_source_claims(payload: dict[str, Any]) -> list[dict[str, Any]]:
     claims: list[dict[str, Any]] = []
     if "enrollments" in payload:
-        claims.append(
-            {
-                "collection": "enrollments",
-                "identity_paths": ["enrollments[].npi", "enrollments[].ccn", "enrollments[].enrollment_id"],
-                "evidence_path": "evidence",
-                "row_evidence_paths": ["enrollments[].evidence"],
-                "match_policy": "exact_identifier_required_for_report_fact",
-            }
+        claim = _provider_source_claim(
+            collection="enrollments",
+            match_policy="exact_identifier_required_for_report_fact",
         )
+        if payload.get("enrollments"):
+            claim["row_evidence_paths"] = ["enrollments[].evidence"]
+        claims.append(claim)
     if "enrollment" in payload:
-        claims.append(
-            {
-                "collection": "enrollment",
-                "identity_paths": ["enrollment[].npi", "enrollment[].ccn", "enrollment[].enrollment_id"],
-                "evidence_path": "evidence",
-                "row_evidence_paths": ["enrollment[].evidence"],
-                "match_policy": "exact_identifier_required_for_report_fact",
-            }
+        claim = _provider_source_claim(
+            collection="enrollment",
+            match_policy="exact_identifier_required_for_report_fact",
         )
+        if payload.get("enrollment"):
+            claim["row_evidence_paths"] = ["enrollment[].evidence"]
+        claims.append(claim)
     if "ownership" in payload or "owners" in payload:
         collection = "owners" if "owners" in payload else "ownership"
-        claims.append(
-            {
-                "collection": collection,
-                "identity_paths": [
-                    f"{collection}[].ccn",
-                    f"{collection}[].enrollment_id",
-                    f"{collection}[].owner_associate_id",
-                    f"{collection}[].owner_name",
-                ],
-                "evidence_path": "evidence",
-                "row_evidence_paths": [f"{collection}[].evidence"],
-                "match_policy": "owner_identifier_required_for_owner_merge",
-            }
+        claim = _provider_source_claim(
+            collection=collection,
+            match_policy="owner_identifier_required_for_owner_merge",
         )
+        if payload.get(collection):
+            claim["row_evidence_paths"] = [f"{collection}[].evidence"]
+        claims.append(claim)
     if "chow_history" in payload or "events" in payload:
         collection = "events" if "events" in payload else "chow_history"
-        claims.append(
-            {
-                "collection": collection,
-                "identity_paths": [
-                    f"{collection}[].ccn",
-                    f"{collection}[].enrollment_id",
-                    f"{collection}[].owner_associate_id",
-                    f"{collection}[].transaction_date",
-                ],
-                "evidence_path": "evidence",
-                "row_evidence_paths": [f"{collection}[].evidence"],
-                "match_policy": "exact_identifier_plus_event_date_for_chow_fact",
-            }
+        claim = _provider_source_claim(
+            collection=collection,
+            match_policy="exact_identifier_plus_event_date_for_chow_fact",
         )
+        if payload.get(collection):
+            claim["row_evidence_paths"] = [f"{collection}[].evidence"]
+        claims.append(claim)
     if "nodes" in payload or "owner_network" in payload:
         prefix = "owner_network." if "owner_network" in payload else ""
-        claims.append(
-            {
-                "collection": "owner_network",
-                "identity_paths": [
-                    f"{prefix}nodes[].id",
-                    f"{prefix}edges[].source",
-                    f"{prefix}edges[].target",
-                ],
-                "evidence_path": "evidence",
-                "row_evidence_paths": [f"{prefix}nodes[].evidence", f"{prefix}edges[].evidence"],
-                "match_policy": "bounded_graph_context_requires_source_row_review",
-            }
+        claim = _provider_source_claim(
+            collection="owner_network",
+            match_policy="bounded_graph_context_requires_source_row_review",
         )
+        rows = payload.get("owner_network") if prefix else payload
+        if rows.get("nodes") or rows.get("edges"):
+            claim["row_evidence_paths"] = [f"{prefix}nodes[].evidence", f"{prefix}edges[].evidence"]
+        claims.append(claim)
     return claims
 
 
+def _provider_source_claim(*, collection: str, match_policy: str) -> dict[str, Any]:
+    return {
+        "collection": collection,
+        "identity_paths": ["identity", "evidence.query"],
+        "evidence_path": "evidence",
+        "source_metadata_path": "source_metadata",
+        "match_policy": match_policy,
+    }
+
+
 def _provider_join_key_usage(field: str, source_claims: list[dict[str, Any]]) -> list[str]:
+    collections_by_field = {
+        "npi": {"enrollments", "enrollment"},
+        "ccn": {"enrollments", "enrollment", "owners", "ownership", "events", "chow_history"},
+        "pecos_enrollment_id": {"enrollments", "enrollment", "owners", "ownership", "events", "chow_history"},
+        "owner_id": {"owners", "ownership", "owner_network"},
+    }.get(field, set())
     path_tokens = {
         "npi": ("npi",),
         "ccn": ("ccn",),
@@ -1076,9 +1069,13 @@ def _provider_join_key_usage(field: str, source_claims: list[dict[str, Any]]) ->
     }.get(field, (field,))
     used_by = []
     for claim in source_claims:
+        collection = str(claim.get("collection") or "")
+        if collection in collections_by_field:
+            used_by.append(collection)
+            continue
         paths = " ".join(str(path) for path in claim.get("identity_paths", []))
         if any(token in paths for token in path_tokens):
-            used_by.append(str(claim.get("collection") or ""))
+            used_by.append(collection)
     return sorted(item for item in used_by if item)
 
 

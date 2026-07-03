@@ -10,9 +10,9 @@ import json
 import logging
 import os
 import time
+import uuid
 from collections import defaultdict, deque
 from collections.abc import Awaitable, Callable, Mapping, Sequence
-from dataclasses import dataclass
 from functools import wraps
 from pathlib import Path
 from typing import Any
@@ -31,31 +31,20 @@ from shared.utils.gateway_auth import (
     load_gateway_security_config,
     token_fingerprint,
 )
-from shared.utils.mcp_response import (
-    evidence_receipt_validation_summary,
-    raise_tool_error,
-    to_structured,
-)
+from shared.utils.mcp_response import raise_tool_error, to_structured
 from shared.utils.server_registry import SERVER_BY_ID
+from servers.live_gateway.policy_runner import (
+    SOURCE_CAVEAT_CLASSES,
+    LiveToolSpec,
+    attach_gateway_policy,
+    audit_provenance_fields,
+    build_audit_evidence_export,
+    effective_source_caveat_class,
+    evaluate_provenance_status,
+    source_caveat,
+)
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass(frozen=True)
-class LiveToolSpec:
-    """One approved live tool exposed through the live gateway."""
-
-    server: str
-    module: str
-    tool_name: str
-    category: str
-    scopes: tuple[str, ...] = ("mcp:read",)
-    request_size_limit_bytes: int = 32_768
-    result_size_limit_bytes: int = 262_144
-    result_limit: int = 100
-    rate_limit_class: str = "standard"
-    source_caveat_class: str = "public_source"
-    require_provenance: bool = True
 
 
 LIVE_TOOL_SPECS: tuple[LiveToolSpec, ...] = (
@@ -172,60 +161,6 @@ _SENSITIVE_ARGUMENT_KEYS = {
     "federal_tax_id",
     "federal_tax_identifier",
 }
-SOURCE_CAVEAT_CLASSES: dict[str, str] = {
-    "provider_enrollment_public_record": (
-        "CMS provider enrollment, ownership, and CHOW rows are public records; "
-        "name searches are candidate matches unless an exact identifier supports the join."
-    ),
-    "cms_quality_summary": (
-        "CMS quality summary rows are public source context; exact named measure claims should preserve "
-        "the row-level CMS measure receipt."
-    ),
-    "claims_public_aggregate": (
-        "Claims analytics exposed through live-gateway must remain public aggregate analysis and must not be treated as PHI."
-    ),
-    "exclusion_screening": (
-        "LEIE/SAM results are screening sources; final exclusion or eligibility decisions require source-system verification."
-    ),
-    "public_breach_or_state_record": (
-        "Public breach/cyber records are partial disclosure sources and do not prove absence of incidents or cybersecurity attestation."
-    ),
-    "public_financial_record": (
-        "Public financial records depend on filing/source freshness and may not represent current operating performance."
-    ),
-    "public_workforce_operations": (
-        "Workforce and throughput outputs use public aggregate sources or configured caches; validate period and denominator before reporting."
-    ),
-    "public_community_health": (
-        "Community health outputs are public population estimates and should not be interpreted as patient-level facts."
-    ),
-    "public_research_trials": (
-        "Research and trials outputs reflect public registry/API records; sponsor and organization aliases require review before aggregation."
-    ),
-    "public_source": "Public-source result; preserve the owning tool's source caveats and evidence receipts.",
-}
-_CATEGORY_CAVEAT_CLASS = {
-    "provider_enrollment": "provider_enrollment_public_record",
-    "hospital_quality": "cms_quality_summary",
-    "claims_analytics": "claims_public_aggregate",
-    "exclusions": "exclusion_screening",
-    "public_records": "public_breach_or_state_record",
-    "financial_intelligence": "public_financial_record",
-    "operations": "public_workforce_operations",
-    "workforce": "public_workforce_operations",
-    "community_health": "public_community_health",
-    "research_trials": "public_research_trials",
-}
-
-
-def _effective_source_caveat_class(spec: LiveToolSpec) -> str:
-    return _CATEGORY_CAVEAT_CLASS.get(spec.category, spec.source_caveat_class)
-
-
-def _source_caveat(spec: LiveToolSpec) -> str:
-    return SOURCE_CAVEAT_CLASSES[_effective_source_caveat_class(spec)]
-
-
 def _validate_live_policy_specs() -> None:
     seen: set[str] = set()
     module_functions: dict[str, set[str]] = {}
@@ -256,7 +191,7 @@ def _validate_live_policy_specs() -> None:
             )
         if spec.rate_limit_class not in _RATE_LIMIT_POLICIES:
             raise RuntimeError(f"Unknown live-gateway rate limit class for {spec.tool_name}: {spec.rate_limit_class}")
-        caveat_class = _effective_source_caveat_class(spec)
+        caveat_class = effective_source_caveat_class(spec)
         if caveat_class not in SOURCE_CAVEAT_CLASSES:
             raise RuntimeError(f"Unknown live-gateway source caveat class for {spec.tool_name}: {caveat_class}")
         if not spec.scopes:
@@ -467,8 +402,8 @@ def live_tool_inventory() -> list[dict[str, Any]]:
                 "result_limit": spec.result_limit,
                 "rate_limit_class": spec.rate_limit_class,
                 "auth_posture": "bearer_required_for_http_sse",
-                "source_caveat_class": _effective_source_caveat_class(spec),
-                "source_caveat": _source_caveat(spec),
+                "source_caveat_class": effective_source_caveat_class(spec),
+                "source_caveat": source_caveat(spec),
                 "requires_provenance": spec.require_provenance,
                 "audit_event": "tool_call",
             }
@@ -562,13 +497,24 @@ async def list_live_tools() -> dict[str, Any]:
                 "source_caveat_class": "<source_caveat_class>",
                 "provenance_status": (
                     "evidence_receipt_valid|evidence_receipt_invalid|"
-                    "evidence_receipt_missing|non_object_result"
+                    "evidence_receipt_missing|source_claim_paths_invalid|non_object_result"
                 ),
                 "evidence_present": "<bool>",
                 "source_metadata_present": "<bool>",
                 "identity_present": "<bool>",
+                "source_claim_paths_status": "source_claim_paths_valid|source_claim_paths_invalid",
+                "source_claim_paths_valid": "<bool>",
+                "source_claim_path_issues": "<path validation defects when source-claim traceability fails>",
                 "sensitive_argument_keys": "<redacted_key_names_when_blocked>",
                 "invalid_evidence_paths": "<paths_and_errors_when_nested_or_top_level_receipts_fail_validation>",
+                "trace_id": "<non-secret policy decision correlation id>",
+                "audit_evidence": {
+                    "trace_id": "<same trace_id>",
+                    "requested_scopes": "<tool policy scopes required for this decision>",
+                    "provenance": "<compact evidence/source-claim validation status>",
+                    "blocked_reasons": "<policy and provenance reasons when outcome is blocked>",
+                    "degraded_reasons": "<non-blocking provenance caveats when outcome is allowed>",
+                },
                 "subject": "<caller_identity_when_auth_available>",
                 "outcome": "allowed|blocked|error",
             },
@@ -580,6 +526,8 @@ async def list_live_tools() -> dict[str, Any]:
                 "Malformed upstream evidence receipts are blocked before results leave live-gateway, including nested row receipts.",
                 "Structurally valid but empty upstream evidence receipts are blocked; live routed receipts must include source identity, match basis, confidence, caveat, and next step.",
                 "Missing upstream evidence receipts are blocked for live tools that require provenance.",
+                "Live-routed results must pass strict source-claim-path validation before leaving live-gateway.",
+                "Allowed responses and audit events include compact non-secret audit_evidence with trace_id, requested scopes, provenance status, and block/degradation reasons.",
                 "HTTP/SSE auth cannot be disabled for live-gateway startup.",
                 "HTTP/SSE wildcard network binds require explicit opt-in, HTTPS public URL, and locked Host/Origin allow-lists.",
                 "Batch screening tools require the additional mcp:bulk scope.",
@@ -656,9 +604,16 @@ async def call_live_tool(
 ) -> Any:
     """Call an allowlisted live tool through the gateway policy enforcement path."""
 
+    trace_id = _new_trace_id()
     spec = LIVE_TOOL_BY_NAME.get(tool_name)
     if spec is None:
-        _record_audit(tool_name=tool_name, outcome="blocked", reason="tool_not_allowlisted", subject=subject)
+        _record_audit(
+            tool_name=tool_name,
+            outcome="blocked",
+            reason="tool_not_allowlisted",
+            subject=subject,
+            trace_id=trace_id,
+        )
         raise_tool_error(f"{tool_name!r} is not exposed by live-gateway", code="policy_denied")
 
     kwargs = dict(arguments or {})
@@ -669,6 +624,7 @@ async def call_live_tool(
             outcome="blocked",
             reason="sensitive_argument_key_rejected",
             subject=subject,
+            trace_id=trace_id,
             sensitive_argument_keys=sensitive_keys,
         )
         raise_tool_error(
@@ -687,6 +643,7 @@ async def call_live_tool(
             outcome="blocked",
             reason="request_size_limit_exceeded",
             subject=subject,
+            trace_id=trace_id,
             request_size_bytes=request_size,
         )
         raise_tool_error(
@@ -694,16 +651,23 @@ async def call_live_tool(
             code="policy_denied",
         )
 
-    _enforce_argument_limits(spec, kwargs, subject=subject)
-    _enforce_scopes(spec, caller_scopes, subject=subject)
-    _enforce_rate_limit(spec, subject=subject)
+    _enforce_argument_limits(spec, kwargs, subject=subject, trace_id=trace_id)
+    _enforce_scopes(spec, caller_scopes, subject=subject, trace_id=trace_id)
+    _enforce_rate_limit(spec, subject=subject, trace_id=trace_id)
 
     tool = _LIVE_TOOL_CALLABLES[spec.tool_name]
     try:
         raw_result = tool(**kwargs)
         result = await raw_result if inspect.isawaitable(raw_result) else raw_result
     except Exception:
-        _record_audit(spec=spec, outcome="error", reason="owning_tool_error", subject=subject, request_size_bytes=request_size)
+        _record_audit(
+            spec=spec,
+            outcome="error",
+            reason="owning_tool_error",
+            subject=subject,
+            trace_id=trace_id,
+            request_size_bytes=request_size,
+        )
         raise
 
     structured = to_structured(result)
@@ -714,6 +678,7 @@ async def call_live_tool(
             outcome="blocked",
             reason="result_limit_exceeded",
             subject=subject,
+            trace_id=trace_id,
             request_size_bytes=request_size,
             result_count=result_count,
         )
@@ -729,6 +694,7 @@ async def call_live_tool(
             outcome="blocked",
             reason="result_size_limit_exceeded",
             subject=subject,
+            trace_id=trace_id,
             request_size_bytes=request_size,
             result_size_bytes=result_size,
         )
@@ -737,20 +703,39 @@ async def call_live_tool(
             code="policy_denied",
         )
 
-    provenance_status = _provenance_status(structured)
+    provenance_status = evaluate_provenance_status(structured)
     if provenance_status.get("status") == "evidence_receipt_invalid":
         _record_audit(
             spec=spec,
             outcome="blocked",
             reason="invalid_evidence_receipt",
             subject=subject,
+            trace_id=trace_id,
+            provenance_status_payload=provenance_status,
             request_size_bytes=request_size,
             result_size_bytes=result_size,
             result_count=result_count,
-            **_audit_provenance_fields(provenance_status),
+            **audit_provenance_fields(provenance_status),
         )
         raise_tool_error(
             f"{spec.tool_name} returned an invalid evidence receipt; live-gateway requires valid provenance when evidence is present",
+            code="policy_denied",
+        )
+    if provenance_status.get("status") == "source_claim_paths_invalid":
+        _record_audit(
+            spec=spec,
+            outcome="blocked",
+            reason="invalid_source_claim_paths",
+            subject=subject,
+            trace_id=trace_id,
+            provenance_status_payload=provenance_status,
+            request_size_bytes=request_size,
+            result_size_bytes=result_size,
+            result_count=result_count,
+            **audit_provenance_fields(provenance_status),
+        )
+        raise_tool_error(
+            f"{spec.tool_name} returned invalid source claim paths; live-gateway requires boundary traceability",
             code="policy_denied",
         )
     if spec.require_provenance and provenance_status.get("status") in {"evidence_receipt_missing", "non_object_result"}:
@@ -759,16 +744,30 @@ async def call_live_tool(
             outcome="blocked",
             reason="missing_evidence_receipt",
             subject=subject,
+            trace_id=trace_id,
+            provenance_status_payload=provenance_status,
             request_size_bytes=request_size,
             result_size_bytes=result_size,
             result_count=result_count,
-            **_audit_provenance_fields(provenance_status),
+            **audit_provenance_fields(provenance_status),
         )
         raise_tool_error(
             f"{spec.tool_name} returned no evidence receipt; live-gateway requires source provenance before routing results",
             code="policy_denied",
         )
-    response = _attach_gateway_policy(spec, structured, provenance_status=provenance_status)
+    audit_evidence = build_audit_evidence_export(
+        spec,
+        provenance_status=provenance_status,
+        trace_id=trace_id,
+        outcome="allowed",
+        reason="policy_passed",
+    )
+    response = attach_gateway_policy(
+        spec,
+        structured,
+        provenance_status=provenance_status,
+        audit_evidence=audit_evidence,
+    )
     response_size = _json_size(response)
     if response_size > spec.result_size_limit_bytes:
         _record_audit(
@@ -776,10 +775,12 @@ async def call_live_tool(
             outcome="blocked",
             reason="response_size_limit_exceeded",
             subject=subject,
+            trace_id=trace_id,
+            provenance_status_payload=provenance_status,
             request_size_bytes=request_size,
             result_size_bytes=response_size,
             result_count=result_count,
-            **_audit_provenance_fields(provenance_status),
+            **audit_provenance_fields(provenance_status),
         )
         raise_tool_error(
             f"{spec.tool_name} response is {response_size} bytes after live-gateway policy metadata; "
@@ -791,15 +792,24 @@ async def call_live_tool(
         outcome="allowed",
         reason="policy_passed",
         subject=subject,
+        trace_id=trace_id,
+        provenance_status_payload=provenance_status,
+        audit_evidence=audit_evidence,
         request_size_bytes=request_size,
         result_size_bytes=response_size,
         result_count=result_count,
-        **_audit_provenance_fields(provenance_status),
+        **audit_provenance_fields(provenance_status),
     )
     return response
 
 
-def _enforce_argument_limits(spec: LiveToolSpec, arguments: Mapping[str, Any], *, subject: str) -> None:
+def _enforce_argument_limits(
+    spec: LiveToolSpec,
+    arguments: Mapping[str, Any],
+    *,
+    subject: str,
+    trace_id: str,
+) -> None:
     for key in ("limit", "size", "page_size", "max_results"):
         value = arguments.get(key)
         requested_limit = _coerce_result_limit_argument(value)
@@ -809,6 +819,7 @@ def _enforce_argument_limits(spec: LiveToolSpec, arguments: Mapping[str, Any], *
                 outcome="blocked",
                 reason=f"{key}_argument_below_minimum",
                 subject=subject,
+                trace_id=trace_id,
             )
             raise_tool_error(
                 f"{spec.tool_name} argument {key}={value!r} must be at least 1",
@@ -820,6 +831,7 @@ def _enforce_argument_limits(spec: LiveToolSpec, arguments: Mapping[str, Any], *
                 outcome="blocked",
                 reason=f"{key}_argument_exceeds_result_limit",
                 subject=subject,
+                trace_id=trace_id,
             )
             raise_tool_error(
                 f"{spec.tool_name} argument {key}={value!r} exceeds live-gateway result_limit={spec.result_limit}",
@@ -833,6 +845,7 @@ def _enforce_argument_limits(spec: LiveToolSpec, arguments: Mapping[str, Any], *
             outcome="blocked",
             reason="argument_list_exceeds_result_limit",
             subject=subject,
+            trace_id=trace_id,
             oversized_argument_lists=oversized_lists,
         )
         first = oversized_lists[0]
@@ -891,7 +904,13 @@ def _normalize_argument_key(value: str) -> str:
     return "".join(character.lower() if character.isalnum() else "_" for character in value).strip("_")
 
 
-def _enforce_scopes(spec: LiveToolSpec, caller_scopes: Sequence[str] | None, *, subject: str) -> None:
+def _enforce_scopes(
+    spec: LiveToolSpec,
+    caller_scopes: Sequence[str] | None,
+    *,
+    subject: str,
+    trace_id: str,
+) -> None:
     granted = set(caller_scopes if caller_scopes is not None else _security_config.required_scopes)
     missing = sorted(set(spec.scopes) - granted)
     if missing:
@@ -900,6 +919,7 @@ def _enforce_scopes(spec: LiveToolSpec, caller_scopes: Sequence[str] | None, *, 
             outcome="blocked",
             reason="missing_scope",
             subject=subject,
+            trace_id=trace_id,
             missing_scopes=missing,
         )
         raise_tool_error(
@@ -909,7 +929,7 @@ def _enforce_scopes(spec: LiveToolSpec, caller_scopes: Sequence[str] | None, *, 
         )
 
 
-def _enforce_rate_limit(spec: LiveToolSpec, *, subject: str) -> None:
+def _enforce_rate_limit(spec: LiveToolSpec, *, subject: str, trace_id: str) -> None:
     calls, window_seconds = _RATE_LIMIT_POLICIES.get(spec.rate_limit_class, _RATE_LIMIT_POLICIES["standard"])
     now = time.monotonic()
     key = f"{spec.rate_limit_class}:{spec.tool_name}:{_rate_limit_subject(subject)}"
@@ -923,6 +943,7 @@ def _enforce_rate_limit(spec: LiveToolSpec, *, subject: str) -> None:
             outcome="blocked",
             reason="rate_limit_exceeded",
             subject=subject,
+            trace_id=trace_id,
             retry_after_seconds=retry_after,
         )
         raise_tool_error(
@@ -959,85 +980,12 @@ def _access_token_subject(access_token: AccessToken) -> str:
     return f"{client_id}:{token_fingerprint(token_id)}"[:128]
 
 
-def _attach_gateway_policy(spec: LiveToolSpec, result: Any, *, provenance_status: Mapping[str, Any] | None = None) -> Any:
-    registry_spec = SERVER_BY_ID[spec.server]
-    policy = {
-        "gateway": "live-gateway",
-        "tool": spec.tool_name,
-        "server": spec.server,
-        "dataset_ids": list(registry_spec.dataset_ids),
-        "cache_needs": list(registry_spec.cache_needs),
-        "server_safety_notes": list(registry_spec.safety_notes),
-        "allowed_scopes": list(spec.scopes),
-        "request_size_limit_bytes": spec.request_size_limit_bytes,
-        "result_size_limit_bytes": spec.result_size_limit_bytes,
-        "result_limit": spec.result_limit,
-        "rate_limit_class": spec.rate_limit_class,
-        "source_caveat_class": _effective_source_caveat_class(spec),
-        "source_caveat": _source_caveat(spec),
-        "audit_event": "tool_call",
-        "requires_provenance": spec.require_provenance,
-        "provenance_status": dict(provenance_status or _provenance_status(result)),
-    }
-    if isinstance(result, dict):
-        response = dict(result)
-        response["live_gateway_policy"] = policy
-        return response
-    return {"result": result, "live_gateway_policy": policy}
-
-
-def _provenance_status(result: Any) -> dict[str, Any]:
-    payload = to_structured(result)
-    if not isinstance(payload, Mapping):
-        return {
-            "status": "non_object_result",
-            "evidence_present": False,
-            "evidence_valid": False,
-            "source_metadata_present": False,
-            "identity_present": False,
-        }
-
-    evidence_summary = evidence_receipt_validation_summary(payload, require_content=True)
-    result_status = {
-        "status": evidence_summary["status"],
-        "evidence_present": evidence_summary["evidence_present"],
-        "evidence_valid": evidence_summary["evidence_valid"],
-        "source_metadata_present": bool(_nested_values_for_keys(payload, {"source_metadata"})),
-        "identity_present": bool(_nested_values_for_keys(payload, {"identity", "identities", "entity", "entities"})),
-    }
-    if evidence_summary.get("invalid_evidence_paths"):
-        result_status["invalid_evidence_paths"] = evidence_summary["invalid_evidence_paths"]
-    return result_status
-
-
-def _nested_values_for_keys(value: Any, keys: set[str], *, path: str = "result") -> list[tuple[str, Any]]:
-    matches: list[tuple[str, Any]] = []
-    if isinstance(value, Mapping):
-        for key, child in value.items():
-            child_path = f"{path}.{key}"
-            if str(key) in keys:
-                matches.append((child_path, child))
-            matches.extend(_nested_values_for_keys(child, keys, path=child_path))
-    elif isinstance(value, Sequence) and not isinstance(value, str | bytes | bytearray):
-        for index, child in enumerate(value):
-            matches.extend(_nested_values_for_keys(child, keys, path=f"{path}[{index}]"))
-    return matches
-
-
-def _audit_provenance_fields(provenance_status: Mapping[str, Any]) -> dict[str, Any]:
-    fields = {
-        "provenance_status": provenance_status.get("status"),
-        "evidence_present": bool(provenance_status.get("evidence_present")),
-        "source_metadata_present": bool(provenance_status.get("source_metadata_present")),
-        "identity_present": bool(provenance_status.get("identity_present")),
-    }
-    if provenance_status.get("invalid_evidence_paths"):
-        fields["invalid_evidence_paths"] = provenance_status["invalid_evidence_paths"]
-    return fields
-
-
 def _json_size(value: Any) -> int:
     return len(json.dumps(to_structured(value), separators=(",", ":"), sort_keys=True, default=str).encode("utf-8"))
+
+
+def _new_trace_id() -> str:
+    return uuid.uuid4().hex
 
 
 def _max_list_length(value: Any) -> int:
@@ -1056,25 +1004,55 @@ def _record_audit(
     outcome: str,
     reason: str,
     subject: str = "configured_gateway_principal",
+    trace_id: str | None = None,
+    provenance_status_payload: Mapping[str, Any] | None = None,
+    audit_evidence: Mapping[str, Any] | None = None,
     **fields: Any,
 ) -> None:
+    event_trace_id = trace_id or _new_trace_id()
     event = {
         "event": "tool_call",
         "gateway": "live-gateway",
+        "trace_id": event_trace_id,
         "tool": spec.tool_name if spec else tool_name or "",
         "server": spec.server if spec else "",
         "category": spec.category if spec else "",
         "rate_limit_class": spec.rate_limit_class if spec else "",
-        "source_caveat_class": _effective_source_caveat_class(spec) if spec else "",
+        "source_caveat_class": effective_source_caveat_class(spec) if spec else "",
         "subject": subject,
         "outcome": outcome,
         "reason": reason,
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
     event.update({key: value for key, value in fields.items() if value not in (None, "")})
+    if spec:
+        event["audit_evidence"] = dict(
+            audit_evidence
+            or build_audit_evidence_export(
+                spec,
+                provenance_status=provenance_status_payload or _provenance_status_from_audit_fields(event),
+                trace_id=event_trace_id,
+                outcome=outcome,
+                reason=reason,
+            )
+        )
     _AUDIT_EVENTS.append(event)
     _append_audit_log(event)
     logger.info("live_gateway_audit %s", json.dumps(event, sort_keys=True, default=str))
+
+
+def _provenance_status_from_audit_fields(event: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "status": event.get("provenance_status") or "not_evaluated",
+        "evidence_present": bool(event.get("evidence_present")),
+        "evidence_valid": event.get("provenance_status") == "evidence_receipt_valid",
+        "source_metadata_present": bool(event.get("source_metadata_present")),
+        "identity_present": bool(event.get("identity_present")),
+        "source_claim_paths_status": event.get("source_claim_paths_status") or "not_evaluated",
+        "source_claim_paths_valid": bool(event.get("source_claim_paths_valid")),
+        "source_claim_path_issues": event.get("source_claim_path_issues") or [],
+        "invalid_evidence_paths": event.get("invalid_evidence_paths") or [],
+    }
 
 
 def _audit_log_path() -> Path | None:

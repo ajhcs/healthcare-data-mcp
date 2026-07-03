@@ -6,6 +6,7 @@ import pytest
 
 from servers.geo_demographics import server
 from shared.utils.mcp_response import validate_evidence_receipt
+from shared.utils.source_backed_result import validate_source_claim_paths
 from tests.helpers import parse_tool_result
 
 
@@ -18,6 +19,29 @@ def _sample_demographics(zcta: str, year: int = 2023) -> dict:
         "male_population": 480,
         "female_population": 520,
         "age_distribution": {"under_18": 200, "age_18_to_64": 600, "age_65_plus": 200},
+        "race_ethnicity": {
+            "white_alone": 600,
+            "black_alone": 200,
+            "american_indian_alaska_native_alone": 10,
+            "asian_alone": 100,
+            "native_hawaiian_pacific_islander_alone": 5,
+            "some_other_race_alone": 20,
+            "two_or_more_races": 65,
+            "hispanic_latino": 150,
+            "not_hispanic_latino": 850,
+        },
+        "land_area": {
+            "land_area_square_meters": 2589988.110336,
+            "land_area_square_miles": 1.0,
+            "source_dataset_id": "census_gazetteer_zcta",
+            "source_period": "2023",
+        },
+        "population_density": {
+            "people_per_square_mile": 1000.0,
+            "population_input": 1000,
+            "land_area_input_square_miles": 1.0,
+            "source_dataset_id": "census_acs5_zcta_demographics+census_gazetteer_zcta",
+        },
         "median_household_income": 75000,
         "insurance": {
             "private": 500,
@@ -57,6 +81,11 @@ def _assert_receipt(result: dict, *, dataset_id: str, match_basis: str) -> None:
     validate_evidence_receipt(result["evidence"], require_content=True)
 
 
+def _assert_boundary_traceability(result: dict) -> None:
+    assert result["identity_map"]["source_claims"]
+    assert validate_source_claim_paths(result, require_boundary_traceability=True)["valid"] is True
+
+
 @pytest.mark.asyncio
 async def test_get_zcta_demographics_returns_evidence_and_identity(monkeypatch) -> None:
     async def fake_get(zcta: str, year: int = 2023) -> dict:
@@ -67,6 +96,10 @@ async def test_get_zcta_demographics_returns_evidence_and_identity(monkeypatch) 
     result = parse_tool_result(await server.get_zcta_demographics("19107", year=2023))
 
     assert result["zcta"] == "19107"
+    assert result["race_ethnicity"]["hispanic_latino"] == 150
+    assert result["population_density"]["people_per_square_mile"] == 1000.0
+    validate_evidence_receipt(result["land_area_evidence"], require_content=True)
+    assert result["land_area_evidence"]["dataset_id"] == "census_gazetteer_zcta"
     _assert_receipt(result, dataset_id="census_acs5_zcta_demographics", match_basis="zcta_exact_acs5_api_row")
     assert result["identity"]["zip_code"] == "19107"
 
@@ -83,11 +116,41 @@ async def test_get_zcta_demographics_batch_returns_collection_evidence(monkeypat
     assert result["count"] == 2
     assert [row["zcta"] for row in result["results"]] == ["19107", "19104"]
     validate_evidence_receipt(result["results"][0]["evidence"], require_content=True)
+    validate_evidence_receipt(result["results"][0]["land_area_evidence"], require_content=True)
     assert result["results"][0]["evidence"]["dataset_id"] == "census_acs5_zcta_demographics"
     assert result["results"][0]["evidence"]["match_basis"] == "zcta_exact_acs5_batch_row"
     assert result["results"][0]["evidence"]["query"]["zcta"] == "19107"
+    assert result["results"][0]["land_area_evidence"]["dataset_id"] == "census_gazetteer_zcta"
+    assert result["results"][0]["race_ethnicity"]["black_alone"] == 200
     _assert_receipt(result, dataset_id="census_acs5_zcta_demographics", match_basis="zcta_exact_batch_acs5_api_rows")
     assert {entity["zip_code"] for entity in result["identity_map"]["entities"]} == {"19107", "19104"}
+    _assert_boundary_traceability(result)
+
+
+@pytest.mark.asyncio
+async def test_get_zcta_demographics_batch_preserves_no_data_rows(monkeypatch) -> None:
+    async def fake_batch(zctas: list[str], year: int = 2023) -> list[dict]:
+        return [
+            _sample_demographics("19107", year),
+            {
+                "zcta": "00000",
+                "year": year,
+                "status": "no_data",
+                "missingness_state": "unavailable_public",
+                "error": "No ACS5 data found for ZCTA 00000",
+            },
+        ]
+
+    monkeypatch.setattr(server, "get_demographics_batch", fake_batch)
+
+    result = parse_tool_result(await server.get_zcta_demographics_batch(["19107", "00000"], year=2023))
+
+    assert result["count"] == 2
+    assert result["results"][1]["status"] == "no_data"
+    assert result["results"][1]["missingness_state"] == "unavailable_public"
+    assert result["results"][1]["evidence"]["match_basis"] == "zcta_exact_acs5_no_data"
+    assert {entity["zip_code"] for entity in result["identity_map"]["entities"]} == {"19107"}
+    _assert_boundary_traceability(result)
 
 
 @pytest.mark.asyncio
@@ -108,6 +171,7 @@ async def test_get_zcta_adjacency_returns_tiger_evidence(monkeypatch) -> None:
     assert result["adjacent_zcta_rows"][0]["evidence"]["query"]["adjacent_zcta"] == "19103"
     _assert_receipt(result, dataset_id="census_tiger_zcta_adjacency", match_basis="zcta_exact_tiger_adjacency_cache")
     assert {entity["zip_code"] for entity in result["identity_map"]["entities"]} == {"19103", "19106"}
+    _assert_boundary_traceability(result)
 
 
 @pytest.mark.asyncio
@@ -168,3 +232,4 @@ async def test_crosswalk_zip_returns_hud_evidence_and_identity_map(monkeypatch) 
     _assert_receipt(result, dataset_id="hud_usps_zip_crosswalk", match_basis="zip_exact_hud_usps_crosswalk")
     assert result["identity"]["zip_code"] == "19107"
     assert result["identity_map"]["entities"][0]["unresolved_identifiers"][0] == {"type": "county", "value": "42101"}
+    _assert_boundary_traceability(result)

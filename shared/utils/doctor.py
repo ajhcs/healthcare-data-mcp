@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from shared.utils.server_registry import SERVER_BY_ID, SERVER_REGISTRY, WORKFLOW_PRESETS, ServerCapability
+from shared.utils.source_status import normalize_source_status
 from shared.utils.workflows import build_workflow_plan, validate_workflow_contracts, validate_workflow_tool_references
 
 
@@ -583,6 +584,13 @@ def format_doctor_report(report: dict[str, Any]) -> str:
         lines.append("  rate-limit classes: " + ", ".join(live_policy["rate_limit_classes"]))
     if live_policy.get("scope_sets"):
         lines.append("  scope sets: " + "; ".join(live_policy["scope_sets"]))
+    audit_evidence = live_policy.get("audit_evidence_export", {})
+    if audit_evidence:
+        lines.append(
+            "  audit evidence export: "
+            f"{audit_evidence.get('status', 'unknown')} "
+            f"({audit_evidence.get('helper', 'unknown helper')})"
+        )
     for issue in live_policy.get("issues", [])[:5]:
         lines.append(f"  CHECK {issue.get('tool', issue.get('server', 'policy'))}: {issue.get('status')}")
 
@@ -730,6 +738,11 @@ def _cache_report(cache_root: str | Path | None) -> dict[str, Any]:
                 "report_eligible": bool(entry.get("report_eligible", False)),
                 "next_action": str(entry.get("next_action", "")),
                 "ttl_days": entry.get("ttl_days"),
+                "source_status": normalize_source_status(
+                    entry,
+                    retrieval_method="cache",
+                    caveat=str(entry.get("next_action") or "Cache/source status is reported by discovery metadata."),
+                ),
             }
             for entry in entries
             if (entry.get("readiness_status") or entry.get("status")) != "ready"
@@ -1080,6 +1093,14 @@ def _ast_call_count(tree: ast.AST, function_name: str) -> int:
     return count
 
 
+def _ast_function_count(tree: ast.AST, function_name: str) -> int:
+    return sum(
+        1
+        for child in ast.walk(tree)
+        if isinstance(child, ast.AsyncFunctionDef | ast.FunctionDef) and child.name == function_name
+    )
+
+
 def _module_fastmcp_tools(module_name: str) -> dict[str, Any]:
     spec = importlib.util.find_spec(module_name)
     if spec is None or not spec.origin:
@@ -1134,6 +1155,7 @@ def _live_gateway_policy_validation() -> dict[str, Any]:
     """Statically validate live-gateway policy wiring without starting the gateway."""
 
     module_name = "servers.live_gateway.server"
+    policy_runner_module_name = "servers.live_gateway.policy_runner"
     module_spec = importlib.util.find_spec(module_name)
     issues: list[dict[str, Any]] = []
     if module_spec is None or not module_spec.origin:
@@ -1183,16 +1205,61 @@ def _live_gateway_policy_validation() -> dict[str, Any]:
             "issue_count": 1,
         }
 
+    policy_runner_tree: ast.AST | None = None
+    policy_runner_spec = importlib.util.find_spec(policy_runner_module_name)
+    if policy_runner_spec is None or not policy_runner_spec.origin:
+        issues.append(
+            {
+                "status": "policy_runner_module_not_found",
+                "module": policy_runner_module_name,
+                "message": "Could not find live-gateway policy runner module source.",
+            }
+        )
+    else:
+        policy_runner_path = Path(policy_runner_spec.origin)
+        try:
+            policy_runner_tree = ast.parse(
+                policy_runner_path.read_text(encoding="utf-8"),
+                filename=str(policy_runner_path),
+            )
+        except Exception as exc:
+            issues.append(
+                {
+                    "status": "policy_runner_module_parse_failed",
+                    "module": policy_runner_module_name,
+                    "message": f"{type(exc).__name__}: {exc}",
+                }
+            )
+
     specs = _live_tool_specs_from_tree(tree)
     rate_limit_policies = _literal_assignment(tree, "_RATE_LIMIT_POLICIES", default={})
     allowed_live_scopes = _literal_assignment(tree, "_ALLOWED_LIVE_SCOPES", default={"mcp:read", "mcp:bulk"})
-    source_caveat_classes = _literal_assignment(tree, "SOURCE_CAVEAT_CLASSES", default={})
-    category_caveat_class = _literal_assignment(tree, "_CATEGORY_CAVEAT_CLASS", default={})
+    policy_tree = policy_runner_tree or tree
+    source_caveat_classes = _literal_assignment(policy_tree, "SOURCE_CAVEAT_CLASSES", default={})
+    category_caveat_class = _literal_assignment(policy_tree, "_CATEGORY_CAVEAT_CLASS", default={})
     shared_evidence_validation_call_count = _ast_call_count(tree, "evidence_receipt_validation_summary")
+    if policy_runner_tree is not None:
+        shared_evidence_validation_call_count += _ast_call_count(
+            policy_runner_tree,
+            "evidence_receipt_validation_summary",
+        )
     shared_evidence_validation = {
         "status": "ok" if shared_evidence_validation_call_count else "missing",
         "call_count": shared_evidence_validation_call_count,
         "helper": "shared.utils.mcp_response.evidence_receipt_validation_summary",
+    }
+    audit_evidence_helper_defined = bool(
+        policy_runner_tree is not None
+        and _ast_function_count(policy_runner_tree, "build_audit_evidence_export")
+    )
+    audit_evidence_attach_count = _ast_call_count(tree, "build_audit_evidence_export")
+    if policy_runner_tree is not None:
+        audit_evidence_attach_count += _ast_call_count(policy_runner_tree, "build_audit_evidence_export")
+    audit_evidence_export = {
+        "status": "ok" if audit_evidence_helper_defined and audit_evidence_attach_count else "missing",
+        "helper": "servers.live_gateway.policy_runner.build_audit_evidence_export",
+        "helper_defined": audit_evidence_helper_defined,
+        "call_count": audit_evidence_attach_count,
     }
     if not shared_evidence_validation_call_count:
         issues.append(
@@ -1203,6 +1270,14 @@ def _live_gateway_policy_validation() -> dict[str, Any]:
                     "live-gateway must use the shared nested evidence receipt validator "
                     "instead of a private provenance traversal."
                 ),
+            }
+        )
+    if audit_evidence_export["status"] != "ok":
+        issues.append(
+            {
+                "status": "live_gateway_audit_evidence_export_missing",
+                "module": policy_runner_module_name,
+                "message": "live-gateway must expose compact non-secret audit evidence with trace IDs for policy decisions.",
             }
         )
     rate_limit_names = set(rate_limit_policies) if isinstance(rate_limit_policies, dict) else set()
@@ -1324,6 +1399,7 @@ def _live_gateway_policy_validation() -> dict[str, Any]:
         "status": "ok" if not issues else "issues_found",
         "method": "live_gateway_static_policy_ast",
         "module": module_name,
+        "policy_runner_module": policy_runner_module_name,
         "tool_count": len(specs),
         "live_server_count": len(live_servers),
         "bulk_tool_count": bulk_tool_count,
@@ -1332,6 +1408,7 @@ def _live_gateway_policy_validation() -> dict[str, Any]:
         "source_caveat_classes": sorted(source_caveat_names),
         "scope_sets": sorted(scope_sets),
         "shared_evidence_validation": shared_evidence_validation,
+        "audit_evidence_export": audit_evidence_export,
         "issues": issues,
         "issue_count": len(issues),
     }

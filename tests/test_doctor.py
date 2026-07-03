@@ -48,6 +48,7 @@ def test_doctor_report_includes_operator_readiness_sections(tmp_path, monkeypatc
     assert report["summary"]["evidence_contract_issues"] == 0
     assert report["live_gateway_policy_validation"]["status"] == "ok"
     assert report["live_gateway_policy_validation"]["method"] == "live_gateway_static_policy_ast"
+    assert report["live_gateway_policy_validation"]["policy_runner_module"] == "servers.live_gateway.policy_runner"
     assert report["live_gateway_policy_validation"]["tool_count"] >= 50
     assert report["live_gateway_policy_validation"]["bulk_tool_count"] >= 2
     assert report["live_gateway_policy_validation"]["provenance_required_tool_count"] == (
@@ -59,6 +60,11 @@ def test_doctor_report_includes_operator_readiness_sections(tmp_path, monkeypatc
     assert shared_evidence_validation["status"] == "ok"
     assert shared_evidence_validation["call_count"] >= 1
     assert shared_evidence_validation["helper"] == "shared.utils.mcp_response.evidence_receipt_validation_summary"
+    audit_evidence_export = report["live_gateway_policy_validation"]["audit_evidence_export"]
+    assert audit_evidence_export["status"] == "ok"
+    assert audit_evidence_export["helper"] == "servers.live_gateway.policy_runner.build_audit_evidence_export"
+    assert audit_evidence_export["helper_defined"] is True
+    assert audit_evidence_export["call_count"] >= 1
     assert report["summary"]["live_gateway_policy_issues"] == 0
     evidence_surfaces = {
         surface["surface"]: surface
@@ -123,6 +129,13 @@ def test_doctor_report_includes_operator_readiness_sections(tmp_path, monkeypatc
     assert "docs:workflow-catalog" in artifact_names
     assert report["client_config_hints"]
     assert report["remote_gateway"]["metadata_gateway"] == "search/fetch metadata only"
+    not_ready_source_status = report["cache"]["not_ready_examples"][0]["source_status"]
+    assert not_ready_source_status["source_url"]
+    assert not_ready_source_status["source_period"]
+    assert not_ready_source_status["cache_status"]
+    assert not_ready_source_status["cache_freshness"]
+    assert not_ready_source_status["retrieval_method"] == "cache"
+    assert not_ready_source_status["caveat"]
 
 
 def test_priority_evidence_contracts_cover_live_gateway_provenance_tools() -> None:
@@ -224,6 +237,7 @@ def test_doctor_report_formats_as_actionable_text(tmp_path, monkeypatch) -> None
     assert "ci_product_readiness_gates: ok" in text
     assert "Live-gateway policy validation:" in text
     assert "rate-limit classes: bulk, standard" in text
+    assert "audit evidence export: ok" in text
     assert "step readiness:" in text
     assert "hc-mcp workflow compliance_exclusion_screening --json" in text
     assert "hc-mcp public-records" in text

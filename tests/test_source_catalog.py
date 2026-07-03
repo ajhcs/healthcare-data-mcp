@@ -5,6 +5,7 @@ import json
 import pytest
 
 from shared.utils.source_catalog import (
+    PublicSourceCatalog,
     SourceManifest,
     read_source_manifest,
     resolve_cms_dataset,
@@ -164,6 +165,40 @@ def test_source_manifest_json_roundtrip(tmp_path) -> None:
 
     assert loaded == manifest
     assert json.loads(path.read_text(encoding="utf-8"))["source_url"] == "https://example.test/data.csv"
+
+
+def test_public_source_catalog_resolves_cms_and_socrata_from_loaded_catalogs() -> None:
+    catalog = PublicSourceCatalog(
+        cms_catalog={
+            "dataset": [
+                {
+                    "title": "Hospital Enrollments",
+                    "identifier": "cms-current",
+                    "modified": "2026-04-20",
+                    "landingPage": "https://data.cms.gov/provider-enrollment/hospital-enrollments",
+                    "distribution": [{"downloadURL": "https://example.test/enrollments.csv", "format": "CSV"}],
+                }
+            ]
+        },
+        socrata_catalog={
+            "results": [
+                {
+                    "resource": {
+                        "id": "abcd-1234",
+                        "name": "PLACES County Data 2025 release",
+                        "domain": "data.cdc.gov",
+                    },
+                    "permalink": "https://data.cdc.gov/d/abcd-1234",
+                }
+            ]
+        },
+    )
+
+    cms = catalog.resolve_cms_dataset("Hospital Enrollments")
+    socrata = catalog.resolve_socrata_dataset("PLACES County Data", release="2025 release")
+
+    assert cms.dataset_id == "cms-current"
+    assert socrata.source_url == "https://data.cdc.gov/resource/abcd-1234.json"
 
 
 def test_resolvers_raise_for_missing_fixture_matches() -> None:

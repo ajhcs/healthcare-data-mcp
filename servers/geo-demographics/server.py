@@ -16,10 +16,18 @@ from shared.utils.mcp_observability import observe_tool
 from shared.utils.mcp_resources import register_standard_resources
 from shared.utils.healthcare_identity import identity_from_public_record
 from shared.utils.mcp_response import collection_response, error_response, evidence_receipt, to_structured
+from shared.utils.source_backed_result import source_claim
 
 from . import data_loaders as gv_loaders
 from . import geography as geo_shapes
-from .census_client import CENSUS_BASE, get_demographics_batch, get_demographics_for_zcta
+from .census_client import (
+    CENSUS_BASE,
+    GAZETTEER_LANDING_PAGE,
+    GAZETTEER_SOURCE_PERIOD,
+    GAZETTEER_URL,
+    get_demographics_batch,
+    get_demographics_for_zcta,
+)
 from .geography import get_adjacent_zctas
 from .models import (
     CrosswalkResponse,
@@ -55,6 +63,18 @@ def _census_source_metadata(year: int) -> dict[str, Any]:
         "cache_status": "live_api",
         "cache_freshness": "queried live via Census API",
         "source_caveat": "ACS estimates are geography-level survey estimates with margins and sampling limits; they are not patient-level facts.",
+    }
+
+
+def _census_gazetteer_source_metadata() -> dict[str, Any]:
+    return {
+        "source_name": "U.S. Census Bureau Gazetteer ZCTA file",
+        "source_url": GAZETTEER_URL,
+        "dataset_id": "census_gazetteer_zcta",
+        "source_period": GAZETTEER_SOURCE_PERIOD,
+        "landing_page": GAZETTEER_LANDING_PAGE,
+        "cache_status": "cache_or_fixture",
+        "source_caveat": "Gazetteer ZCTA land area supports density context only; it is not a patient-flow or market-membership fact.",
     }
 
 
@@ -168,12 +188,97 @@ def _geography_identity(
     return identity
 
 
-def _geography_identity_map(entities: list[dict[str, Any]], *, match_basis: str) -> dict[str, Any]:
+def _geography_identity_map(
+    entities: list[dict[str, Any]],
+    *,
+    match_basis: str,
+    source_metadata: dict[str, Any],
+    row_evidence_paths: tuple[str, ...] = (),
+) -> dict[str, Any]:
     return {
         "entities": entities,
         "match_basis": match_basis,
+        "source_claims": [
+            source_claim(
+                collection=str(source_metadata.get("dataset_id") or "geography"),
+                source_name=str(source_metadata.get("source_name") or ""),
+                source_url=str(source_metadata.get("source_url") or ""),
+                evidence_path="evidence",
+                source_metadata_path="source_metadata",
+                row_evidence_paths=row_evidence_paths,
+                match_policy=match_basis,
+            )
+        ],
         "conflict_policy": "Join geography records by exact geography type and code; names and allocation ratios are context only.",
     }
+
+
+def _is_no_data_demographics(data: dict[str, Any]) -> bool:
+    return data.get("status") == "no_data" or bool(data.get("error"))
+
+
+def _zcta_no_data_payload(
+    data: dict[str, Any],
+    *,
+    source_metadata: dict[str, Any],
+    parent_query: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    zcta = str(data.get("zcta") or "").zfill(5)
+    year = int(data.get("year") or (parent_query or {}).get("year") or 0)
+    row_query = {"zcta": zcta, "year": year}
+    return {
+        "zcta": zcta,
+        "year": year,
+        "status": "no_data",
+        "missingness_state": str(data.get("missingness_state") or "unavailable_public"),
+        "error": str(data.get("error") or f"No ACS5 data found for ZCTA {zcta}"),
+        "evidence": _geo_row_evidence(
+            source_metadata,
+            entity_scope="zcta_demographics_no_data",
+            parent_query=parent_query or row_query,
+            row_query=row_query,
+            match_basis="zcta_exact_acs5_no_data",
+            confidence="source_backed_no_data_state",
+            caveat=source_metadata["source_caveat"],
+            next_step="Treat this ZCTA as unresolved or unavailable; do not impute demographics.",
+        ),
+    }
+
+
+def _zcta_demographics_payload(
+    data: dict[str, Any],
+    *,
+    source_metadata: dict[str, Any],
+    land_area_source_metadata: dict[str, Any],
+    parent_query: dict[str, Any] | None = None,
+    match_basis: str,
+) -> dict[str, Any]:
+    if _is_no_data_demographics(data):
+        return _zcta_no_data_payload(data, source_metadata=source_metadata, parent_query=parent_query)
+
+    result = ZctaDemographics(**data)
+    row = result.model_dump()
+    row["evidence"] = _geo_row_evidence(
+        source_metadata,
+        entity_scope="zcta_demographics",
+        parent_query=parent_query or {"zcta": row.get("zcta"), "year": row.get("year")},
+        row_query={"zcta": row.get("zcta"), "year": row.get("year")},
+        match_basis=match_basis,
+        confidence="source_backed_geography_estimate",
+        caveat=source_metadata["source_caveat"],
+        next_step="Preserve this row receipt with the exact ZCTA and ACS year before citing demographics.",
+    )
+    row["land_area_evidence"] = _geo_row_evidence(
+        land_area_source_metadata,
+        entity_scope="zcta_land_area",
+        parent_query=parent_query or {"zcta": row.get("zcta")},
+        row_query={"zcta": row.get("zcta"), "source_period": land_area_source_metadata["source_period"]},
+        match_basis="zcta_exact_census_gazetteer_row",
+        confidence="source_backed_geography_area",
+        caveat=land_area_source_metadata["source_caveat"],
+        next_step="Use land area only as the denominator input for geography-level density context.",
+    )
+    return row
 
 
 @mcp.tool(structured_output=True)
@@ -231,11 +336,19 @@ async def get_zcta_demographics(zcta: str, year: int = 2023) -> dict[str, Any]:
     zcta = zcta.strip().zfill(5)
     try:
         data = await get_demographics_for_zcta(zcta, year)
-        result = ZctaDemographics(**data)
-        payload = to_structured(result.model_dump())
         source_metadata = _census_source_metadata(year)
+        land_area_source_metadata = _census_gazetteer_source_metadata()
+        payload = to_structured(
+            _zcta_demographics_payload(
+                data,
+                source_metadata=source_metadata,
+                land_area_source_metadata=land_area_source_metadata,
+                match_basis="zcta_exact_acs5_api_row",
+            )
+        )
         payload["source_metadata"] = source_metadata
-        payload["evidence"] = _geo_evidence(
+        payload["land_area_source_metadata"] = land_area_source_metadata
+        payload["evidence"] = payload.get("evidence") or _geo_evidence(
             source_metadata,
             entity_scope="zcta_demographics",
             query={"zcta": zcta, "year": year},
@@ -310,25 +423,25 @@ async def get_zcta_demographics_batch(zctas: list[str], year: int = 2023) -> dic
     zctas = [z.strip().zfill(5) for z in zctas]
     try:
         data_list = await get_demographics_batch(zctas, year)
-        results = [ZctaDemographics(**d) for d in data_list]
         source_metadata = _census_source_metadata(year)
-        rows = [r.model_dump() for r in results]
-        for row in rows:
-            row["evidence"] = _geo_row_evidence(
-                source_metadata,
-                entity_scope="zcta_demographics",
+        land_area_source_metadata = _census_gazetteer_source_metadata()
+        rows = [
+            _zcta_demographics_payload(
+                d,
+                source_metadata=source_metadata,
+                land_area_source_metadata=land_area_source_metadata,
                 parent_query={"zctas": zctas, "year": year},
-                row_query={"zcta": row.get("zcta"), "year": row.get("year")},
                 match_basis="zcta_exact_acs5_batch_row",
-                confidence="source_backed_geography_estimate",
-                caveat=source_metadata["source_caveat"],
-                next_step="Preserve this row receipt with the exact ZCTA and ACS year before citing demographics.",
             )
+            for d in data_list
+        ]
+        resolved_rows = [row for row in rows if row.get("status") != "no_data"]
         return collection_response(
             rows,
             limit=len(zctas),
-            meta={"source": source_metadata},
+            meta={"source": source_metadata, "land_area_source": land_area_source_metadata},
             source_metadata=source_metadata,
+            land_area_source_metadata=land_area_source_metadata,
             evidence=_geo_evidence(
                 source_metadata,
                 entity_scope="zcta_demographics_batch",
@@ -346,9 +459,11 @@ async def get_zcta_demographics_batch(zctas: list[str], year: int = 2023) -> dic
                         source_name=source_metadata["source_name"],
                         source_url=source_metadata["source_url"],
                     )
-                    for row in rows
+                    for row in resolved_rows
                 ],
                 match_basis="acs_zcta_exact_batch",
+                source_metadata=source_metadata,
+                row_evidence_paths=("results[].evidence", "results[].land_area_evidence"),
             ),
         )
     except httpx.HTTPStatusError as e:
@@ -462,6 +577,8 @@ async def get_zcta_adjacency(zcta: str) -> dict[str, Any]:
                 for neighbor in neighbors
             ],
             match_basis="tiger_adjacent_zcta_exact_codes",
+            source_metadata=source_metadata,
+            row_evidence_paths=("adjacent_zcta_rows[].evidence",),
         )
         return payload
     except FileNotFoundError as e:
@@ -839,6 +956,8 @@ async def crosswalk_zip(zip_code: str, target: str = "county") -> dict[str, Any]
                 if row.get("target_code")
             ],
             match_basis="hud_zip_crosswalk_target_codes",
+            source_metadata=source_metadata,
+            row_evidence_paths=("results[].evidence",),
         )
         return payload
 
