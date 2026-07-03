@@ -60,6 +60,9 @@ try:
     from .patient_volume_evidence_pack import (
         build_patient_volume_evidence_pack as assemble_patient_volume_evidence_pack,
     )
+    from .composite_source_input_evidence_pack import (
+        build_composite_source_input_evidence_pack as assemble_composite_source_input_evidence_pack,
+    )
     from .system_discovery import fuzzy_search_systems, resolve_system_ccns
     from .system_metrics import (
         get_health_system_metric as assemble_health_system_metric,
@@ -104,6 +107,9 @@ except ImportError:
     )
     from patient_volume_evidence_pack import (
         build_patient_volume_evidence_pack as assemble_patient_volume_evidence_pack,
+    )
+    from composite_source_input_evidence_pack import (
+        build_composite_source_input_evidence_pack as assemble_composite_source_input_evidence_pack,
     )
     from system_discovery import fuzzy_search_systems, resolve_system_ccns
     from system_metrics import (
@@ -1698,6 +1704,36 @@ async def build_physician_platform_evidence_pack(
 ) -> dict[str, Any]:
     """Normalize Public Alpha physician-platform evidence rows and receipts.
 
+    Discovery:
+    Use this when a profile-population agent needs source-backed physician
+    platform evidence for the Public Alpha `system.physician_count` metric.
+
+    When to use:
+    Use after public source rows have been found, or with no rows to record that
+    the physician-platform source pass has not yet happened.
+
+    Parameters:
+    `system_slug` and `system_name` identify the Toolkit system. `state`
+    scopes suggested retrieval. `source_rows` are caller-supplied public rows.
+    `required_definition_bases` can request employed, affiliated, total, or
+    normalized coverage checks.
+
+    Returns:
+    A read-only evidence pack with source hierarchy, normalized rows, conflicts,
+    missingness findings, identity map, confidence inputs, and row receipts.
+
+    Do / Don't:
+    Do preserve source periods, definition basis, and receipts. Don't treat the
+    result as an approved physician-count value or write profile_metric_values.
+
+    Examples:
+    `build_physician_platform_evidence_pack(system_slug="example-health",
+    system_name="Example Health", source_rows=[...])`
+
+    Common mistakes:
+    Empty `source_rows` means not yet researched, not zero physicians. Mixed
+    employed and affiliated definitions need Toolkit review.
+
     This read-only workflow supports Healthcare Toolkit population review for
     `system.physician_count`. It returns candidate evidence rows, definition
     basis, source hierarchy, identity join policy, confidence inputs, conflicts,
@@ -1725,6 +1761,36 @@ async def build_patient_volume_evidence_pack(
 ) -> dict[str, Any]:
     """Normalize Public Alpha PSA/ELMS patient-volume input rows.
 
+    Discovery:
+    Use this when a profile or methodology agent needs ZIP/ZCTA demand,
+    competitor, distance/friction, and attractiveness evidence for PSA/ELMS.
+
+    When to use:
+    Use after public patient-volume or access-point rows have been retrieved, or
+    with no rows to record that evidence adequacy has not been researched.
+
+    Parameters:
+    `region_slug` identifies the Toolkit region. `systems` and
+    `required_system_slugs` define all-six coverage. `source_rows` are
+    caller-supplied public rows. `denominator_scope` records the candidate
+    demand basis.
+
+    Returns:
+    A read-only evidence pack with source hierarchy, normalized rows, coverage,
+    blockers, identity map, confidence inputs, and row receipts.
+
+    Do / Don't:
+    Do preserve denominator scope, ZIP/ZCTA basis, and row receipts. Don't
+    calculate PSA, ELMS, HHI, capture probability, or profile_metric_values.
+
+    Examples:
+    `build_patient_volume_evidence_pack(region_slug="philadelphia-public-alpha",
+    required_system_slugs=[...], source_rows=[...])`
+
+    Common mistakes:
+    Medicare-only rows are not all-payer demand. Mixed denominator scopes are a
+    source conflict, not an averaging opportunity.
+
     This read-only workflow supports Healthcare Toolkit methodology review for
     `geography.primary_service_area` and `market.effective_local_market_share`.
     It returns source hierarchy, denominator scope, ZIP/ZCTA demand rows,
@@ -1739,6 +1805,67 @@ async def build_patient_volume_evidence_pack(
         source_rows=source_rows,
         required_system_slugs=required_system_slugs,
         denominator_scope=denominator_scope,
+    )
+
+
+@mcp.tool(structured_output=True)
+@observe_tool("health-system-profiler")
+async def build_composite_source_input_evidence_pack(
+    system_slug: str,
+    system_name: str,
+    state: str = "",
+    source_rows: list[dict[str, Any]] | None = None,
+    required_metric_keys: list[str] | None = None,
+) -> dict[str, Any]:
+    """Normalize Public Alpha FSI and Scale Score source-input rows.
+
+    Discovery:
+    Use this when a methodology or population agent needs receipted source
+    inputs for Financial Strength Index or Health System Scale Score.
+
+    When to use:
+    Use after public financial, peer benchmark, roster, utilization,
+    service-line, safety-net, emergency-access, or essentiality rows have been
+    retrieved, or with no rows to record not-yet-researched status.
+
+    Parameters:
+    `system_slug` and `system_name` identify the Toolkit system. `state` scopes
+    suggested retrieval. `source_rows` are caller-supplied public input rows.
+    `required_metric_keys` can limit coverage to FSI, Scale Score, or both.
+
+    Returns:
+    A read-only evidence pack with source hierarchy, retrieval owners,
+    normalized input rows, coverage, conflicts, blockers, identity map,
+    confidence inputs, and row receipts.
+
+    Do / Don't:
+    Do preserve source period, definition basis, identity joins, and receipts.
+    Don't calculate FSI, Scale Score, component scores, confidence tiers,
+    approval states, or profile_metric_values.
+
+    Examples:
+    `build_composite_source_input_evidence_pack(system_slug="example-health",
+    system_name="Example Health", source_rows=[...])`
+
+    Common mistakes:
+    Peer benchmark rows need an approved class and vintage. Missing source rows
+    are not zeros, and same-period input conflicts must route to Toolkit review.
+
+    This read-only workflow supports Healthcare Toolkit methodology and profile
+    review for `finance.ushso_financial_strength_index` and
+    `system.health_system_scale_score`. It returns source-input rows, source
+    hierarchy, retrieval owners, source periods, identity join policy,
+    missingness/conflict states, confidence inputs, and row-level receipts. It
+    does not calculate scores, components, confidence tiers, approval states, or
+    write `profile_metric_values`.
+    """
+
+    return assemble_composite_source_input_evidence_pack(
+        system_slug=system_slug,
+        system_name=system_name,
+        state=state,
+        source_rows=source_rows,
+        required_metric_keys=required_metric_keys,
     )
 
 
