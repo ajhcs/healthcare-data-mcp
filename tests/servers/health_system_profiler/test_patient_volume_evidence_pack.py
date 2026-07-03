@@ -54,6 +54,7 @@ async def test_patient_volume_evidence_pack_normalizes_all_required_input_rows()
     demand = result["patient_volume_input_rows"][0]
     assert demand["status"] == "supported"
     assert demand["value"]["zip_code"] == "19100"
+    assert demand["value"]["geography_basis"] == "zip_code"
     assert demand["value"]["zip_demand"] == 1234.0
     assert demand["value"]["denominator_scope"] == "medicare_inpatient"
     assert demand["value"]["confidence_inputs"]["source_rank"] == 2
@@ -152,6 +153,96 @@ async def test_patient_volume_evidence_pack_blocks_disallowed_source_scope_pair(
     assert row["status"] == "needs_review"
     assert "denominator_scope_not_allowed_for_source_family" in row["value"]["missing_reasons"]
     assert row["value"]["confidence_inputs"]["allowed_denominator_scopes"] == ["all_payer_inpatient"]
+    assert validate_source_claim_paths(result, require_boundary_traceability=True)["valid"] is True
+
+
+@pytest.mark.asyncio
+async def test_patient_volume_evidence_pack_requires_row_type_specific_fields() -> None:
+    result = await server.build_patient_volume_evidence_pack(
+        region_slug="philadelphia-public-alpha",
+        required_system_slugs=["christianacare"],
+        source_rows=[
+            {
+                **_zip_demand_row(system_slug="christianacare", zip_code="19713"),
+                "row_type": "distance_friction",
+                "zip_demand": "",
+                "competitor_id": "000001",
+                "competitor_name": "Example Hospital",
+                "source_family": "public_facility_and_routing_context",
+                "distance_miles": "",
+                "friction_basis": "",
+            },
+            {
+                **_zip_demand_row(system_slug="christianacare", zip_code="19713"),
+                "row_type": "attractiveness_input",
+                "zip_code": "",
+                "zip_demand": "",
+                "competitor_id": "000001",
+                "source_family": "public_facility_and_routing_context",
+                "attractiveness": "",
+                "attractiveness_basis": "",
+            },
+        ],
+    )
+
+    distance, attractiveness = result["patient_volume_input_rows"]
+    assert distance["status"] == "needs_review"
+    assert "distance_miles_or_friction_value" in distance["value"]["missing_reasons"]
+    assert "friction_basis" in distance["value"]["missing_reasons"]
+    assert attractiveness["status"] == "needs_review"
+    assert "attractiveness" in attractiveness["value"]["missing_reasons"]
+    assert "attractiveness_basis" in attractiveness["value"]["missing_reasons"]
+    assert result["coverage"]["missing_row_types"] == [
+        "zip_demand",
+        "competitor_access_point",
+        "distance_friction",
+        "attractiveness_input",
+    ]
+    assert validate_source_claim_paths(result, require_boundary_traceability=True)["valid"] is True
+
+
+@pytest.mark.asyncio
+async def test_patient_volume_evidence_pack_requires_source_family_and_denominator_scope() -> None:
+    result = await server.build_patient_volume_evidence_pack(
+        region_slug="philadelphia-public-alpha",
+        source_rows=[
+            {
+                **_zip_demand_row(system_slug="christianacare", zip_code="19713"),
+                "source_family": "",
+                "denominator_scope": "",
+            }
+        ],
+    )
+
+    row = result["patient_volume_input_rows"][0]
+    assert row["status"] == "needs_review"
+    assert "source_family" in row["value"]["missing_reasons"]
+    assert "denominator_scope" in row["value"]["missing_reasons"]
+    assert validate_source_claim_paths(result, require_boundary_traceability=True)["valid"] is True
+
+
+@pytest.mark.asyncio
+async def test_patient_volume_evidence_pack_blocks_conflicting_zip_demand_values() -> None:
+    result = await server.build_patient_volume_evidence_pack(
+        region_slug="philadelphia-public-alpha",
+        required_system_slugs=["christianacare"],
+        source_rows=[
+            _zip_demand_row(system_slug="christianacare", zip_code="19713"),
+            {
+                **_zip_demand_row(system_slug="christianacare", zip_code="19713"),
+                "zip_demand": "1,999",
+            },
+            _access_row(system_slug="christianacare"),
+            _distance_row(system_slug="christianacare"),
+            _attractiveness_row(system_slug="christianacare"),
+        ],
+    )
+
+    conflict = result["blockers"][0]
+    assert result["status"] == "blocked_source_conflict"
+    assert conflict["status"] == "blocked_source_conflict"
+    assert conflict["detail"]["reason"] == "conflicting_zip_demand"
+    assert conflict["detail"]["zip_demand_values"] == [1234.0, 1999.0]
     assert validate_source_claim_paths(result, require_boundary_traceability=True)["valid"] is True
 
 

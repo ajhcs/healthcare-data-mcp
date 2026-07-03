@@ -107,30 +107,53 @@ def build_patient_volume_evidence_pack(
 
 def _candidate(row: dict[str, Any], *, query: dict[str, Any], retrieved_at: str) -> dict[str, Any]:
     row_type = _row_type(row.get("row_type"))
-    denominator_scope = _denominator_scope(row.get("denominator_scope") or query["denominator_scope"])
-    source_family = str(row.get("source_family") or "cms_hospital_service_area_file")
+    row_denominator_scope = row.get("denominator_scope")
+    denominator_scope = _denominator_scope(row_denominator_scope or query["denominator_scope"])
+    source_family = str(row.get("source_family") or "")
     source_rank = _source_rank(source_family)
     allowed_scopes = _allowed_scopes(source_family)
     source_period = str(row.get("source_period") or row.get("year") or "")
     source_url = str(row.get("source_url") or row.get("url") or "")
     missingness_state = str(row.get("missingness_state") or "")
+    zip_code = _zip(row.get("zip_code") or row.get("zcta"))
+    zcta = _zip(row.get("zcta") or row.get("zip_code"))
+    zip_demand = _number(row.get("zip_demand"))
+    distance_miles = _number(row.get("distance_miles"))
+    friction_value = _number(row.get("friction_value"))
+    attractiveness = _number(row.get("attractiveness"))
     missing_reasons = []
     if row_type not in ROW_TYPES:
         missing_reasons.append("row_type")
+    if missingness_state and missingness_state not in MISSINGNESS_STATES:
+        missing_reasons.append("missingness_state")
+    if not row_denominator_scope:
+        missing_reasons.append("denominator_scope")
     if denominator_scope not in DENOMINATOR_SCOPES:
         missing_reasons.append("denominator_scope")
     elif allowed_scopes and denominator_scope not in allowed_scopes:
         missing_reasons.append("denominator_scope_not_allowed_for_source_family")
-    if source_rank is None:
+    if not source_family or source_rank is None:
         missing_reasons.append("source_family")
+    if not row.get("source_name"):
+        missing_reasons.append("source_name")
+    if not row.get("dataset_id"):
+        missing_reasons.append("dataset_id")
     if not source_period:
         missing_reasons.append("source_period")
     if not (source_url or row.get("landing_page")):
         missing_reasons.append("source_url_or_landing_page")
-    if row_type == "zip_demand" and _number(row.get("zip_demand")) is None and not missingness_state:
-        missing_reasons.append("zip_demand")
-    if row_type in {"competitor_access_point", "distance_friction"} and not (row.get("competitor_id") or row.get("ccn")):
-        missing_reasons.append("competitor_id")
+    missing_reasons.extend(
+        _row_type_missing_reasons(
+            row,
+            row_type=row_type,
+            zip_code=zip_code,
+            zcta=zcta,
+            zip_demand=zip_demand,
+            distance_miles=distance_miles,
+            friction_value=friction_value,
+            attractiveness=attractiveness,
+        )
+    )
     status = "supported"
     if missingness_state in MISSINGNESS_STATES:
         status = missingness_state
@@ -139,17 +162,19 @@ def _candidate(row: dict[str, Any], *, query: dict[str, Any], retrieved_at: str)
     value = {
         "region_slug": row.get("region_slug") or query["region_slug"],
         "system_slug": row.get("system_slug") or "",
-        "zip_code": _zip(row.get("zip_code") or row.get("zcta")),
-        "zcta": _zip(row.get("zcta") or row.get("zip_code")),
+        "zip_code": zip_code,
+        "zcta": zcta,
+        "geography_basis": _geography_basis(row),
         "year": str(row.get("year") or source_period),
         "row_type": row_type,
         "denominator_scope": denominator_scope,
-        "zip_demand": _number(row.get("zip_demand")),
+        "zip_demand": zip_demand,
         "competitor_id": row.get("competitor_id") or row.get("ccn") or "",
         "competitor_name": row.get("competitor_name") or row.get("facility_name") or "",
-        "distance_miles": _number(row.get("distance_miles")),
+        "distance_miles": distance_miles,
+        "friction_value": friction_value,
         "friction_basis": row.get("friction_basis") or "",
-        "attractiveness": _number(row.get("attractiveness")),
+        "attractiveness": attractiveness,
         "attractiveness_basis": row.get("attractiveness_basis") or "",
         "bias_notes": row.get("bias_notes") or row.get("coverage_notes") or "",
         "source_row_id": row.get("source_row_id") or row.get("id") or "",
@@ -230,6 +255,8 @@ def _blockers(rows: list[dict[str, Any]], coverage: dict[str, Any], *, query: di
     scopes = {str(row.get("value", {}).get("denominator_scope") or "") for row in rows if row.get("status") == "supported"}
     if len(scopes) > 1:
         blockers.append(_finding("blocked_source_conflict", {"denominator_scopes": sorted(scopes)}, query, retrieved_at))
+    for conflict in _zip_demand_conflicts(rows):
+        blockers.append(_finding("blocked_source_conflict", conflict, query, retrieved_at))
     return blockers
 
 
@@ -370,6 +397,81 @@ def _suggested_next_calls(region_slug: str) -> list[dict[str, Any]]:
         {"server": "drive-time", "tool": "compute_drive_time_matrix", "reason": "Retrieve reproducible ZIP/access-point distance or friction rows."},
         {"server": "claims-analytics", "tool": "get_market_volumes", "reason": "Retrieve CMS Medicare utilization context where service-line demand is needed."},
     ]
+
+
+def _row_type_missing_reasons(
+    row: dict[str, Any],
+    *,
+    row_type: str,
+    zip_code: str,
+    zcta: str,
+    zip_demand: float | None,
+    distance_miles: float | None,
+    friction_value: float | None,
+    attractiveness: float | None,
+) -> list[str]:
+    reasons: list[str] = []
+    if row_type not in ROW_TYPES:
+        return reasons
+    if row_type in {"zip_demand", "competitor_access_point", "distance_friction"} and not zip_code:
+        reasons.append("zip_code")
+    if row_type == "zip_demand":
+        if not zcta:
+            reasons.append("zcta")
+        if not row.get("year"):
+            reasons.append("year")
+        if zip_demand is None:
+            reasons.append("zip_demand")
+    if row_type in {"competitor_access_point", "distance_friction", "attractiveness_input"}:
+        if not row.get("system_slug"):
+            reasons.append("system_slug")
+        if not (row.get("competitor_id") or row.get("ccn")):
+            reasons.append("competitor_id")
+    if row_type == "competitor_access_point" and not (row.get("competitor_name") or row.get("facility_name")):
+        reasons.append("competitor_name")
+    if row_type == "distance_friction":
+        if distance_miles is None and friction_value is None:
+            reasons.append("distance_miles_or_friction_value")
+        if not row.get("friction_basis"):
+            reasons.append("friction_basis")
+    if row_type == "attractiveness_input":
+        if attractiveness is None:
+            reasons.append("attractiveness")
+        elif attractiveness <= 0:
+            reasons.append("attractiveness_positive")
+        if not row.get("attractiveness_basis"):
+            reasons.append("attractiveness_basis")
+    return reasons
+
+
+def _zip_demand_conflicts(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    values_by_zip_year: dict[tuple[str, str], set[float]] = {}
+    for row in rows:
+        if row.get("status") != "supported" or row.get("row_type") != "zip_demand":
+            continue
+        value = row.get("value", {})
+        if not isinstance(value, dict) or value.get("zip_demand") is None:
+            continue
+        key = (str(value.get("zip_code") or ""), str(value.get("year") or ""))
+        values_by_zip_year.setdefault(key, set()).add(float(value["zip_demand"]))
+    return [
+        {"reason": "conflicting_zip_demand", "zip_code": zip_code, "year": year, "zip_demand_values": sorted(values)}
+        for (zip_code, year), values in sorted(values_by_zip_year.items())
+        if len(values) > 1
+    ]
+
+
+def _geography_basis(row: dict[str, Any]) -> str:
+    explicit = str(row.get("geography_basis") or row.get("geography_key_basis") or "").strip().lower()
+    if explicit:
+        return explicit
+    if row.get("zip_code") and row.get("zcta"):
+        return "zip_code_and_zcta"
+    if row.get("zcta"):
+        return "zcta"
+    if row.get("zip_code"):
+        return "zip_code"
+    return "unspecified"
 
 
 def _row_type(value: Any) -> str:
