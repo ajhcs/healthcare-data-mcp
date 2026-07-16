@@ -69,9 +69,14 @@ Final merge SHA: pending.
 
 Final bundle SHA-256: pending.
 
-Standards review: pending.
+Standards review: passed with no hard, high, or medium findings after the
+`CONTRIBUTING.md` exception was narrowed, parser/build/acquisition boundaries
+were separated, and declarative records were made keyword-explicit.
 
-Mission-packet review: pending.
+Mission-packet review: passed with no hard, high, or medium findings after
+governed offline byte verification, shared reporting entities, current
+state/AHRQ sources, exact HCRIS periods, and PA source-local identity handling
+were corrected.
 
 Checks and clean-checkout reproducibility evidence: pending.
 
