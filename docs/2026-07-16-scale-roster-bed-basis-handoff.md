@@ -65,9 +65,10 @@ in `producer.commit`; it will differ from this candidate hash.
 
 Final PR URL: <https://github.com/ajhcs/healthcare-data-mcp/pull/38>.
 
-Final merge SHA: pending.
+Final implementation merge SHA: `4496c07aafa72852d3f0caf80593e66745902c97`.
 
-Final bundle SHA-256: pending.
+Final producer-bound `bundle_sha256`:
+`sha256:241a6a909613df116802a2d96965ce9678b76e2887c0f1af9f146186ddd75568`.
 
 Standards review: passed with no hard, high, or medium findings after the
 `CONTRIBUTING.md` exception was narrowed, parser/build/acquisition boundaries
@@ -78,7 +79,16 @@ governed offline byte verification, shared reporting entities, current
 state/AHRQ sources, exact HCRIS periods, and PA source-local identity handling
 were corrected.
 
-Checks and clean-checkout reproducibility evidence: pending.
+Clean-checkout reproducibility: passed at the implementation merge SHA. Two
+governed offline rebuilds reparsed and checksum-verified every raw artifact in
+cache run `scale-roster-beds-20260716-08`. Their normalized input files were
+byte-identical (`sha256:ca4dfd5e5b55826fa862ac5e8a8e7516cbb4f615843524aa6679e0002581a1b5`),
+and their producer-bound bundle files were byte-identical
+(`sha256:25b4a6ee35b00cc12d75803a87c1d38c5bc8321efaf27549fe29746f0c2bd8cd`).
+Both outputs passed runtime and published JSON Schema validation, receipt and
+artifact lineage assertions, exact producer-commit validation, and the no-score
+gate. Merged-main Ruff and the focused contract/acquisition suite also passed
+(56 tests).
 
 Pre-merge checks: Ruff; focused acquisition/handoff suite (30 passed); full
 pytest (838 passed); schema export parity; package sdist/wheel build; `twine
@@ -87,7 +97,8 @@ and merged-main verification remain pending until the producer commit is final.
 
 ## Rollback
 
-Revert the additive `HDM-nuq` merge commit. Do not mutate or delete the frozen
+Revert implementation merge commit
+`4496c07aafa72852d3f0caf80593e66745902c97`. Do not mutate or delete the frozen
 external cache run or rewrite Public Evidence Bundle v1. If a source or parser
 must change, acquire a new cache run and handoff hash; never replace bytes under
 the existing `hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-08/`
