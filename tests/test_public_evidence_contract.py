@@ -105,6 +105,41 @@ def test_bundle_rejects_coverage_for_different_entity_or_measure() -> None:
         build_public_evidence_bundle(PublicEvidenceBundleInput.model_validate(payload))
 
 
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("created_at", "2026-07-16T00:00:00"),
+        ("retrieved_at", "2026-07-16T00:00:00"),
+        ("source_modified", "not-a-date"),
+    ],
+)
+def test_bundle_rejects_naive_or_malformed_provenance_time(field: str, value: str) -> None:
+    payload = _fixture_payload()
+    if field == "created_at":
+        payload[field] = value
+    else:
+        sources = payload["sources"]
+        assert isinstance(sources, list) and isinstance(sources[0], dict)
+        receipt = sources[0]["receipt"]
+        assert isinstance(receipt, dict)
+        receipt[field] = value
+
+    with pytest.raises(ValidationError):
+        PublicEvidenceBundleInput.model_validate(payload)
+
+
+def test_bundle_rejects_reversed_evidence_period() -> None:
+    payload = _fixture_payload()
+    observations = payload["observations"]
+    assert isinstance(observations, list) and isinstance(observations[0], dict)
+    period = observations[0]["period"]
+    assert isinstance(period, dict)
+    period.update({"start": "2025-01-01", "end": "2024-01-01"})
+
+    with pytest.raises(ValidationError, match="end cannot precede start"):
+        PublicEvidenceBundleInput.model_validate(payload)
+
+
 def test_bundle_rejects_unknown_schema_version_and_tampered_hash() -> None:
     bundle = build_public_evidence_bundle(PublicEvidenceBundleInput.model_validate(_fixture_payload()))
     payload = bundle.model_dump(mode="json")

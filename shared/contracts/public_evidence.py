@@ -11,10 +11,10 @@ from __future__ import annotations
 import hashlib
 import json
 import math
-from datetime import date, datetime
+from datetime import date
 from typing import Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field, JsonValue, model_validator
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, JsonValue, model_validator
 
 PUBLIC_EVIDENCE_BUNDLE_SCHEMA_VERSION = "ushso.public-evidence-bundle.v1"
 SHA256_PATTERN = r"^sha256:[0-9a-f]{64}$"
@@ -69,8 +69,8 @@ class EvidenceReceiptV1(ContractModel):
     dataset_id: str = Field(min_length=1)
     source_period: str = Field(min_length=1)
     landing_page: str = Field(min_length=1)
-    retrieved_at: datetime
-    source_modified: str = ""
+    retrieved_at: AwareDatetime
+    source_modified: AwareDatetime | None = None
     cache_status: str = Field(min_length=1)
     cache_freshness: str = Field(min_length=1)
     entity_scope: str = Field(min_length=1)
@@ -108,13 +108,13 @@ class SourceAliasV1(ContractModel):
     name: str = ""
     identifier: str = ""
     identifier_type: str = ""
-    retrieved_at: datetime | None = None
+    retrieved_at: AwareDatetime | None = None
 
 
 class MatchDecisionV1(ContractModel):
     basis: str
     confidence: str
-    decided_at: datetime | None = None
+    decided_at: AwareDatetime | None = None
     notes: str = ""
 
 
@@ -139,6 +139,12 @@ class EvidencePeriod(ContractModel):
     start: date | None = None
     end: date | None = None
     label: str = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def dates_are_ordered(self) -> Self:
+        if self.start is not None and self.end is not None and self.end < self.start:
+            raise ValueError("evidence period end cannot precede start")
+        return self
 
 
 class EvidenceObservationV1(ContractModel):
@@ -207,7 +213,7 @@ class EvidenceConflictV1(ContractModel):
 class PublicEvidenceBundleInput(ContractModel):
     bundle_id: str = Field(min_length=1)
     producer: ProducerIdentity
-    created_at: datetime
+    created_at: AwareDatetime
     request: EvidenceRequest
     scope: EvidenceScope
     entities: list[HealthcareEntityV1] = Field(min_length=1)
