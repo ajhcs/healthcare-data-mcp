@@ -51,7 +51,15 @@ def test_bundle_rejects_unknown_receipt_reference() -> None:
 
 
 @pytest.mark.parametrize(
-    "uri", ["/home/operator/cache/source.json", "C:/cache/file", "C:cache/file", r"\\server\share"]
+    "uri",
+    [
+        "/home/operator/cache/source.json",
+        "C:/cache/file",
+        "C:cache/file",
+        r"\\server\share",
+        "FILE:///home/operator/cache.json",
+        "file:C:/cache.json",
+    ],
 )
 def test_bundle_rejects_absolute_cache_locator(uri: str) -> None:
     payload = _fixture_payload()
@@ -119,6 +127,18 @@ def test_bundle_accepts_arbitrarily_large_integer_without_overflow() -> None:
 
     bundle = build_public_evidence_bundle(PublicEvidenceBundleInput.model_validate(payload))
     assert bundle.observations[0].value == 10**1000
+
+
+def test_integer_observation_accepts_json_schema_integral_number_and_normalizes() -> None:
+    payload = _fixture_payload()
+    observations = payload["observations"]
+    assert isinstance(observations, list) and isinstance(observations[0], dict)
+    observations[0]["value_type"] = "integer"
+    observations[0]["value"] = 1.0
+
+    source = PublicEvidenceBundleInput.model_validate(payload)
+    assert source.observations[0].value == 1
+    assert isinstance(source.observations[0].value, int)
 
 
 def test_bundle_requires_full_producer_commit() -> None:

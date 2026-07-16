@@ -61,7 +61,7 @@ class CacheArtifactLineage(ContractModel):
     @model_validator(mode="after")
     def reject_absolute_local_path_as_locator(self) -> Self:
         windows_path = PureWindowsPath(self.uri)
-        if self.uri.startswith(("/", "\\", "file:/")) or windows_path.drive:
+        if self.uri.startswith(("/", "\\")) or self.uri.casefold().startswith("file:") or windows_path.drive:
             raise ValueError("cache artifact uri must be portable and cannot be an absolute local path")
         return self
 
@@ -191,6 +191,9 @@ class EvidenceObservationV1(ContractModel):
     @model_validator(mode="after")
     def value_matches_declared_type(self) -> Self:
         value = self.value
+        if self.value_type == "integer" and isinstance(value, float) and math.isfinite(value) and value.is_integer():
+            self.value = int(value)
+            value = self.value
         matches = {
             "integer": isinstance(value, int) and not isinstance(value, bool),
             "number": isinstance(value, (int, float)) and not isinstance(value, bool),
