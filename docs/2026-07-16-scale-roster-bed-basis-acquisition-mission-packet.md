@@ -4,7 +4,8 @@ Tracking bead: `HDM-nuq`
 
 Cross-repository parent: `healthcare-toolkit-2rr9.6`
 
-Downstream beads: Healthcare Agents `beads-0z7`, then Healthcare Toolkit
+Downstream sequence: Healthcare Toolkit `healthcare-toolkit-2rr9.6.2`,
+Healthcare Agents `beads-0z7`, then Healthcare Toolkit
 `healthcare-toolkit-2rr9.6.1`
 
 ## Mission
@@ -49,6 +50,12 @@ Conflicting identities, ownership dates, facility status, and bed bases remain
 structured conflicts. A convenient system total must not be synthesized from
 incompatible bases.
 
+Every populated observation must reference a receipt. Every required
+entity/measure pair must have coverage that is either populated and bound to
+matching observations or explicitly missing. Public Evidence Bundle v1 does not
+attach receipts to missingness-only coverage, so this packet does not claim that
+missingness itself has a receipt.
+
 ## Source and receipt gates
 
 - Prefer current primary public sources with stable archived artifacts. Record
@@ -70,7 +77,8 @@ incompatible bases.
   identities, hashes, coverage, temporal fields, bed-basis semantics, and cache
   locator portability.
 - A frozen handoff containing the exact bundle hash and producer commit for
-  `beads-0z7`.
+  Toolkit `healthcare-toolkit-2rr9.6.2`, which freezes the scenario/identity
+  hashes required by Agents `beads-0z7`.
 
 ## Verification
 
@@ -82,10 +90,11 @@ and medium findings require correction or a recorded disposition.
 
 ## Authority and sequencing
 
-Cole Lyons is the sole initial implementation owner for this slice. Agents
-`beads-0z7` and Toolkit `healthcare-toolkit-2rr9.6.1` remain unassigned until
-this bead freezes and verifies its handoff. No parallel implementation owner may
-edit the shared contract seam.
+Cole Lyons is the sole initial implementation owner for this slice. Toolkit
+`healthcare-toolkit-2rr9.6.2`, Agents `beads-0z7`, and Toolkit
+`healthcare-toolkit-2rr9.6.1` remain unassigned until their immediate predecessor
+freezes and verifies its handoff. No parallel implementation owner may edit the
+shared contract seam.
 
 ## No-go and rollback
 
