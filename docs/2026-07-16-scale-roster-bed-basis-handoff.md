@@ -63,7 +63,7 @@ Pre-merge candidate bundle hash with the placeholder producer commit:
 The authoritative handoff hash must be rebuilt after merge with the merge SHA
 in `producer.commit`; it will differ from this candidate hash.
 
-Final PR URL: pending.
+Final PR URL: <https://github.com/ajhcs/healthcare-data-mcp/pull/38>.
 
 Final merge SHA: pending.
 
