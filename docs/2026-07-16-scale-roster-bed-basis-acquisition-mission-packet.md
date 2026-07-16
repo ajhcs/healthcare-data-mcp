@@ -18,7 +18,7 @@ basis. The output is evidence, not a Scale score or strategic conclusion.
 
 ## Frozen boundary
 
-- Start from merged Data MCP main `0de3622e98f01115145641bce1da79e276b6f459`.
+- Start from merged Data MCP main `f822eb81a20f889b1a436b96f5bfa28fb4918e9b`.
 - Emit `ushso.public-evidence-bundle.v1` and preserve its canonical hash,
   receipts, cache/input artifacts, coverage edges, parser/connector versions,
   source timestamps, and exact producer commit.
