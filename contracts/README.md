@@ -19,6 +19,7 @@ intermediate artifact:
 ```bash
 hc-mcp-contract build-public-evidence \
   --input contracts/v1/fixtures/public-evidence-input.json \
+  --producer-commit "$(git rev-parse HEAD)" \
   --output /tmp/public-evidence-bundle.json
 ```
 

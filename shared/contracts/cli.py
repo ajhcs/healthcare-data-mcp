@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 
 from shared.contracts.public_evidence import PublicEvidenceBundleInput, build_public_evidence_bundle
@@ -14,10 +15,17 @@ def main() -> None:
     build = subparsers.add_parser("build-public-evidence", help="Build a canonical Public Evidence Bundle v1.")
     build.add_argument("--input", type=Path, required=True, help="PublicEvidenceBundleInput JSON path.")
     build.add_argument("--output", type=Path, help="Output JSON path. Defaults to stdout.")
+    build.add_argument(
+        "--producer-commit",
+        help="Pinned producer Git commit supplied by the orchestrator; overrides fixture/input metadata.",
+    )
     args = parser.parse_args()
 
     if args.command == "build-public-evidence":
-        value = PublicEvidenceBundleInput.model_validate_json(args.input.read_text(encoding="utf-8"))
+        input_payload = json.loads(args.input.read_text(encoding="utf-8"))
+        if args.producer_commit:
+            input_payload["producer"]["commit"] = args.producer_commit
+        value = PublicEvidenceBundleInput.model_validate(input_payload)
         payload = build_public_evidence_bundle(value).model_dump_json(indent=2) + "\n"
         if args.output is None:
             print(payload, end="")

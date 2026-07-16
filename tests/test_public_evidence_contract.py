@@ -72,6 +72,8 @@ def test_cli_builds_bundle_without_intermediate_copy(tmp_path: Path) -> None:
             str(FIXTURE),
             "--output",
             str(output),
+            "--producer-commit",
+            "d" * 40,
         ],
         cwd=ROOT,
         check=True,
@@ -79,6 +81,7 @@ def test_cli_builds_bundle_without_intermediate_copy(tmp_path: Path) -> None:
 
     bundle = PublicEvidenceBundle.model_validate_json(output.read_text(encoding="utf-8"))
     assert bundle.observations[0].receipt_refs == ["receipt:pa-doh:temple:fy2024"]
+    assert bundle.producer.commit == "d" * 40
 
 
 def test_checked_in_schema_matches_model() -> None:
