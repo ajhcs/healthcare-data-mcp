@@ -12,9 +12,12 @@ import hashlib
 import json
 import math
 from datetime import date
+from pathlib import PureWindowsPath
 from typing import Literal, Self
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, JsonValue, model_validator
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, GetJsonSchemaHandler, JsonValue, model_validator
+from pydantic.json_schema import JsonSchemaValue
+from pydantic_core import CoreSchema
 
 PUBLIC_EVIDENCE_BUNDLE_SCHEMA_VERSION = "ushso.public-evidence-bundle.v1"
 SHA256_PATTERN = r"^sha256:[0-9a-f]{64}$"
@@ -29,7 +32,7 @@ class ContractModel(BaseModel):
 class ProducerIdentity(ContractModel):
     repo: Literal["healthcare-data-mcp"] = "healthcare-data-mcp"
     version: str = Field(min_length=1)
-    commit: str = Field(min_length=7, max_length=64, pattern=r"^[0-9a-f]+$")
+    commit: str = Field(min_length=40, max_length=40, pattern=r"^[0-9a-f]{40}$")
 
 
 class EvidenceRequest(ContractModel):
@@ -57,7 +60,8 @@ class CacheArtifactLineage(ContractModel):
 
     @model_validator(mode="after")
     def reject_absolute_local_path_as_locator(self) -> Self:
-        if self.uri.startswith(("/", "file:/")) or (len(self.uri) > 2 and self.uri[1:3] == ":\\"):
+        windows_path = PureWindowsPath(self.uri)
+        if self.uri.startswith(("/", "\\", "file:/")) or windows_path.drive:
             raise ValueError("cache artifact uri must be portable and cannot be an absolute local path")
         return self
 
@@ -81,7 +85,9 @@ class EvidenceReceiptV1(ContractModel):
     caveat: str
     next_step: str = Field(min_length=1)
     acquisition_method: str = Field(min_length=1)
-    rights_classification: Literal["public_domain", "public_use_terms", "restricted_publication", "unknown_review_required"]
+    rights_classification: Literal[
+        "public_domain", "public_use_terms", "restricted_publication", "unknown_review_required"
+    ]
     row_locator: str = Field(min_length=1)
     artifact: CacheArtifactLineage
     parent_receipt_ids: list[str] = Field(default_factory=list)
@@ -161,6 +167,27 @@ class EvidenceObservationV1(ContractModel):
     caveat: str
     dependency_cluster_ids: list[str] = Field(min_length=1)
 
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        schema = handler(core_schema)
+        schema["allOf"] = [
+            {
+                "if": {"properties": {"value_type": {"const": value_type}}, "required": ["value_type"]},
+                "then": {"properties": {"value": {"type": json_type}}},
+            }
+            for value_type, json_type in (
+                ("integer", "integer"),
+                ("number", "number"),
+                ("string", "string"),
+                ("boolean", "boolean"),
+            )
+        ]
+        return schema
+
     @model_validator(mode="after")
     def value_matches_declared_type(self) -> Self:
         value = self.value
@@ -172,7 +199,7 @@ class EvidenceObservationV1(ContractModel):
         }
         if not matches[self.value_type]:
             raise ValueError("observation value must match value_type")
-        if self.value_type == "number" and isinstance(value, (int, float)) and not math.isfinite(value):
+        if self.value_type == "number" and isinstance(value, float) and not math.isfinite(value):
             raise ValueError("numeric observation value must be finite")
         return self
 
@@ -235,6 +262,8 @@ class PublicEvidenceBundle(PublicEvidenceBundleInput):
         _validate_unique("source_id", [item.source_id for item in self.sources])
         _validate_unique("receipt_id", [item.receipt.receipt_id for item in self.sources])
         _validate_unique("cache artifact_id", [item.artifact_id for item in self.input_artifacts])
+        _validate_unique("coverage_id", [item.coverage_id for item in self.coverage])
+        _validate_unique("conflict_id", [item.conflict_id for item in self.conflicts])
         entity_ids = {item.entity_id for item in self.entities}
         observations = {item.observation_id: item for item in self.observations}
         observation_ids = set(observations)

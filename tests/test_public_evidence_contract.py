@@ -50,12 +50,15 @@ def test_bundle_rejects_unknown_receipt_reference() -> None:
         build_public_evidence_bundle(PublicEvidenceBundleInput.model_validate(payload))
 
 
-def test_bundle_rejects_absolute_cache_locator() -> None:
+@pytest.mark.parametrize(
+    "uri", ["/home/operator/cache/source.json", "C:/cache/file", "C:cache/file", r"\\server\share"]
+)
+def test_bundle_rejects_absolute_cache_locator(uri: str) -> None:
     payload = _fixture_payload()
     artifacts = payload["input_artifacts"]
     assert isinstance(artifacts, list)
     assert isinstance(artifacts[0], dict)
-    artifacts[0]["uri"] = "/home/operator/cache/source.json"
+    artifacts[0]["uri"] = uri
 
     with pytest.raises(ValidationError, match="portable"):
         PublicEvidenceBundleInput.model_validate(payload)
@@ -81,6 +84,51 @@ def test_bundle_rejects_duplicate_cache_artifact_identity() -> None:
 
     with pytest.raises(ValidationError, match="duplicate cache artifact_id"):
         build_public_evidence_bundle(PublicEvidenceBundleInput.model_validate(payload))
+
+
+@pytest.mark.parametrize(("collection", "identity"), [("coverage", "coverage_id"), ("conflicts", "conflict_id")])
+def test_bundle_rejects_duplicate_coverage_or_conflict_identity(collection: str, identity: str) -> None:
+    payload = _fixture_payload()
+    items = payload[collection]
+    assert isinstance(items, list)
+    if not items:
+        items.append(
+            {
+                "conflict_id": "conflict:fixture",
+                "conflict_type": "fixture",
+                "entity_refs": [],
+                "observation_refs": [],
+                "receipt_refs": [],
+                "status": "open",
+                "rationale": "Synthetic duplicate identity fixture.",
+            }
+        )
+    assert isinstance(items[0], dict) and identity in items[0]
+    items.append(dict(items[0]))
+
+    with pytest.raises(ValidationError, match=f"duplicate {identity}"):
+        build_public_evidence_bundle(PublicEvidenceBundleInput.model_validate(payload))
+
+
+def test_bundle_accepts_arbitrarily_large_integer_without_overflow() -> None:
+    payload = _fixture_payload()
+    observations = payload["observations"]
+    assert isinstance(observations, list) and isinstance(observations[0], dict)
+    observations[0]["value_type"] = "number"
+    observations[0]["value"] = 10**1000
+
+    bundle = build_public_evidence_bundle(PublicEvidenceBundleInput.model_validate(payload))
+    assert bundle.observations[0].value == 10**1000
+
+
+def test_bundle_requires_full_producer_commit() -> None:
+    payload = _fixture_payload()
+    producer = payload["producer"]
+    assert isinstance(producer, dict)
+    producer["commit"] = "abcdef0"
+
+    with pytest.raises(ValidationError, match="commit"):
+        PublicEvidenceBundleInput.model_validate(payload)
 
 
 def test_bundle_rejects_receipt_artifact_checksum_conflict() -> None:
@@ -185,3 +233,8 @@ def test_checked_in_schema_matches_model() -> None:
     validator = Draft202012Validator(schema)
     bundle = build_public_evidence_bundle(PublicEvidenceBundleInput.model_validate(_fixture_payload()))
     assert list(validator.iter_errors(bundle.model_dump(mode="json"))) == []
+
+    malformed = bundle.model_dump(mode="json")
+    malformed["observations"][0]["value_type"] = "number"
+    malformed["observations"][0]["value"] = "not-a-number"
+    assert list(validator.iter_errors(malformed))
