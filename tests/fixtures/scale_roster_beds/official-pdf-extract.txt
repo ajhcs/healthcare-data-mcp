@@ -1,0 +1,3 @@
+Example Health Official Facility Table
+Example Hospital | Licensed Beds | 125
+Second Hospital | Approved Beds | 90
