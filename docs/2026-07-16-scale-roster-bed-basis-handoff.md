@@ -10,12 +10,12 @@ Downstream consumer: Healthcare Toolkit `healthcare-toolkit-2rr9.6.2`
 - Public contract: `ushso.public-evidence-bundle.v1`
 - Connector: `scale-roster-bed-connector.v1`
 - Parser: `scale-roster-bed-parser.v1`
-- Cache run: `scale-roster-beds-20260716-07`
-- Acquisition cutoff: `2026-07-16T21:30:49.641346+00:00`
+- Cache run: `scale-roster-beds-20260716-08`
+- Acquisition cutoff: `2026-07-16T21:40:49.364509+00:00`
 - Candidate universe: 63 facilities across six enterprise-wide systems
 - Frozen artifacts: 27
 - Normalized observations: 249
-- Coverage rows: 285
+- Coverage rows: 291
 - Open conflicts: 5
 
 Official-system artifacts retain `unknown_review_required` rights. Raw official
@@ -47,6 +47,8 @@ Scale component, or Scale score is emitted. In particular:
 - Chestnut Hill retains ownership and bed-basis conflicts.
 - Jefferson's March 2025 33-location enterprise roster remains unallocated to
   current state licenses and CCNs where exact joins were not established.
+  Pennsylvania name-only workbook rows are separate source-local entities with
+  unresolved candidate relationships, never automatic merges.
 - Penn's six principal hospitals remain separate from Cedar Avenue and the
   additional rehabilitation/behavioral candidates.
 - Cooper's current About page calls Children's Regional a third hospital; that
@@ -57,7 +59,7 @@ Scale component, or Scale score is emitted. In particular:
 ## Verification record
 
 Pre-merge candidate bundle hash with the placeholder producer commit:
-`sha256:77eeeb485095b469ab0d390642758788a580bda7d924529f31adb1a310263818`.
+`sha256:9f6bd13a8b62f0c5aa8112ec5d528c23bbcf9b884540c8b472f825d2f0e7d057`.
 The authoritative handoff hash must be rebuilt after merge with the merge SHA
 in `producer.commit`; it will differ from this candidate hash.
 
@@ -73,8 +75,8 @@ Mission-packet review: pending.
 
 Checks and clean-checkout reproducibility evidence: pending.
 
-Pre-merge checks: Ruff; focused acquisition/handoff suite (29 passed); full
-pytest (837 passed); schema export parity; package sdist/wheel build; `twine
+Pre-merge checks: Ruff; focused acquisition/handoff suite (30 passed); full
+pytest (838 passed); schema export parity; package sdist/wheel build; `twine
 check`; and installed-wheel import smoke. Pinned-commit byte-for-byte rebuild
 and merged-main verification remain pending until the producer commit is final.
 
@@ -83,5 +85,5 @@ and merged-main verification remain pending until the producer commit is final.
 Revert the additive `HDM-nuq` merge commit. Do not mutate or delete the frozen
 external cache run or rewrite Public Evidence Bundle v1. If a source or parser
 must change, acquire a new cache run and handoff hash; never replace bytes under
-the existing `hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-07/`
+the existing `hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-08/`
 identity.

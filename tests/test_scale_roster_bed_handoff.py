@@ -130,6 +130,34 @@ def test_state_federal_and_dated_crosschecks_preserve_source_local_bases() -> No
     assert conflicts["conflict:temple-shared-cms-reporting-entity"].observation_refs
 
 
+def test_pa_name_only_rows_remain_source_local_and_unresolved() -> None:
+    bundle_input = _handoff()
+    entities = {item.entity_id: item for item in bundle_input.entities}
+    observations = {item.observation_id: item for item in bundle_input.observations}
+    candidate_id = "data-mcp:facility:official:jefferson-health:jefferson-abington-hospital"
+    state_id = "data-mcp:facility:state:pa:report-2024:abington-memorial-hospital"
+
+    state_observation = observations[
+        "observation:state-bed:pa-hospital-report-2024-1a:abington-memorial-hospital:licensed-beds"
+    ]
+    assert state_observation.entity_ref == state_id
+    assert state_observation.entity_ref != candidate_id
+    assert entities[state_id].owner_id == ""
+    assert {item["identifier"] for item in entities[state_id].unresolved_identifiers} == {candidate_id}
+    assert any(
+        item.entity_ref == candidate_id
+        and item.measure_id == "bed_count.declared"
+        and item.status == "not_yet_researched"
+        for item in bundle_input.coverage
+    )
+
+    nj_observation = observations[
+        "observation:state-bed:nj-acute-care-current:cooper-university-hospital-nj10402:lic_beds_slots"
+    ]
+    assert nj_observation.entity_ref == "data-mcp:facility:ccn:310014"
+    assert entities[nj_observation.entity_ref].match_decisions[0].basis == "exact_state_license_id:10402"
+
+
 def test_official_rights_remain_review_required_and_government_sources_are_public_domain() -> None:
     spec = load_spec(SPEC)
     by_id = {source.source_id: source for source in spec.sources}

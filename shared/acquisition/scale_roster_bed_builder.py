@@ -207,8 +207,15 @@ def _entity_payload(
             )
         aliases.append(row)
     unresolved = list(entity.unresolved_identifiers)
+    match_decisions: list[dict[str, JsonValue]] = []
     if entity.state_license_id:
-        unresolved.append({"identifier_type": "state_license_id", "identifier": entity.state_license_id})
+        match_decisions.append(
+            {
+                "basis": f"exact_state_license_id:{entity.state_license_id}",
+                "confidence": "high",
+                "notes": "State license identifier was verified by a frozen source receipt.",
+            }
+        )
     return {
         "entity_id": entity.entity_id,
         "canonical_name": entity.canonical_name,
@@ -218,7 +225,7 @@ def _entity_payload(
         "address": entity.address,
         "zip_code": entity.zip_code,
         "aliases": aliases,
-        "match_decisions": [],
+        "match_decisions": match_decisions,
         "conflicts": entity.identity_conflicts,
         "unresolved_identifiers": unresolved,
     }

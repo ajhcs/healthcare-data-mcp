@@ -57,7 +57,8 @@
       "entity_ids": [
         "data-mcp:facility:official:temple-health:temple-university-hospital",
         "data-mcp:facility:official:temple-health:episcopal-campus",
-        "data-mcp:facility:ccn:390027"
+        "data-mcp:facility:ccn:390027",
+        "data-mcp:facility:state:pa:report-2024:temple-university-hospital"
       ],
       "fact_ids": [
         "episcopal-official-139",
@@ -80,7 +81,8 @@
       "conflict_id": "conflict:chestnut-hill-ownership-and-bases",
       "conflict_type": "ownership_and_bed_basis",
       "entity_ids": [
-        "data-mcp:facility:ccn:390026"
+        "data-mcp:facility:ccn:390026",
+        "data-mcp:facility:state:pa:report-2024:temple-health-chestnut-hill-hospital"
       ],
       "fact_ids": [
         "chestnut-official-148",
@@ -1305,22 +1307,516 @@
     {
       "address": "",
       "aliases": [
-        "JEFFERSON HEALTH NORTHEAST"
+        "ABINGTON MEMORIAL HOSPITAL"
       ],
-      "canonical_name": "Jefferson Health Northeast state reporting entity",
+      "canonical_name": "ABINGTON MEMORIAL HOSPITAL",
       "ccn": "",
-      "entity_id": "data-mcp:facility:state:pa:jefferson-health-northeast",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:abington-memorial-hospital",
       "entity_type": "facility",
       "identity_conflicts": [
         {
           "status": "open",
-          "type": "shared_state_reporting_entity"
+          "type": "name_only_candidate_relationship"
         }
       ],
-      "owner_entity_id": "data-mcp:system:jefferson-health",
+      "owner_entity_id": "",
+      "state_license_id": "",
+      "system_slug": "jefferson-health",
+      "unresolved_identifiers": [
+        {
+          "identifier": "data-mcp:facility:official:jefferson-health:jefferson-abington-hospital",
+          "identifier_type": "candidate_entity_id"
+        }
+      ],
+      "zip_code": ""
+    },
+    {
+      "address": "",
+      "aliases": [
+        "EINSTEIN MEDICAL CENTER MONTGOMERY"
+      ],
+      "canonical_name": "EINSTEIN MEDICAL CENTER MONTGOMERY",
+      "ccn": "",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:einstein-medical-center-montgomery",
+      "entity_type": "facility",
+      "identity_conflicts": [
+        {
+          "status": "open",
+          "type": "name_only_candidate_relationship"
+        }
+      ],
+      "owner_entity_id": "",
+      "state_license_id": "",
+      "system_slug": "jefferson-health",
+      "unresolved_identifiers": [
+        {
+          "identifier": "data-mcp:facility:official:jefferson-health:jefferson-einstein-montgomery-hospital",
+          "identifier_type": "candidate_entity_id"
+        }
+      ],
+      "zip_code": ""
+    },
+    {
+      "address": "",
+      "aliases": [
+        "ALBERT EINSTEIN MEDICAL CENTER"
+      ],
+      "canonical_name": "ALBERT EINSTEIN MEDICAL CENTER",
+      "ccn": "",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:albert-einstein-medical-center",
+      "entity_type": "facility",
+      "identity_conflicts": [
+        {
+          "status": "open",
+          "type": "name_only_candidate_relationship"
+        }
+      ],
+      "owner_entity_id": "",
+      "state_license_id": "",
+      "system_slug": "jefferson-health",
+      "unresolved_identifiers": [
+        {
+          "identifier": "data-mcp:facility:official:jefferson-health:jefferson-einstein-philadelphia-hospital",
+          "identifier_type": "candidate_entity_id"
+        }
+      ],
+      "zip_code": ""
+    },
+    {
+      "address": "",
+      "aliases": [
+        "LANSDALE HOSPITAL"
+      ],
+      "canonical_name": "LANSDALE HOSPITAL",
+      "ccn": "",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:lansdale-hospital",
+      "entity_type": "facility",
+      "identity_conflicts": [
+        {
+          "status": "open",
+          "type": "name_only_candidate_relationship"
+        }
+      ],
+      "owner_entity_id": "",
+      "state_license_id": "",
+      "system_slug": "jefferson-health",
+      "unresolved_identifiers": [
+        {
+          "identifier": "data-mcp:facility:official:jefferson-health:jefferson-lansdale-hospital",
+          "identifier_type": "candidate_entity_id"
+        }
+      ],
+      "zip_code": ""
+    },
+    {
+      "address": "",
+      "aliases": [
+        "THOMAS JEFFERSON UNIVERSITY HOSPITAL"
+      ],
+      "canonical_name": "THOMAS JEFFERSON UNIVERSITY HOSPITAL",
+      "ccn": "",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:thomas-jefferson-university-hospital",
+      "entity_type": "facility",
+      "identity_conflicts": [
+        {
+          "status": "open",
+          "type": "name_only_candidate_relationship"
+        }
+      ],
+      "owner_entity_id": "",
+      "state_license_id": "",
+      "system_slug": "jefferson-health",
+      "unresolved_identifiers": [
+        {
+          "identifier": "data-mcp:facility:official:jefferson-health:thomas-jefferson-university-hospital",
+          "identifier_type": "candidate_entity_id"
+        }
+      ],
+      "zip_code": ""
+    },
+    {
+      "address": "",
+      "aliases": [
+        "JEFFERSON HEALTH NORTHEAST"
+      ],
+      "canonical_name": "JEFFERSON HEALTH NORTHEAST",
+      "ccn": "",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:jefferson-health-northeast",
+      "entity_type": "facility",
+      "identity_conflicts": [
+        {
+          "status": "open",
+          "type": "name_only_candidate_relationship"
+        }
+      ],
+      "owner_entity_id": "",
       "state_license_id": "",
       "system_slug": "jefferson-health",
       "unresolved_identifiers": [],
+      "zip_code": ""
+    },
+    {
+      "address": "",
+      "aliases": [
+        "TEMPLE UNIVERSITY HOSPITAL"
+      ],
+      "canonical_name": "TEMPLE UNIVERSITY HOSPITAL",
+      "ccn": "",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:temple-university-hospital",
+      "entity_type": "facility",
+      "identity_conflicts": [
+        {
+          "status": "open",
+          "type": "name_only_candidate_relationship"
+        }
+      ],
+      "owner_entity_id": "",
+      "state_license_id": "",
+      "system_slug": "temple-health",
+      "unresolved_identifiers": [
+        {
+          "identifier": "data-mcp:facility:official:temple-health:temple-university-hospital",
+          "identifier_type": "candidate_entity_id"
+        }
+      ],
+      "zip_code": ""
+    },
+    {
+      "address": "",
+      "aliases": [
+        "TEMPLE HEALTH CHESTNUT HILL HOSPITAL"
+      ],
+      "canonical_name": "TEMPLE HEALTH CHESTNUT HILL HOSPITAL",
+      "ccn": "",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:temple-health-chestnut-hill-hospital",
+      "entity_type": "facility",
+      "identity_conflicts": [
+        {
+          "status": "open",
+          "type": "name_only_candidate_relationship"
+        }
+      ],
+      "owner_entity_id": "",
+      "state_license_id": "",
+      "system_slug": "temple-health",
+      "unresolved_identifiers": [
+        {
+          "identifier": "data-mcp:facility:ccn:390026",
+          "identifier_type": "candidate_entity_id"
+        }
+      ],
+      "zip_code": ""
+    },
+    {
+      "address": "",
+      "aliases": [
+        "HOSPITAL OF THE UNIVERSITY OF PENNSYLVANIA"
+      ],
+      "canonical_name": "HOSPITAL OF THE UNIVERSITY OF PENNSYLVANIA",
+      "ccn": "",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:hospital-of-the-university-of-pennsylvania",
+      "entity_type": "facility",
+      "identity_conflicts": [
+        {
+          "status": "open",
+          "type": "name_only_candidate_relationship"
+        }
+      ],
+      "owner_entity_id": "",
+      "state_license_id": "",
+      "system_slug": "penn-medicine",
+      "unresolved_identifiers": [
+        {
+          "identifier": "data-mcp:facility:ccn:390111",
+          "identifier_type": "candidate_entity_id"
+        }
+      ],
+      "zip_code": ""
+    },
+    {
+      "address": "",
+      "aliases": [
+        "PENN PRESBYTERIAN MEDICAL CENTER"
+      ],
+      "canonical_name": "PENN PRESBYTERIAN MEDICAL CENTER",
+      "ccn": "",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:penn-presbyterian-medical-center",
+      "entity_type": "facility",
+      "identity_conflicts": [
+        {
+          "status": "open",
+          "type": "name_only_candidate_relationship"
+        }
+      ],
+      "owner_entity_id": "",
+      "state_license_id": "",
+      "system_slug": "penn-medicine",
+      "unresolved_identifiers": [
+        {
+          "identifier": "data-mcp:facility:ccn:390223",
+          "identifier_type": "candidate_entity_id"
+        }
+      ],
+      "zip_code": ""
+    },
+    {
+      "address": "",
+      "aliases": [
+        "CHESTER COUNTY HOSPITAL"
+      ],
+      "canonical_name": "CHESTER COUNTY HOSPITAL",
+      "ccn": "",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:chester-county-hospital",
+      "entity_type": "facility",
+      "identity_conflicts": [
+        {
+          "status": "open",
+          "type": "name_only_candidate_relationship"
+        }
+      ],
+      "owner_entity_id": "",
+      "state_license_id": "",
+      "system_slug": "penn-medicine",
+      "unresolved_identifiers": [
+        {
+          "identifier": "data-mcp:facility:ccn:390179",
+          "identifier_type": "candidate_entity_id"
+        }
+      ],
+      "zip_code": ""
+    },
+    {
+      "address": "",
+      "aliases": [
+        "LANCASTER GENERAL HOSPITAL"
+      ],
+      "canonical_name": "LANCASTER GENERAL HOSPITAL",
+      "ccn": "",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:lancaster-general-hospital",
+      "entity_type": "facility",
+      "identity_conflicts": [
+        {
+          "status": "open",
+          "type": "name_only_candidate_relationship"
+        }
+      ],
+      "owner_entity_id": "",
+      "state_license_id": "",
+      "system_slug": "penn-medicine",
+      "unresolved_identifiers": [
+        {
+          "identifier": "data-mcp:facility:ccn:390100",
+          "identifier_type": "candidate_entity_id"
+        }
+      ],
+      "zip_code": ""
+    },
+    {
+      "address": "",
+      "aliases": [
+        "PENNSYLVANIA HOSPITAL OF THE UNIVERSITY OF PENNSYLVANIA HEALTH SYSTEM"
+      ],
+      "canonical_name": "PENNSYLVANIA HOSPITAL OF THE UNIVERSITY OF PENNSYLVANIA HEALTH SYSTEM",
+      "ccn": "",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:pennsylvania-hospital-of-the-university-of-pennsylvania-health-system",
+      "entity_type": "facility",
+      "identity_conflicts": [
+        {
+          "status": "open",
+          "type": "name_only_candidate_relationship"
+        }
+      ],
+      "owner_entity_id": "",
+      "state_license_id": "",
+      "system_slug": "penn-medicine",
+      "unresolved_identifiers": [
+        {
+          "identifier": "data-mcp:facility:ccn:390226",
+          "identifier_type": "candidate_entity_id"
+        }
+      ],
+      "zip_code": ""
+    },
+    {
+      "address": "",
+      "aliases": [
+        "MAIN LINE HOSPITAL LANKENAU MEDICAL CENTER"
+      ],
+      "canonical_name": "MAIN LINE HOSPITAL LANKENAU MEDICAL CENTER",
+      "ccn": "",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:main-line-hospital-lankenau-medical-center",
+      "entity_type": "facility",
+      "identity_conflicts": [
+        {
+          "status": "open",
+          "type": "name_only_candidate_relationship"
+        }
+      ],
+      "owner_entity_id": "",
+      "state_license_id": "",
+      "system_slug": "main-line-health",
+      "unresolved_identifiers": [
+        {
+          "identifier": "data-mcp:facility:ccn:390195",
+          "identifier_type": "candidate_entity_id"
+        }
+      ],
+      "zip_code": ""
+    },
+    {
+      "address": "",
+      "aliases": [
+        "MAIN LINE HOSPITAL BRYN MAWR"
+      ],
+      "canonical_name": "MAIN LINE HOSPITAL BRYN MAWR",
+      "ccn": "",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:main-line-hospital-bryn-mawr",
+      "entity_type": "facility",
+      "identity_conflicts": [
+        {
+          "status": "open",
+          "type": "name_only_candidate_relationship"
+        }
+      ],
+      "owner_entity_id": "",
+      "state_license_id": "",
+      "system_slug": "main-line-health",
+      "unresolved_identifiers": [
+        {
+          "identifier": "data-mcp:facility:ccn:390139",
+          "identifier_type": "candidate_entity_id"
+        }
+      ],
+      "zip_code": ""
+    },
+    {
+      "address": "",
+      "aliases": [
+        "MAIN LINE HOSPITAL PAOLI"
+      ],
+      "canonical_name": "MAIN LINE HOSPITAL PAOLI",
+      "ccn": "",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:main-line-hospital-paoli",
+      "entity_type": "facility",
+      "identity_conflicts": [
+        {
+          "status": "open",
+          "type": "name_only_candidate_relationship"
+        }
+      ],
+      "owner_entity_id": "",
+      "state_license_id": "",
+      "system_slug": "main-line-health",
+      "unresolved_identifiers": [
+        {
+          "identifier": "data-mcp:facility:ccn:390153",
+          "identifier_type": "candidate_entity_id"
+        }
+      ],
+      "zip_code": ""
+    },
+    {
+      "address": "",
+      "aliases": [
+        "RIDDLE MEMORIAL HOSPITAL"
+      ],
+      "canonical_name": "RIDDLE MEMORIAL HOSPITAL",
+      "ccn": "",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:riddle-memorial-hospital",
+      "entity_type": "facility",
+      "identity_conflicts": [
+        {
+          "status": "open",
+          "type": "name_only_candidate_relationship"
+        }
+      ],
+      "owner_entity_id": "",
+      "state_license_id": "",
+      "system_slug": "main-line-health",
+      "unresolved_identifiers": [
+        {
+          "identifier": "data-mcp:facility:ccn:390222",
+          "identifier_type": "candidate_entity_id"
+        }
+      ],
+      "zip_code": ""
+    },
+    {
+      "address": "",
+      "aliases": [
+        "MAIN LINE HOSPITAL BRYN MAWR REHABILITATION"
+      ],
+      "canonical_name": "MAIN LINE HOSPITAL BRYN MAWR REHABILITATION",
+      "ccn": "",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:main-line-hospital-bryn-mawr-rehabilitation",
+      "entity_type": "facility",
+      "identity_conflicts": [
+        {
+          "status": "open",
+          "type": "name_only_candidate_relationship"
+        }
+      ],
+      "owner_entity_id": "",
+      "state_license_id": "",
+      "system_slug": "main-line-health",
+      "unresolved_identifiers": [
+        {
+          "identifier": "data-mcp:facility:ccn:393025",
+          "identifier_type": "candidate_entity_id"
+        }
+      ],
+      "zip_code": ""
+    },
+    {
+      "address": "",
+      "aliases": [
+        "LANCASTER BEHAVIORAL HEALTH HOSPITAL"
+      ],
+      "canonical_name": "LANCASTER BEHAVIORAL HEALTH HOSPITAL",
+      "ccn": "",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:lancaster-behavioral-health-hospital",
+      "entity_type": "facility",
+      "identity_conflicts": [
+        {
+          "status": "open",
+          "type": "name_only_candidate_relationship"
+        }
+      ],
+      "owner_entity_id": "",
+      "state_license_id": "",
+      "system_slug": "penn-medicine",
+      "unresolved_identifiers": [
+        {
+          "identifier": "data-mcp:facility:ccn:394055",
+          "identifier_type": "candidate_entity_id"
+        }
+      ],
+      "zip_code": ""
+    },
+    {
+      "address": "",
+      "aliases": [
+        "ROTHMAN ORTHOPAEDIC SPECIALTY HOSPITAL"
+      ],
+      "canonical_name": "ROTHMAN ORTHOPAEDIC SPECIALTY HOSPITAL",
+      "ccn": "",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:rothman-orthopaedic-specialty-hospital",
+      "entity_type": "facility",
+      "identity_conflicts": [
+        {
+          "status": "open",
+          "type": "name_only_candidate_relationship"
+        }
+      ],
+      "owner_entity_id": "",
+      "state_license_id": "",
+      "system_slug": "jefferson-health",
+      "unresolved_identifiers": [
+        {
+          "identifier": "data-mcp:facility:official:jefferson-health:rothman-orthopaedic-specialty-hospital",
+          "identifier_type": "candidate_entity_id"
+        }
+      ],
       "zip_code": ""
     }
   ],
@@ -3510,11 +4006,11 @@
       "confidence": "high for state row transcription; ownership and cross-basis comparability not adjudicated",
       "denominator_scope": "facility-level; basis=PA source field LICENSED BEDS; raw source field=LICENSED BEDS",
       "dependency_cluster_ids": [],
-      "entity_id": "data-mcp:facility:official:jefferson-health:jefferson-abington-hospital",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:abington-memorial-hospital",
       "extraction_pattern": null,
       "fact_id": "state-bed:pa-hospital-report-2024-1a:abington-memorial-hospital:licensed-beds",
       "literal_value": null,
-      "match_basis": "Exact state row identifier or exact state-reported facility name; no fuzzy merge.",
+      "match_basis": "Exact state-reported facility name identifies this PA source-local entity only; the candidate relationship remains unresolved.",
       "measure_id": "bed_count.licensed",
       "missingness": null,
       "missingness_reason": "",
@@ -3537,11 +4033,11 @@
       "confidence": "high for state row transcription; ownership and cross-basis comparability not adjudicated",
       "denominator_scope": "facility-level; basis=PA source field BEDS SET UP AND STAFFED; raw source field=BEDS SET UP AND STAFFED",
       "dependency_cluster_ids": [],
-      "entity_id": "data-mcp:facility:official:jefferson-health:jefferson-abington-hospital",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:abington-memorial-hospital",
       "extraction_pattern": null,
       "fact_id": "state-bed:pa-hospital-report-2024-1a:abington-memorial-hospital:beds-set-up-and-staffed",
       "literal_value": null,
-      "match_basis": "Exact state row identifier or exact state-reported facility name; no fuzzy merge.",
+      "match_basis": "Exact state-reported facility name identifies this PA source-local entity only; the candidate relationship remains unresolved.",
       "measure_id": "bed_count.setup_and_staffed",
       "missingness": null,
       "missingness_reason": "",
@@ -3564,11 +4060,11 @@
       "confidence": "high for state row transcription; ownership and cross-basis comparability not adjudicated",
       "denominator_scope": "facility-level; basis=PA source field LICENSED BEDS; raw source field=LICENSED BEDS",
       "dependency_cluster_ids": [],
-      "entity_id": "data-mcp:facility:official:jefferson-health:jefferson-einstein-montgomery-hospital",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:einstein-medical-center-montgomery",
       "extraction_pattern": null,
       "fact_id": "state-bed:pa-hospital-report-2024-1a:einstein-medical-center-montgomery:licensed-beds",
       "literal_value": null,
-      "match_basis": "Exact state row identifier or exact state-reported facility name; no fuzzy merge.",
+      "match_basis": "Exact state-reported facility name identifies this PA source-local entity only; the candidate relationship remains unresolved.",
       "measure_id": "bed_count.licensed",
       "missingness": null,
       "missingness_reason": "",
@@ -3591,11 +4087,11 @@
       "confidence": "high for state row transcription; ownership and cross-basis comparability not adjudicated",
       "denominator_scope": "facility-level; basis=PA source field BEDS SET UP AND STAFFED; raw source field=BEDS SET UP AND STAFFED",
       "dependency_cluster_ids": [],
-      "entity_id": "data-mcp:facility:official:jefferson-health:jefferson-einstein-montgomery-hospital",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:einstein-medical-center-montgomery",
       "extraction_pattern": null,
       "fact_id": "state-bed:pa-hospital-report-2024-1a:einstein-medical-center-montgomery:beds-set-up-and-staffed",
       "literal_value": null,
-      "match_basis": "Exact state row identifier or exact state-reported facility name; no fuzzy merge.",
+      "match_basis": "Exact state-reported facility name identifies this PA source-local entity only; the candidate relationship remains unresolved.",
       "measure_id": "bed_count.setup_and_staffed",
       "missingness": null,
       "missingness_reason": "",
@@ -3618,11 +4114,11 @@
       "confidence": "high for state row transcription; ownership and cross-basis comparability not adjudicated",
       "denominator_scope": "facility-level; basis=PA source field LICENSED BEDS; raw source field=LICENSED BEDS",
       "dependency_cluster_ids": [],
-      "entity_id": "data-mcp:facility:official:jefferson-health:jefferson-einstein-philadelphia-hospital",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:albert-einstein-medical-center",
       "extraction_pattern": null,
       "fact_id": "state-bed:pa-hospital-report-2024-1a:albert-einstein-medical-center:licensed-beds",
       "literal_value": null,
-      "match_basis": "Exact state row identifier or exact state-reported facility name; no fuzzy merge.",
+      "match_basis": "Exact state-reported facility name identifies this PA source-local entity only; the candidate relationship remains unresolved.",
       "measure_id": "bed_count.licensed",
       "missingness": null,
       "missingness_reason": "",
@@ -3645,11 +4141,11 @@
       "confidence": "high for state row transcription; ownership and cross-basis comparability not adjudicated",
       "denominator_scope": "facility-level; basis=PA source field BEDS SET UP AND STAFFED; raw source field=BEDS SET UP AND STAFFED",
       "dependency_cluster_ids": [],
-      "entity_id": "data-mcp:facility:official:jefferson-health:jefferson-einstein-philadelphia-hospital",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:albert-einstein-medical-center",
       "extraction_pattern": null,
       "fact_id": "state-bed:pa-hospital-report-2024-1a:albert-einstein-medical-center:beds-set-up-and-staffed",
       "literal_value": null,
-      "match_basis": "Exact state row identifier or exact state-reported facility name; no fuzzy merge.",
+      "match_basis": "Exact state-reported facility name identifies this PA source-local entity only; the candidate relationship remains unresolved.",
       "measure_id": "bed_count.setup_and_staffed",
       "missingness": null,
       "missingness_reason": "",
@@ -3672,11 +4168,11 @@
       "confidence": "high for state row transcription; ownership and cross-basis comparability not adjudicated",
       "denominator_scope": "facility-level; basis=PA source field LICENSED BEDS; raw source field=LICENSED BEDS",
       "dependency_cluster_ids": [],
-      "entity_id": "data-mcp:facility:official:jefferson-health:jefferson-lansdale-hospital",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:lansdale-hospital",
       "extraction_pattern": null,
       "fact_id": "state-bed:pa-hospital-report-2024-1a:lansdale-hospital:licensed-beds",
       "literal_value": null,
-      "match_basis": "Exact state row identifier or exact state-reported facility name; no fuzzy merge.",
+      "match_basis": "Exact state-reported facility name identifies this PA source-local entity only; the candidate relationship remains unresolved.",
       "measure_id": "bed_count.licensed",
       "missingness": null,
       "missingness_reason": "",
@@ -3699,11 +4195,11 @@
       "confidence": "high for state row transcription; ownership and cross-basis comparability not adjudicated",
       "denominator_scope": "facility-level; basis=PA source field BEDS SET UP AND STAFFED; raw source field=BEDS SET UP AND STAFFED",
       "dependency_cluster_ids": [],
-      "entity_id": "data-mcp:facility:official:jefferson-health:jefferson-lansdale-hospital",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:lansdale-hospital",
       "extraction_pattern": null,
       "fact_id": "state-bed:pa-hospital-report-2024-1a:lansdale-hospital:beds-set-up-and-staffed",
       "literal_value": null,
-      "match_basis": "Exact state row identifier or exact state-reported facility name; no fuzzy merge.",
+      "match_basis": "Exact state-reported facility name identifies this PA source-local entity only; the candidate relationship remains unresolved.",
       "measure_id": "bed_count.setup_and_staffed",
       "missingness": null,
       "missingness_reason": "",
@@ -3726,11 +4222,11 @@
       "confidence": "high for state row transcription; ownership and cross-basis comparability not adjudicated",
       "denominator_scope": "facility-level; basis=PA source field LICENSED BEDS; raw source field=LICENSED BEDS",
       "dependency_cluster_ids": [],
-      "entity_id": "data-mcp:facility:official:jefferson-health:thomas-jefferson-university-hospital",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:thomas-jefferson-university-hospital",
       "extraction_pattern": null,
       "fact_id": "state-bed:pa-hospital-report-2024-1a:thomas-jefferson-university-hospital:licensed-beds",
       "literal_value": null,
-      "match_basis": "Exact state row identifier or exact state-reported facility name; no fuzzy merge.",
+      "match_basis": "Exact state-reported facility name identifies this PA source-local entity only; the candidate relationship remains unresolved.",
       "measure_id": "bed_count.licensed",
       "missingness": null,
       "missingness_reason": "",
@@ -3753,11 +4249,11 @@
       "confidence": "high for state row transcription; ownership and cross-basis comparability not adjudicated",
       "denominator_scope": "facility-level; basis=PA source field BEDS SET UP AND STAFFED; raw source field=BEDS SET UP AND STAFFED",
       "dependency_cluster_ids": [],
-      "entity_id": "data-mcp:facility:official:jefferson-health:thomas-jefferson-university-hospital",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:thomas-jefferson-university-hospital",
       "extraction_pattern": null,
       "fact_id": "state-bed:pa-hospital-report-2024-1a:thomas-jefferson-university-hospital:beds-set-up-and-staffed",
       "literal_value": null,
-      "match_basis": "Exact state row identifier or exact state-reported facility name; no fuzzy merge.",
+      "match_basis": "Exact state-reported facility name identifies this PA source-local entity only; the candidate relationship remains unresolved.",
       "measure_id": "bed_count.setup_and_staffed",
       "missingness": null,
       "missingness_reason": "",
@@ -3780,11 +4276,11 @@
       "confidence": "high for state row transcription; ownership and cross-basis comparability not adjudicated",
       "denominator_scope": "facility-level; basis=PA source field LICENSED BEDS; raw source field=LICENSED BEDS",
       "dependency_cluster_ids": [],
-      "entity_id": "data-mcp:facility:state:pa:jefferson-health-northeast",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:jefferson-health-northeast",
       "extraction_pattern": null,
       "fact_id": "state-bed:pa-hospital-report-2024-1a:jefferson-health-northeast:licensed-beds",
       "literal_value": null,
-      "match_basis": "Exact state row identifier or exact state-reported facility name; no fuzzy merge.",
+      "match_basis": "Exact state-reported facility name identifies this PA source-local entity only; the candidate relationship remains unresolved.",
       "measure_id": "bed_count.licensed",
       "missingness": null,
       "missingness_reason": "",
@@ -3807,11 +4303,11 @@
       "confidence": "high for state row transcription; ownership and cross-basis comparability not adjudicated",
       "denominator_scope": "facility-level; basis=PA source field BEDS SET UP AND STAFFED; raw source field=BEDS SET UP AND STAFFED",
       "dependency_cluster_ids": [],
-      "entity_id": "data-mcp:facility:state:pa:jefferson-health-northeast",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:jefferson-health-northeast",
       "extraction_pattern": null,
       "fact_id": "state-bed:pa-hospital-report-2024-1a:jefferson-health-northeast:beds-set-up-and-staffed",
       "literal_value": null,
-      "match_basis": "Exact state row identifier or exact state-reported facility name; no fuzzy merge.",
+      "match_basis": "Exact state-reported facility name identifies this PA source-local entity only; the candidate relationship remains unresolved.",
       "measure_id": "bed_count.setup_and_staffed",
       "missingness": null,
       "missingness_reason": "",
@@ -3834,11 +4330,11 @@
       "confidence": "high for state row transcription; ownership and cross-basis comparability not adjudicated",
       "denominator_scope": "facility-level; basis=PA source field LICENSED BEDS; raw source field=LICENSED BEDS",
       "dependency_cluster_ids": [],
-      "entity_id": "data-mcp:facility:ccn:390027",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:temple-university-hospital",
       "extraction_pattern": null,
       "fact_id": "state-bed:pa-hospital-report-2024-1a:temple-university-hospital:licensed-beds",
       "literal_value": null,
-      "match_basis": "Exact state row identifier or exact state-reported facility name; no fuzzy merge.",
+      "match_basis": "Exact state-reported facility name identifies this PA source-local entity only; the candidate relationship remains unresolved.",
       "measure_id": "bed_count.licensed",
       "missingness": null,
       "missingness_reason": "",
@@ -3861,11 +4357,11 @@
       "confidence": "high for state row transcription; ownership and cross-basis comparability not adjudicated",
       "denominator_scope": "facility-level; basis=PA source field BEDS SET UP AND STAFFED; raw source field=BEDS SET UP AND STAFFED",
       "dependency_cluster_ids": [],
-      "entity_id": "data-mcp:facility:ccn:390027",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:temple-university-hospital",
       "extraction_pattern": null,
       "fact_id": "state-bed:pa-hospital-report-2024-1a:temple-university-hospital:beds-set-up-and-staffed",
       "literal_value": null,
-      "match_basis": "Exact state row identifier or exact state-reported facility name; no fuzzy merge.",
+      "match_basis": "Exact state-reported facility name identifies this PA source-local entity only; the candidate relationship remains unresolved.",
       "measure_id": "bed_count.setup_and_staffed",
       "missingness": null,
       "missingness_reason": "",
@@ -3888,11 +4384,11 @@
       "confidence": "high for state row transcription; ownership and cross-basis comparability not adjudicated",
       "denominator_scope": "facility-level; basis=PA source field LICENSED BEDS; raw source field=LICENSED BEDS",
       "dependency_cluster_ids": [],
-      "entity_id": "data-mcp:facility:ccn:390026",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:temple-health-chestnut-hill-hospital",
       "extraction_pattern": null,
       "fact_id": "state-bed:pa-hospital-report-2024-1a:temple-health-chestnut-hill-hospital:licensed-beds",
       "literal_value": null,
-      "match_basis": "Exact state row identifier or exact state-reported facility name; no fuzzy merge.",
+      "match_basis": "Exact state-reported facility name identifies this PA source-local entity only; the candidate relationship remains unresolved.",
       "measure_id": "bed_count.licensed",
       "missingness": null,
       "missingness_reason": "",
@@ -3915,11 +4411,11 @@
       "confidence": "high for state row transcription; ownership and cross-basis comparability not adjudicated",
       "denominator_scope": "facility-level; basis=PA source field BEDS SET UP AND STAFFED; raw source field=BEDS SET UP AND STAFFED",
       "dependency_cluster_ids": [],
-      "entity_id": "data-mcp:facility:ccn:390026",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:temple-health-chestnut-hill-hospital",
       "extraction_pattern": null,
       "fact_id": "state-bed:pa-hospital-report-2024-1a:temple-health-chestnut-hill-hospital:beds-set-up-and-staffed",
       "literal_value": null,
-      "match_basis": "Exact state row identifier or exact state-reported facility name; no fuzzy merge.",
+      "match_basis": "Exact state-reported facility name identifies this PA source-local entity only; the candidate relationship remains unresolved.",
       "measure_id": "bed_count.setup_and_staffed",
       "missingness": null,
       "missingness_reason": "",
@@ -3942,11 +4438,11 @@
       "confidence": "high for state row transcription; ownership and cross-basis comparability not adjudicated",
       "denominator_scope": "facility-level; basis=PA source field LICENSED BEDS; raw source field=LICENSED BEDS",
       "dependency_cluster_ids": [],
-      "entity_id": "data-mcp:facility:ccn:390111",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:hospital-of-the-university-of-pennsylvania",
       "extraction_pattern": null,
       "fact_id": "state-bed:pa-hospital-report-2024-1a:hospital-of-the-university-of-pennsylvania:licensed-beds",
       "literal_value": null,
-      "match_basis": "Exact state row identifier or exact state-reported facility name; no fuzzy merge.",
+      "match_basis": "Exact state-reported facility name identifies this PA source-local entity only; the candidate relationship remains unresolved.",
       "measure_id": "bed_count.licensed",
       "missingness": null,
       "missingness_reason": "",
@@ -3969,11 +4465,11 @@
       "confidence": "high for state row transcription; ownership and cross-basis comparability not adjudicated",
       "denominator_scope": "facility-level; basis=PA source field BEDS SET UP AND STAFFED; raw source field=BEDS SET UP AND STAFFED",
       "dependency_cluster_ids": [],
-      "entity_id": "data-mcp:facility:ccn:390111",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:hospital-of-the-university-of-pennsylvania",
       "extraction_pattern": null,
       "fact_id": "state-bed:pa-hospital-report-2024-1a:hospital-of-the-university-of-pennsylvania:beds-set-up-and-staffed",
       "literal_value": null,
-      "match_basis": "Exact state row identifier or exact state-reported facility name; no fuzzy merge.",
+      "match_basis": "Exact state-reported facility name identifies this PA source-local entity only; the candidate relationship remains unresolved.",
       "measure_id": "bed_count.setup_and_staffed",
       "missingness": null,
       "missingness_reason": "",
@@ -3996,11 +4492,11 @@
       "confidence": "high for state row transcription; ownership and cross-basis comparability not adjudicated",
       "denominator_scope": "facility-level; basis=PA source field LICENSED BEDS; raw source field=LICENSED BEDS",
       "dependency_cluster_ids": [],
-      "entity_id": "data-mcp:facility:ccn:390223",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:penn-presbyterian-medical-center",
       "extraction_pattern": null,
       "fact_id": "state-bed:pa-hospital-report-2024-1a:penn-presbyterian-medical-center:licensed-beds",
       "literal_value": null,
-      "match_basis": "Exact state row identifier or exact state-reported facility name; no fuzzy merge.",
+      "match_basis": "Exact state-reported facility name identifies this PA source-local entity only; the candidate relationship remains unresolved.",
       "measure_id": "bed_count.licensed",
       "missingness": null,
       "missingness_reason": "",
@@ -4023,11 +4519,11 @@
       "confidence": "high for state row transcription; ownership and cross-basis comparability not adjudicated",
       "denominator_scope": "facility-level; basis=PA source field BEDS SET UP AND STAFFED; raw source field=BEDS SET UP AND STAFFED",
       "dependency_cluster_ids": [],
-      "entity_id": "data-mcp:facility:ccn:390223",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:penn-presbyterian-medical-center",
       "extraction_pattern": null,
       "fact_id": "state-bed:pa-hospital-report-2024-1a:penn-presbyterian-medical-center:beds-set-up-and-staffed",
       "literal_value": null,
-      "match_basis": "Exact state row identifier or exact state-reported facility name; no fuzzy merge.",
+      "match_basis": "Exact state-reported facility name identifies this PA source-local entity only; the candidate relationship remains unresolved.",
       "measure_id": "bed_count.setup_and_staffed",
       "missingness": null,
       "missingness_reason": "",
@@ -4050,11 +4546,11 @@
       "confidence": "high for state row transcription; ownership and cross-basis comparability not adjudicated",
       "denominator_scope": "facility-level; basis=PA source field LICENSED BEDS; raw source field=LICENSED BEDS",
       "dependency_cluster_ids": [],
-      "entity_id": "data-mcp:facility:ccn:390179",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:chester-county-hospital",
       "extraction_pattern": null,
       "fact_id": "state-bed:pa-hospital-report-2024-1a:chester-county-hospital:licensed-beds",
       "literal_value": null,
-      "match_basis": "Exact state row identifier or exact state-reported facility name; no fuzzy merge.",
+      "match_basis": "Exact state-reported facility name identifies this PA source-local entity only; the candidate relationship remains unresolved.",
       "measure_id": "bed_count.licensed",
       "missingness": null,
       "missingness_reason": "",
@@ -4077,11 +4573,11 @@
       "confidence": "high for state row transcription; ownership and cross-basis comparability not adjudicated",
       "denominator_scope": "facility-level; basis=PA source field BEDS SET UP AND STAFFED; raw source field=BEDS SET UP AND STAFFED",
       "dependency_cluster_ids": [],
-      "entity_id": "data-mcp:facility:ccn:390179",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:chester-county-hospital",
       "extraction_pattern": null,
       "fact_id": "state-bed:pa-hospital-report-2024-1a:chester-county-hospital:beds-set-up-and-staffed",
       "literal_value": null,
-      "match_basis": "Exact state row identifier or exact state-reported facility name; no fuzzy merge.",
+      "match_basis": "Exact state-reported facility name identifies this PA source-local entity only; the candidate relationship remains unresolved.",
       "measure_id": "bed_count.setup_and_staffed",
       "missingness": null,
       "missingness_reason": "",
@@ -4104,11 +4600,11 @@
       "confidence": "high for state row transcription; ownership and cross-basis comparability not adjudicated",
       "denominator_scope": "facility-level; basis=PA source field LICENSED BEDS; raw source field=LICENSED BEDS",
       "dependency_cluster_ids": [],
-      "entity_id": "data-mcp:facility:ccn:390100",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:lancaster-general-hospital",
       "extraction_pattern": null,
       "fact_id": "state-bed:pa-hospital-report-2024-1a:lancaster-general-hospital:licensed-beds",
       "literal_value": null,
-      "match_basis": "Exact state row identifier or exact state-reported facility name; no fuzzy merge.",
+      "match_basis": "Exact state-reported facility name identifies this PA source-local entity only; the candidate relationship remains unresolved.",
       "measure_id": "bed_count.licensed",
       "missingness": null,
       "missingness_reason": "",
@@ -4131,11 +4627,11 @@
       "confidence": "high for state row transcription; ownership and cross-basis comparability not adjudicated",
       "denominator_scope": "facility-level; basis=PA source field BEDS SET UP AND STAFFED; raw source field=BEDS SET UP AND STAFFED",
       "dependency_cluster_ids": [],
-      "entity_id": "data-mcp:facility:ccn:390100",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:lancaster-general-hospital",
       "extraction_pattern": null,
       "fact_id": "state-bed:pa-hospital-report-2024-1a:lancaster-general-hospital:beds-set-up-and-staffed",
       "literal_value": null,
-      "match_basis": "Exact state row identifier or exact state-reported facility name; no fuzzy merge.",
+      "match_basis": "Exact state-reported facility name identifies this PA source-local entity only; the candidate relationship remains unresolved.",
       "measure_id": "bed_count.setup_and_staffed",
       "missingness": null,
       "missingness_reason": "",
@@ -4158,11 +4654,11 @@
       "confidence": "high for state row transcription; ownership and cross-basis comparability not adjudicated",
       "denominator_scope": "facility-level; basis=PA source field LICENSED BEDS; raw source field=LICENSED BEDS",
       "dependency_cluster_ids": [],
-      "entity_id": "data-mcp:facility:ccn:390226",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:pennsylvania-hospital-of-the-university-of-pennsylvania-health-system",
       "extraction_pattern": null,
       "fact_id": "state-bed:pa-hospital-report-2024-1a:pennsylvania-hospital-of-the-university-of-pennsylvania-health-system:licensed-beds",
       "literal_value": null,
-      "match_basis": "Exact state row identifier or exact state-reported facility name; no fuzzy merge.",
+      "match_basis": "Exact state-reported facility name identifies this PA source-local entity only; the candidate relationship remains unresolved.",
       "measure_id": "bed_count.licensed",
       "missingness": null,
       "missingness_reason": "",
@@ -4185,11 +4681,11 @@
       "confidence": "high for state row transcription; ownership and cross-basis comparability not adjudicated",
       "denominator_scope": "facility-level; basis=PA source field BEDS SET UP AND STAFFED; raw source field=BEDS SET UP AND STAFFED",
       "dependency_cluster_ids": [],
-      "entity_id": "data-mcp:facility:ccn:390226",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:pennsylvania-hospital-of-the-university-of-pennsylvania-health-system",
       "extraction_pattern": null,
       "fact_id": "state-bed:pa-hospital-report-2024-1a:pennsylvania-hospital-of-the-university-of-pennsylvania-health-system:beds-set-up-and-staffed",
       "literal_value": null,
-      "match_basis": "Exact state row identifier or exact state-reported facility name; no fuzzy merge.",
+      "match_basis": "Exact state-reported facility name identifies this PA source-local entity only; the candidate relationship remains unresolved.",
       "measure_id": "bed_count.setup_and_staffed",
       "missingness": null,
       "missingness_reason": "",
@@ -4212,11 +4708,11 @@
       "confidence": "high for state row transcription; ownership and cross-basis comparability not adjudicated",
       "denominator_scope": "facility-level; basis=PA source field LICENSED BEDS; raw source field=LICENSED BEDS",
       "dependency_cluster_ids": [],
-      "entity_id": "data-mcp:facility:ccn:390195",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:main-line-hospital-lankenau-medical-center",
       "extraction_pattern": null,
       "fact_id": "state-bed:pa-hospital-report-2024-1a:main-line-hospital-lankenau-medical-center:licensed-beds",
       "literal_value": null,
-      "match_basis": "Exact state row identifier or exact state-reported facility name; no fuzzy merge.",
+      "match_basis": "Exact state-reported facility name identifies this PA source-local entity only; the candidate relationship remains unresolved.",
       "measure_id": "bed_count.licensed",
       "missingness": null,
       "missingness_reason": "",
@@ -4239,11 +4735,11 @@
       "confidence": "high for state row transcription; ownership and cross-basis comparability not adjudicated",
       "denominator_scope": "facility-level; basis=PA source field BEDS SET UP AND STAFFED; raw source field=BEDS SET UP AND STAFFED",
       "dependency_cluster_ids": [],
-      "entity_id": "data-mcp:facility:ccn:390195",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:main-line-hospital-lankenau-medical-center",
       "extraction_pattern": null,
       "fact_id": "state-bed:pa-hospital-report-2024-1a:main-line-hospital-lankenau-medical-center:beds-set-up-and-staffed",
       "literal_value": null,
-      "match_basis": "Exact state row identifier or exact state-reported facility name; no fuzzy merge.",
+      "match_basis": "Exact state-reported facility name identifies this PA source-local entity only; the candidate relationship remains unresolved.",
       "measure_id": "bed_count.setup_and_staffed",
       "missingness": null,
       "missingness_reason": "",
@@ -4266,11 +4762,11 @@
       "confidence": "high for state row transcription; ownership and cross-basis comparability not adjudicated",
       "denominator_scope": "facility-level; basis=PA source field LICENSED BEDS; raw source field=LICENSED BEDS",
       "dependency_cluster_ids": [],
-      "entity_id": "data-mcp:facility:ccn:390139",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:main-line-hospital-bryn-mawr",
       "extraction_pattern": null,
       "fact_id": "state-bed:pa-hospital-report-2024-1a:main-line-hospital-bryn-mawr:licensed-beds",
       "literal_value": null,
-      "match_basis": "Exact state row identifier or exact state-reported facility name; no fuzzy merge.",
+      "match_basis": "Exact state-reported facility name identifies this PA source-local entity only; the candidate relationship remains unresolved.",
       "measure_id": "bed_count.licensed",
       "missingness": null,
       "missingness_reason": "",
@@ -4293,11 +4789,11 @@
       "confidence": "high for state row transcription; ownership and cross-basis comparability not adjudicated",
       "denominator_scope": "facility-level; basis=PA source field BEDS SET UP AND STAFFED; raw source field=BEDS SET UP AND STAFFED",
       "dependency_cluster_ids": [],
-      "entity_id": "data-mcp:facility:ccn:390139",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:main-line-hospital-bryn-mawr",
       "extraction_pattern": null,
       "fact_id": "state-bed:pa-hospital-report-2024-1a:main-line-hospital-bryn-mawr:beds-set-up-and-staffed",
       "literal_value": null,
-      "match_basis": "Exact state row identifier or exact state-reported facility name; no fuzzy merge.",
+      "match_basis": "Exact state-reported facility name identifies this PA source-local entity only; the candidate relationship remains unresolved.",
       "measure_id": "bed_count.setup_and_staffed",
       "missingness": null,
       "missingness_reason": "",
@@ -4320,11 +4816,11 @@
       "confidence": "high for state row transcription; ownership and cross-basis comparability not adjudicated",
       "denominator_scope": "facility-level; basis=PA source field LICENSED BEDS; raw source field=LICENSED BEDS",
       "dependency_cluster_ids": [],
-      "entity_id": "data-mcp:facility:ccn:390153",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:main-line-hospital-paoli",
       "extraction_pattern": null,
       "fact_id": "state-bed:pa-hospital-report-2024-1a:main-line-hospital-paoli:licensed-beds",
       "literal_value": null,
-      "match_basis": "Exact state row identifier or exact state-reported facility name; no fuzzy merge.",
+      "match_basis": "Exact state-reported facility name identifies this PA source-local entity only; the candidate relationship remains unresolved.",
       "measure_id": "bed_count.licensed",
       "missingness": null,
       "missingness_reason": "",
@@ -4347,11 +4843,11 @@
       "confidence": "high for state row transcription; ownership and cross-basis comparability not adjudicated",
       "denominator_scope": "facility-level; basis=PA source field BEDS SET UP AND STAFFED; raw source field=BEDS SET UP AND STAFFED",
       "dependency_cluster_ids": [],
-      "entity_id": "data-mcp:facility:ccn:390153",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:main-line-hospital-paoli",
       "extraction_pattern": null,
       "fact_id": "state-bed:pa-hospital-report-2024-1a:main-line-hospital-paoli:beds-set-up-and-staffed",
       "literal_value": null,
-      "match_basis": "Exact state row identifier or exact state-reported facility name; no fuzzy merge.",
+      "match_basis": "Exact state-reported facility name identifies this PA source-local entity only; the candidate relationship remains unresolved.",
       "measure_id": "bed_count.setup_and_staffed",
       "missingness": null,
       "missingness_reason": "",
@@ -4374,11 +4870,11 @@
       "confidence": "high for state row transcription; ownership and cross-basis comparability not adjudicated",
       "denominator_scope": "facility-level; basis=PA source field LICENSED BEDS; raw source field=LICENSED BEDS",
       "dependency_cluster_ids": [],
-      "entity_id": "data-mcp:facility:ccn:390222",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:riddle-memorial-hospital",
       "extraction_pattern": null,
       "fact_id": "state-bed:pa-hospital-report-2024-1a:riddle-memorial-hospital:licensed-beds",
       "literal_value": null,
-      "match_basis": "Exact state row identifier or exact state-reported facility name; no fuzzy merge.",
+      "match_basis": "Exact state-reported facility name identifies this PA source-local entity only; the candidate relationship remains unresolved.",
       "measure_id": "bed_count.licensed",
       "missingness": null,
       "missingness_reason": "",
@@ -4401,11 +4897,11 @@
       "confidence": "high for state row transcription; ownership and cross-basis comparability not adjudicated",
       "denominator_scope": "facility-level; basis=PA source field BEDS SET UP AND STAFFED; raw source field=BEDS SET UP AND STAFFED",
       "dependency_cluster_ids": [],
-      "entity_id": "data-mcp:facility:ccn:390222",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:riddle-memorial-hospital",
       "extraction_pattern": null,
       "fact_id": "state-bed:pa-hospital-report-2024-1a:riddle-memorial-hospital:beds-set-up-and-staffed",
       "literal_value": null,
-      "match_basis": "Exact state row identifier or exact state-reported facility name; no fuzzy merge.",
+      "match_basis": "Exact state-reported facility name identifies this PA source-local entity only; the candidate relationship remains unresolved.",
       "measure_id": "bed_count.setup_and_staffed",
       "missingness": null,
       "missingness_reason": "",
@@ -4428,11 +4924,11 @@
       "confidence": "high for state row transcription; ownership and cross-basis comparability not adjudicated",
       "denominator_scope": "facility-level; basis=PA source field LICENSED BEDS**; raw source field=LICENSED BEDS**",
       "dependency_cluster_ids": [],
-      "entity_id": "data-mcp:facility:ccn:393025",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:main-line-hospital-bryn-mawr-rehabilitation",
       "extraction_pattern": null,
       "fact_id": "state-bed:pa-hospital-report-2024-1b:main-line-hospital-bryn-mawr-rehabilitation:licensed-beds**",
       "literal_value": null,
-      "match_basis": "Exact state row identifier or exact state-reported facility name; no fuzzy merge.",
+      "match_basis": "Exact state-reported facility name identifies this PA source-local entity only; the candidate relationship remains unresolved.",
       "measure_id": "bed_count.licensed",
       "missingness": null,
       "missingness_reason": "",
@@ -4455,11 +4951,11 @@
       "confidence": "high for state row transcription; ownership and cross-basis comparability not adjudicated",
       "denominator_scope": "facility-level; basis=PA source field BEDS SET UP AND STAFFED; raw source field=BEDS SET UP AND STAFFED",
       "dependency_cluster_ids": [],
-      "entity_id": "data-mcp:facility:ccn:393025",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:main-line-hospital-bryn-mawr-rehabilitation",
       "extraction_pattern": null,
       "fact_id": "state-bed:pa-hospital-report-2024-1b:main-line-hospital-bryn-mawr-rehabilitation:beds-set-up-and-staffed",
       "literal_value": null,
-      "match_basis": "Exact state row identifier or exact state-reported facility name; no fuzzy merge.",
+      "match_basis": "Exact state-reported facility name identifies this PA source-local entity only; the candidate relationship remains unresolved.",
       "measure_id": "bed_count.setup_and_staffed",
       "missingness": null,
       "missingness_reason": "",
@@ -4482,11 +4978,11 @@
       "confidence": "high for state row transcription; ownership and cross-basis comparability not adjudicated",
       "denominator_scope": "facility-level; basis=PA source field LICENSED BEDS**; raw source field=LICENSED BEDS**",
       "dependency_cluster_ids": [],
-      "entity_id": "data-mcp:facility:ccn:394055",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:lancaster-behavioral-health-hospital",
       "extraction_pattern": null,
       "fact_id": "state-bed:pa-hospital-report-2024-1b:lancaster-behavioral-health-hospital:licensed-beds**",
       "literal_value": null,
-      "match_basis": "Exact state row identifier or exact state-reported facility name; no fuzzy merge.",
+      "match_basis": "Exact state-reported facility name identifies this PA source-local entity only; the candidate relationship remains unresolved.",
       "measure_id": "bed_count.licensed",
       "missingness": null,
       "missingness_reason": "",
@@ -4509,11 +5005,11 @@
       "confidence": "high for state row transcription; ownership and cross-basis comparability not adjudicated",
       "denominator_scope": "facility-level; basis=PA source field BEDS SET UP AND STAFFED; raw source field=BEDS SET UP AND STAFFED",
       "dependency_cluster_ids": [],
-      "entity_id": "data-mcp:facility:ccn:394055",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:lancaster-behavioral-health-hospital",
       "extraction_pattern": null,
       "fact_id": "state-bed:pa-hospital-report-2024-1b:lancaster-behavioral-health-hospital:beds-set-up-and-staffed",
       "literal_value": null,
-      "match_basis": "Exact state row identifier or exact state-reported facility name; no fuzzy merge.",
+      "match_basis": "Exact state-reported facility name identifies this PA source-local entity only; the candidate relationship remains unresolved.",
       "measure_id": "bed_count.setup_and_staffed",
       "missingness": null,
       "missingness_reason": "",
@@ -4536,11 +5032,11 @@
       "confidence": "high for state row transcription; ownership and cross-basis comparability not adjudicated",
       "denominator_scope": "facility-level; basis=PA source field LICENSED BEDS**; raw source field=LICENSED BEDS**",
       "dependency_cluster_ids": [],
-      "entity_id": "data-mcp:facility:official:jefferson-health:rothman-orthopaedic-specialty-hospital",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:rothman-orthopaedic-specialty-hospital",
       "extraction_pattern": null,
       "fact_id": "state-bed:pa-hospital-report-2024-1b:rothman-orthopaedic-specialty-hospital:licensed-beds**",
       "literal_value": null,
-      "match_basis": "Exact state row identifier or exact state-reported facility name; no fuzzy merge.",
+      "match_basis": "Exact state-reported facility name identifies this PA source-local entity only; the candidate relationship remains unresolved.",
       "measure_id": "bed_count.licensed",
       "missingness": null,
       "missingness_reason": "",
@@ -4563,11 +5059,11 @@
       "confidence": "high for state row transcription; ownership and cross-basis comparability not adjudicated",
       "denominator_scope": "facility-level; basis=PA source field BEDS SET UP AND STAFFED; raw source field=BEDS SET UP AND STAFFED",
       "dependency_cluster_ids": [],
-      "entity_id": "data-mcp:facility:official:jefferson-health:rothman-orthopaedic-specialty-hospital",
+      "entity_id": "data-mcp:facility:state:pa:report-2024:rothman-orthopaedic-specialty-hospital",
       "extraction_pattern": null,
       "fact_id": "state-bed:pa-hospital-report-2024-1b:rothman-orthopaedic-specialty-hospital:beds-set-up-and-staffed",
       "literal_value": null,
-      "match_basis": "Exact state row identifier or exact state-reported facility name; no fuzzy merge.",
+      "match_basis": "Exact state-reported facility name identifies this PA source-local entity only; the candidate relationship remains unresolved.",
       "measure_id": "bed_count.setup_and_staffed",
       "missingness": null,
       "missingness_reason": "",
@@ -4594,7 +5090,7 @@
       "extraction_pattern": null,
       "fact_id": "state-bed:nj-acute-care-current:jefferson-cherry-hill-hospital-nj10401:lic_beds_slots",
       "literal_value": null,
-      "match_basis": "Exact state row identifier or exact state-reported facility name; no fuzzy merge.",
+      "match_basis": "Exact state facility identifier; no name-only entity merge.",
       "measure_id": "bed_count.licensed",
       "missingness": null,
       "missingness_reason": "",
@@ -4648,7 +5144,7 @@
       "extraction_pattern": null,
       "fact_id": "state-bed:nj-acute-care-current:jefferson-stratford-hospital-nj10403:lic_beds_slots",
       "literal_value": null,
-      "match_basis": "Exact state row identifier or exact state-reported facility name; no fuzzy merge.",
+      "match_basis": "Exact state facility identifier; no name-only entity merge.",
       "measure_id": "bed_count.licensed",
       "missingness": null,
       "missingness_reason": "",
@@ -4702,7 +5198,7 @@
       "extraction_pattern": null,
       "fact_id": "state-bed:nj-acute-care-current:jefferson-washington-township-hospital-nj10802-1:lic_beds_slots",
       "literal_value": null,
-      "match_basis": "Exact state row identifier or exact state-reported facility name; no fuzzy merge.",
+      "match_basis": "Exact state facility identifier; no name-only entity merge.",
       "measure_id": "bed_count.licensed",
       "missingness": null,
       "missingness_reason": "",
@@ -4756,7 +5252,7 @@
       "extraction_pattern": null,
       "fact_id": "state-bed:nj-acute-care-current:cooper-university-hospital-nj10402:lic_beds_slots",
       "literal_value": null,
-      "match_basis": "Exact state row identifier or exact state-reported facility name; no fuzzy merge.",
+      "match_basis": "Exact state facility identifier; no name-only entity merge.",
       "measure_id": "bed_count.licensed",
       "missingness": null,
       "missingness_reason": "",
@@ -4810,7 +5306,7 @@
       "extraction_pattern": null,
       "fact_id": "state-bed:nj-acute-care-current:cooper-university-hospital-cape-regional-inc-nj10501:lic_beds_slots",
       "literal_value": null,
-      "match_basis": "Exact state row identifier or exact state-reported facility name; no fuzzy merge.",
+      "match_basis": "Exact state facility identifier; no name-only entity merge.",
       "measure_id": "bed_count.licensed",
       "missingness": null,
       "missingness_reason": "",
@@ -8034,9 +8530,84 @@
       "confidence": "",
       "denominator_scope": "facility-level; basis=declared bed basis not established",
       "dependency_cluster_ids": [],
+      "entity_id": "data-mcp:facility:official:jefferson-health:jefferson-abington-hospital",
+      "extraction_pattern": null,
+      "fact_id": "bed-missing:jefferson-health:jefferson-abington-hospital",
+      "literal_value": null,
+      "match_basis": "",
+      "measure_id": "bed_count.declared",
+      "missingness": "not_yet_researched",
+      "missingness_reason": "The March 2025 enterprise roster identifies the candidate; current state/CMS facility crosswalk extraction remains incomplete.",
+      "next_step": "Review this source-local fact before Toolkit identity or metric use.",
+      "period_end": null,
+      "period_label": "acquisition cutoff",
+      "period_start": null,
+      "row_locator": "",
+      "source_id": null,
+      "table_match": {},
+      "table_value_field": "",
+      "unit": "beds",
+      "value_type": "integer"
+    },
+    {
+      "absence_checks": [],
+      "caveat": "",
+      "confidence": "",
+      "denominator_scope": "facility-level; basis=declared bed basis not established",
+      "dependency_cluster_ids": [],
       "entity_id": "data-mcp:facility:official:jefferson-health:jefferson-bucks-hospital",
       "extraction_pattern": null,
       "fact_id": "bed-missing:jefferson-health:jefferson-bucks-hospital",
+      "literal_value": null,
+      "match_basis": "",
+      "measure_id": "bed_count.declared",
+      "missingness": "not_yet_researched",
+      "missingness_reason": "The March 2025 enterprise roster identifies the candidate; current state/CMS facility crosswalk extraction remains incomplete.",
+      "next_step": "Review this source-local fact before Toolkit identity or metric use.",
+      "period_end": null,
+      "period_label": "acquisition cutoff",
+      "period_start": null,
+      "row_locator": "",
+      "source_id": null,
+      "table_match": {},
+      "table_value_field": "",
+      "unit": "beds",
+      "value_type": "integer"
+    },
+    {
+      "absence_checks": [],
+      "caveat": "",
+      "confidence": "",
+      "denominator_scope": "facility-level; basis=declared bed basis not established",
+      "dependency_cluster_ids": [],
+      "entity_id": "data-mcp:facility:official:jefferson-health:jefferson-einstein-montgomery-hospital",
+      "extraction_pattern": null,
+      "fact_id": "bed-missing:jefferson-health:jefferson-einstein-montgomery-hospital",
+      "literal_value": null,
+      "match_basis": "",
+      "measure_id": "bed_count.declared",
+      "missingness": "not_yet_researched",
+      "missingness_reason": "The March 2025 enterprise roster identifies the candidate; current state/CMS facility crosswalk extraction remains incomplete.",
+      "next_step": "Review this source-local fact before Toolkit identity or metric use.",
+      "period_end": null,
+      "period_label": "acquisition cutoff",
+      "period_start": null,
+      "row_locator": "",
+      "source_id": null,
+      "table_match": {},
+      "table_value_field": "",
+      "unit": "beds",
+      "value_type": "integer"
+    },
+    {
+      "absence_checks": [],
+      "caveat": "",
+      "confidence": "",
+      "denominator_scope": "facility-level; basis=declared bed basis not established",
+      "dependency_cluster_ids": [],
+      "entity_id": "data-mcp:facility:official:jefferson-health:jefferson-einstein-philadelphia-hospital",
+      "extraction_pattern": null,
+      "fact_id": "bed-missing:jefferson-health:jefferson-einstein-philadelphia-hospital",
       "literal_value": null,
       "match_basis": "",
       "measure_id": "bed_count.declared",
@@ -8087,6 +8658,31 @@
       "entity_id": "data-mcp:facility:official:jefferson-health:jefferson-hospital-for-neuroscience",
       "extraction_pattern": null,
       "fact_id": "bed-missing:jefferson-health:jefferson-hospital-for-neuroscience",
+      "literal_value": null,
+      "match_basis": "",
+      "measure_id": "bed_count.declared",
+      "missingness": "not_yet_researched",
+      "missingness_reason": "The March 2025 enterprise roster identifies the candidate; current state/CMS facility crosswalk extraction remains incomplete.",
+      "next_step": "Review this source-local fact before Toolkit identity or metric use.",
+      "period_end": null,
+      "period_label": "acquisition cutoff",
+      "period_start": null,
+      "row_locator": "",
+      "source_id": null,
+      "table_match": {},
+      "table_value_field": "",
+      "unit": "beds",
+      "value_type": "integer"
+    },
+    {
+      "absence_checks": [],
+      "caveat": "",
+      "confidence": "",
+      "denominator_scope": "facility-level; basis=declared bed basis not established",
+      "dependency_cluster_ids": [],
+      "entity_id": "data-mcp:facility:official:jefferson-health:jefferson-lansdale-hospital",
+      "extraction_pattern": null,
+      "fact_id": "bed-missing:jefferson-health:jefferson-lansdale-hospital",
       "literal_value": null,
       "match_basis": "",
       "measure_id": "bed_count.declared",
@@ -8631,6 +9227,56 @@
       "entity_id": "data-mcp:facility:official:jefferson-health:physicians-care-surgical-hospital",
       "extraction_pattern": null,
       "fact_id": "bed-missing:jefferson-health:physicians-care-surgical-hospital",
+      "literal_value": null,
+      "match_basis": "",
+      "measure_id": "bed_count.declared",
+      "missingness": "not_yet_researched",
+      "missingness_reason": "The March 2025 enterprise roster identifies the candidate; current state/CMS facility crosswalk extraction remains incomplete.",
+      "next_step": "Review this source-local fact before Toolkit identity or metric use.",
+      "period_end": null,
+      "period_label": "acquisition cutoff",
+      "period_start": null,
+      "row_locator": "",
+      "source_id": null,
+      "table_match": {},
+      "table_value_field": "",
+      "unit": "beds",
+      "value_type": "integer"
+    },
+    {
+      "absence_checks": [],
+      "caveat": "",
+      "confidence": "",
+      "denominator_scope": "facility-level; basis=declared bed basis not established",
+      "dependency_cluster_ids": [],
+      "entity_id": "data-mcp:facility:official:jefferson-health:rothman-orthopaedic-specialty-hospital",
+      "extraction_pattern": null,
+      "fact_id": "bed-missing:jefferson-health:rothman-orthopaedic-specialty-hospital",
+      "literal_value": null,
+      "match_basis": "",
+      "measure_id": "bed_count.declared",
+      "missingness": "not_yet_researched",
+      "missingness_reason": "The March 2025 enterprise roster identifies the candidate; current state/CMS facility crosswalk extraction remains incomplete.",
+      "next_step": "Review this source-local fact before Toolkit identity or metric use.",
+      "period_end": null,
+      "period_label": "acquisition cutoff",
+      "period_start": null,
+      "row_locator": "",
+      "source_id": null,
+      "table_match": {},
+      "table_value_field": "",
+      "unit": "beds",
+      "value_type": "integer"
+    },
+    {
+      "absence_checks": [],
+      "caveat": "",
+      "confidence": "",
+      "denominator_scope": "facility-level; basis=declared bed basis not established",
+      "dependency_cluster_ids": [],
+      "entity_id": "data-mcp:facility:official:jefferson-health:thomas-jefferson-university-hospital",
+      "extraction_pattern": null,
+      "fact_id": "bed-missing:jefferson-health:thomas-jefferson-university-hospital",
       "literal_value": null,
       "match_basis": "",
       "measure_id": "bed_count.declared",

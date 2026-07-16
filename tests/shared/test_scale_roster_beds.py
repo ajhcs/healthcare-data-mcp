@@ -331,7 +331,7 @@ def test_html_and_pdf_extractors_cover_page_text(monkeypatch: pytest.MonkeyPatch
     pdf_path.write_bytes(b"synthetic PDF fixture; reader is isolated below")
     page_text = (FIXTURES / "official-pdf-extract.txt").read_text(encoding="utf-8")
     monkeypatch.setattr(
-        "shared.acquisition.scale_roster_beds.PdfReader",
+        "shared.acquisition.scale_roster_bed_parser.PdfReader",
         lambda path: SimpleNamespace(pages=[SimpleNamespace(extract_text=lambda: page_text)]),
     )
     bed_fact = FactSpec(
