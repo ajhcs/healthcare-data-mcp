@@ -270,6 +270,7 @@
         "end": {
           "anyOf": [
             {
+              "format": "date",
               "type": "string"
             },
             {
@@ -287,6 +288,7 @@
         "start": {
           "anyOf": [
             {
+              "format": "date",
               "type": "string"
             },
             {
@@ -670,9 +672,17 @@
           "type": "string"
         },
         "decided_at": {
-          "default": "",
-          "title": "Decided At",
-          "type": "string"
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Decided At"
         },
         "notes": {
           "default": "",
@@ -735,9 +745,17 @@
           "type": "string"
         },
         "retrieved_at": {
-          "default": "",
-          "title": "Retrieved At",
-          "type": "string"
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Retrieved At"
         },
         "source_name": {
           "title": "Source Name",

@@ -10,7 +10,8 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import datetime
+import math
+from datetime import date, datetime
 from typing import Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, model_validator
@@ -107,13 +108,13 @@ class SourceAliasV1(ContractModel):
     name: str = ""
     identifier: str = ""
     identifier_type: str = ""
-    retrieved_at: str = ""
+    retrieved_at: datetime | None = None
 
 
 class MatchDecisionV1(ContractModel):
     basis: str
     confidence: str
-    decided_at: str = ""
+    decided_at: datetime | None = None
     notes: str = ""
 
 
@@ -135,8 +136,8 @@ class HealthcareEntityV1(ContractModel):
 
 
 class EvidencePeriod(ContractModel):
-    start: str | None = None
-    end: str | None = None
+    start: date | None = None
+    end: date | None = None
     label: str = Field(min_length=1)
 
 
@@ -165,6 +166,8 @@ class EvidenceObservationV1(ContractModel):
         }
         if not matches[self.value_type]:
             raise ValueError("observation value must match value_type")
+        if self.value_type == "number" and isinstance(value, (int, float)) and not math.isfinite(value):
+            raise ValueError("numeric observation value must be finite")
         return self
 
 
@@ -225,18 +228,27 @@ class PublicEvidenceBundle(PublicEvidenceBundleInput):
         _validate_unique("observation_id", [item.observation_id for item in self.observations])
         _validate_unique("source_id", [item.source_id for item in self.sources])
         _validate_unique("receipt_id", [item.receipt.receipt_id for item in self.sources])
+        _validate_unique("cache artifact_id", [item.artifact_id for item in self.input_artifacts])
         entity_ids = {item.entity_id for item in self.entities}
-        observation_ids = {item.observation_id for item in self.observations}
+        observations = {item.observation_id: item for item in self.observations}
+        observation_ids = set(observations)
         receipt_ids = {item.receipt.receipt_id for item in self.sources}
-        artifact_ids = {item.artifact_id for item in self.input_artifacts}
+        artifacts = {item.artifact_id: item for item in self.input_artifacts}
+        artifact_ids = set(artifacts)
         for observation in self.observations:
             _require_refs("observation entity", [observation.entity_ref], entity_ids)
             _require_refs("observation receipt", observation.receipt_refs, receipt_ids)
         for coverage in self.coverage:
             _require_refs("coverage entity", [coverage.entity_ref], entity_ids)
             _require_refs("coverage observation", coverage.observation_refs, observation_ids)
+            for observation_ref in coverage.observation_refs:
+                observation = observations[observation_ref]
+                if observation.entity_ref != coverage.entity_ref or observation.measure_id != coverage.measure_id:
+                    raise ValueError("coverage observation must match coverage entity_ref and measure_id")
         for source in self.sources:
             _require_refs("source cache artifact", [source.receipt.artifact.artifact_id], artifact_ids)
+            if source.receipt.artifact != artifacts[source.receipt.artifact.artifact_id]:
+                raise ValueError("source receipt artifact must match input artifact lineage")
             _require_refs("parent receipt", source.receipt.parent_receipt_ids, receipt_ids)
         for conflict in self.conflicts:
             _require_refs("conflict entity", conflict.entity_refs, entity_ids)
@@ -251,7 +263,13 @@ class PublicEvidenceBundle(PublicEvidenceBundleInput):
 def canonical_sha256(value: object) -> str:
     """Hash canonical UTF-8 JSON for portable contract identity."""
 
-    encoded = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    encoded = json.dumps(
+        value,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+        allow_nan=False,
+    ).encode("utf-8")
     return f"sha256:{hashlib.sha256(encoded).hexdigest()}"
 
 
