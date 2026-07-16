@@ -34,9 +34,10 @@ def main() -> None:
     if args.write_spec is not None:
         write_atomic_json(args.write_spec, spec.model_dump(mode="json"))
     if args.offline:
+        if args.cache_root is None:
+            parser.error("governed offline rebuild requires --cache-root to verify every frozen artifact")
         frozen = load_frozen(args.frozen)
-        if args.cache_root is not None:
-            frozen = verify_frozen_bytes(spec, frozen, cache_root=args.cache_root)
+        frozen = verify_frozen_bytes(spec, frozen, cache_root=args.cache_root)
     else:
         if args.cache_root is None or not args.cache_run_id:
             parser.error("live acquisition requires --cache-root and --cache-run-id")

@@ -26,7 +26,10 @@ affected modules or run the Docker build locally.
 
 - Keep server outputs JSON-serializable and MCP-friendly.
 - Prefer shared utilities in `shared/utils/` over copying logic across servers.
-- Do not commit secrets, `.env`, cache files, or downloaded datasets.
+- Do not commit secrets, `.env`, raw cache files, or downloaded source datasets.
+  Reviewed generated contract handoff manifests and normalized inputs under
+  `contracts/` are allowed only when they exclude raw source bytes and local
+  paths, record a reviewed rights classification, and keep raw bytes external.
 - If a source requires attribution or fair-access headers, preserve those
   requirements in code and docs.
 

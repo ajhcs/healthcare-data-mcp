@@ -56,7 +56,9 @@ class SourceSpec(StrictModel):
     source_period: str = Field(min_length=1)
     expected_media_type: str = Field(min_length=1)
     rights_classification: Rights
-    parser_kind: Literal["html", "pdf", "csv", "text"]
+    parser_kind: Literal["html", "pdf", "csv", "xlsx", "text"]
+    encoding: Literal["utf-8-sig", "cp1252"] = "utf-8-sig"
+    header_row: int = Field(default=1, ge=1)
 
     @model_validator(mode="after")
     def require_allowlisted_https_source(self) -> Self:
@@ -78,6 +80,11 @@ class EntitySpec(StrictModel):
     owner_entity_id: str = ""
     identity_conflicts: list[dict[str, str]] = Field(default_factory=list)
     unresolved_identifiers: list[dict[str, str]] = Field(default_factory=list)
+
+
+class AbsenceCheck(StrictModel):
+    source_id: str = Field(min_length=1)
+    table_match: dict[str, str] = Field(min_length=1)
 
 
 class FactSpec(StrictModel):
@@ -102,6 +109,7 @@ class FactSpec(StrictModel):
     literal_value: JsonValue | None = None
     missingness: Missingness | None = None
     missingness_reason: str = ""
+    absence_checks: list[AbsenceCheck] = Field(default_factory=list)
     dependency_cluster_ids: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
@@ -117,7 +125,11 @@ class FactSpec(StrictModel):
                 raise ValueError("missingness facts cannot claim a source, extractor, or value")
             if not self.missingness_reason:
                 raise ValueError("missingness facts require a reason")
+            if self.missingness == "unavailable_public" and not self.absence_checks:
+                raise ValueError("unavailable_public facts require a mechanically verified absence check")
             return self
+        if self.absence_checks:
+            raise ValueError("populated facts cannot include absence checks")
         has_pattern = bool(self.extraction_pattern)
         has_table_extractor = bool(self.table_match and self.table_value_field)
         if not self.source_id or has_pattern == has_table_extractor or not self.row_locator:
@@ -160,7 +172,14 @@ class AcquisitionSpec(StrictModel):
             raise ValueError("systems must name exactly the six health-system entity IDs")
         _require_refs("fact entity", [item.entity_id for item in self.facts], entity_ids)
         _require_refs("fact source", [item.source_id for item in self.facts if item.source_id], source_ids)
-        _require_refs("entity owner", [item.owner_entity_id for item in self.entities if item.owner_entity_id], entity_ids)
+        _require_refs(
+            "absence-check source",
+            [check.source_id for item in self.facts for check in item.absence_checks],
+            source_ids,
+        )
+        _require_refs(
+            "entity owner", [item.owner_entity_id for item in self.entities if item.owner_entity_id], entity_ids
+        )
         for conflict in self.conflicts:
             _require_refs("conflict entity", conflict.entity_ids, entity_ids)
             _require_refs("conflict fact", conflict.fact_ids, fact_ids)

@@ -1,392 +1,440 @@
 {
-  "acquired_at": "2026-07-16T21:02:50.828901Z",
+  "acquired_at": "2026-07-16T21:30:49.641346Z",
   "artifacts": [
     {
-      "artifact_id": "artifact:christianacare-about:c2d30c6bc976c379",
-      "cache_run_id": "scale-roster-beds-20260716-04",
-      "checksum_sha256": "sha256:c2d30c6bc976c379bf8c9431691597a4aaf586a9a78e27b1288beec58ad7348d",
+      "artifact_id": "artifact:christianacare-about:b9f0b7f1e008d7eb",
+      "cache_run_id": "scale-roster-beds-20260716-07",
+      "checksum_sha256": "sha256:b9f0b7f1e008d7eb90171f53daa8766bde6264628e00e1af263e9255b4b0bdc9",
       "connector_version": "scale-roster-bed-connector.v1",
-      "content_length": 1620062,
+      "content_length": 1620120,
       "final_url": "https://christianacare.org/us/en/about-us/who-we-are",
       "media_type": "text/html",
       "parser_version": "scale-roster-bed-parser.v1",
-      "portable_uri": "hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-04/christianacare-about.html",
-      "retrieved_at": "2026-07-16T21:01:37.684196Z",
-      "schema_fingerprint": "sha256:82a9089c84927f4329b3a479d6338f067026e0ff697bed6a2bf3a5b7956f7137",
+      "portable_uri": "hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-07/christianacare-about.html",
+      "retrieved_at": "2026-07-16T21:29:31.822220Z",
+      "schema_fingerprint": "sha256:0dec6f87a7664e363483a96d737b95823939343c9dd1f4ea1af5300441719ed0",
       "source_id": "christianacare-about",
-      "source_modified": "2026-07-16T14:38:10Z",
+      "source_modified": "2026-07-16T21:27:14Z",
       "source_url": "https://christianacare.org/us/en/about-us/who-we-are"
     },
     {
       "artifact_id": "artifact:christianacare-union:2dafbb00f975e10e",
-      "cache_run_id": "scale-roster-beds-20260716-04",
+      "cache_run_id": "scale-roster-beds-20260716-07",
       "checksum_sha256": "sha256:2dafbb00f975e10e8fdced1a17baec80f8acedcfed603e5f5dfd3ee9d98819b2",
       "connector_version": "scale-roster-bed-connector.v1",
       "content_length": 1586759,
       "final_url": "https://christianacare.org/us/en/facilities/union-hospital",
       "media_type": "text/html",
       "parser_version": "scale-roster-bed-parser.v1",
-      "portable_uri": "hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-04/christianacare-union.html",
-      "retrieved_at": "2026-07-16T21:01:37.719124Z",
-      "schema_fingerprint": "sha256:82a9089c84927f4329b3a479d6338f067026e0ff697bed6a2bf3a5b7956f7137",
+      "portable_uri": "hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-07/christianacare-union.html",
+      "retrieved_at": "2026-07-16T21:29:31.867747Z",
+      "schema_fingerprint": "sha256:0dec6f87a7664e363483a96d737b95823939343c9dd1f4ea1af5300441719ed0",
       "source_id": "christianacare-union",
       "source_modified": "2026-07-16T13:30:00Z",
       "source_url": "https://christianacare.org/us/en/facilities/union-hospital"
     },
     {
       "artifact_id": "artifact:christianacare-west-grove:e5e7f8e84ba64617",
-      "cache_run_id": "scale-roster-beds-20260716-04",
+      "cache_run_id": "scale-roster-beds-20260716-07",
       "checksum_sha256": "sha256:e5e7f8e84ba6461744de752e33d315a26d2f57bc25e1452027df538cb185911c",
       "connector_version": "scale-roster-bed-connector.v1",
       "content_length": 74924,
       "final_url": "https://news.christianacare.org/2025/08/christianacare-hospital-west-grove-now-open/",
       "media_type": "text/html",
       "parser_version": "scale-roster-bed-parser.v1",
-      "portable_uri": "hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-04/christianacare-west-grove.html",
-      "retrieved_at": "2026-07-16T21:01:38.041642Z",
-      "schema_fingerprint": "sha256:82a9089c84927f4329b3a479d6338f067026e0ff697bed6a2bf3a5b7956f7137",
+      "portable_uri": "hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-07/christianacare-west-grove.html",
+      "retrieved_at": "2026-07-16T21:29:32.242264Z",
+      "schema_fingerprint": "sha256:0dec6f87a7664e363483a96d737b95823939343c9dd1f4ea1af5300441719ed0",
       "source_id": "christianacare-west-grove",
       "source_modified": null,
       "source_url": "https://news.christianacare.org/2025/08/christianacare-hospital-west-grove-now-open/"
     },
     {
       "artifact_id": "artifact:jefferson-enterprise-2025:1c2100fb4bad470f",
-      "cache_run_id": "scale-roster-beds-20260716-04",
+      "cache_run_id": "scale-roster-beds-20260716-07",
       "checksum_sha256": "sha256:1c2100fb4bad470f75da4b0ba1e62b7d900365d540e720f8f4680668680c50c9",
       "connector_version": "scale-roster-bed-connector.v1",
       "content_length": 5381364,
       "final_url": "https://www.jeffersonhealth.org/content/dam/health2021/documents/about/we-are-jefferson-stats-booklet-march-2025.pdf",
       "media_type": "application/pdf",
       "parser_version": "scale-roster-bed-parser.v1",
-      "portable_uri": "hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-04/jefferson-enterprise-2025.pdf",
-      "retrieved_at": "2026-07-16T21:01:38.462443Z",
-      "schema_fingerprint": "sha256:d7b7965718aa9924d463c4eb6f0e1196915ca3b548332780f52a2687ec025749",
+      "portable_uri": "hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-07/jefferson-enterprise-2025.pdf",
+      "retrieved_at": "2026-07-16T21:29:32.797447Z",
+      "schema_fingerprint": "sha256:f9db602ded433302d10d9de9c4405d77616fcf5b2ed82355caf745edbe9fc645",
       "source_id": "jefferson-enterprise-2025",
       "source_modified": "2025-04-21T17:58:31Z",
       "source_url": "https://www.jeffersonhealth.org/content/dam/health2021/documents/about/we-are-jefferson-stats-booklet-march-2025.pdf"
     },
     {
       "artifact_id": "artifact:sepa-chna-2025:d9f573ab88fd6a26",
-      "cache_run_id": "scale-roster-beds-20260716-04",
+      "cache_run_id": "scale-roster-beds-20260716-07",
       "checksum_sha256": "sha256:d9f573ab88fd6a261463932f5ca75569fdc2af17889a890f8be8fc1ffd2eeb55",
       "connector_version": "scale-roster-bed-connector.v1",
       "content_length": 25952114,
       "final_url": "https://www.jeffersonhealth.org/content/dam/health2021/documents/informational/26-0036-fy26-jh_hospitals-overview-profiles-jeff-northeast-chna2025-final.pdf",
       "media_type": "application/pdf",
       "parser_version": "scale-roster-bed-parser.v1",
-      "portable_uri": "hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-04/sepa-chna-2025.pdf",
-      "retrieved_at": "2026-07-16T21:01:39.188127Z",
-      "schema_fingerprint": "sha256:d7b7965718aa9924d463c4eb6f0e1196915ca3b548332780f52a2687ec025749",
+      "portable_uri": "hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-07/sepa-chna-2025.pdf",
+      "retrieved_at": "2026-07-16T21:29:33.521574Z",
+      "schema_fingerprint": "sha256:f9db602ded433302d10d9de9c4405d77616fcf5b2ed82355caf745edbe9fc645",
       "source_id": "sepa-chna-2025",
       "source_modified": "2025-06-30T14:32:10Z",
       "source_url": "https://www.jeffersonhealth.org/content/dam/health2021/documents/informational/26-0036-fy26-jh_hospitals-overview-profiles-jeff-northeast-chna2025-final.pdf"
     },
     {
       "artifact_id": "artifact:temple-locations:1fe27fd4157a5954",
-      "cache_run_id": "scale-roster-beds-20260716-04",
+      "cache_run_id": "scale-roster-beds-20260716-07",
       "checksum_sha256": "sha256:1fe27fd4157a5954a9ddeb11ea632170864bbfaa64ec09b71c8e9289da47d784",
       "connector_version": "scale-roster-bed-connector.v1",
       "content_length": 347628,
       "final_url": "https://www.templehealth.org/locations",
       "media_type": "text/html",
       "parser_version": "scale-roster-bed-parser.v1",
-      "portable_uri": "hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-04/temple-locations.html",
-      "retrieved_at": "2026-07-16T21:01:39.301184Z",
-      "schema_fingerprint": "sha256:82a9089c84927f4329b3a479d6338f067026e0ff697bed6a2bf3a5b7956f7137",
+      "portable_uri": "hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-07/temple-locations.html",
+      "retrieved_at": "2026-07-16T21:29:33.627223Z",
+      "schema_fingerprint": "sha256:0dec6f87a7664e363483a96d737b95823939343c9dd1f4ea1af5300441719ed0",
       "source_id": "temple-locations",
       "source_modified": "2026-07-16T20:54:17Z",
       "source_url": "https://www.templehealth.org/locations"
     },
     {
       "artifact_id": "artifact:temple-episcopal:45dc5d05060f9f94",
-      "cache_run_id": "scale-roster-beds-20260716-04",
+      "cache_run_id": "scale-roster-beds-20260716-07",
       "checksum_sha256": "sha256:45dc5d05060f9f94759ff3d4ed4bc404a9ea4163fbe7b6f90213faf0497e14ff",
       "connector_version": "scale-roster-bed-connector.v1",
       "content_length": 62657,
       "final_url": "https://www.templehealth.org/locations/episcopal-campus-tuh/about",
       "media_type": "text/html",
       "parser_version": "scale-roster-bed-parser.v1",
-      "portable_uri": "hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-04/temple-episcopal.html",
-      "retrieved_at": "2026-07-16T21:01:39.394151Z",
-      "schema_fingerprint": "sha256:82a9089c84927f4329b3a479d6338f067026e0ff697bed6a2bf3a5b7956f7137",
+      "portable_uri": "hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-07/temple-episcopal.html",
+      "retrieved_at": "2026-07-16T21:29:33.662831Z",
+      "schema_fingerprint": "sha256:0dec6f87a7664e363483a96d737b95823939343c9dd1f4ea1af5300441719ed0",
       "source_id": "temple-episcopal",
       "source_modified": "2026-07-16T16:53:39Z",
       "source_url": "https://www.templehealth.org/locations/episcopal-campus-tuh/about"
     },
     {
       "artifact_id": "artifact:temple-chestnut-hill:30dd46310871550b",
-      "cache_run_id": "scale-roster-beds-20260716-04",
+      "cache_run_id": "scale-roster-beds-20260716-07",
       "checksum_sha256": "sha256:30dd46310871550bef3376d7924bfb844d2c9b897e926ad2e85304b7aba89a5d",
       "connector_version": "scale-roster-bed-connector.v1",
       "content_length": 71882,
       "final_url": "https://www.templehealth.org/locations/chestnut-hill-hospital/about",
       "media_type": "text/html",
       "parser_version": "scale-roster-bed-parser.v1",
-      "portable_uri": "hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-04/temple-chestnut-hill.html",
-      "retrieved_at": "2026-07-16T21:01:39.434487Z",
-      "schema_fingerprint": "sha256:82a9089c84927f4329b3a479d6338f067026e0ff697bed6a2bf3a5b7956f7137",
+      "portable_uri": "hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-07/temple-chestnut-hill.html",
+      "retrieved_at": "2026-07-16T21:29:33.702930Z",
+      "schema_fingerprint": "sha256:0dec6f87a7664e363483a96d737b95823939343c9dd1f4ea1af5300441719ed0",
       "source_id": "temple-chestnut-hill",
       "source_modified": "2026-07-16T16:38:31Z",
       "source_url": "https://www.templehealth.org/locations/chestnut-hill-hospital/about"
     },
     {
-      "artifact_id": "artifact:penn-six-hospitals-2024:d1fa6c42efc7aa49",
-      "cache_run_id": "scale-roster-beds-20260716-04",
-      "checksum_sha256": "sha256:d1fa6c42efc7aa493c36294d3975568a4e1f70548f79337774728aa881463a14",
+      "artifact_id": "artifact:penn-six-hospitals-2024:11c1d4e064c003cd",
+      "cache_run_id": "scale-roster-beds-20260716-07",
+      "checksum_sha256": "sha256:11c1d4e064c003cd2fb8e39efb645839dbaa61eeec2e5c1ea90b1466d0a56f83",
       "connector_version": "scale-roster-bed-connector.v1",
-      "content_length": 224852,
+      "content_length": 224986,
       "final_url": "https://www.pennmedicine.org/news/penn-medicine-named-2024-lgbtq-health-care-leader-by-hrc",
       "media_type": "text/html",
       "parser_version": "scale-roster-bed-parser.v1",
-      "portable_uri": "hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-04/penn-six-hospitals-2024.html",
-      "retrieved_at": "2026-07-16T21:01:39.653499Z",
-      "schema_fingerprint": "sha256:82a9089c84927f4329b3a479d6338f067026e0ff697bed6a2bf3a5b7956f7137",
+      "portable_uri": "hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-07/penn-six-hospitals-2024.html",
+      "retrieved_at": "2026-07-16T21:29:33.949935Z",
+      "schema_fingerprint": "sha256:0dec6f87a7664e363483a96d737b95823939343c9dd1f4ea1af5300441719ed0",
       "source_id": "penn-six-hospitals-2024",
       "source_modified": null,
       "source_url": "https://www.pennmedicine.org/news/penn-medicine-named-2024-lgbtq-health-care-leader-by-hrc"
     },
     {
-      "artifact_id": "artifact:penn-princeton-house-2024:0fb5c05290375cb8",
-      "cache_run_id": "scale-roster-beds-20260716-04",
-      "checksum_sha256": "sha256:0fb5c05290375cb87a99239a105a75701a724d71483bc359d4a101c11d97bb47",
+      "artifact_id": "artifact:penn-princeton-house-2024:1493dcb126f46cc3",
+      "cache_run_id": "scale-roster-beds-20260716-07",
+      "checksum_sha256": "sha256:1493dcb126f46cc3870ef9ccceb1100a507bb9c18789c2293701b6bb3c4e241e",
       "connector_version": "scale-roster-bed-connector.v1",
       "content_length": 237990,
       "final_url": "https://www.pennmedicine.org/news/princeton-health-hybrid-nursing-residency",
       "media_type": "text/html",
       "parser_version": "scale-roster-bed-parser.v1",
-      "portable_uri": "hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-04/penn-princeton-house-2024.html",
-      "retrieved_at": "2026-07-16T21:01:39.799081Z",
-      "schema_fingerprint": "sha256:82a9089c84927f4329b3a479d6338f067026e0ff697bed6a2bf3a5b7956f7137",
+      "portable_uri": "hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-07/penn-princeton-house-2024.html",
+      "retrieved_at": "2026-07-16T21:29:34.025195Z",
+      "schema_fingerprint": "sha256:0dec6f87a7664e363483a96d737b95823939343c9dd1f4ea1af5300441719ed0",
       "source_id": "penn-princeton-house-2024",
       "source_modified": null,
       "source_url": "https://www.pennmedicine.org/news/princeton-health-hybrid-nursing-residency"
     },
     {
-      "artifact_id": "artifact:cooper-about:4f13e668a352df88",
-      "cache_run_id": "scale-roster-beds-20260716-04",
-      "checksum_sha256": "sha256:4f13e668a352df88fac1a63a0f70e83f7bb63c5d1c8ed88ea65be33d5bd13422",
+      "artifact_id": "artifact:cooper-about:0f4995b1a1d046fa",
+      "cache_run_id": "scale-roster-beds-20260716-07",
+      "checksum_sha256": "sha256:0f4995b1a1d046fa3a3f332ac54f953f7931a8284c243d2f825ce1d9f120317b",
       "connector_version": "scale-roster-bed-connector.v1",
       "content_length": 100489,
       "final_url": "https://www.cooperhealth.org/about-us",
       "media_type": "text/html",
       "parser_version": "scale-roster-bed-parser.v1",
-      "portable_uri": "hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-04/cooper-about.html",
-      "retrieved_at": "2026-07-16T21:01:39.992524Z",
-      "schema_fingerprint": "sha256:82a9089c84927f4329b3a479d6338f067026e0ff697bed6a2bf3a5b7956f7137",
+      "portable_uri": "hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-07/cooper-about.html",
+      "retrieved_at": "2026-07-16T21:29:34.185756Z",
+      "schema_fingerprint": "sha256:0dec6f87a7664e363483a96d737b95823939343c9dd1f4ea1af5300441719ed0",
       "source_id": "cooper-about",
-      "source_modified": "2026-07-16T20:23:31Z",
+      "source_modified": "2026-07-16T21:11:57Z",
       "source_url": "https://www.cooperhealth.org/about-us"
     },
     {
       "artifact_id": "artifact:cooper-camden-2025:234e8a2326b7adbd",
-      "cache_run_id": "scale-roster-beds-20260716-04",
+      "cache_run_id": "scale-roster-beds-20260716-07",
       "checksum_sha256": "sha256:234e8a2326b7adbd22f6f50e2774f4bd2cae63ab6e25b5c1412143dbd34c8fe4",
       "connector_version": "scale-roster-bed-connector.v1",
       "content_length": 4313931,
       "final_url": "https://www.cooperhealth.org/sites/default/files/about-us/Cooper%20Fast%20Facts%20Q1%202025.pdf",
       "media_type": "application/pdf",
       "parser_version": "scale-roster-bed-parser.v1",
-      "portable_uri": "hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-04/cooper-camden-2025.pdf",
-      "retrieved_at": "2026-07-16T21:01:40.323451Z",
-      "schema_fingerprint": "sha256:d7b7965718aa9924d463c4eb6f0e1196915ca3b548332780f52a2687ec025749",
+      "portable_uri": "hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-07/cooper-camden-2025.pdf",
+      "retrieved_at": "2026-07-16T21:29:34.351460Z",
+      "schema_fingerprint": "sha256:f9db602ded433302d10d9de9c4405d77616fcf5b2ed82355caf745edbe9fc645",
       "source_id": "cooper-camden-2025",
       "source_modified": "2025-04-29T22:35:14Z",
       "source_url": "https://www.cooperhealth.org/sites/default/files/about-us/Cooper%20Fast%20Facts%20Q1%202025.pdf"
     },
     {
       "artifact_id": "artifact:cooper-cape-2025:2a9b2119e975623d",
-      "cache_run_id": "scale-roster-beds-20260716-04",
+      "cache_run_id": "scale-roster-beds-20260716-07",
       "checksum_sha256": "sha256:2a9b2119e975623d1d22614242a3a54d2c38464fee40650eb8fb6d0eae6b85ea",
       "connector_version": "scale-roster-bed-connector.v1",
       "content_length": 4747421,
       "final_url": "https://www.cooperhealth.org/sites/default/files/about-us/Cooper%20Cape%20Fast%20Facts%20Q1%202025.pdf",
       "media_type": "application/pdf",
       "parser_version": "scale-roster-bed-parser.v1",
-      "portable_uri": "hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-04/cooper-cape-2025.pdf",
-      "retrieved_at": "2026-07-16T21:01:40.687614Z",
-      "schema_fingerprint": "sha256:d7b7965718aa9924d463c4eb6f0e1196915ca3b548332780f52a2687ec025749",
+      "portable_uri": "hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-07/cooper-cape-2025.pdf",
+      "retrieved_at": "2026-07-16T21:29:34.437788Z",
+      "schema_fingerprint": "sha256:f9db602ded433302d10d9de9c4405d77616fcf5b2ed82355caf745edbe9fc645",
       "source_id": "cooper-cape-2025",
       "source_modified": "2025-04-29T22:35:14Z",
       "source_url": "https://www.cooperhealth.org/sites/default/files/about-us/Cooper%20Cape%20Fast%20Facts%20Q1%202025.pdf"
     },
     {
-      "artifact_id": "artifact:main-line-about:9c42d16e96926181",
-      "cache_run_id": "scale-roster-beds-20260716-04",
-      "checksum_sha256": "sha256:9c42d16e96926181d8369618546c88c1caabf38e2123bbdd11fb6a9c1eb79111",
+      "artifact_id": "artifact:main-line-about:74b922449ec937b0",
+      "cache_run_id": "scale-roster-beds-20260716-07",
+      "checksum_sha256": "sha256:74b922449ec937b067f8522c362b4f4dd936f9e8b190f1053b3fb8e3aa34e6fa",
       "connector_version": "scale-roster-bed-connector.v1",
       "content_length": 189182,
       "final_url": "https://www.mainlinehealth.org/about",
       "media_type": "text/html",
       "parser_version": "scale-roster-bed-parser.v1",
-      "portable_uri": "hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-04/main-line-about.html",
-      "retrieved_at": "2026-07-16T21:01:41.113671Z",
-      "schema_fingerprint": "sha256:82a9089c84927f4329b3a479d6338f067026e0ff697bed6a2bf3a5b7956f7137",
+      "portable_uri": "hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-07/main-line-about.html",
+      "retrieved_at": "2026-07-16T21:29:34.849134Z",
+      "schema_fingerprint": "sha256:0dec6f87a7664e363483a96d737b95823939343c9dd1f4ea1af5300441719ed0",
       "source_id": "main-line-about",
       "source_modified": null,
       "source_url": "https://www.mainlinehealth.org/about"
     },
     {
       "artifact_id": "artifact:main-line-lankenau:b3d04a3b4ac4d437",
-      "cache_run_id": "scale-roster-beds-20260716-04",
+      "cache_run_id": "scale-roster-beds-20260716-07",
       "checksum_sha256": "sha256:b3d04a3b4ac4d4370c14bac5c593a329ada5d3280aa5a9fd5cbf1d9d77c1987f",
       "connector_version": "scale-roster-bed-connector.v1",
       "content_length": 1638758,
       "final_url": "https://www.mainlinehealth.org/-/media/files/pdf/basic-content/about/communications/fact-sheets/lmc-fact-sheet.pdf",
       "media_type": "application/pdf",
       "parser_version": "scale-roster-bed-parser.v1",
-      "portable_uri": "hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-04/main-line-lankenau.pdf",
-      "retrieved_at": "2026-07-16T21:01:41.369977Z",
-      "schema_fingerprint": "sha256:d7b7965718aa9924d463c4eb6f0e1196915ca3b548332780f52a2687ec025749",
+      "portable_uri": "hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-07/main-line-lankenau.pdf",
+      "retrieved_at": "2026-07-16T21:29:35.025548Z",
+      "schema_fingerprint": "sha256:f9db602ded433302d10d9de9c4405d77616fcf5b2ed82355caf745edbe9fc645",
       "source_id": "main-line-lankenau",
       "source_modified": "2026-01-19T19:47:08Z",
       "source_url": "https://www.mainlinehealth.org/-/media/files/pdf/basic-content/about/communications/fact-sheets/lmc-fact-sheet.pdf"
     },
     {
       "artifact_id": "artifact:main-line-bryn-mawr:8beac94e04227a0d",
-      "cache_run_id": "scale-roster-beds-20260716-04",
+      "cache_run_id": "scale-roster-beds-20260716-07",
       "checksum_sha256": "sha256:8beac94e04227a0d58faa1c02e75476ba7f0d2b49d3f6e375260295ac5f4d0a0",
       "connector_version": "scale-roster-bed-connector.v1",
       "content_length": 1478443,
       "final_url": "https://www.mainlinehealth.org/-/media/files/pdf/basic-content/about/communications/fact-sheets/bmh-fact-sheet.pdf",
       "media_type": "application/pdf",
       "parser_version": "scale-roster-bed-parser.v1",
-      "portable_uri": "hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-04/main-line-bryn-mawr.pdf",
-      "retrieved_at": "2026-07-16T21:01:41.451955Z",
-      "schema_fingerprint": "sha256:d7b7965718aa9924d463c4eb6f0e1196915ca3b548332780f52a2687ec025749",
+      "portable_uri": "hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-07/main-line-bryn-mawr.pdf",
+      "retrieved_at": "2026-07-16T21:29:35.076118Z",
+      "schema_fingerprint": "sha256:f9db602ded433302d10d9de9c4405d77616fcf5b2ed82355caf745edbe9fc645",
       "source_id": "main-line-bryn-mawr",
       "source_modified": "2025-09-09T18:40:08Z",
       "source_url": "https://www.mainlinehealth.org/-/media/files/pdf/basic-content/about/communications/fact-sheets/bmh-fact-sheet.pdf"
     },
     {
       "artifact_id": "artifact:main-line-paoli:b14c31a246ce6962",
-      "cache_run_id": "scale-roster-beds-20260716-04",
+      "cache_run_id": "scale-roster-beds-20260716-07",
       "checksum_sha256": "sha256:b14c31a246ce69621c807fea761b107b966c4ceaa6ef1cb5d9caa8a48d90de29",
       "connector_version": "scale-roster-bed-connector.v1",
       "content_length": 1853115,
       "final_url": "https://www.mainlinehealth.org/-/media/files/pdf/basic-content/about/communications/fact-sheets/ph-fact-sheet.pdf",
       "media_type": "application/pdf",
       "parser_version": "scale-roster-bed-parser.v1",
-      "portable_uri": "hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-04/main-line-paoli.pdf",
-      "retrieved_at": "2026-07-16T21:01:41.533535Z",
-      "schema_fingerprint": "sha256:d7b7965718aa9924d463c4eb6f0e1196915ca3b548332780f52a2687ec025749",
+      "portable_uri": "hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-07/main-line-paoli.pdf",
+      "retrieved_at": "2026-07-16T21:29:35.127689Z",
+      "schema_fingerprint": "sha256:f9db602ded433302d10d9de9c4405d77616fcf5b2ed82355caf745edbe9fc645",
       "source_id": "main-line-paoli",
       "source_modified": "2025-09-08T20:04:48Z",
       "source_url": "https://www.mainlinehealth.org/-/media/files/pdf/basic-content/about/communications/fact-sheets/ph-fact-sheet.pdf"
     },
     {
       "artifact_id": "artifact:main-line-riddle:5cb6a3bcf237578d",
-      "cache_run_id": "scale-roster-beds-20260716-04",
+      "cache_run_id": "scale-roster-beds-20260716-07",
       "checksum_sha256": "sha256:5cb6a3bcf237578dbcaadc8c723928f6aabdc45d8e03877c44e36714d8a0b0d1",
       "connector_version": "scale-roster-bed-connector.v1",
       "content_length": 1351137,
       "final_url": "https://www.mainlinehealth.org/-/media/files/pdf/basic-content/about/communications/fact-sheets/rh-fact-sheet.pdf",
       "media_type": "application/pdf",
       "parser_version": "scale-roster-bed-parser.v1",
-      "portable_uri": "hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-04/main-line-riddle.pdf",
-      "retrieved_at": "2026-07-16T21:01:41.615219Z",
-      "schema_fingerprint": "sha256:d7b7965718aa9924d463c4eb6f0e1196915ca3b548332780f52a2687ec025749",
+      "portable_uri": "hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-07/main-line-riddle.pdf",
+      "retrieved_at": "2026-07-16T21:29:35.180321Z",
+      "schema_fingerprint": "sha256:f9db602ded433302d10d9de9c4405d77616fcf5b2ed82355caf745edbe9fc645",
       "source_id": "main-line-riddle",
       "source_modified": "2025-12-04T19:06:14Z",
       "source_url": "https://www.mainlinehealth.org/-/media/files/pdf/basic-content/about/communications/fact-sheets/rh-fact-sheet.pdf"
     },
     {
-      "artifact_id": "artifact:cms-pos-q4-2025:32b84da5c1ec9737",
-      "cache_run_id": "scale-roster-beds-20260716-04",
-      "checksum_sha256": "sha256:32b84da5c1ec9737d9f62dc4e1d397e9c60b78051d971048d899a005c6b8841e",
+      "artifact_id": "artifact:cms-pos-q1-2026:dc6edee436a33d69",
+      "cache_run_id": "scale-roster-beds-20260716-07",
+      "checksum_sha256": "sha256:dc6edee436a33d69771874fb2b2cf80d142343b653a4754f047cd33663608550",
       "connector_version": "scale-roster-bed-connector.v1",
-      "content_length": 51436939,
-      "final_url": "https://data.cms.gov/sites/default/files/2026-01/c500f848-83b3-4f29-a677-562243a2f23b/Hospital_and_other.DATA.Q4_2025.csv",
+      "content_length": 30016084,
+      "final_url": "https://data.cms.gov/sites/default/files/2026-04/8ff9bcf4-032e-4a6f-b1c1-d8f1c2e96885/Hospital_and_other.DATA.Q1_2026.csv",
       "media_type": "text/csv",
       "parser_version": "scale-roster-bed-parser.v1",
-      "portable_uri": "hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-04/cms-pos-q4-2025.csv",
-      "retrieved_at": "2026-07-16T21:01:42.116420Z",
-      "schema_fingerprint": "sha256:97370b3fd51964896c53b2e71ec4342f67950132c07bae7ad047e611ebe1a8e2",
-      "source_id": "cms-pos-q4-2025",
-      "source_modified": "2026-01-09T21:18:29Z",
-      "source_url": "https://data.cms.gov/sites/default/files/2026-01/c500f848-83b3-4f29-a677-562243a2f23b/Hospital_and_other.DATA.Q4_2025.csv"
+      "portable_uri": "hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-07/cms-pos-q1-2026.csv",
+      "retrieved_at": "2026-07-16T21:29:35.539617Z",
+      "schema_fingerprint": "sha256:bd2e6e437118a83f9dfef8893049c36ab9d3c3aefbc7a16fde3a86b1240fc2df",
+      "source_id": "cms-pos-q1-2026",
+      "source_modified": "2026-04-13T22:52:17Z",
+      "source_url": "https://data.cms.gov/sites/default/files/2026-04/8ff9bcf4-032e-4a6f-b1c1-d8f1c2e96885/Hospital_and_other.DATA.Q1_2026.csv"
+    },
+    {
+      "artifact_id": "artifact:ahrq-compendium-linkage-2023:a86146f10c8de626",
+      "cache_run_id": "scale-roster-beds-20260716-07",
+      "checksum_sha256": "sha256:a86146f10c8de626fea1da3a24b756e6a68165e449ae3687f1e90d6bdf129727",
+      "connector_version": "scale-roster-bed-connector.v1",
+      "content_length": 1528734,
+      "final_url": "https://www.ahrq.gov/sites/default/files/wysiwyg/chsp/compendium/chsp-hospital-linkage-2023.csv",
+      "media_type": "text/csv",
+      "parser_version": "scale-roster-bed-parser.v1",
+      "portable_uri": "hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-07/ahrq-compendium-linkage-2023.csv",
+      "retrieved_at": "2026-07-16T21:29:35.722428Z",
+      "schema_fingerprint": "sha256:633359a9d9203acdcd4d2acec3d89761434e0cb0eeda9e8246c06a5f292e7150",
+      "source_id": "ahrq-compendium-linkage-2023",
+      "source_modified": "2025-06-02T20:40:39Z",
+      "source_url": "https://www.ahrq.gov/sites/default/files/wysiwyg/chsp/compendium/chsp-hospital-linkage-2023.csv"
     },
     {
       "artifact_id": "artifact:cms-hgi-current:83c98b2e8687580e",
-      "cache_run_id": "scale-roster-beds-20260716-04",
+      "cache_run_id": "scale-roster-beds-20260716-07",
       "checksum_sha256": "sha256:83c98b2e8687580e0482b13e1e9acd5813534be243e5ccd9f55556a869595d40",
       "connector_version": "scale-roster-bed-connector.v1",
       "content_length": 1453884,
       "final_url": "https://data.cms.gov/provider-data/sites/default/files/resources/893c372430d9d71a1c52737d01239d47_1777413958/Hospital_General_Information.csv",
       "media_type": "text/csv",
       "parser_version": "scale-roster-bed-parser.v1",
-      "portable_uri": "hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-04/cms-hgi-current.csv",
-      "retrieved_at": "2026-07-16T21:01:42.152952Z",
-      "schema_fingerprint": "sha256:97370b3fd51964896c53b2e71ec4342f67950132c07bae7ad047e611ebe1a8e2",
+      "portable_uri": "hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-07/cms-hgi-current.csv",
+      "retrieved_at": "2026-07-16T21:29:35.770945Z",
+      "schema_fingerprint": "sha256:bd2e6e437118a83f9dfef8893049c36ab9d3c3aefbc7a16fde3a86b1240fc2df",
       "source_id": "cms-hgi-current",
       "source_modified": "2026-04-28T22:10:52Z",
       "source_url": "https://data.cms.gov/provider-data/sites/default/files/resources/893c372430d9d71a1c52737d01239d47_1777413958/Hospital_General_Information.csv"
     },
     {
       "artifact_id": "artifact:cms-hcris-2023-final:614f3d94dfeb8409",
-      "cache_run_id": "scale-roster-beds-20260716-04",
+      "cache_run_id": "scale-roster-beds-20260716-07",
       "checksum_sha256": "sha256:614f3d94dfeb84092ca775f90913ab4f843233a4fa90c3df3013efeb5221a757",
       "connector_version": "scale-roster-bed-connector.v1",
       "content_length": 4130294,
       "final_url": "https://data.cms.gov/sites/default/files/2026-01/3c39f483-c7e0-4025-8396-4df76942e10f/CostReport_2023_Final.csv",
       "media_type": "text/csv",
       "parser_version": "scale-roster-bed-parser.v1",
-      "portable_uri": "hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-04/cms-hcris-2023-final.csv",
-      "retrieved_at": "2026-07-16T21:01:42.215896Z",
-      "schema_fingerprint": "sha256:97370b3fd51964896c53b2e71ec4342f67950132c07bae7ad047e611ebe1a8e2",
+      "portable_uri": "hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-07/cms-hcris-2023-final.csv",
+      "retrieved_at": "2026-07-16T21:29:35.847418Z",
+      "schema_fingerprint": "sha256:bd2e6e437118a83f9dfef8893049c36ab9d3c3aefbc7a16fde3a86b1240fc2df",
       "source_id": "cms-hcris-2023-final",
       "source_modified": "2026-01-08T15:47:43Z",
       "source_url": "https://data.cms.gov/sites/default/files/2026-01/3c39f483-c7e0-4025-8396-4df76942e10f/CostReport_2023_Final.csv"
     },
     {
-      "artifact_id": "artifact:pa-hospital-reports-index:ae5791e0d4006db0",
-      "cache_run_id": "scale-roster-beds-20260716-04",
-      "checksum_sha256": "sha256:ae5791e0d4006db067e5f6a4def7a9fc4f663324e758c80786b383aca9b6dc18",
+      "artifact_id": "artifact:pa-hospital-report-2024-1a:767f54375b717f32",
+      "cache_run_id": "scale-roster-beds-20260716-07",
+      "checksum_sha256": "sha256:767f54375b717f32611e116d860ea484e9e60818132f5a5a206dd350de2c7f7b",
       "connector_version": "scale-roster-bed-connector.v1",
-      "content_length": 717988,
-      "final_url": "https://www.pa.gov/agencies/health/health-statistics/health-facilities/hospital-reports",
-      "media_type": "text/html",
+      "content_length": 23348,
+      "final_url": "https://www.pa.gov/content/dam/copapwp-pagov/en/health/documents/topics/healthstatistics/healthfacilities/hospitalreports/documents/hospital_report_2024_1a.xlsx",
+      "media_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       "parser_version": "scale-roster-bed-parser.v1",
-      "portable_uri": "hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-04/pa-hospital-reports-index.html",
-      "retrieved_at": "2026-07-16T21:01:42.590885Z",
-      "schema_fingerprint": "sha256:82a9089c84927f4329b3a479d6338f067026e0ff697bed6a2bf3a5b7956f7137",
-      "source_id": "pa-hospital-reports-index",
-      "source_modified": "2026-07-16T20:58:30Z",
-      "source_url": "https://www.pa.gov/agencies/health/health-statistics/health-facilities/hospital-reports"
+      "portable_uri": "hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-07/pa-hospital-report-2024-1a.xlsx",
+      "retrieved_at": "2026-07-16T21:29:36.136861Z",
+      "schema_fingerprint": "sha256:dd2df09453aab0e9d113e66666e13956eabe2fa42016bd5e8168b4b0f8aee305",
+      "source_id": "pa-hospital-report-2024-1a",
+      "source_modified": "2025-10-10T12:46:25Z",
+      "source_url": "https://www.pa.gov/content/dam/copapwp-pagov/en/health/documents/topics/healthstatistics/healthfacilities/hospitalreports/documents/hospital_report_2024_1a.xlsx"
     },
     {
-      "artifact_id": "artifact:nj-facilities-index:1774af77013efa0f",
-      "cache_run_id": "scale-roster-beds-20260716-04",
-      "checksum_sha256": "sha256:1774af77013efa0fd72f71a2b5787b67e9811f1c85a2b2dc6663ef9685a5bbc7",
+      "artifact_id": "artifact:pa-hospital-report-2024-1b:b7aef0bb6150ba34",
+      "cache_run_id": "scale-roster-beds-20260716-07",
+      "checksum_sha256": "sha256:b7aef0bb6150ba3415ff868c34b3ae0719dc30ea8baf3f50850ae64df898480d",
       "connector_version": "scale-roster-bed-connector.v1",
-      "content_length": 24153,
-      "final_url": "https://healthapps.nj.gov/Facilities/acSetSearch.aspx?by=county",
-      "media_type": "text/html",
+      "content_length": 16865,
+      "final_url": "https://www.pa.gov/content/dam/copapwp-pagov/en/health/documents/topics/healthstatistics/healthfacilities/hospitalreports/documents/hospital_report_2024_1b.xlsx",
+      "media_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       "parser_version": "scale-roster-bed-parser.v1",
-      "portable_uri": "hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-04/nj-facilities-index.html",
-      "retrieved_at": "2026-07-16T21:01:42.830834Z",
-      "schema_fingerprint": "sha256:82a9089c84927f4329b3a479d6338f067026e0ff697bed6a2bf3a5b7956f7137",
-      "source_id": "nj-facilities-index",
-      "source_modified": null,
-      "source_url": "https://healthapps.nj.gov/Facilities/acSetSearch.aspx?by=county"
+      "portable_uri": "hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-07/pa-hospital-report-2024-1b.xlsx",
+      "retrieved_at": "2026-07-16T21:29:36.169299Z",
+      "schema_fingerprint": "sha256:dd2df09453aab0e9d113e66666e13956eabe2fa42016bd5e8168b4b0f8aee305",
+      "source_id": "pa-hospital-report-2024-1b",
+      "source_modified": "2025-10-10T12:46:24Z",
+      "source_url": "https://www.pa.gov/content/dam/copapwp-pagov/en/health/documents/topics/healthstatistics/healthfacilities/hospitalreports/documents/hospital_report_2024_1b.xlsx"
     },
     {
-      "artifact_id": "artifact:de-hospitals-index:fb851f5ffe214867",
-      "cache_run_id": "scale-roster-beds-20260716-04",
-      "checksum_sha256": "sha256:fb851f5ffe214867ddeae1f0a88728edc0c3012aed1eda0175e94e04f8c07e0b",
+      "artifact_id": "artifact:nj-acute-care-current:18402ec009395375",
+      "cache_run_id": "scale-roster-beds-20260716-07",
+      "checksum_sha256": "sha256:18402ec00939537542075ec7cff8fd296dd84c9c5dd52f256ca18b444de1fd31",
+      "connector_version": "scale-roster-bed-connector.v1",
+      "content_length": 381050,
+      "final_url": "https://healthapps.nj.gov/Facilities/documents2/All_Acute.xlsx",
+      "media_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "parser_version": "scale-roster-bed-parser.v1",
+      "portable_uri": "hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-07/nj-acute-care-current.xlsx",
+      "retrieved_at": "2026-07-16T21:29:36.516170Z",
+      "schema_fingerprint": "sha256:ced498ef76dc632586c6c7652fed6a847c043b2fefebaa617049d65eda178456",
+      "source_id": "nj-acute-care-current",
+      "source_modified": "2026-07-15T16:46:35Z",
+      "source_url": "https://healthapps.nj.gov/Facilities/documents2/All_Acute.xlsx"
+    },
+    {
+      "artifact_id": "artifact:de-hospitals-index:6048783c9efcc504",
+      "cache_run_id": "scale-roster-beds-20260716-07",
+      "checksum_sha256": "sha256:6048783c9efcc5045dee98b5ac727dcbb073a7fa5f248794fba3c3007efad596",
       "connector_version": "scale-roster-bed-connector.v1",
       "content_length": 320114,
       "final_url": "https://dhss.delaware.gov/dhcq/dhcq/hospitals/",
       "media_type": "text/html",
       "parser_version": "scale-roster-bed-parser.v1",
-      "portable_uri": "hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-04/de-hospitals-index.html",
-      "retrieved_at": "2026-07-16T21:01:45.253506Z",
-      "schema_fingerprint": "sha256:82a9089c84927f4329b3a479d6338f067026e0ff697bed6a2bf3a5b7956f7137",
+      "portable_uri": "hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-07/de-hospitals-index.html",
+      "retrieved_at": "2026-07-16T21:29:39.061540Z",
+      "schema_fingerprint": "sha256:0dec6f87a7664e363483a96d737b95823939343c9dd1f4ea1af5300441719ed0",
       "source_id": "de-hospitals-index",
       "source_modified": null,
       "source_url": "https://dhss.delaware.gov/dhcq/dhcq/hospitals/"
+    },
+    {
+      "artifact_id": "artifact:md-licensed-acute-beds-fy2026:d29e6b7da02c367a",
+      "cache_run_id": "scale-roster-beds-20260716-07",
+      "checksum_sha256": "sha256:d29e6b7da02c367ae09d09221c77b552739bfe4e9beb7585846c66f1b848c2ca",
+      "connector_version": "scale-roster-bed-connector.v1",
+      "content_length": 156443,
+      "final_url": "https://mhcc.maryland.gov/sites/default/files/reports/licensed_acute_care_beds_fy2026.pdf",
+      "media_type": "application/pdf",
+      "parser_version": "scale-roster-bed-parser.v1",
+      "portable_uri": "hc-cache://scale-roster-bed-basis.v1/scale-roster-beds-20260716-07/md-licensed-acute-beds-fy2026.pdf",
+      "retrieved_at": "2026-07-16T21:29:39.264473Z",
+      "schema_fingerprint": "sha256:f9db602ded433302d10d9de9c4405d77616fcf5b2ed82355caf745edbe9fc645",
+      "source_id": "md-licensed-acute-beds-fy2026",
+      "source_modified": "2026-05-12T17:11:54Z",
+      "source_url": "https://mhcc.maryland.gov/sites/default/files/reports/licensed_acute_care_beds_fy2026.pdf"
     }
   ],
-  "cache_run_id": "scale-roster-beds-20260716-04",
+  "cache_run_id": "scale-roster-beds-20260716-07",
   "extracted_facts": [
     {
       "fact_id": "system-identity:christianacare",
@@ -799,23 +847,313 @@
       "value": 243
     },
     {
+      "fact_id": "de-license:christiana-newark",
+      "normalized_content_checksum": "sha256:7bf0f496fdbbfe63514f24c797b62f6f7adfc85b7283e11fe05d476a4c1d42fe",
+      "value": "HSPTL-002"
+    },
+    {
+      "fact_id": "de-license:wilmington",
+      "normalized_content_checksum": "sha256:9213f9faf5152c3c94e8334b75124d076e3b8a6abd1cef4f799292b9e6340b49",
+      "value": "HSPTL-001"
+    },
+    {
+      "fact_id": "de-bed:christiana-newark:licensed",
+      "normalized_content_checksum": "sha256:be73502d6a169922eaa1440385f5bd3c0e19f7b657467212dd7400ddc7216059",
+      "value": 1039
+    },
+    {
+      "fact_id": "de-bed:wilmington:licensed",
+      "normalized_content_checksum": "sha256:1c45088443ce40f87fe1d9fc1d3f7d42f4311320cdb4cf28b40ea98ba2f1e23b",
+      "value": 321
+    },
+    {
+      "fact_id": "md-bed:union:licensed-fy2026",
+      "normalized_content_checksum": "sha256:cf172c825962f0b5de74117ef4398d7a9a1927031c1efaa442a282bd7e6bb984",
+      "value": 99
+    },
+    {
+      "fact_id": "state-bed:pa-hospital-report-2024-1a:abington-memorial-hospital:licensed-beds",
+      "normalized_content_checksum": "sha256:21f57425a50257a32dbabd20e3edfa5e9a592a553a95930eee07412e366cca7e",
+      "value": 667
+    },
+    {
+      "fact_id": "state-bed:pa-hospital-report-2024-1a:abington-memorial-hospital:beds-set-up-and-staffed",
+      "normalized_content_checksum": "sha256:526c07e9e0b9e93b2bb9195e32c486828b237d915c792822885b8146556e413b",
+      "value": 574
+    },
+    {
+      "fact_id": "state-bed:pa-hospital-report-2024-1a:einstein-medical-center-montgomery:licensed-beds",
+      "normalized_content_checksum": "sha256:c77ee5b14e22bd794d78e83e0b14af12d77e490ea55600e8ce4b43af55cfe519",
+      "value": 195
+    },
+    {
+      "fact_id": "state-bed:pa-hospital-report-2024-1a:einstein-medical-center-montgomery:beds-set-up-and-staffed",
+      "normalized_content_checksum": "sha256:a47411936e54657571156c50d0279b772d881e00887b66f1fa7ca0124515baac",
+      "value": 195
+    },
+    {
+      "fact_id": "state-bed:pa-hospital-report-2024-1a:albert-einstein-medical-center:licensed-beds",
+      "normalized_content_checksum": "sha256:c667795262c014c6373cfe40ee2b69533a8e167cb3d4a98ab307eb5a3a84cea4",
+      "value": 692
+    },
+    {
+      "fact_id": "state-bed:pa-hospital-report-2024-1a:albert-einstein-medical-center:beds-set-up-and-staffed",
+      "normalized_content_checksum": "sha256:c62ddb9d85170db70d0d9b907f31ca11d97fd605256be4f536b0ff6f93f2ec33",
+      "value": 692
+    },
+    {
+      "fact_id": "state-bed:pa-hospital-report-2024-1a:lansdale-hospital:licensed-beds",
+      "normalized_content_checksum": "sha256:c0aa01d1457d57955fe4bb5248a00f4e91853c86cf035e5bb14cf8c197a72a0d",
+      "value": 140
+    },
+    {
+      "fact_id": "state-bed:pa-hospital-report-2024-1a:lansdale-hospital:beds-set-up-and-staffed",
+      "normalized_content_checksum": "sha256:7c28c69bd6d150ee2ae83e31474c1ae0601b3459d45c52789186f62cc214bf24",
+      "value": 98
+    },
+    {
+      "fact_id": "state-bed:pa-hospital-report-2024-1a:thomas-jefferson-university-hospital:licensed-beds",
+      "normalized_content_checksum": "sha256:fc682100046a01cda48f91912622b5f20ce28d01cfb164611f49c50876e32c34",
+      "value": 888
+    },
+    {
+      "fact_id": "state-bed:pa-hospital-report-2024-1a:thomas-jefferson-university-hospital:beds-set-up-and-staffed",
+      "normalized_content_checksum": "sha256:fbdbc49f9468629a264642f5ca92e7fae972188ae4bbc7c5dd293e15399db133",
+      "value": 888
+    },
+    {
+      "fact_id": "state-bed:pa-hospital-report-2024-1a:jefferson-health-northeast:licensed-beds",
+      "normalized_content_checksum": "sha256:9d83f883a01a1d1589dab75aa3fa09dc248d68a5fef42e33c821355bb825e3ee",
+      "value": 464
+    },
+    {
+      "fact_id": "state-bed:pa-hospital-report-2024-1a:jefferson-health-northeast:beds-set-up-and-staffed",
+      "normalized_content_checksum": "sha256:6489822370d276a491421c419036a7ee5fcffd683205322de2c2d23f61a4dec1",
+      "value": 459
+    },
+    {
+      "fact_id": "state-bed:pa-hospital-report-2024-1a:temple-university-hospital:licensed-beds",
+      "normalized_content_checksum": "sha256:475e4ccc06d04f3cfcfbec39c5f6e87eb2f41f8db73669d9558af9fb78942917",
+      "value": 890
+    },
+    {
+      "fact_id": "state-bed:pa-hospital-report-2024-1a:temple-university-hospital:beds-set-up-and-staffed",
+      "normalized_content_checksum": "sha256:f36f185817e9581eacb87d3ce0f44b7f20f4ae3632491b295fac89c7da157cd6",
+      "value": 869
+    },
+    {
+      "fact_id": "state-bed:pa-hospital-report-2024-1a:temple-health-chestnut-hill-hospital:licensed-beds",
+      "normalized_content_checksum": "sha256:338ea978dfafa231af243411dfcc31913f2b56707917f6a9e72d61eb4a611197",
+      "value": 148
+    },
+    {
+      "fact_id": "state-bed:pa-hospital-report-2024-1a:temple-health-chestnut-hill-hospital:beds-set-up-and-staffed",
+      "normalized_content_checksum": "sha256:c57d11be2246030ea922afcbd4cf659761d5cd7c9d5c28369990e59a06011836",
+      "value": 148
+    },
+    {
+      "fact_id": "state-bed:pa-hospital-report-2024-1a:hospital-of-the-university-of-pennsylvania:licensed-beds",
+      "normalized_content_checksum": "sha256:24a3e7b99d5924d8acac6f1cb268651a4c94ad490e009066e0843923aedaf30d",
+      "value": 1110
+    },
+    {
+      "fact_id": "state-bed:pa-hospital-report-2024-1a:hospital-of-the-university-of-pennsylvania:beds-set-up-and-staffed",
+      "normalized_content_checksum": "sha256:aabe77265bd8a5b71370b90f0f7ab38a627ff16f8179052e231f026818519f8f",
+      "value": 1110
+    },
+    {
+      "fact_id": "state-bed:pa-hospital-report-2024-1a:penn-presbyterian-medical-center:licensed-beds",
+      "normalized_content_checksum": "sha256:6738b417360289a7a8ad67a0aafb769c609cede587f59aa70c24b2a96946fa5a",
+      "value": 364
+    },
+    {
+      "fact_id": "state-bed:pa-hospital-report-2024-1a:penn-presbyterian-medical-center:beds-set-up-and-staffed",
+      "normalized_content_checksum": "sha256:eb8811efda919d86ee720fb70341d8bf2a070e5600ef73c8b7af34ed8855184e",
+      "value": 364
+    },
+    {
+      "fact_id": "state-bed:pa-hospital-report-2024-1a:chester-county-hospital:licensed-beds",
+      "normalized_content_checksum": "sha256:23d5a3b7b0bedc520e01fc43f4c87fdd940592bcadfccd16dd6e04e4bad3bada",
+      "value": 329
+    },
+    {
+      "fact_id": "state-bed:pa-hospital-report-2024-1a:chester-county-hospital:beds-set-up-and-staffed",
+      "normalized_content_checksum": "sha256:b8b5fa9a1f60dd7be8ffa0f9825687201725ca16da46a3bbf6fd7fcc6f4584cd",
+      "value": 315
+    },
+    {
+      "fact_id": "state-bed:pa-hospital-report-2024-1a:lancaster-general-hospital:licensed-beds",
+      "normalized_content_checksum": "sha256:27ffa1e9a1ca1078dce29398133cd058e3344179eb7265b5a839dac43af9fd25",
+      "value": 620
+    },
+    {
+      "fact_id": "state-bed:pa-hospital-report-2024-1a:lancaster-general-hospital:beds-set-up-and-staffed",
+      "normalized_content_checksum": "sha256:342a7dd5b41053e7844571b57514e87aec5a7fdf73f7456a0e1f0ebbcc50e28e",
+      "value": 620
+    },
+    {
+      "fact_id": "state-bed:pa-hospital-report-2024-1a:pennsylvania-hospital-of-the-university-of-pennsylvania-health-system:licensed-beds",
+      "normalized_content_checksum": "sha256:85d407cdbf8dadcfcaf85da300a9960cba965425eaa1f06b3957ec05fca6f981",
+      "value": 493
+    },
+    {
+      "fact_id": "state-bed:pa-hospital-report-2024-1a:pennsylvania-hospital-of-the-university-of-pennsylvania-health-system:beds-set-up-and-staffed",
+      "normalized_content_checksum": "sha256:8bbe4335580653f7142acf4b94302d02bc3d2bd8e247644d5914e0dac69112eb",
+      "value": 493
+    },
+    {
+      "fact_id": "state-bed:pa-hospital-report-2024-1a:main-line-hospital-lankenau-medical-center:licensed-beds",
+      "normalized_content_checksum": "sha256:5299ecdfa90aa4b55521171cab03547a16e61657b7e0cbb7b6ed5a637cd6364f",
+      "value": 370
+    },
+    {
+      "fact_id": "state-bed:pa-hospital-report-2024-1a:main-line-hospital-lankenau-medical-center:beds-set-up-and-staffed",
+      "normalized_content_checksum": "sha256:fb6e0f800f9affda6eb4b538d010a50d50aa6d1933176d38dde9488c042055f9",
+      "value": 370
+    },
+    {
+      "fact_id": "state-bed:pa-hospital-report-2024-1a:main-line-hospital-bryn-mawr:licensed-beds",
+      "normalized_content_checksum": "sha256:41b6854f55d16e16ecbb7f96271df4a2fb6b93ace0ec3bbf511f789398707c76",
+      "value": 284
+    },
+    {
+      "fact_id": "state-bed:pa-hospital-report-2024-1a:main-line-hospital-bryn-mawr:beds-set-up-and-staffed",
+      "normalized_content_checksum": "sha256:a4cb3c6a60ce092ae517aeea59c9e75654c4043a2ab0a51b9b93737def395b39",
+      "value": 284
+    },
+    {
+      "fact_id": "state-bed:pa-hospital-report-2024-1a:main-line-hospital-paoli:licensed-beds",
+      "normalized_content_checksum": "sha256:1ad24fb24dc791a8e67fd3a9a208bd45f49e4aad5ebebfad5a7dd30ba7cede4b",
+      "value": 261
+    },
+    {
+      "fact_id": "state-bed:pa-hospital-report-2024-1a:main-line-hospital-paoli:beds-set-up-and-staffed",
+      "normalized_content_checksum": "sha256:601f7f9e37b93d7d08f2965dbee9a37ec967b840965bb48f28b74f0bc744eea4",
+      "value": 261
+    },
+    {
+      "fact_id": "state-bed:pa-hospital-report-2024-1a:riddle-memorial-hospital:licensed-beds",
+      "normalized_content_checksum": "sha256:a9f4b54e2aa95ed7e9c98c97b2fcfde0ffe9b1ba37398c1b1e6cc32c0a14d16a",
+      "value": 243
+    },
+    {
+      "fact_id": "state-bed:pa-hospital-report-2024-1a:riddle-memorial-hospital:beds-set-up-and-staffed",
+      "normalized_content_checksum": "sha256:c9c4a62ddd97e3dff5ed215217a938be9a6fa4c41baf14a7332af1772239ca48",
+      "value": 243
+    },
+    {
+      "fact_id": "state-bed:pa-hospital-report-2024-1b:main-line-hospital-bryn-mawr-rehabilitation:licensed-beds**",
+      "normalized_content_checksum": "sha256:2a1a8a5d9a16e757f138de3d6d7035d77fe1781f3c70d7655e20dec8ec3a1bec",
+      "value": 148
+    },
+    {
+      "fact_id": "state-bed:pa-hospital-report-2024-1b:main-line-hospital-bryn-mawr-rehabilitation:beds-set-up-and-staffed",
+      "normalized_content_checksum": "sha256:51e0042c6f7f907d9d82d7b57c5d61d6ef8f63a72c46f51330f68abcd8b19225",
+      "value": 148
+    },
+    {
+      "fact_id": "state-bed:pa-hospital-report-2024-1b:lancaster-behavioral-health-hospital:licensed-beds**",
+      "normalized_content_checksum": "sha256:1df7afe05ffa6734411e1f03d52ac2d118ec3d9c4c8688de15a5df7442afc829",
+      "value": 126
+    },
+    {
+      "fact_id": "state-bed:pa-hospital-report-2024-1b:lancaster-behavioral-health-hospital:beds-set-up-and-staffed",
+      "normalized_content_checksum": "sha256:610fc9dab48c03a37bf825c7a38f82c9ea532793980216408f593211c14394af",
+      "value": 126
+    },
+    {
+      "fact_id": "state-bed:pa-hospital-report-2024-1b:rothman-orthopaedic-specialty-hospital:licensed-beds**",
+      "normalized_content_checksum": "sha256:8cb0dd3f48ec9dabee42629b3db0e2328eec008937521d76b5bc8cdd0a5f4757",
+      "value": 24
+    },
+    {
+      "fact_id": "state-bed:pa-hospital-report-2024-1b:rothman-orthopaedic-specialty-hospital:beds-set-up-and-staffed",
+      "normalized_content_checksum": "sha256:6738127a658889216abad9b572a5e85dbabcd6b593d1f4c199fd36b890cf8af1",
+      "value": 24
+    },
+    {
+      "fact_id": "state-bed:nj-acute-care-current:jefferson-cherry-hill-hospital-nj10401:lic_beds_slots",
+      "normalized_content_checksum": "sha256:665ace98ac80e369424bdb73db2cbd5679d747dfc3b75035b9e6f02ce7ea715e",
+      "value": 196
+    },
+    {
+      "fact_id": "state-license:nj-acute-care-current:jefferson-cherry-hill-hospital-nj10401",
+      "normalized_content_checksum": "sha256:049496047c7250e9dce76d935e23843a5b95fb8f49367330df2c6d6ea74cc411",
+      "value": "10401"
+    },
+    {
+      "fact_id": "state-bed:nj-acute-care-current:jefferson-stratford-hospital-nj10403:lic_beds_slots",
+      "normalized_content_checksum": "sha256:c3ad9895a4ae794810da51f2a43710fee9bd66e809c9b2f8d0772181a456a06d",
+      "value": 181
+    },
+    {
+      "fact_id": "state-license:nj-acute-care-current:jefferson-stratford-hospital-nj10403",
+      "normalized_content_checksum": "sha256:94a4e13254ce6190a13c247f6283c76cc61fb3b219f4a00315630aa53ce10adb",
+      "value": "10403"
+    },
+    {
+      "fact_id": "state-bed:nj-acute-care-current:jefferson-washington-township-hospital-nj10802-1:lic_beds_slots",
+      "normalized_content_checksum": "sha256:1c94e407c6e081cc21e62ca2ea5e04f90a0671b07e3fae1d8a7346d364a2b965",
+      "value": 286
+    },
+    {
+      "fact_id": "state-license:nj-acute-care-current:jefferson-washington-township-hospital-nj10802-1",
+      "normalized_content_checksum": "sha256:69710069191bae6f69ef367661398a2fb0ef5a1e4a8a67f09f9190c0bd04e998",
+      "value": "10802"
+    },
+    {
+      "fact_id": "state-bed:nj-acute-care-current:cooper-university-hospital-nj10402:lic_beds_slots",
+      "normalized_content_checksum": "sha256:4979077df2a8f5c6f7c244ae0ab98687a856e5e26c8fe14b5ac94057cd1aad15",
+      "value": 663
+    },
+    {
+      "fact_id": "state-license:nj-acute-care-current:cooper-university-hospital-nj10402",
+      "normalized_content_checksum": "sha256:3985d81aece5574667eb4a52971101655564d9894feaa371333a25d493bfffb0",
+      "value": "10402"
+    },
+    {
+      "fact_id": "state-bed:nj-acute-care-current:cooper-university-hospital-cape-regional-inc-nj10501:lic_beds_slots",
+      "normalized_content_checksum": "sha256:9587f73f97b1187573c10863696014a536c39f841ee76b8f333e525a2c859169",
+      "value": 242
+    },
+    {
+      "fact_id": "state-license:nj-acute-care-current:cooper-university-hospital-cape-regional-inc-nj10501",
+      "normalized_content_checksum": "sha256:96a9af35668c3e3798e4c04259b0975d8ab81f0b59f7a72999771368fea4c4bd",
+      "value": "10501"
+    },
+    {
+      "fact_id": "cms-pos:080001:bed_cnt",
+      "normalized_content_checksum": "sha256:233f97e472b7b0bbe608022ee896de55414adef255a3bb694a126dc28b6486c0",
+      "value": 1196
+    },
+    {
+      "fact_id": "cms-pos:080001:crtfd_bed_cnt",
+      "normalized_content_checksum": "sha256:50044e3c89dbeae56ab862e0f554c9709e7016c8e4b7297065dd7b9c00c69081",
+      "value": 1196
+    },
+    {
+      "fact_id": "cms-hcris:080001:number-of-beds",
+      "normalized_content_checksum": "sha256:ac29ec7cf922cf73dd099cbd7e65571fd43587bfa89c0354c8a40905cc6b2c43",
+      "value": 1172
+    },
+    {
       "fact_id": "cms-hgi-identity:210032",
       "normalized_content_checksum": "sha256:c6f0dc7124db10f658e5f874c43d0955b00b82f66e81e025eefc0aa811c976b6",
       "value": "210032"
     },
     {
       "fact_id": "cms-pos:210032:bed_cnt",
-      "normalized_content_checksum": "sha256:70a0e7a38d3dbeeebd40e175dc3abe28fbed3442c09f0d75a08ab5f7c13b8105",
+      "normalized_content_checksum": "sha256:c27d61091b556c128d3f1cda8c0765ef26bfe138b41132048f5188ebb7aa492e",
       "value": 166
     },
     {
       "fact_id": "cms-pos:210032:crtfd_bed_cnt",
-      "normalized_content_checksum": "sha256:626d58a144bb49091f787839f29cef04f69dfe354791742fb8ef355ab4561ee4",
+      "normalized_content_checksum": "sha256:bdf0e7075b912e26e520f2d9295f226a9005e1988feb67f01d97cc8cf63983fb",
       "value": 166
     },
     {
       "fact_id": "cms-hcris:210032:number-of-beds",
-      "normalized_content_checksum": "sha256:9e99f1e2ad5d59ac7532d18e2f3c8ac7ac2905f4dff138276652e7ceb340250a",
+      "normalized_content_checksum": "sha256:e01b845e09eed4f6de5de60e93fe9da0bf84b7f3510f82d10c4f39dcffd9966b",
       "value": 124
     },
     {
@@ -825,17 +1163,17 @@
     },
     {
       "fact_id": "cms-pos:310010:bed_cnt",
-      "normalized_content_checksum": "sha256:835b62c65b61efa9385c740aa733313421f0602765008312ceeed904e2df625a",
+      "normalized_content_checksum": "sha256:cb0e80c96f06db91a56d3867f965d464b073f3a3c337525e9b96b60ee8c58dcd",
       "value": 375
     },
     {
       "fact_id": "cms-pos:310010:crtfd_bed_cnt",
-      "normalized_content_checksum": "sha256:0e80997ea9200b074a5eaa2a1012bce9923ce8cb75af0f6078f29dc5049d8a35",
+      "normalized_content_checksum": "sha256:4a22b0a0adc88da158e993719663f8b4c2a4a3820b6212b4fe5f99586ba8377e",
       "value": 375
     },
     {
       "fact_id": "cms-hcris:310010:number-of-beds",
-      "normalized_content_checksum": "sha256:66b1ba06688537c1c35274e12837e5186a5b458240627f5a33a8e8fadbd857cc",
+      "normalized_content_checksum": "sha256:0041d6a1b85e09311c6b9925d69ea28fbcda64fabfaaae10711fe3503adce5e6",
       "value": 206
     },
     {
@@ -845,17 +1183,17 @@
     },
     {
       "fact_id": "cms-pos:310011:bed_cnt",
-      "normalized_content_checksum": "sha256:142352180419f81ba9257156706936c8c7ab0cc71eee8af8d3b9cadc09eb9c58",
+      "normalized_content_checksum": "sha256:cc3400f49c2e5c5d7dfd5d633b10125f0487161f227a343cd08bb1b6ba7764d0",
       "value": 242
     },
     {
       "fact_id": "cms-pos:310011:crtfd_bed_cnt",
-      "normalized_content_checksum": "sha256:a0ce8751d49abe2268f7d5a30493f61926ec83768d0c0c5e45d05a8c0adc7005",
+      "normalized_content_checksum": "sha256:d301d5bdbf39f75bbd686c3af59d5d0471d624f782d0d35c71a22ded4cca7e0f",
       "value": 242
     },
     {
       "fact_id": "cms-hcris:310011:number-of-beds",
-      "normalized_content_checksum": "sha256:a77a2ff38414260c3d74fcb2771e01b18a1767a6c841381278ec51838fb8e6f0",
+      "normalized_content_checksum": "sha256:28ad4628829a7b79dadcc4d9544c3877281e2a6f54f3bb02091d1c292a8f7d87",
       "value": 149
     },
     {
@@ -865,17 +1203,17 @@
     },
     {
       "fact_id": "cms-pos:310014:bed_cnt",
-      "normalized_content_checksum": "sha256:636defaf91316b5be5a9ae884a60e66ea62b67f7dcdbc54ea210f307d348c843",
+      "normalized_content_checksum": "sha256:5b8031f8ac39460c679ee4709eaa24fbcf68002b60b9b1ffb50afdf2608d5ab7",
       "value": 663
     },
     {
       "fact_id": "cms-pos:310014:crtfd_bed_cnt",
-      "normalized_content_checksum": "sha256:72b39ed7fdf92ea95891a1ea39f19a626bc4e3074c295a766925463173d63cf7",
+      "normalized_content_checksum": "sha256:caf7cdcbcad0bb51a64995bb720eafda18567de5bee03c1411ed314fcaaea832",
       "value": 663
     },
     {
       "fact_id": "cms-hcris:310014:number-of-beds",
-      "normalized_content_checksum": "sha256:a2459e39597101d06d5875fb7b7c26191e2c692773cc8462a59f2bf89ef5d596",
+      "normalized_content_checksum": "sha256:6cc22a926378f14aba4fd48d69a64b76f33cc0eb44082f889c9a2183bd711541",
       "value": 578
     },
     {
@@ -885,27 +1223,42 @@
     },
     {
       "fact_id": "cms-pos:390026:bed_cnt",
-      "normalized_content_checksum": "sha256:95e6b8d6f38c249b243e1f64c255eb4d4fbf6ab704d012074ef0fb683d7dc852",
+      "normalized_content_checksum": "sha256:5b829138e9b488a9a871abfd1c2d500ef0b97aa6f20a1d3c7839dbc6613885db",
       "value": 148
     },
     {
       "fact_id": "cms-pos:390026:crtfd_bed_cnt",
-      "normalized_content_checksum": "sha256:d67f9e3bb2b41110c25c51048af4068dcf3f34529116ae76e77286ec4d90efd7",
+      "normalized_content_checksum": "sha256:921b8cdb74793e2599acae2d85bad758ba0864eb8a4b289e80d4be47969fb149",
       "value": 134
     },
     {
       "fact_id": "cms-hcris:390026:number-of-beds",
-      "normalized_content_checksum": "sha256:09ea7c9d06397be018d6e1403491ee1a070cd3617a8810d5d4f8781481516fe6",
+      "normalized_content_checksum": "sha256:29f750bfd64b1bc8561ede7b66abe8aab41fe15fa53500a8c0ddaf59db6eeb3a",
       "value": 128
     },
     {
+      "fact_id": "cms-pos:390027:bed_cnt",
+      "normalized_content_checksum": "sha256:c4a1396981d0300849da12b3b0a7aeff4d1a66722ffa4ee23a133d41e2f115bc",
+      "value": 891
+    },
+    {
+      "fact_id": "cms-pos:390027:crtfd_bed_cnt",
+      "normalized_content_checksum": "sha256:5696884d7dc37d82ffed3a71747673f6437fa7162ef75802e480c80750e21b1b",
+      "value": 735
+    },
+    {
+      "fact_id": "cms-hcris:390027:number-of-beds",
+      "normalized_content_checksum": "sha256:32f17647cf24364d7d3eb2f9abfdb06da9f9ffafaafa5f1686ffaccecee7f446",
+      "value": 761
+    },
+    {
       "fact_id": "cms-pos:390080:bed_cnt",
-      "normalized_content_checksum": "sha256:52ffd929996b14692bacb09823053255796bd1d760ebd12c5980e6e7891a744c",
+      "normalized_content_checksum": "sha256:4d558242b991aca9b59a89cbef2a1657ad8b3207dc1d6bdeae3c4effa24bb300",
       "value": 176
     },
     {
       "fact_id": "cms-pos:390080:crtfd_bed_cnt",
-      "normalized_content_checksum": "sha256:fc4e3f2ff58e699bf67fc44915a83c3234ffe705ce41b4d5ad047cc8a1106b86",
+      "normalized_content_checksum": "sha256:bddbda02d91e8e68255631351a0cc1cfff2397c68524f81fdb1d8adb41d12365",
       "value": 156
     },
     {
@@ -915,17 +1268,17 @@
     },
     {
       "fact_id": "cms-pos:390100:bed_cnt",
-      "normalized_content_checksum": "sha256:07564beea5596ca58a6fd4b7ff8ef6361e8d34c6aec52dabbbd3d456e4a33eca",
+      "normalized_content_checksum": "sha256:504fa587537e4be342b14263642c37f4392c8a89d8aa2cbeef3fd210cf1faa38",
       "value": 632
     },
     {
       "fact_id": "cms-pos:390100:crtfd_bed_cnt",
-      "normalized_content_checksum": "sha256:625aaae58cc70683c7137170c84b218e0d8f4d206957a760755a90ceeb0da2bf",
+      "normalized_content_checksum": "sha256:defa4a49fba05027054d72f695ac4f1e50006aed27156ebfea68d15389fac76b",
       "value": 537
     },
     {
       "fact_id": "cms-hcris:390100:number-of-beds",
-      "normalized_content_checksum": "sha256:e9999415ae000380c5378f95183dab837444dcb139a8267286e3ac280b4bed46",
+      "normalized_content_checksum": "sha256:a5f9f896235dab400596b74e17361ff39da25922a8d8ff9124fa320534059002",
       "value": 620
     },
     {
@@ -935,17 +1288,17 @@
     },
     {
       "fact_id": "cms-pos:390111:bed_cnt",
-      "normalized_content_checksum": "sha256:f1e8b81074ba20a356ce3ec0dc4a1eb85ba852e38a126c283d29a2319f843945",
+      "normalized_content_checksum": "sha256:d32e215417d4cec61aec2217718e1bff032ea9d8a609c4e3b6e457adee6757c4",
       "value": 782
     },
     {
       "fact_id": "cms-pos:390111:crtfd_bed_cnt",
-      "normalized_content_checksum": "sha256:7ffa321cf8f9c6802c971e027487c488666c8d73fd1cf5dece819497d2fc021a",
+      "normalized_content_checksum": "sha256:91987c553e2155ba7892b5c9bddbf9bd62c710b382f37fc523bb9a9b9d1d9668",
       "value": 599
     },
     {
       "fact_id": "cms-hcris:390111:number-of-beds",
-      "normalized_content_checksum": "sha256:bd285a5b982ff54b84d9a11c0b9356b4773bb9dac1bbf410d5b4a9724348d1ac",
+      "normalized_content_checksum": "sha256:da19df16e8491eb974e21a62735ddbeaaa006784328182fad102e567d1f3491f",
       "value": 1011
     },
     {
@@ -955,17 +1308,17 @@
     },
     {
       "fact_id": "cms-pos:390139:bed_cnt",
-      "normalized_content_checksum": "sha256:15dc4e9baad8eefe3781becb6c9c1c22cbbfe1b219f4c7bdc5bb5e5c2e99bbac",
+      "normalized_content_checksum": "sha256:85bc1d17a2086fb00a6d465e07c16f0b53d22aedd3f9a7cb4488132f84403172",
       "value": 284
     },
     {
       "fact_id": "cms-pos:390139:crtfd_bed_cnt",
-      "normalized_content_checksum": "sha256:0ccd346e7774c90ee47d68c739d7a48bfb9f28dbf112d36bc4a9c9ca6abb179d",
+      "normalized_content_checksum": "sha256:ba36af79e423846b84c142afc466e6c549d1dee69339bcf94ad87d2ce4c55ed8",
       "value": 227
     },
     {
       "fact_id": "cms-hcris:390139:number-of-beds",
-      "normalized_content_checksum": "sha256:b488993145fd472ce59a70adaa25a80d156ded37ff4d1fd8081a03fca6826478",
+      "normalized_content_checksum": "sha256:fb8f4b0153774dd10a0b521ef8fbefcc9e1dd2371738d83d48fdab5c94aa28be",
       "value": 244
     },
     {
@@ -975,17 +1328,17 @@
     },
     {
       "fact_id": "cms-pos:390153:bed_cnt",
-      "normalized_content_checksum": "sha256:4d7fc5f1e94753aeb22df9a77ff97386a5617ce471a35cda8a2e226d859d03a1",
-      "value": 231
+      "normalized_content_checksum": "sha256:bf4f5242e211bbb256c23d4f6363edbd546aa8c320e22bda8780711f96f1bff8",
+      "value": 261
     },
     {
       "fact_id": "cms-pos:390153:crtfd_bed_cnt",
-      "normalized_content_checksum": "sha256:1988f13de478ab21f59a9dec596056346124f1cfdbd813a494a242870f83df43",
-      "value": 194
+      "normalized_content_checksum": "sha256:1a5c18f03d987436d412c978ea12cf92605cc763d4d25567a137f5963efe9ee3",
+      "value": 224
     },
     {
       "fact_id": "cms-hcris:390153:number-of-beds",
-      "normalized_content_checksum": "sha256:fc1d1bc898daf288e7589365a933196a9dbc980d0d6f6992f6d3e72b059b330f",
+      "normalized_content_checksum": "sha256:be528da510b591e8f3810496771598f6951667f3121e9ddba81e7445cda6fde8",
       "value": 261
     },
     {
@@ -995,17 +1348,17 @@
     },
     {
       "fact_id": "cms-pos:390179:bed_cnt",
-      "normalized_content_checksum": "sha256:cff84c2b48b3a4902db2287741fcb82299916b01c534a4677b4e36485f079771",
+      "normalized_content_checksum": "sha256:f3db41a2d601bca5c917fdbae32f09a1b1f9c0100ec6e82ccdf040461951ee97",
       "value": 319
     },
     {
       "fact_id": "cms-pos:390179:crtfd_bed_cnt",
-      "normalized_content_checksum": "sha256:09428eb2147e99904dbb9a39ee655906ba6ffd7f2340228578a3ed1b3618bda6",
+      "normalized_content_checksum": "sha256:54a49d958478299fa5685e4a3dbaedc47b9a1d7fc738d8c1505875abf1fe69b1",
       "value": 263
     },
     {
       "fact_id": "cms-hcris:390179:number-of-beds",
-      "normalized_content_checksum": "sha256:ef9e813cbeb22648dba65c7bae9ab38e9515bde634266661382fa5501e5bc0e1",
+      "normalized_content_checksum": "sha256:ad38524b29496c2d565baebb238c14cde3c080cfa00197a276187bff7831891a",
       "value": 309
     },
     {
@@ -1015,32 +1368,32 @@
     },
     {
       "fact_id": "cms-pos:390195:bed_cnt",
-      "normalized_content_checksum": "sha256:837c73641ef71e87555421adde718bb8593e4ce08d35d6443ba75450bf9c9d60",
+      "normalized_content_checksum": "sha256:de2f93339bf59b4ed505542860967340ecd8c19fe5d9e6239d935132509fcf74",
       "value": 370
     },
     {
       "fact_id": "cms-pos:390195:crtfd_bed_cnt",
-      "normalized_content_checksum": "sha256:9884d3177ad5af1c760872ff693668057777a1ecdd82c2f8b8c0d784dd87263a",
+      "normalized_content_checksum": "sha256:b57d1aa634d171f6439afd734db22667ba57caaa2789ac76436b03de346011cd",
       "value": 285
     },
     {
       "fact_id": "cms-hcris:390195:number-of-beds",
-      "normalized_content_checksum": "sha256:990a12c283359f50fd787b7d90ec75a6059144b45107bcd8f68d299e30fa8d51",
+      "normalized_content_checksum": "sha256:81df95e16a493d32db90523aec334ca9b08e1791b9e38dbda70b9df8a68fab49",
       "value": 370
     },
     {
       "fact_id": "cms-pos:390196:bed_cnt",
-      "normalized_content_checksum": "sha256:b3a67fb234319d4f9462cfa9093c490d049391afc8f61b4f9092df81ff12a027",
+      "normalized_content_checksum": "sha256:110fb3682a15472696ece4abdf1fecbf9b244cdc83dc7fd1c2b92df59abc93d2",
       "value": 100
     },
     {
       "fact_id": "cms-pos:390196:crtfd_bed_cnt",
-      "normalized_content_checksum": "sha256:e73111e4eca737efc0cc5192b5128ea29348c31abfa7213a9644f69f4030326b",
+      "normalized_content_checksum": "sha256:fa0faebc3df4d30f944994cfce0af2c9a8b0de6efaf8b4ee039a50dc0e722267",
       "value": 100
     },
     {
       "fact_id": "cms-hcris:390196:number-of-beds",
-      "normalized_content_checksum": "sha256:e949d6c0081ffa2eab3f231b8f541c0afbd2f82f66d74714de2701675511ed47",
+      "normalized_content_checksum": "sha256:2ed12398e0b1130fc72168b65eec681cfbf7195a8c7321a4088c2c1160082ba4",
       "value": 100
     },
     {
@@ -1050,17 +1403,17 @@
     },
     {
       "fact_id": "cms-pos:390222:bed_cnt",
-      "normalized_content_checksum": "sha256:d7040e437f38ae3a0354ccb69a1976c0d2e6cc5e92832e6da2c4394e19d58b97",
-      "value": 212
+      "normalized_content_checksum": "sha256:dfe3d942c685bb9c3e41a093e0cdbf739427b4e9b87ec8a2e85ce555a386e3c6",
+      "value": 243
     },
     {
       "fact_id": "cms-pos:390222:crtfd_bed_cnt",
-      "normalized_content_checksum": "sha256:6b74ed60052b933f1511584a2a840de8612bffbab1b252ec6e2041340e79e48d",
-      "value": 190
+      "normalized_content_checksum": "sha256:5a93b72dc0994cc7ca2fddc4d6d94b645c89780a39dd2a3bb7871e3ef237d4e8",
+      "value": 155
     },
     {
       "fact_id": "cms-hcris:390222:number-of-beds",
-      "normalized_content_checksum": "sha256:d434aef44e8806689819f49d0d7f465d4965cbe61bb383d4d745547966a2e19a",
+      "normalized_content_checksum": "sha256:a49e02a79099c4eadfac866c5776fda1e801474e79452a37060ba29e5e99d742",
       "value": 230
     },
     {
@@ -1070,17 +1423,17 @@
     },
     {
       "fact_id": "cms-pos:390223:bed_cnt",
-      "normalized_content_checksum": "sha256:519e73e61018d61483b917a3c2011015ce2b0214bdff73fe4176c2a8d9d5c298",
+      "normalized_content_checksum": "sha256:1a32040c15b7f8d9f1eb99e86ac64f613ed1aacdbd46d50e46ab45a4c3590275",
       "value": 305
     },
     {
       "fact_id": "cms-pos:390223:crtfd_bed_cnt",
-      "normalized_content_checksum": "sha256:5aae05f982d317b372c0c5bcec4ab737d340da01d6b37ea27edf698cb70284af",
+      "normalized_content_checksum": "sha256:f37e696467bb9dfb9daf9a22430aaa851bda4d17834b1304f13f5b3e794a2cae",
       "value": 262
     },
     {
       "fact_id": "cms-hcris:390223:number-of-beds",
-      "normalized_content_checksum": "sha256:ae2e649519cd6e6586c350d54ac78bea65d86a7a70bee6684460ee71763eef94",
+      "normalized_content_checksum": "sha256:c8506ec1538af9a75cc9f285d439b763d7385ad7677d8f8fa48594c3e68fd1b2",
       "value": 328
     },
     {
@@ -1090,47 +1443,47 @@
     },
     {
       "fact_id": "cms-pos:390226:bed_cnt",
-      "normalized_content_checksum": "sha256:589102629f31b5007708faec4437644fede6759e4e32b76618aa4042bcf64d7f",
+      "normalized_content_checksum": "sha256:39f6041ba2e5e4a4d9ec594eeb1df35a12fd176b90c6e29293ea38af259c666a",
       "value": 475
     },
     {
       "fact_id": "cms-pos:390226:crtfd_bed_cnt",
-      "normalized_content_checksum": "sha256:fab801251cbcbcb2b478cdeaf399d376ce0732fc9a4d3b1f5a1010598286da3c",
+      "normalized_content_checksum": "sha256:0f8502a02ce5b2b52c7094caabc627819397905e67301dcc0a6c867535bc3c91",
       "value": 380
     },
     {
       "fact_id": "cms-hcris:390226:number-of-beds",
-      "normalized_content_checksum": "sha256:d0db7b5d459b340065d4334b57940a8e24046057b2077ec3743bbe630eb0fd5a",
+      "normalized_content_checksum": "sha256:305c0f2ced5be32f5910c6114f89e9452d5972e4dff6bea7cb54d9f3b92ccae5",
       "value": 420
     },
     {
       "fact_id": "cms-pos:392050:bed_cnt",
-      "normalized_content_checksum": "sha256:f765446ed6388eb9d43d3d1111319ece23e59b7c437867b7d801d94972546323",
+      "normalized_content_checksum": "sha256:d3948cee638431721fd452292b07ce3cf32f5111c0a8cb9a3842190409c2345e",
       "value": 38
     },
     {
       "fact_id": "cms-pos:392050:crtfd_bed_cnt",
-      "normalized_content_checksum": "sha256:226b8eb169be76ddac0af8ada5f3ea409f2b2e6daa57ddc601ecf1c0f9ca9d91",
+      "normalized_content_checksum": "sha256:e55d451449e812ead170525e2942c65160da237c7d0639a2fe5bcb0d05584f7e",
       "value": 38
     },
     {
       "fact_id": "cms-hcris:392050:number-of-beds",
-      "normalized_content_checksum": "sha256:0b584016701f45ac67c016d0858c73970e60430e8b74f13b9f111a4b9007dbcc",
+      "normalized_content_checksum": "sha256:7be7f2cb726bb8eae67a4d77351a471213679896472e91d84f182c4d3b63f41a",
       "value": 18
     },
     {
       "fact_id": "cms-pos:393025:bed_cnt",
-      "normalized_content_checksum": "sha256:d39b26dfd6dd2c98be38af7f83da9a3ba9f3d3ee4a0f1b69bf61c886e24871b0",
+      "normalized_content_checksum": "sha256:c7d07467e77edea5585f11f1d3fa69069f4b2c97b0ffaad31f2f3d08c85307c2",
       "value": 148
     },
     {
       "fact_id": "cms-pos:393025:crtfd_bed_cnt",
-      "normalized_content_checksum": "sha256:cb88523bbf5ce5d50a3d4b485cef8526b83f4663a98a1fdf18d0139edb6de5fd",
+      "normalized_content_checksum": "sha256:8cbfc4b2717ac04dd072753a7dcaf5ea0057a0c1d364f6cdb891b0ed0f9e0731",
       "value": 148
     },
     {
       "fact_id": "cms-hcris:393025:number-of-beds",
-      "normalized_content_checksum": "sha256:9b12e6a929815cc626731d9771c2de141b4ebf984396ae8ca5f77690c10ccb6a",
+      "normalized_content_checksum": "sha256:440342a53a75086e6bba7450a06ae22de497282ea56946ed97de5b5a370e1c59",
       "value": 148
     },
     {
@@ -1140,17 +1493,192 @@
     },
     {
       "fact_id": "cms-pos:394055:bed_cnt",
-      "normalized_content_checksum": "sha256:7117b244bfb7712e2a151a13b689a32dd0548a040175d5947de0d45d224c656e",
+      "normalized_content_checksum": "sha256:b9ae728b1c0a6ddb8a117b4b576299ffcd5977888f0d67abf814d66e3be0c8b7",
       "value": 126
     },
     {
       "fact_id": "cms-pos:394055:crtfd_bed_cnt",
-      "normalized_content_checksum": "sha256:2c4c94b9822cd225e7d9b87a9acf71164fff5998c15c96439a88d0a120750ffa",
+      "normalized_content_checksum": "sha256:bd4f9cae9bf7ac6a6fe08870cd4fe1d38e24c1f1884a70cc3f85b9fbd607d6a7",
       "value": 126
     },
     {
       "fact_id": "cms-hcris:394055:number-of-beds",
-      "normalized_content_checksum": "sha256:9fc7ed8014d83ac004f63ed3cf33effcf175d4dcbe9ff40b975f33d05f4ec800",
+      "normalized_content_checksum": "sha256:f0ad2a0e3ffd4315e68e847325d24d28b25eae72204c44d208bb905e32a9b6bb",
+      "value": 126
+    },
+    {
+      "fact_id": "ahrq-linkage:210032",
+      "normalized_content_checksum": "sha256:d9662432c58c2fbe4c53b207e16a3627aee79ba1bdc96d6dd63ab941a2bd6199",
+      "value": "HSI00000218"
+    },
+    {
+      "fact_id": "ahrq-bed:210032:hos_beds",
+      "normalized_content_checksum": "sha256:2f30d07072f86a74e5a0e0375802f262dbc025162182d4c5653ca881f631bcd9",
+      "value": 124
+    },
+    {
+      "fact_id": "ahrq-linkage:310010",
+      "normalized_content_checksum": "sha256:84c53894e36eb8998a308355be4d932a4903381e0d1b440836775f1c5523aa5b",
+      "value": "HSI00000820"
+    },
+    {
+      "fact_id": "ahrq-bed:310010:hos_beds",
+      "normalized_content_checksum": "sha256:4cb8ebae4c51d67cef1e90dd094118ec10926cb92445ffacf39cc532cafad037",
+      "value": 206
+    },
+    {
+      "fact_id": "ahrq-linkage:310014",
+      "normalized_content_checksum": "sha256:9fe56c6fdfddd48f74af73ffb24d0bfd9efc9ab2eedae75b53ba1b0773f853ff",
+      "value": "HSI00001079"
+    },
+    {
+      "fact_id": "ahrq-bed:310014:hos_beds",
+      "normalized_content_checksum": "sha256:c2fee5606169729cef2ea4afc34b0d5509457e5df0ae3728303b772798ea4b56",
+      "value": 578
+    },
+    {
+      "fact_id": "ahrq-linkage:390026",
+      "normalized_content_checksum": "sha256:f03a62288dae03a7afe38a925f33f2c2705377ca1f53470fc8e93651d025b3d7",
+      "value": "HSI00001065"
+    },
+    {
+      "fact_id": "ahrq-bed:390026:hos_beds",
+      "normalized_content_checksum": "sha256:a473f1befdbaca49652052a7bfc979c93fabb02075d960d4710a37f14dc70f4a",
+      "value": 128
+    },
+    {
+      "fact_id": "ahrq-linkage:390080",
+      "normalized_content_checksum": "sha256:37e28fbeaf076cb721c4be1b3f2916815ec3b295ec7b3316b586fd97ee050043",
+      "value": "HSI00001065"
+    },
+    {
+      "fact_id": "ahrq-linkage:390100",
+      "normalized_content_checksum": "sha256:000260bbfbc45b29a58bb05cedc744b1cd525653267e754eea755eb0d179368d",
+      "value": "HSI00000820"
+    },
+    {
+      "fact_id": "ahrq-bed:390100:hos_beds",
+      "normalized_content_checksum": "sha256:1eee411d2f41221844555117c2d6dba54915a082c6847dea47d5d4fa73e84dec",
+      "value": 620
+    },
+    {
+      "fact_id": "ahrq-linkage:390111",
+      "normalized_content_checksum": "sha256:089ac1b128eb485aed0e1d789e14d48b3abd06340f23121b123a439f630a3e55",
+      "value": "HSI00000820"
+    },
+    {
+      "fact_id": "ahrq-bed:390111:hos_beds",
+      "normalized_content_checksum": "sha256:7120fcd0218a6715a4c89b3598c2ca8c2556e9a4de2a14baf11f75fe63aea05b",
+      "value": 1051
+    },
+    {
+      "fact_id": "ahrq-linkage:390139",
+      "normalized_content_checksum": "sha256:7f964016394edd909bd286bb15565973492115314191d9e8cb7c65ff08bef8b6",
+      "value": "HSI00000608"
+    },
+    {
+      "fact_id": "ahrq-bed:390139:hos_beds",
+      "normalized_content_checksum": "sha256:12909f1f82d39f7e06916d32eee7fb55e87bc4fa6b135a3e74114cbf225132c8",
+      "value": 244
+    },
+    {
+      "fact_id": "ahrq-linkage:390153",
+      "normalized_content_checksum": "sha256:20c6809a789db38bb159d2b861179c2c99216b522116080cde9570cd9b49b656",
+      "value": "HSI00000608"
+    },
+    {
+      "fact_id": "ahrq-bed:390153:hos_beds",
+      "normalized_content_checksum": "sha256:a7031fa30c621c01d520d8d503be74b416950bda14904cf786218d868e6cc66a",
+      "value": 249
+    },
+    {
+      "fact_id": "ahrq-linkage:390179",
+      "normalized_content_checksum": "sha256:68f952575d7a886581b8e8935dc0fc3152fbda35205f6831322f9248ecb02ff5",
+      "value": "HSI00000820"
+    },
+    {
+      "fact_id": "ahrq-bed:390179:hos_beds",
+      "normalized_content_checksum": "sha256:f8698d6581a0c699ac587f4d70b2f227ddafa89c64bf02dc903c77d39d0c1a4c",
+      "value": 299
+    },
+    {
+      "fact_id": "ahrq-linkage:390195",
+      "normalized_content_checksum": "sha256:9483a1ff21815819dc5b38290cd95273697fcf1b142f67a668b7e4c09a43d190",
+      "value": "HSI00000608"
+    },
+    {
+      "fact_id": "ahrq-bed:390195:hos_beds",
+      "normalized_content_checksum": "sha256:8f5992ac461513cafcb18ecda12e8e5b6884c6afdf8b316e828c08d818a32462",
+      "value": 370
+    },
+    {
+      "fact_id": "ahrq-linkage:390196",
+      "normalized_content_checksum": "sha256:27ba55abf4b905474db024d3a8fb9a1c08184ae1054afd6e998b877e471bebf2",
+      "value": "HSI00001065"
+    },
+    {
+      "fact_id": "ahrq-bed:390196:hos_beds",
+      "normalized_content_checksum": "sha256:e5e9e4a250088c0cf5dd9118363539f2568b0dd1b27bb3dab11ec1aa86924aef",
+      "value": 100
+    },
+    {
+      "fact_id": "ahrq-linkage:390222",
+      "normalized_content_checksum": "sha256:e8d028d439dbe764359dbf0662b9ddef7d4fee59c345389608ef25047f4effab",
+      "value": "HSI00000608"
+    },
+    {
+      "fact_id": "ahrq-bed:390222:hos_beds",
+      "normalized_content_checksum": "sha256:bb4d8b78c18ab263e16684f46222b34df28c9f0a4641f6febc7229558b6b4be4",
+      "value": 186
+    },
+    {
+      "fact_id": "ahrq-linkage:390223",
+      "normalized_content_checksum": "sha256:331751e8a880388aedb3551ccea0ef3d65d4e5598eeac10f8fbbc29e7be86d28",
+      "value": "HSI00000820"
+    },
+    {
+      "fact_id": "ahrq-bed:390223:hos_beds",
+      "normalized_content_checksum": "sha256:7ad6b5906a2ae52b3076c68216a7c49867c978f6767874ce9ba569ed986361e1",
+      "value": 328
+    },
+    {
+      "fact_id": "ahrq-linkage:390226",
+      "normalized_content_checksum": "sha256:2e520e073f6db0ff1e018fbc5abf8d7c9739a6848f4f401974d0df5950dcb948",
+      "value": "HSI00000820"
+    },
+    {
+      "fact_id": "ahrq-bed:390226:hos_beds",
+      "normalized_content_checksum": "sha256:769adeefa0af99963c3776b6b50fade8084255654712860fa273f83d4820b9c3",
+      "value": 425
+    },
+    {
+      "fact_id": "ahrq-linkage:392050",
+      "normalized_content_checksum": "sha256:e79c5a3c5b01cacb1aeb8b986ced015ac74afa2b7b8036d9167f7f6ad6080ef5",
+      "value": "HSI00000820"
+    },
+    {
+      "fact_id": "ahrq-bed:392050:hos_beds",
+      "normalized_content_checksum": "sha256:e4a8673ad368d8b383d7bb0f96c36983e4989ab88dd0b712a82d32b9a429cdcc",
+      "value": 18
+    },
+    {
+      "fact_id": "ahrq-linkage:393025",
+      "normalized_content_checksum": "sha256:7635cfdaf4095051c8aa63428b34df17ec738638998efa554b20b4299b2b612a",
+      "value": "HSI00000608"
+    },
+    {
+      "fact_id": "ahrq-bed:393025:hos_beds",
+      "normalized_content_checksum": "sha256:1e6be176e17a69175bfe4a23524acf73258dbcc6411810f1678e125af69f03a6",
+      "value": 148
+    },
+    {
+      "fact_id": "ahrq-linkage:394055",
+      "normalized_content_checksum": "sha256:580d097bac9a009f03d02cd0e476ca6f9ba296d4dc7a7012f6d3a7d23dba0982",
+      "value": "HSI00000820"
+    },
+    {
+      "fact_id": "ahrq-bed:394055:hos_beds",
+      "normalized_content_checksum": "sha256:cbb80eedd47b3f8509c7f3c4ce4a4502b972462c6c0aab9727640b0a311d5d24",
       "value": 126
     }
   ],

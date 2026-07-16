@@ -4,11 +4,15 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from pathlib import Path
+import sys
 from types import SimpleNamespace
+from zipfile import ZIP_DEFLATED, ZipFile
 
 import httpx
 import pytest
 from pydantic import ValidationError
+
+from scripts.acquire_scale_roster_beds import main as acquisition_main
 
 from shared.acquisition.scale_roster_bed_models import (
     AcquisitionSpec,
@@ -194,6 +198,76 @@ def test_state_table_parser_matches_exact_license_id() -> None:
     assert _extract_fact(fact, FIXTURES / "state-hospitals.csv", "csv") == 125
 
 
+def test_xlsx_parser_uses_configured_header_and_exact_state_row(tmp_path: Path) -> None:
+    path = tmp_path / "state.xlsx"
+    shared_strings = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="6" uniqueCount="6">'
+        "<si><t>State report title</t></si><si><t>license_id</t></si><si><t>facility_name</t></si>"
+        "<si><t>licensed_beds</t></si><si><t>PA-001</t></si><si><t>Example Hospital</t></si></sst>"
+    )
+    worksheet = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>'
+        '<row r="1"><c r="A1" t="s"><v>0</v></c></row>'
+        '<row r="2"><c r="A2" t="s"><v>1</v></c><c r="B2" t="s"><v>2</v></c>'
+        '<c r="C2" t="s"><v>3</v></c></row>'
+        '<row r="3"><c r="A3" t="s"><v>4</v></c><c r="B3" t="s"><v>5</v></c>'
+        '<c r="C3"><v>125</v></c></row></sheetData></worksheet>'
+    )
+    with ZipFile(path, "w", ZIP_DEFLATED) as workbook:
+        workbook.writestr("xl/sharedStrings.xml", shared_strings)
+        workbook.writestr("xl/worksheets/sheet1.xml", worksheet)
+    fact = FactSpec(
+        fact_id="state-xlsx-bed",
+        entity_id=SYSTEMS[0],
+        measure_id="bed_count.licensed",
+        value_type="integer",
+        unit="beds",
+        period_label="fixture",
+        denominator_scope="facility-level; basis=state licensed_beds",
+        source_id="official",
+        row_locator="license_id=PA-001; field=licensed_beds",
+        match_basis="exact state license ID",
+        confidence="high",
+        table_match={"license_id": "PA-001"},
+        table_value_field="licensed_beds",
+    )
+    assert _extract_fact(fact, path, "xlsx", header_row=2) == 125
+
+
+def test_unavailable_public_requires_mechanical_absence_check() -> None:
+    with pytest.raises(ValidationError, match="mechanically verified absence"):
+        FactSpec(
+            fact_id="missing-without-search",
+            entity_id=SYSTEMS[0],
+            measure_id="bed_count.declared",
+            value_type="integer",
+            unit="beds",
+            period_label="fixture",
+            denominator_scope="facility-level; basis=not established",
+            missingness="unavailable_public",
+            missingness_reason="No row was found.",
+        )
+
+
+def test_governed_offline_cli_requires_frozen_cache_bytes(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "acquire_scale_roster_beds.py",
+            "--offline",
+            "--frozen",
+            str(tmp_path / "frozen.json"),
+            "--output",
+            str(tmp_path / "input.json"),
+        ],
+    )
+    with pytest.raises(SystemExit, match="2"):
+        acquisition_main()
+
+
 @pytest.mark.parametrize(
     ("match", "field", "message"),
     [
@@ -202,9 +276,7 @@ def test_state_table_parser_matches_exact_license_id() -> None:
         ({}, "BED_CNT", "exactly one complete extractor"),
     ],
 )
-def test_csv_parser_rejects_missing_identifiers_or_fields(
-    match: dict[str, str], field: str, message: str
-) -> None:
+def test_csv_parser_rejects_missing_identifiers_or_fields(match: dict[str, str], field: str, message: str) -> None:
     payload = {
         "fact_id": "bad-pos-row",
         "entity_id": SYSTEMS[0],
