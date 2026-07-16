@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Added a versioned Public Evidence Bundle v1 contract and CLI with canonical
+  hashes, source receipts, portable cache-artifact lineage, explicit coverage,
+  and strict graph validation for cross-repository consumers.
+
 ## v0.4.0 - Source-disciplined health-system metrics
 
 Released: 2026-06-15

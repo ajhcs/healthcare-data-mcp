@@ -49,12 +49,13 @@ dependencies = [
 [project.optional-dependencies]
 census = ["censusdis>=0.15.0"]
 routing = ["osmnx>=2.0.0", "aceso>=0.1.0"]
-dev = ["pytest>=9.0.3", "pytest-asyncio>=0.23", "pytest-cov>=5.0", "ruff>=0.5.0", "build>=1.2.0", "twine>=5.0.0"]
+dev = ["pytest>=9.0.3", "pytest-asyncio>=0.23", "pytest-cov>=5.0", "ruff>=0.5.0", "build>=1.2.0", "twine>=5.0.0", "jsonschema>=4.23.0"]
 
 [project.scripts]
 hc-mcp-all = "servers._launcher:main"
 hc-mcp = "servers._launcher:main"
 hc-mcp-setup = "shared.setup_wizard:main"
+hc-mcp-contract = "shared.contracts.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/ajhcs/healthcare-data-mcp"

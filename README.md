@@ -18,6 +18,11 @@ hc-mcp doctor
 hc-mcp --list
 ```
 
+Versioned producer contracts are published under [`contracts/`](contracts/).
+`hc-mcp-contract build-public-evidence` converts acquired, receipted source
+records into a canonical `ushso.public-evidence-bundle.v1` without granting a
+consumer cache or runtime credentials.
+
 Prefer an installer script?
 
 ```bash

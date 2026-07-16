@@ -1,0 +1,188 @@
+{
+  "bundle_id": "peb-temple-main-line-cardiology-demo-001",
+  "producer": {
+    "repo": "healthcare-data-mcp",
+    "version": "0.4.0",
+    "commit": "0000000000000000000000000000000000000000"
+  },
+  "created_at": "2026-07-16T00:00:00Z",
+  "request": {
+    "workflow": "public-preview-cardiology-evidence",
+    "parameters": {
+      "market": "philadelphia",
+      "fixture": true
+    }
+  },
+  "scope": {
+    "systems": ["temple-health", "main-line-health"],
+    "market": {"id": "philadelphia", "state": "PA"},
+    "service_line": "cardiology",
+    "periods": ["FY2024"]
+  },
+  "entities": [
+    {
+      "entity_id": "data-mcp:ahrq:system:temple",
+      "canonical_name": "TEMPLE UNIVERSITY HEALTH SYSTEM",
+      "entity_type": "health_system",
+      "ahrq_system_id": "temple",
+      "aliases": [{"source_name": "AHRQ Compendium", "name": "Temple University Health System"}],
+      "match_decisions": [{"basis": "ahrq_system_id", "confidence": "exact"}],
+      "conflicts": [],
+      "unresolved_identifiers": []
+    },
+    {
+      "entity_id": "data-mcp:ahrq:system:main-line",
+      "canonical_name": "MAIN LINE HEALTH",
+      "entity_type": "health_system",
+      "ahrq_system_id": "main-line",
+      "aliases": [{"source_name": "AHRQ Compendium", "name": "Main Line Health"}],
+      "match_decisions": [{"basis": "ahrq_system_id", "confidence": "exact"}],
+      "conflicts": [],
+      "unresolved_identifiers": []
+    }
+  ],
+  "observations": [
+    {
+      "observation_id": "obs:temple:licensed-beds:fy2024",
+      "measure_id": "licensed_beds",
+      "value_type": "integer",
+      "value": 722,
+      "unit": "beds",
+      "period": {"label": "FY2024"},
+      "denominator_scope": "system_reported_acute_care_facilities",
+      "entity_ref": "data-mcp:ahrq:system:temple",
+      "receipt_refs": ["receipt:pa-doh:temple:fy2024"],
+      "derivation_class": "source_reported",
+      "caveat": "Fixture value for contract verification only.",
+      "dependency_cluster_ids": ["dep:pa-doh-annual-hospital-report:fy2024"]
+    },
+    {
+      "observation_id": "obs:main-line:licensed-beds:fy2024",
+      "measure_id": "licensed_beds",
+      "value_type": "integer",
+      "value": 625,
+      "unit": "beds",
+      "period": {"label": "FY2024"},
+      "denominator_scope": "system_reported_acute_care_facilities",
+      "entity_ref": "data-mcp:ahrq:system:main-line",
+      "receipt_refs": ["receipt:pa-doh:main-line:fy2024"],
+      "derivation_class": "source_reported",
+      "caveat": "Fixture value for contract verification only.",
+      "dependency_cluster_ids": ["dep:pa-doh-annual-hospital-report:fy2024"]
+    }
+  ],
+  "sources": [
+    {
+      "source_id": "source:pa-doh:annual-hospital-report:fy2024:temple",
+      "registry_id": "pa-doh-annual-hospital-report",
+      "registry_version": "2026-07-16",
+      "receipt": {
+        "receipt_id": "receipt:pa-doh:temple:fy2024",
+        "source_name": "Pennsylvania Department of Health",
+        "source_url": "https://www.health.pa.gov/",
+        "dataset_id": "pa-doh-annual-hospital-report-fy2024",
+        "source_period": "FY2024",
+        "landing_page": "https://www.health.pa.gov/topics/HealthStatistics/HealthFacilities/HospitalReports/Pages/hospital-reports.aspx",
+        "retrieved_at": "2026-07-16T00:00:00Z",
+        "cache_status": "verified",
+        "cache_freshness": "frozen_fixture",
+        "entity_scope": "Temple University Health System",
+        "query": {"system": "Temple University Health System"},
+        "cache_key": "pa-doh/fy2024/temple",
+        "match_basis": "reviewed_system_roster",
+        "confidence": "fixture_only",
+        "caveat": "Synthetic contract fixture; not product evidence.",
+        "next_step": "Replace with acquired public evidence for production use.",
+        "acquisition_method": "fixture_connector",
+        "rights_classification": "public_use_terms",
+        "row_locator": "system=temple;measure=licensed_beds",
+        "artifact": {
+          "artifact_id": "cache:pa-doh:fy2024",
+          "checksum_sha256": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "media_type": "application/json",
+          "uri": "hc-cache://pa-doh/fy2024/source.json",
+          "cache_run_id": "cache-run-fixture-001",
+          "connector": "fixture_connector",
+          "connector_version": "1.0.0",
+          "parser_version": "1.0.0",
+          "schema_fingerprint": "pa-doh-hospital-report.v1"
+        },
+        "parent_receipt_ids": []
+      },
+      "content_checksum": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "access_rights": "public_use_terms"
+    },
+    {
+      "source_id": "source:pa-doh:annual-hospital-report:fy2024:main-line",
+      "registry_id": "pa-doh-annual-hospital-report",
+      "registry_version": "2026-07-16",
+      "receipt": {
+        "receipt_id": "receipt:pa-doh:main-line:fy2024",
+        "source_name": "Pennsylvania Department of Health",
+        "source_url": "https://www.health.pa.gov/",
+        "dataset_id": "pa-doh-annual-hospital-report-fy2024",
+        "source_period": "FY2024",
+        "landing_page": "https://www.health.pa.gov/topics/HealthStatistics/HealthFacilities/HospitalReports/Pages/hospital-reports.aspx",
+        "retrieved_at": "2026-07-16T00:00:00Z",
+        "cache_status": "verified",
+        "cache_freshness": "frozen_fixture",
+        "entity_scope": "Main Line Health",
+        "query": {"system": "Main Line Health"},
+        "cache_key": "pa-doh/fy2024/main-line",
+        "match_basis": "reviewed_system_roster",
+        "confidence": "fixture_only",
+        "caveat": "Synthetic contract fixture; not product evidence.",
+        "next_step": "Replace with acquired public evidence for production use.",
+        "acquisition_method": "fixture_connector",
+        "rights_classification": "public_use_terms",
+        "row_locator": "system=main-line;measure=licensed_beds",
+        "artifact": {
+          "artifact_id": "cache:pa-doh:fy2024",
+          "checksum_sha256": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "media_type": "application/json",
+          "uri": "hc-cache://pa-doh/fy2024/source.json",
+          "cache_run_id": "cache-run-fixture-001",
+          "connector": "fixture_connector",
+          "connector_version": "1.0.0",
+          "parser_version": "1.0.0",
+          "schema_fingerprint": "pa-doh-hospital-report.v1"
+        },
+        "parent_receipt_ids": []
+      },
+      "content_checksum": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "access_rights": "public_use_terms"
+    }
+  ],
+  "coverage": [
+    {
+      "coverage_id": "coverage:temple:licensed-beds:fy2024",
+      "entity_ref": "data-mcp:ahrq:system:temple",
+      "measure_id": "licensed_beds",
+      "status": "populated",
+      "observation_refs": ["obs:temple:licensed-beds:fy2024"],
+      "reason": "Receipted source-reported value is present."
+    },
+    {
+      "coverage_id": "coverage:main-line:licensed-beds:fy2024",
+      "entity_ref": "data-mcp:ahrq:system:main-line",
+      "measure_id": "licensed_beds",
+      "status": "populated",
+      "observation_refs": ["obs:main-line:licensed-beds:fy2024"],
+      "reason": "Receipted source-reported value is present."
+    }
+  ],
+  "conflicts": [],
+  "input_artifacts": [
+    {
+      "artifact_id": "cache:pa-doh:fy2024",
+      "checksum_sha256": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "media_type": "application/json",
+      "uri": "hc-cache://pa-doh/fy2024/source.json",
+      "cache_run_id": "cache-run-fixture-001",
+      "connector": "fixture_connector",
+      "connector_version": "1.0.0",
+      "parser_version": "1.0.0",
+      "schema_fingerprint": "pa-doh-hospital-report.v1"
+    }
+  ]
+}
