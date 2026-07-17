@@ -23,7 +23,7 @@ def acquisition() -> ScaleInputFamilyAcquisition:
             "FY2024",
             "Christiana Care Health System and Affiliates; exact relationship to the frozen product roster requires review.",
             "PDF page 6, Total operating revenues and other support, 2024 column, thousands",
-            "5ab7710494b4eb5f9a7cbba4d593d084c66f9a83013050f1aeda24d525725cd2",
+            "5ab7710494b4eb5f9a7cbba4d593d084c66f9a83013050f1aeda24d525725cd2",  # pragma: allowlist secret
             638476,
         ),
         _artifact(
@@ -34,7 +34,7 @@ def acquisition() -> ScaleInputFamilyAcquisition:
             "FY2022",
             "Thomas Jefferson University consolidated boundary is broader than the frozen Jefferson Health delivery-system roster.",
             "PDF page 6, Total operating revenues, gains and other support, 2022 column, thousands",
-            "7e6702695d42e6235f347382a2af4c8b1509e211282e62b30005a72c00e92c70",
+            "7e6702695d42e6235f347382a2af4c8b1509e211282e62b30005a72c00e92c70",  # pragma: allowlist secret
             683530,
         ),
         _artifact(
@@ -45,7 +45,7 @@ def acquisition() -> ScaleInputFamilyAcquisition:
             "FY2025",
             "TUHS consolidated reporting boundary is unresolved against the frozen Temple Health product roster; the indexed audit URL was unavailable.",
             "PDF page 8, Revenues and other support without donor restrictions, 2025 column, thousands",
-            "c512dac3a6da51cd0fdd9b23c6bbc85efe580f1dab1a65183506ee521ea34711",
+            "c512dac3a6da51cd0fdd9b23c6bbc85efe580f1dab1a65183506ee521ea34711",  # pragma: allowlist secret
             753181,
             audit_status="unaudited",
         ),
@@ -57,7 +57,7 @@ def acquisition() -> ScaleInputFamilyAcquisition:
             "FY2025",
             "UPHS combined boundary includes Doylestown Health from April 1, 2025 and is not period-aligned with every other system.",
             "physical PDF page 6 (statement page 4), Total revenues and other support, 2025 column, thousands",
-            "e83eab7626abc8f7e012297a70367f510a2ddb3548435fe16eed505a1ef00b55",
+            "e83eab7626abc8f7e012297a70367f510a2ddb3548435fe16eed505a1ef00b55",  # pragma: allowlist secret
             2041738,
         ),
         {
@@ -87,7 +87,7 @@ def acquisition() -> ScaleInputFamilyAcquisition:
             "FY2022",
             "Main Line Health System and Affiliates consolidated boundary is stale relative to FY2024/FY2025 candidates and requires roster reconciliation.",
             "PDF page 6, Total revenues, gains and other support, 2022 column, thousands",
-            "f63496c6eddb610952d6b245cd07b3e33927a8542fd76ed0fe9001e14cdf20a0",
+            "f63496c6eddb610952d6b245cd07b3e33927a8542fd76ed0fe9001e14cdf20a0",  # pragma: allowlist secret
             610290,
             rights="public_domain",
         ),
