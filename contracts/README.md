@@ -59,5 +59,38 @@ The slice contains source-local roster dispositions and basis-specific facility
 bed observations only. It is not authority to count hospitals, roll up beds,
 calculate Scale, or promote a result.
 
+The remaining Scale input families use the additive field-neutral acquisition
+workflow. The first cycle has two generated files:
+
+- `v1/fixtures/scale-operating-revenue-acquisition.json` records the ordered
+  all-six candidate/missingness matrix, raw-payload hashes, periods,
+  definitions, boundaries, and open blockers.
+- `v1/fixtures/scale-operating-revenue-input.json` is its deterministic Public
+  Evidence Bundle input. Source-local candidate totals use a distinct measure
+  ID; the actual `operating_revenue_usd` coverage remains
+  `blocked_source_conflict` for every system.
+
+The checked-in input fixture deliberately uses the forty-zero pre-merge
+producer placeholder. A downstream handoff is valid only when the clean rebuild
+CLI replaces it with the exact validated source commit.
+
+Rebuild only with the frozen disposable cache present:
+
+```bash
+python -m scripts.acquire_scale_input_family \
+  --family operating_revenue_usd \
+  --source-commit <full-clean-checkout-sha> \
+  --cache-root /tmp/scale-input-family-cache \
+  --acquisition-output /tmp/scale-operating-revenue-acquisition.json \
+  --evidence-output /tmp/scale-operating-revenue-input.json
+```
+
+HTTP-error custody evidence is recorded as blocked and is never treated as
+source content. Every successfully retrieved payload must pass exact byte
+length and SHA-256 verification before either generated file is emitted. Every
+reported numeric candidate is also re-extracted from the frozen audited PDF at
+its exact page, row label, period, units, boundary, column, and scale. The CLI
+rejects dirty or commit-drifted source trees and writes only outside that tree.
+
 Contract v1 is immutable. Add a new version and compatibility adapter for any
 breaking change; do not silently change the meaning of existing fields.

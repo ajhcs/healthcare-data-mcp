@@ -1,0 +1,310 @@
+{
+  "acquired_at": "2026-07-17T22:10:00Z",
+  "acquisition_id": "scale-operating-revenue-all-six-2026-07-17",
+  "acquisition_sha256": "sha256:b2406395db844d3aa451de183bf46d006fb92c3dd65ed717e651687fab995e55",
+  "candidates": [
+    {
+      "approved_for_scale": false,
+      "basis": "Christiana Care Health System and Affiliates",
+      "blocker_codes": [
+        "period_alignment",
+        "no_common_audited_period"
+      ],
+      "candidate_value": 3080783000,
+      "definition": "Total operating revenues and other support",
+      "extraction": {
+        "artifact_ref": "artifact:christianacare:operating-revenue:fy2024",
+        "basis_marker": "Christiana Care Health System and Affiliates",
+        "definition_marker": "Total operating revenues and other support",
+        "page_number": 6,
+        "period_marker": "Years Ended June 30, 2024 and 2023",
+        "raw_value": 3080783,
+        "row_pattern": "Total operating revenues and other support\\s+(?P<value>3,080,783)\\s+2,872,845",
+        "scale_multiplier": 1000,
+        "units_marker": "(Dollars in thousands)"
+      },
+      "finding": "FY2024 candidate is not yet comparable to every system and its product-roster boundary remains unapproved.",
+      "imputed": false,
+      "input_family": "operating_revenue_usd",
+      "missingness": "blocked_source_conflict",
+      "source_artifact_refs": [
+        "artifact:christianacare:operating-revenue:fy2024"
+      ],
+      "source_period": "FY2024",
+      "system_slug": "christianacare",
+      "unit": "USD"
+    },
+    {
+      "approved_for_scale": false,
+      "basis": "Thomas Jefferson University",
+      "blocker_codes": [
+        "entity_boundary",
+        "no_common_audited_period"
+      ],
+      "candidate_value": 7914485000,
+      "definition": "Total operating revenues, gains and other support",
+      "extraction": {
+        "artifact_ref": "artifact:jefferson-health:operating-revenue:fy2022",
+        "basis_marker": "Thomas Jefferson University",
+        "definition_marker": "Total operating revenues, gains and other support",
+        "page_number": 6,
+        "period_marker": "2022 2021",
+        "raw_value": 7914485,
+        "row_pattern": "Total operating revenues, gains and other support\\s+(?P<value>7,914,485)\\s+5,662,873",
+        "scale_multiplier": 1000,
+        "units_marker": "(In Thousands)"
+      },
+      "finding": "FY2022 university-consolidated candidate is stale and broader than the frozen Jefferson Health delivery roster.",
+      "imputed": false,
+      "input_family": "operating_revenue_usd",
+      "missingness": "blocked_source_conflict",
+      "source_artifact_refs": [
+        "artifact:jefferson-health:operating-revenue:fy2022"
+      ],
+      "source_period": "FY2022",
+      "system_slug": "jefferson-health",
+      "unit": "USD"
+    },
+    {
+      "approved_for_scale": false,
+      "basis": "Temple University Health System consolidated",
+      "blocker_codes": [
+        "unaudited_source",
+        "no_common_audited_period"
+      ],
+      "candidate_value": null,
+      "definition": "unaudited year-end revenues and other support context only",
+      "extraction": null,
+      "finding": "The Year-End Report is explicitly unaudited and cannot substitute for the unavailable indexed audit; no candidate value is admitted.",
+      "imputed": false,
+      "input_family": "operating_revenue_usd",
+      "missingness": "blocked_source_conflict",
+      "source_artifact_refs": [
+        "artifact:temple-health:operating-revenue:fy2025"
+      ],
+      "source_period": "FY2025",
+      "system_slug": "temple-health",
+      "unit": "USD"
+    },
+    {
+      "approved_for_scale": false,
+      "basis": "University of Pennsylvania Health System",
+      "blocker_codes": [
+        "period_and_membership_boundary",
+        "no_common_audited_period"
+      ],
+      "candidate_value": 11995614000,
+      "definition": "Total revenues and other support",
+      "extraction": {
+        "artifact_ref": "artifact:penn-medicine:operating-revenue:fy2025",
+        "basis_marker": "University of Pennsylvania Health System",
+        "definition_marker": "Total revenues and other support",
+        "page_number": 6,
+        "period_marker": "Years Ended June 30, 2025 and 2024",
+        "raw_value": 11995614,
+        "row_pattern": "Total revenues and other support\\s+(?P<value>11,995,614)\\s+10,899,080",
+        "scale_multiplier": 1000,
+        "units_marker": "(thousands of dollars)"
+      },
+      "finding": "FY2025 includes a partial-year Doylestown membership substitution and lacks a common all-six period.",
+      "imputed": false,
+      "input_family": "operating_revenue_usd",
+      "missingness": "blocked_source_conflict",
+      "source_artifact_refs": [
+        "artifact:penn-medicine:operating-revenue:fy2025"
+      ],
+      "source_period": "FY2025",
+      "system_slug": "penn-medicine",
+      "unit": "USD"
+    },
+    {
+      "approved_for_scale": false,
+      "basis": "The Cooper Health System consolidated",
+      "blocker_codes": [
+        "raw_byte_custody",
+        "no_common_audited_period"
+      ],
+      "candidate_value": null,
+      "definition": "reported consolidated operating revenue sought",
+      "extraction": null,
+      "finding": "The official landing page identifies a current audit, but governed retrieval returned HTTP 403; no value is admitted.",
+      "imputed": false,
+      "input_family": "operating_revenue_usd",
+      "missingness": "blocked_source_conflict",
+      "source_artifact_refs": [
+        "artifact:cooper-university-health-care:operating-revenue:fy2025"
+      ],
+      "source_period": "FY2025",
+      "system_slug": "cooper-university-health-care",
+      "unit": "USD"
+    },
+    {
+      "approved_for_scale": false,
+      "basis": "Main Line Health System and Affiliates",
+      "blocker_codes": [
+        "period_alignment",
+        "no_common_audited_period"
+      ],
+      "candidate_value": 2107785000,
+      "definition": "Total revenues, gains and other support",
+      "extraction": {
+        "artifact_ref": "artifact:main-line-health:operating-revenue:fy2022",
+        "basis_marker": "Main Line Health System and Affiliates",
+        "definition_marker": "Total revenues, gains and other support",
+        "page_number": 6,
+        "period_marker": "For the years ended June 30, 2022 and 2021",
+        "raw_value": 2107785,
+        "row_pattern": "Total revenues, gains and other support\\s+(?P<value>2,107,785)\\s+1,984,631",
+        "scale_multiplier": 1000,
+        "units_marker": "(in thousands)"
+      },
+      "finding": "FY2022 is stale relative to current candidates and its product-roster boundary remains unapproved.",
+      "imputed": false,
+      "input_family": "operating_revenue_usd",
+      "missingness": "blocked_source_conflict",
+      "source_artifact_refs": [
+        "artifact:main-line-health:operating-revenue:fy2022"
+      ],
+      "source_period": "FY2022",
+      "system_slug": "main-line-health",
+      "unit": "USD"
+    }
+  ],
+  "input_family": "operating_revenue_usd",
+  "producer_version": "HDM-pzz",
+  "prohibited_outputs": [
+    "scale_score",
+    "component_score",
+    "sensitivity_result",
+    "projection",
+    "adjudication",
+    "recommendation",
+    "promotion"
+  ],
+  "schema_version": "ushso.scale-input-family-acquisition.v1",
+  "source_artifacts": [
+    {
+      "artifact_id": "artifact:christianacare:operating-revenue:fy2024",
+      "audit_status": "audited",
+      "content_length": 638476,
+      "custody_state": "frozen_verified",
+      "document_title": "Christiana Care Health System and Affiliates FY2024 audited financial statements",
+      "entity_boundary": "Christiana Care Health System and Affiliates; exact relationship to the frozen product roster requires review.",
+      "http_status": 200,
+      "landing_page": "https://hscrc.maryland.gov/Pages/hospitals.aspx",
+      "media_type": "application/pdf",
+      "payload_sha256": "sha256:5ab7710494b4eb5f9a7cbba4d593d084c66f9a83013050f1aeda24d525725cd2",
+      "retrieved_at": "2026-07-17T22:10:00Z",
+      "rights_classification": "unknown_review_required",
+      "source_name": "Christiana Care Health System and Affiliates FY2024 audited financial statements",
+      "source_period": "FY2024",
+      "source_url": "https://hscrc.maryland.gov/Documents/Strong%20als%20Folder/Audited%20Financials%20-%20ar-rev/FY%202024/ChristianaCare%20Union%20of%20Cecil%20%20FY2024%20AFS.pdf",
+      "statement_locator": "PDF page 6, Total operating revenues and other support, 2024 column, thousands",
+      "system_slug": "christianacare"
+    },
+    {
+      "artifact_id": "artifact:jefferson-health:operating-revenue:fy2022",
+      "audit_status": "audited",
+      "content_length": 683530,
+      "custody_state": "frozen_verified",
+      "document_title": "Thomas Jefferson University FY2022 consolidated audited financial statements",
+      "entity_boundary": "Thomas Jefferson University consolidated boundary is broader than the frozen Jefferson Health delivery-system roster.",
+      "http_status": 200,
+      "landing_page": "https://www.jefferson.edu/finance/finance-for-staff/university-tax-audit-compliance.html",
+      "media_type": "application/pdf",
+      "payload_sha256": "sha256:7e6702695d42e6235f347382a2af4c8b1509e211282e62b30005a72c00e92c70",
+      "retrieved_at": "2026-07-17T22:10:00Z",
+      "rights_classification": "unknown_review_required",
+      "source_name": "Thomas Jefferson University FY2022 consolidated audited financial statements",
+      "source_period": "FY2022",
+      "source_url": "https://www.jefferson.edu/content/dam/academic/finance/documents/TJU%20FY2022%20Audited%20Financial%20Statements-10182022.pdf",
+      "statement_locator": "PDF page 6, Total operating revenues, gains and other support, 2022 column, thousands",
+      "system_slug": "jefferson-health"
+    },
+    {
+      "artifact_id": "artifact:temple-health:operating-revenue:fy2025",
+      "audit_status": "unaudited",
+      "content_length": 753181,
+      "custody_state": "frozen_verified",
+      "document_title": "Temple University Health System June 30, 2025 Year-End Report (UNAUDITED)",
+      "entity_boundary": "TUHS consolidated reporting boundary is unresolved against the frozen Temple Health product roster; the indexed audit URL was unavailable.",
+      "http_status": 200,
+      "landing_page": "https://tuhsfinance.templehealth.org/audited.html",
+      "media_type": "application/pdf",
+      "payload_sha256": "sha256:c512dac3a6da51cd0fdd9b23c6bbc85efe580f1dab1a65183506ee521ea34711",
+      "retrieved_at": "2026-07-17T22:10:00Z",
+      "rights_classification": "unknown_review_required",
+      "source_name": "Temple University Health System June 30, 2025 Year-End Report (UNAUDITED)",
+      "source_period": "FY2025",
+      "source_url": "https://tuhsfinance.templehealth.org/CURRENT%20STATEMENTS/TUHS%20Investor%20Quarterly%20Report%20-%20June%2030%2C%202025.pdf",
+      "statement_locator": "PDF page 8, Revenues and other support without donor restrictions, 2025 column, thousands",
+      "system_slug": "temple-health"
+    },
+    {
+      "artifact_id": "artifact:penn-medicine:operating-revenue:fy2025",
+      "audit_status": "audited",
+      "content_length": 2041738,
+      "custody_state": "frozen_verified",
+      "document_title": "University of Pennsylvania Health System FY2025 combined audited financial statements",
+      "entity_boundary": "UPHS combined boundary includes Doylestown Health from April 1, 2025 and is not period-aligned with every other system.",
+      "http_status": 200,
+      "landing_page": "https://www.pennmedicine.org/locations/entity/princeton-health/financial-reporting",
+      "media_type": "application/pdf",
+      "payload_sha256": "sha256:e83eab7626abc8f7e012297a70367f510a2ddb3548435fe16eed505a1ef00b55",
+      "retrieved_at": "2026-07-17T22:10:00Z",
+      "rights_classification": "unknown_review_required",
+      "source_name": "University of Pennsylvania Health System FY2025 combined audited financial statements",
+      "source_period": "FY2025",
+      "source_url": "https://tupa-q-001.sitecorecontenthub.cloud/api/public/content/PHS-Audited-Financial-Statement.pdf",
+      "statement_locator": "physical PDF page 6 (statement page 4), Total revenues and other support, 2025 column, thousands",
+      "system_slug": "penn-medicine"
+    },
+    {
+      "artifact_id": "artifact:cooper-university-health-care:operating-revenue:fy2025",
+      "audit_status": "unavailable",
+      "content_length": 511,
+      "custody_state": "blocked_http_response",
+      "document_title": "The Cooper Health System Financial Statements 2025 and 2024",
+      "entity_boundary": "The public landing page lists the audit, but the governed connector received HTTP 403 and could not freeze the audited payload bytes.",
+      "http_status": 403,
+      "landing_page": "https://www.cooperhealth.org/cooper-university-health-care-financial-reporting",
+      "media_type": "text/html",
+      "payload_sha256": "sha256:33acb41a6489d077bb258d1b49dd1546a5e057263a2c470d0002a7c9102eff69",
+      "retrieved_at": "2026-07-17T22:10:00Z",
+      "rights_classification": "unknown_review_required",
+      "source_name": "The Cooper Health System FY2025 consolidated audited financial statements",
+      "source_period": "FY2025",
+      "source_url": "https://www.cooperhealth.org/sites/default/files/2026-06/Cooper%20Health%20System%20Financial%20Statements%2025%2024.pdf",
+      "statement_locator": "HTTP 403 response; no source row admitted",
+      "system_slug": "cooper-university-health-care"
+    },
+    {
+      "artifact_id": "artifact:main-line-health:operating-revenue:fy2022",
+      "audit_status": "audited",
+      "content_length": 610290,
+      "custody_state": "frozen_verified",
+      "document_title": "Main Line Health System and Affiliates FY2022 audited financial statements",
+      "entity_boundary": "Main Line Health System and Affiliates consolidated boundary is stale relative to FY2024/FY2025 candidates and requires roster reconciliation.",
+      "http_status": 200,
+      "landing_page": "https://emma.msrb.org/",
+      "media_type": "application/pdf",
+      "payload_sha256": "sha256:f63496c6eddb610952d6b245cd07b3e33927a8542fd76ed0fe9001e14cdf20a0",
+      "retrieved_at": "2026-07-17T22:10:00Z",
+      "rights_classification": "public_domain",
+      "source_name": "Main Line Health System and Affiliates FY2022 audited financial statements",
+      "source_period": "FY2022",
+      "source_url": "https://emma.msrb.org/P21619447-P21247636-P21672202.pdf",
+      "statement_locator": "PDF page 6, Total revenues, gains and other support, 2022 column, thousands",
+      "system_slug": "main-line-health"
+    }
+  ],
+  "systems": [
+    "christianacare",
+    "jefferson-health",
+    "temple-health",
+    "penn-medicine",
+    "cooper-university-health-care",
+    "main-line-health"
+  ],
+  "workflow_id": "scale-input-family-acquisition.v1"
+}
