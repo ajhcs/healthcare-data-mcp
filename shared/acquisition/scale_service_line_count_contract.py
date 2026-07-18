@@ -59,10 +59,10 @@ class PriorPhysicianToolkitLineage(StrictModel):
     @model_validator(mode="after")
     def preserve_exact_commits(self) -> Self:
         expected = {
-            "binding_merge": "581265a2f2c80f71832b87de787b8b93e3ac8b1c",
-            "binding_tracker_merge": "4f62f957c4389a80101d15902d2b72cc4e089e07",
-            "admission_merge": "cc3ccb3d26e44d410546003b7dec073a2b74ab17",
-            "tracker_merge": "208b2ab97594316f0a3bd64649423091c11e6bbf",
+            "binding_merge": "581265a2f2c80f71832b87de787b8b93e3ac8b1c",  # pragma: allowlist secret
+            "binding_tracker_merge": "4f62f957c4389a80101d15902d2b72cc4e089e07",  # pragma: allowlist secret
+            "admission_merge": "cc3ccb3d26e44d410546003b7dec073a2b74ab17",  # pragma: allowlist secret
+            "tracker_merge": "208b2ab97594316f0a3bd64649423091c11e6bbf",  # pragma: allowlist secret
         }
         if any(getattr(self, key).replace("-", "") != value for key, value in expected.items()):
             raise ValueError("prior physician Toolkit commit lineage drift")
