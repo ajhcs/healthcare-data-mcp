@@ -141,3 +141,26 @@ deduplication, current organizational boundary, and post-vintage membership
 are unresolved. All six coverage rows therefore remain
 `blocked_source_conflict`; no physician aggregation, Scale execution, or
 downstream authority is produced.
+
+The service-line-count cycle uses additive contract v4 at
+`v4/scale-service-line-count-acquisition.schema.json`. It preserves the exact
+six AHRQ identity rows and exact 40-column system-file header, which contains
+no service-line field, and evaluates the exact CMS RBCS 2025 report as a
+possible common taxonomy. RBCS classifies paid Medicare Part B HCPCS activity;
+it does not report offered health-system service lines and is not converted.
+
+```bash
+python -m scripts.acquire_scale_input_family \
+  --family service_line_count \
+  --source-commit <full-clean-checkout-sha> \
+  --cache-root ~/.healthcare-data-mcp/cache \
+  --cms-rbcs-report /external/custody/RBCS_Final_Report_RY2025.pdf \
+  --acquisition-output /tmp/scale-service-line-count-acquisition.json \
+  --evidence-output /tmp/scale-service-line-count-input.json
+```
+
+All six cells remain `unavailable_public`. The bundle contains no numeric
+observation or fabricated zero. Marketing-page hand-counts, claims aggregation,
+facility-to-system inference, Scale execution, and downstream authority remain
+prohibited pending a receipted common offered-service taxonomy and comparable
+all-six system counts.
