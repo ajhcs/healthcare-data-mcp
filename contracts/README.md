@@ -141,3 +141,36 @@ deduplication, current organizational boundary, and post-vintage membership
 are unresolved. All six coverage rows therefore remain
 `blocked_source_conflict`; no physician aggregation, Scale execution, or
 downstream authority is produced.
+
+The service-line-count cycle uses additive contract v4 at
+`v4/scale-service-line-count-acquisition.schema.json`. It preserves the exact
+six AHRQ identity rows and exact 40-column system-file header, which contains
+no service-line field, and evaluates the exact CMS RBCS 2025 report as a
+possible common taxonomy. RBCS classifies paid Medicare Part B HCPCS activity;
+it does not report offered health-system service lines and is not converted.
+
+```bash
+python -m scripts.acquire_scale_input_family \
+  --family service_line_count \
+  --source-commit <full-clean-checkout-sha> \
+  --cache-root ~/.healthcare-data-mcp/cache \
+  --cms-rbcs-report /external/custody/RBCS_Final_Report_RY2025.pdf \
+  --acquisition-output /tmp/scale-service-line-count-acquisition.json \
+  --evidence-output /tmp/scale-service-line-count-input.json
+```
+
+All six cells remain `unavailable_public`. The bundle contains no numeric
+observation or fabricated zero. Marketing-page hand-counts, claims aggregation,
+facility-to-system inference, Scale execution, and downstream authority remain
+prohibited pending a receipted common offered-service taxonomy and comparable
+all-six system counts.
+
+The exact-byte end-to-end test is opt-in because raw custody stays outside Git.
+Point it only at reviewed custody; unit tests for missing/mutated bytes and PDF
+markers run without these settings:
+
+```bash
+HDM_KH4_AHRQ_CACHE_ROOT=/reviewed/cache/root \
+HDM_KH4_CMS_RBCS_REPORT=/reviewed/custody/RBCS_Final_Report_RY2025.pdf \
+pytest tests/test_scale_service_line_count_handoff.py -q
+```

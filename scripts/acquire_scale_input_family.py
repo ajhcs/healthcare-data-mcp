@@ -25,6 +25,13 @@ from shared.acquisition.scale_physician_count_packet import (
     acquisition as physician_count_acquisition,
     verify_physician_count_source_bytes,
 )
+from shared.acquisition.scale_service_line_count_evidence import (
+    build_service_line_count_public_evidence_input,
+)
+from shared.acquisition.scale_service_line_count_packet import (
+    acquisition as service_line_count_acquisition,
+    verify_service_line_count_source_bytes,
+)
 from shared.acquisition.scale_tabular_input_family import (
     build_tabular_public_evidence_input,
 )
@@ -35,11 +42,17 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--family",
-        choices=("operating_revenue_usd", "annual_discharges", "physician_count"),
+        choices=(
+            "operating_revenue_usd",
+            "annual_discharges",
+            "physician_count",
+            "service_line_count",
+        ),
         required=True,
     )
     parser.add_argument("--source-commit", required=True)
     parser.add_argument("--cache-root", type=Path, required=True)
+    parser.add_argument("--cms-rbcs-report", type=Path)
     parser.add_argument("--acquisition-output", type=Path, required=True)
     parser.add_argument("--evidence-output", type=Path, required=True)
     args = parser.parse_args()
@@ -64,7 +77,7 @@ def main() -> None:
             producer_commit=args.source_commit,
         )
         frozen_payload = tabular_frozen.model_dump(mode="json")
-    else:
+    elif args.family == "physician_count":
         physician_frozen = physician_count_acquisition()
         verify_physician_count_source_bytes(physician_frozen, args.cache_root)
         evidence = build_physician_count_public_evidence_input(
@@ -72,6 +85,20 @@ def main() -> None:
             producer_commit=args.source_commit,
         )
         frozen_payload = physician_frozen.model_dump(mode="json")
+    else:
+        if args.cms_rbcs_report is None:
+            parser.error("--cms-rbcs-report is required for service_line_count")
+        service_line_frozen = service_line_count_acquisition()
+        verify_service_line_count_source_bytes(
+            service_line_frozen,
+            args.cache_root,
+            args.cms_rbcs_report,
+        )
+        evidence = build_service_line_count_public_evidence_input(
+            service_line_frozen,
+            producer_commit=args.source_commit,
+        )
+        frozen_payload = service_line_frozen.model_dump(mode="json")
     write_atomic_json(args.acquisition_output, frozen_payload)
     write_atomic_json(args.evidence_output, evidence.model_dump(mode="json"))
 
