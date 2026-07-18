@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from shared.acquisition.scale_annual_discharges_packet import AnnualDischargesAcquisition
+from shared.acquisition.scale_physician_count_contract import PhysicianCountAcquisition
 from shared.contracts.public_evidence import PublicEvidenceBundle
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -18,6 +19,10 @@ def main() -> None:
         / "contracts"
         / "v2"
         / "scale-tabular-input-family-acquisition.schema.json": AnnualDischargesAcquisition.model_json_schema(),
+        ROOT
+        / "contracts"
+        / "v3"
+        / "scale-physician-count-acquisition.schema.json": PhysicianCountAcquisition.model_json_schema(),
     }
     for target, schema in schemas.items():
         target.parent.mkdir(parents=True, exist_ok=True)

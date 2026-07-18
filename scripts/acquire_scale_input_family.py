@@ -18,6 +18,13 @@ from shared.acquisition.scale_annual_discharges_packet import (
     verify_annual_discharges_source_bytes,
 )
 from shared.acquisition.scale_operating_revenue_packet import acquisition as operating_revenue_acquisition
+from shared.acquisition.scale_physician_count_evidence import (
+    build_physician_count_public_evidence_input,
+)
+from shared.acquisition.scale_physician_count_packet import (
+    acquisition as physician_count_acquisition,
+    verify_physician_count_source_bytes,
+)
 from shared.acquisition.scale_tabular_input_family import (
     build_tabular_public_evidence_input,
 )
@@ -28,7 +35,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--family",
-        choices=("operating_revenue_usd", "annual_discharges"),
+        choices=("operating_revenue_usd", "annual_discharges", "physician_count"),
         required=True,
     )
     parser.add_argument("--source-commit", required=True)
@@ -49,7 +56,7 @@ def main() -> None:
         verify_source_bytes(frozen, args.cache_root)
         evidence = build_public_evidence_input(frozen, producer_commit=args.source_commit)
         frozen_payload = frozen.model_dump(mode="json")
-    else:
+    elif args.family == "annual_discharges":
         tabular_frozen = annual_discharges_acquisition()
         verify_annual_discharges_source_bytes(tabular_frozen, args.cache_root)
         evidence = build_tabular_public_evidence_input(
@@ -57,6 +64,14 @@ def main() -> None:
             producer_commit=args.source_commit,
         )
         frozen_payload = tabular_frozen.model_dump(mode="json")
+    else:
+        physician_frozen = physician_count_acquisition()
+        verify_physician_count_source_bytes(physician_frozen, args.cache_root)
+        evidence = build_physician_count_public_evidence_input(
+            physician_frozen,
+            producer_commit=args.source_commit,
+        )
+        frozen_payload = physician_frozen.model_dump(mode="json")
     write_atomic_json(args.acquisition_output, frozen_payload)
     write_atomic_json(args.evidence_output, evidence.model_dump(mode="json"))
 
