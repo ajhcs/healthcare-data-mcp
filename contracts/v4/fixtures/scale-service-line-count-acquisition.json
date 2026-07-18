@@ -1,7 +1,7 @@
 {
   "acquired_at": "2026-07-18T18:15:29Z",
   "acquisition_id": "scale-service-line-count-all-six-2026-07-18",
-  "acquisition_sha256": "sha256:e2f0beabe0cb20c10bcfab9e15816acb12100c10808f3febc66c96b6dea0f47d",
+  "acquisition_sha256": "sha256:87b8b2ded72ad667ed51c9d99cc9df8f7e86adff4472b1fa883175a96091c5ca",
   "ahrq_header_columns": [
     "health_sys_id",
     "health_sys_name",
@@ -293,7 +293,8 @@
     "media_type": "application/pdf",
     "page_count": 48,
     "payload_sha256": "sha256:68ac55dcc2812c6d692134dec827ffc5056f60b5ddcf605575fb6f2025b193e4",
-    "rights_classification": "public_domain",
+    "rights_basis": "Publicly accessible CMS report; embedded CPT/HCPCS rights and redistribution not independently reviewed",
+    "rights_classification": "unknown_review_required",
     "source_name": "Centers for Medicare & Medicaid Services",
     "source_period": "2025 release; Medicare Part B analysis window described by source",
     "source_url": "https://data.cms.gov/sites/default/files/2025-12/a167eaff-5167-4c2c-a133-9ec94f0ee112/RBCS%20Final%20Report_RY2025.pdf"

@@ -649,7 +649,7 @@
       "source_id": "source:main-line-health:service-line-count:ahrq-identity"
     },
     {
-      "access_rights": "public_domain",
+      "access_rights": "unknown_review_required",
       "content_checksum": "sha256:68ac55dcc2812c6d692134dec827ffc5056f60b5ddcf605575fb6f2025b193e4",
       "receipt": {
         "acquisition_method": "scale-service-line-count-connector.v4",
@@ -683,7 +683,7 @@
         },
         "receipt_id": "receipt:all-six:service-line-count:cms-rbcs-taxonomy",
         "retrieved_at": "2026-07-18T18:15:29Z",
-        "rights_classification": "public_domain",
+        "rights_classification": "unknown_review_required",
         "row_locator": "PDF pages 8 and 22 (physical pages 8 and 22): HCPCS/Part B inclusion rules and Data Limitations",
         "source_modified": "2025-12-08T17:51:06Z",
         "source_name": "Centers for Medicare & Medicaid Services",

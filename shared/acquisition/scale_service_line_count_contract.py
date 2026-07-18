@@ -99,7 +99,10 @@ class EvaluatedDocumentArtifact(StrictModel):
     payload_sha256: Literal["sha256:68ac55dcc2812c6d692134dec827ffc5056f60b5ddcf605575fb6f2025b193e4"]
     content_length: Literal[839953] = 839953
     page_count: Literal[48] = 48
-    rights_classification: Literal["public_domain"] = "public_domain"
+    rights_classification: Literal["unknown_review_required"] = "unknown_review_required"
+    rights_basis: Literal[
+        "Publicly accessible CMS report; embedded CPT/HCPCS rights and redistribution not independently reviewed"
+    ]
     custody_state: Literal["frozen_verified_external"] = "frozen_verified_external"
     http_receipt: HttpReceipt
 

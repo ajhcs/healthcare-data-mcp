@@ -89,6 +89,9 @@ organizational-boundary inference.
   `68ac55dcc2812c6d692134dec827ffc5056f60b5ddcf605575fb6f2025b193e4`
 - canonical HTTP receipt:
   `sha256:20ce1b137bd38903bc6a3df8944008ea04c9425186f273feb0401a557f4ea033`
+- rights: `unknown_review_required`; the publicly accessible report discusses
+  CPT/HCPCS material and no independent redistribution-rights determination is
+  frozen
 - evaluation query semantic SHA-256:
   `sha256:8a79dca0acbdc80b828360c6582343016aa6afc492edeb428b7287543a3aa50e`
 - exact locators: physical PDF pages 8 and 22, covering the HCPCS/Part B
@@ -130,13 +133,13 @@ observation and cannot promote missingness.
 Pre-merge generated identities:
 
 - acquisition semantic hash:
-  `sha256:e2f0beabe0cb20c10bcfab9e15816acb12100c10808f3febc66c96b6dea0f47d`
+  `sha256:87b8b2ded72ad667ed51c9d99cc9df8f7e86adff4472b1fa883175a96091c5ca`
 - acquisition fixture byte SHA-256:
-  `4d8b5cbb73bcfa68c938f794912c5a5391b7f049f1b0e0e446c6c026cd053f08`
+  `59a1debb97e6dd3cb2cbc6ce680c996cac8dbd17050c3b55563d3c90fa1f3946`
 - evidence-input fixture byte SHA-256:
-  `12bba3c87a0d5b919d3a1c26960b6af232b64e01d6a200a768cab592ee6e3535`
+  `22321f105525f32475d395739021ba6730e4b86ab044e85b24fac639e0b265f4`
 - generated v4 schema byte SHA-256:
-  `1dea71c0ec8acc3dc9f6ad181cd6f3c40a87d6ba975eafc93f63424424135eda`
+  `77f5b05729b09a655cf7d79b7777506629633c552777c5e0b98fc11837250ab7`
 
 The checked-in evidence input retains a forty-zero producer placeholder. After
 merge, the handoff owner must rebuild from the exact clean merge commit, bind

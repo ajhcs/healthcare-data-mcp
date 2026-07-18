@@ -108,7 +108,8 @@ def acquisition() -> ServiceLineCountAcquisition:
                 "payload_sha256": http_receipt_body["payload_sha256"],
                 "content_length": 839953,
                 "page_count": 48,
-                "rights_classification": "public_domain",
+                "rights_classification": "unknown_review_required",
+                "rights_basis": "Publicly accessible CMS report; embedded CPT/HCPCS rights and redistribution not independently reviewed",
                 "custody_state": "frozen_verified_external",
                 "http_receipt": {
                     **http_receipt_body,
