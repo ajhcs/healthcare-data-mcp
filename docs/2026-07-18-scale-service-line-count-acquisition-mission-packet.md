@@ -101,6 +101,13 @@ Raw source bytes remain outside Git. The portable contract contains hashes,
 lengths, exact locators, rights classification, retrieval metadata, query
 hashes, and no local filesystem path.
 
+Exact-byte end-to-end verification is deliberately opt-in and path-neutral.
+Set `HDM_KH4_AHRQ_CACHE_ROOT` to the reviewed AHRQ cache root and
+`HDM_KH4_CMS_RBCS_REPORT` to the reviewed external PDF. With neither variable,
+the real-custody test skips while always-running adversarial tests cover missing
+files, length/hash drift, PDF page-count/marker drift, and rights/receipt drift.
+No test assumes a current user, home directory, or `/tmp` custody path.
+
 ## Six explicit missing cells and open gates
 
 Every system retains the same nine common blockers: no receipted common

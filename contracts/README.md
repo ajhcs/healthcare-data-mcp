@@ -164,3 +164,13 @@ observation or fabricated zero. Marketing-page hand-counts, claims aggregation,
 facility-to-system inference, Scale execution, and downstream authority remain
 prohibited pending a receipted common offered-service taxonomy and comparable
 all-six system counts.
+
+The exact-byte end-to-end test is opt-in because raw custody stays outside Git.
+Point it only at reviewed custody; unit tests for missing/mutated bytes and PDF
+markers run without these settings:
+
+```bash
+HDM_KH4_AHRQ_CACHE_ROOT=/reviewed/cache/root \
+HDM_KH4_CMS_RBCS_REPORT=/reviewed/custody/RBCS_Final_Report_RY2025.pdf \
+pytest tests/test_scale_service_line_count_handoff.py -q
+```

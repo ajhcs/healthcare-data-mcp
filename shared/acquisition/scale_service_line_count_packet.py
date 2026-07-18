@@ -192,6 +192,8 @@ def verify_service_line_count_source_bytes(
     if header != tuple(value.ahrq_header_columns) or any("service_line" in item for item in header):
         raise ValueError("AHRQ service-line source evaluation header drift")
 
+    if not cms_report.is_file():
+        raise ValueError("CMS RBCS source file missing")
     raw = cms_report.read_bytes()
     cms = value.cms_taxonomy_artifact
     if len(raw) != cms.content_length or _sha256(raw) != cms.payload_sha256:

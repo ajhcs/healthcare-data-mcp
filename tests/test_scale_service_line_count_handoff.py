@@ -4,7 +4,11 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from pathlib import Path
+import sys
+from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
 from jsonschema import Draft202012Validator
@@ -27,6 +31,7 @@ from shared.acquisition.scale_service_line_count_packet import (
 )
 from shared.acquisition.scale_system_roster import SYSTEM_SLUGS
 from shared.contracts.public_evidence import build_public_evidence_bundle, canonical_sha256
+import scripts.acquire_scale_input_family as acquisition_cli
 
 ROOT = Path(__file__).resolve().parents[1]
 V4 = ROOT / "contracts" / "v4"
@@ -34,8 +39,8 @@ ACQUISITION = V4 / "fixtures" / "scale-service-line-count-acquisition.json"
 EVIDENCE = V4 / "fixtures" / "scale-service-line-count-input.json"
 SCHEMA = V4 / "scale-service-line-count-acquisition.schema.json"
 PUBLIC_SCHEMA = ROOT / "contracts" / "v1" / "public-evidence-bundle.schema.json"
-VALIDATED_CACHE = Path.home() / ".healthcare-data-mcp" / "cache"
-CMS_REPORT = Path("/tmp/service-line-source-wRLqSf/rbcs.pdf")
+E2E_CACHE_ENV = "HDM_KH4_AHRQ_CACHE_ROOT"
+E2E_CMS_ENV = "HDM_KH4_CMS_RBCS_REPORT"
 
 
 def _checked_in() -> ServiceLineCountAcquisition:
@@ -191,15 +196,214 @@ def test_rejects_identity_receipt_query_finding_and_no_go_drift() -> None:
 
 
 def test_source_byte_verifier_accepts_only_exact_receipts(tmp_path: Path) -> None:
-    if not CMS_REPORT.exists() or not VALIDATED_CACHE.exists():
-        pytest.skip("frozen external source custody is unavailable")
-    verify_service_line_count_source_bytes(_checked_in(), VALIDATED_CACHE, CMS_REPORT)
+    cache_setting = os.environ.get(E2E_CACHE_ENV)
+    cms_setting = os.environ.get(E2E_CMS_ENV)
+    if cache_setting is None or cms_setting is None:
+        pytest.skip(
+            f"set {E2E_CACHE_ENV} and {E2E_CMS_ENV} to run exact external-custody verification"
+        )
+    cache_root = Path(cache_setting)
+    cms_report = Path(cms_setting)
+    verify_service_line_count_source_bytes(_checked_in(), cache_root, cms_report)
     mutated = tmp_path / "rbcs.pdf"
-    raw = bytearray(CMS_REPORT.read_bytes())
+    raw = bytearray(cms_report.read_bytes())
     raw[-1] ^= 1
     mutated.write_bytes(raw)
     with pytest.raises(ValueError, match="CMS RBCS source byte drift"):
-        verify_service_line_count_source_bytes(_checked_in(), VALIDATED_CACHE, mutated)
+        verify_service_line_count_source_bytes(_checked_in(), cache_root, mutated)
+
+
+def _unit_cache_with_exact_ahrq_header(tmp_path: Path) -> Path:
+    cache_root = tmp_path / "cache"
+    source = cache_root / "source.csv"
+    source.parent.mkdir(parents=True)
+    source.write_text(",".join(AHRQ_HEADER_COLUMNS) + "\n", encoding="cp1252")
+    manifest = cache_root / "manifests" / "datasets" / "ahrq_health_system_compendium.json"
+    manifest.parent.mkdir(parents=True)
+    manifest.write_text(
+        json.dumps(
+            {
+                "artifacts": [
+                    {"relative_path": "ahrq_system_2023.csv", "path": str(source)}
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    return cache_root
+
+
+def _mock_rbcs_reader(*, page_count: int = 48, page_8: str = "HCPCS Code Dictionary Medicare Part B", page_22: str = "Data Limitations Medicare Part B fee-for-service claims") -> SimpleNamespace:
+    pages = [SimpleNamespace(extract_text=lambda: "") for _ in range(page_count)]
+    if page_count >= 8:
+        pages[7] = SimpleNamespace(extract_text=lambda: page_8)
+    if page_count >= 22:
+        pages[21] = SimpleNamespace(extract_text=lambda: page_22)
+    return SimpleNamespace(pages=pages)
+
+
+def test_source_byte_verifier_rejects_missing_length_and_hash(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    cache_root = _unit_cache_with_exact_ahrq_header(tmp_path)
+    monkeypatch.setattr(
+        "shared.acquisition.scale_service_line_count_packet.verify_physician_count_source_bytes",
+        lambda *_: None,
+    )
+    with pytest.raises(ValueError, match="source file missing"):
+        verify_service_line_count_source_bytes(
+            _checked_in(), cache_root, tmp_path / "missing.pdf"
+        )
+
+    wrong_length = tmp_path / "wrong-length.pdf"
+    wrong_length.write_bytes(b"not the report")
+    with pytest.raises(ValueError, match="source byte drift"):
+        verify_service_line_count_source_bytes(_checked_in(), cache_root, wrong_length)
+
+    wrong_hash = tmp_path / "wrong-hash.pdf"
+    wrong_hash.write_bytes(b"x" * _checked_in().cms_taxonomy_artifact.content_length)
+    with pytest.raises(ValueError, match="source byte drift"):
+        verify_service_line_count_source_bytes(_checked_in(), cache_root, wrong_hash)
+
+
+@pytest.mark.parametrize(
+    ("reader", "message"),
+    [
+        (_mock_rbcs_reader(page_count=47), "page count drift"),
+        (_mock_rbcs_reader(page_8="not the taxonomy markers"), "taxonomy-scope marker drift"),
+        (_mock_rbcs_reader(page_22="not the limitation markers"), "limitation marker drift"),
+    ],
+)
+def test_source_byte_verifier_rejects_pdf_structure_and_markers(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    reader: SimpleNamespace,
+    message: str,
+) -> None:
+    cache_root = _unit_cache_with_exact_ahrq_header(tmp_path)
+    report = tmp_path / "report.pdf"
+    report.write_bytes(b"x" * _checked_in().cms_taxonomy_artifact.content_length)
+    monkeypatch.setattr(
+        "shared.acquisition.scale_service_line_count_packet.verify_physician_count_source_bytes",
+        lambda *_: None,
+    )
+    monkeypatch.setattr(
+        "shared.acquisition.scale_service_line_count_packet._sha256",
+        lambda _: _checked_in().cms_taxonomy_artifact.payload_sha256,
+    )
+    monkeypatch.setattr(
+        "shared.acquisition.scale_service_line_count_packet.PdfReader", lambda _: reader
+    )
+    with pytest.raises(ValueError, match=message):
+        verify_service_line_count_source_bytes(_checked_in(), cache_root, report)
+
+
+def test_source_byte_verifier_accepts_mocked_exact_structure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    cache_root = _unit_cache_with_exact_ahrq_header(tmp_path)
+    report = tmp_path / "report.pdf"
+    report.write_bytes(b"x" * _checked_in().cms_taxonomy_artifact.content_length)
+    monkeypatch.setattr(
+        "shared.acquisition.scale_service_line_count_packet.verify_physician_count_source_bytes",
+        lambda *_: None,
+    )
+    monkeypatch.setattr(
+        "shared.acquisition.scale_service_line_count_packet._sha256",
+        lambda _: _checked_in().cms_taxonomy_artifact.payload_sha256,
+    )
+    monkeypatch.setattr(
+        "shared.acquisition.scale_service_line_count_packet.PdfReader",
+        lambda _: _mock_rbcs_reader(),
+    )
+    verify_service_line_count_source_bytes(_checked_in(), cache_root, report)
+
+
+def test_contract_binds_cms_rights_and_http_receipt() -> None:
+    payload = _checked_in().model_dump(mode="json")
+    for field, value in (
+        ("rights_classification", "public_domain"),
+        ("rights_basis", "public URL means unrestricted reuse"),
+    ):
+        artifact = {**payload["cms_taxonomy_artifact"], field: value}
+        with pytest.raises(ValidationError):
+            build_service_line_count_acquisition(
+                {**payload, "cms_taxonomy_artifact": artifact}
+            )
+    for field, value in (
+        ("final_url", "https://data.cms.gov/fabricated.pdf"),
+        ("payload_sha256", "sha256:" + "a" * 64),
+        ("receipt_sha256", "sha256:" + "b" * 64),
+    ):
+        receipt = {**payload["cms_taxonomy_artifact"]["http_receipt"], field: value}
+        artifact = {**payload["cms_taxonomy_artifact"], "http_receipt": receipt}
+        with pytest.raises(ValidationError):
+            build_service_line_count_acquisition(
+                {**payload, "cms_taxonomy_artifact": artifact}
+            )
+
+
+def _mock_cli_preflight(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setattr(acquisition_cli, "repository_top_level", lambda _: tmp_path)
+    monkeypatch.setattr(acquisition_cli, "require_clean_repository", lambda _: None)
+    monkeypatch.setattr(acquisition_cli, "require_repository_commit", lambda *_: None)
+    monkeypatch.setattr(acquisition_cli, "require_outputs_outside_repository", lambda *_: None)
+
+
+def test_service_line_cli_requires_cms_report(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _mock_cli_preflight(monkeypatch, tmp_path)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "acquire_scale_input_family.py", "--family", "service_line_count",
+            "--source-commit", "a" * 40, "--cache-root", str(tmp_path / "cache"),
+            "--acquisition-output", str(tmp_path / "out-a.json"),
+            "--evidence-output", str(tmp_path / "out-e.json"),
+        ],
+    )
+    with pytest.raises(SystemExit, match="2"):
+        acquisition_cli.main()
+    assert "--cms-rbcs-report is required" in capsys.readouterr().err
+
+
+def test_service_line_cli_dispatches_exact_custody_paths(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _mock_cli_preflight(monkeypatch, tmp_path)
+    frozen = SimpleNamespace(model_dump=Mock(return_value={"acquisition": True}))
+    evidence = SimpleNamespace(model_dump=Mock(return_value={"evidence": True}))
+    verify = Mock()
+    build_evidence = Mock(return_value=evidence)
+    write = Mock()
+    monkeypatch.setattr(acquisition_cli, "service_line_count_acquisition", Mock(return_value=frozen))
+    monkeypatch.setattr(acquisition_cli, "verify_service_line_count_source_bytes", verify)
+    monkeypatch.setattr(
+        acquisition_cli, "build_service_line_count_public_evidence_input", build_evidence
+    )
+    monkeypatch.setattr(acquisition_cli, "write_atomic_json", write)
+    cache_root = tmp_path / "cache"
+    cms_report = tmp_path / "rbcs.pdf"
+    acquisition_output = tmp_path / "out-a.json"
+    evidence_output = tmp_path / "out-e.json"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "acquire_scale_input_family.py", "--family", "service_line_count",
+            "--source-commit", "a" * 40, "--cache-root", str(cache_root),
+            "--cms-rbcs-report", str(cms_report),
+            "--acquisition-output", str(acquisition_output),
+            "--evidence-output", str(evidence_output),
+        ],
+    )
+    acquisition_cli.main()
+    verify.assert_called_once_with(frozen, cache_root, cms_report)
+    build_evidence.assert_called_once_with(frozen, producer_commit="a" * 40)
+    assert write.call_args_list[0].args == (acquisition_output, {"acquisition": True})
+    assert write.call_args_list[1].args == (evidence_output, {"evidence": True})
 
 
 def test_json_schema_rejects_runtime_immutable_mutations() -> None:
