@@ -19,28 +19,13 @@ from typing import Literal, Mapping, Self
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
 from pypdf import PdfReader
 
+from shared.acquisition.scale_system_roster import SYSTEM_NAMES, SYSTEM_SLUGS
 from shared.contracts.public_evidence import (
     PublicEvidenceBundleInput,
     canonical_sha256,
 )
 
 SHA256_PATTERN = r"^sha256:[0-9a-f]{64}$"
-SYSTEM_SLUGS = (
-    "christianacare",
-    "jefferson-health",
-    "temple-health",
-    "penn-medicine",
-    "cooper-university-health-care",
-    "main-line-health",
-)
-SYSTEM_NAMES = {
-    "christianacare": "ChristianaCare",
-    "jefferson-health": "Jefferson Health",
-    "temple-health": "Temple Health",
-    "penn-medicine": "Penn Medicine",
-    "cooper-university-health-care": "Cooper University Health Care",
-    "main-line-health": "Main Line Health",
-}
 SCALE_INPUT_FAMILIES = (
     "operating_revenue_usd",
     "annual_discharges",

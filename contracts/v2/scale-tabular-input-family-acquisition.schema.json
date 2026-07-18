@@ -1,0 +1,649 @@
+{
+  "$defs": {
+    "LinkageContextRow": {
+      "additionalProperties": false,
+      "properties": {
+        "acutehosp_flag_raw": {
+          "enum": [
+            "0",
+            "1"
+          ],
+          "title": "Acutehosp Flag Raw",
+          "type": "string"
+        },
+        "artifact_ref": {
+          "minLength": 1,
+          "title": "Artifact Ref",
+          "type": "string"
+        },
+        "ccn": {
+          "pattern": "^[0-9]{6}$",
+          "title": "Ccn",
+          "type": "string"
+        },
+        "compendium_hospital_id": {
+          "pattern": "^CHSP[0-9]{8}$",
+          "title": "Compendium Hospital Id",
+          "type": "string"
+        },
+        "health_sys_id": {
+          "pattern": "^HSI[0-9]{8}$",
+          "title": "Health Sys Id",
+          "type": "string"
+        },
+        "health_sys_name": {
+          "minLength": 1,
+          "title": "Health Sys Name",
+          "type": "string"
+        },
+        "hos_dsch_raw": {
+          "pattern": "^(?:[0-9]+)?$",
+          "title": "Hos Dsch Raw",
+          "type": "string"
+        },
+        "hospital_name": {
+          "minLength": 1,
+          "title": "Hospital Name",
+          "type": "string"
+        },
+        "row_number": {
+          "minimum": 2,
+          "title": "Row Number",
+          "type": "integer"
+        },
+        "source_row_sha256": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Source Row Sha256",
+          "type": "string"
+        },
+        "system_slug": {
+          "title": "System Slug",
+          "type": "string"
+        }
+      },
+      "required": [
+        "system_slug",
+        "artifact_ref",
+        "row_number",
+        "source_row_sha256",
+        "compendium_hospital_id",
+        "ccn",
+        "hospital_name",
+        "acutehosp_flag_raw",
+        "health_sys_id",
+        "health_sys_name",
+        "hos_dsch_raw"
+      ],
+      "title": "LinkageContextRow",
+      "type": "object"
+    },
+    "SystemRowExtraction": {
+      "additionalProperties": false,
+      "properties": {
+        "acutehosp_cnt_raw": {
+          "pattern": "^[0-9]+$",
+          "title": "Acutehosp Cnt Raw",
+          "type": "string"
+        },
+        "artifact_ref": {
+          "minLength": 1,
+          "title": "Artifact Ref",
+          "type": "string"
+        },
+        "declared_type": {
+          "const": "integer",
+          "default": "integer",
+          "title": "Declared Type",
+          "type": "string"
+        },
+        "health_sys_city": {
+          "minLength": 1,
+          "title": "Health Sys City",
+          "type": "string"
+        },
+        "health_sys_id": {
+          "pattern": "^HSI[0-9]{8}$",
+          "title": "Health Sys Id",
+          "type": "string"
+        },
+        "health_sys_name": {
+          "minLength": 1,
+          "title": "Health Sys Name",
+          "type": "string"
+        },
+        "health_sys_state": {
+          "pattern": "^[A-Z]{2}$",
+          "title": "Health Sys State",
+          "type": "string"
+        },
+        "hosp_cnt_raw": {
+          "pattern": "^[0-9]+$",
+          "title": "Hosp Cnt Raw",
+          "type": "string"
+        },
+        "raw_lexical_value": {
+          "pattern": "^[0-9]+$",
+          "title": "Raw Lexical Value",
+          "type": "string"
+        },
+        "row_key_column": {
+          "const": "health_sys_id",
+          "default": "health_sys_id",
+          "title": "Row Key Column",
+          "type": "string"
+        },
+        "row_number": {
+          "minimum": 2,
+          "title": "Row Number",
+          "type": "integer"
+        },
+        "source_row_sha256": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Source Row Sha256",
+          "type": "string"
+        },
+        "sys_multistate_raw": {
+          "pattern": "^[0-9]+$",
+          "title": "Sys Multistate Raw",
+          "type": "string"
+        },
+        "system_slug": {
+          "title": "System Slug",
+          "type": "string"
+        },
+        "value_column": {
+          "const": "sys_dsch",
+          "default": "sys_dsch",
+          "title": "Value Column",
+          "type": "string"
+        }
+      },
+      "required": [
+        "system_slug",
+        "artifact_ref",
+        "row_number",
+        "source_row_sha256",
+        "health_sys_id",
+        "health_sys_name",
+        "health_sys_city",
+        "health_sys_state",
+        "raw_lexical_value",
+        "hosp_cnt_raw",
+        "acutehosp_cnt_raw",
+        "sys_multistate_raw"
+      ],
+      "title": "SystemRowExtraction",
+      "type": "object"
+    },
+    "TabularScaleInputCandidate": {
+      "additionalProperties": false,
+      "properties": {
+        "aggregated": {
+          "const": false,
+          "default": false,
+          "title": "Aggregated",
+          "type": "boolean"
+        },
+        "approved_for_scale": {
+          "const": false,
+          "default": false,
+          "title": "Approved For Scale",
+          "type": "boolean"
+        },
+        "basis": {
+          "const": "source-local AHRQ highest-ownership system row; denominator, setting, payer, rehabilitation, and shared-CCN treatment unapproved",
+          "title": "Basis",
+          "type": "string"
+        },
+        "blocker_codes": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 8,
+          "title": "Blocker Codes",
+          "type": "array"
+        },
+        "candidate_value": {
+          "minimum": 0,
+          "title": "Candidate Value",
+          "type": "integer"
+        },
+        "definition": {
+          "const": "AHRQ Compendium 2023 system-file column sys_dsch; technical definition not locally receipted",
+          "title": "Definition",
+          "type": "string"
+        },
+        "fabricated_zero": {
+          "const": false,
+          "default": false,
+          "title": "Fabricated Zero",
+          "type": "boolean"
+        },
+        "finding": {
+          "minLength": 1,
+          "title": "Finding",
+          "type": "string"
+        },
+        "imputed": {
+          "const": false,
+          "default": false,
+          "title": "Imputed",
+          "type": "boolean"
+        },
+        "input_family": {
+          "const": "annual_discharges",
+          "title": "Input Family",
+          "type": "string"
+        },
+        "linkage_row_refs": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Linkage Row Refs",
+          "type": "array"
+        },
+        "missingness": {
+          "const": "blocked_source_conflict",
+          "default": "blocked_source_conflict",
+          "title": "Missingness",
+          "type": "string"
+        },
+        "source_artifact_refs": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "title": "Source Artifact Refs",
+          "type": "array"
+        },
+        "source_period": {
+          "const": "2023",
+          "default": "2023",
+          "title": "Source Period",
+          "type": "string"
+        },
+        "system_row_ref": {
+          "minLength": 1,
+          "title": "System Row Ref",
+          "type": "string"
+        },
+        "system_slug": {
+          "title": "System Slug",
+          "type": "string"
+        },
+        "unit": {
+          "const": "discharges",
+          "default": "discharges",
+          "title": "Unit",
+          "type": "string"
+        }
+      },
+      "required": [
+        "system_slug",
+        "input_family",
+        "candidate_value",
+        "definition",
+        "basis",
+        "source_artifact_refs",
+        "system_row_ref",
+        "linkage_row_refs",
+        "blocker_codes",
+        "finding"
+      ],
+      "title": "TabularScaleInputCandidate",
+      "type": "object"
+    },
+    "TabularSourceArtifact": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_id": {
+          "minLength": 1,
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "cache_promoted_at": {
+          "format": "date-time",
+          "title": "Cache Promoted At",
+          "type": "string"
+        },
+        "content_length": {
+          "minimum": 1,
+          "title": "Content Length",
+          "type": "integer"
+        },
+        "dataset_id": {
+          "const": "ahrq_health_system_compendium",
+          "title": "Dataset Id",
+          "type": "string"
+        },
+        "encoding": {
+          "const": "cp1252",
+          "title": "Encoding",
+          "type": "string"
+        },
+        "header_sha256": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Header Sha256",
+          "type": "string"
+        },
+        "landing_page": {
+          "pattern": "^https://www\\.ahrq\\.gov/",
+          "title": "Landing Page",
+          "type": "string"
+        },
+        "media_type": {
+          "const": "text/csv",
+          "title": "Media Type",
+          "type": "string"
+        },
+        "payload_sha256": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Payload Sha256",
+          "type": "string"
+        },
+        "relative_path": {
+          "pattern": "^[A-Za-z0-9._-]+$",
+          "title": "Relative Path",
+          "type": "string"
+        },
+        "rights_classification": {
+          "const": "unknown_review_required",
+          "title": "Rights Classification",
+          "type": "string"
+        },
+        "row_count": {
+          "minimum": 1,
+          "title": "Row Count",
+          "type": "integer"
+        },
+        "schema_fingerprint": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Schema Fingerprint",
+          "type": "string"
+        },
+        "source_name": {
+          "minLength": 1,
+          "title": "Source Name",
+          "type": "string"
+        },
+        "source_period": {
+          "const": "2023",
+          "title": "Source Period",
+          "type": "string"
+        },
+        "source_quality": {
+          "const": "validated_official_tabular_snapshot",
+          "title": "Source Quality",
+          "type": "string"
+        },
+        "source_url": {
+          "pattern": "^https://www\\.ahrq\\.gov/",
+          "title": "Source Url",
+          "type": "string"
+        },
+        "validation_status": {
+          "const": "pass",
+          "title": "Validation Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "relative_path",
+        "source_name",
+        "dataset_id",
+        "source_url",
+        "landing_page",
+        "source_period",
+        "cache_promoted_at",
+        "media_type",
+        "encoding",
+        "payload_sha256",
+        "content_length",
+        "row_count",
+        "schema_fingerprint",
+        "header_sha256",
+        "validation_status",
+        "source_quality",
+        "rights_classification"
+      ],
+      "title": "TabularSourceArtifact",
+      "type": "object"
+    },
+    "ValidatedCacheReceipt": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_role": {
+          "const": "silver",
+          "title": "Artifact Role",
+          "type": "string"
+        },
+        "cache_status": {
+          "const": "ready",
+          "title": "Cache Status",
+          "type": "string"
+        },
+        "dataset_artifact_id": {
+          "minLength": 1,
+          "title": "Dataset Artifact Id",
+          "type": "string"
+        },
+        "dataset_id": {
+          "const": "ahrq_health_system_compendium",
+          "title": "Dataset Id",
+          "type": "string"
+        },
+        "etag": {
+          "const": "",
+          "default": "",
+          "title": "Etag",
+          "type": "string"
+        },
+        "last_modified": {
+          "const": "",
+          "default": "",
+          "title": "Last Modified",
+          "type": "string"
+        },
+        "loader_version": {
+          "minLength": 1,
+          "title": "Loader Version",
+          "type": "string"
+        },
+        "manifest_content_length": {
+          "minimum": 1,
+          "title": "Manifest Content Length",
+          "type": "integer"
+        },
+        "manifest_sha256": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Manifest Sha256",
+          "type": "string"
+        },
+        "retrieved_at": {
+          "format": "date-time",
+          "title": "Retrieved At",
+          "type": "string"
+        },
+        "run_id": {
+          "minLength": 1,
+          "title": "Run Id",
+          "type": "string"
+        },
+        "source_period_metadata": {
+          "const": "Source-declared period, retrieved_at, or modified timestamp.",
+          "title": "Source Period Metadata",
+          "type": "string"
+        },
+        "validation_status": {
+          "const": "pass",
+          "title": "Validation Status",
+          "type": "string"
+        },
+        "validator_version": {
+          "minLength": 1,
+          "title": "Validator Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "dataset_id",
+        "dataset_artifact_id",
+        "run_id",
+        "artifact_role",
+        "cache_status",
+        "retrieved_at",
+        "manifest_sha256",
+        "manifest_content_length",
+        "validation_status",
+        "loader_version",
+        "validator_version",
+        "source_period_metadata"
+      ],
+      "title": "ValidatedCacheReceipt",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Annual contract bound to the immutable complete AHRQ linkage slice.",
+  "properties": {
+    "acquired_at": {
+      "format": "date-time",
+      "title": "Acquired At",
+      "type": "string"
+    },
+    "acquisition_id": {
+      "minLength": 1,
+      "title": "Acquisition Id",
+      "type": "string"
+    },
+    "acquisition_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Acquisition Sha256",
+      "type": "string"
+    },
+    "cache_receipt": {
+      "$ref": "#/$defs/ValidatedCacheReceipt"
+    },
+    "candidates": {
+      "items": {
+        "$ref": "#/$defs/TabularScaleInputCandidate"
+      },
+      "maxItems": 6,
+      "minItems": 6,
+      "title": "Candidates",
+      "type": "array"
+    },
+    "input_family": {
+      "const": "annual_discharges",
+      "title": "Input Family",
+      "type": "string"
+    },
+    "linkage_rows": {
+      "items": {
+        "$ref": "#/$defs/LinkageContextRow"
+      },
+      "minItems": 1,
+      "title": "Linkage Rows",
+      "type": "array"
+    },
+    "producer_version": {
+      "minLength": 1,
+      "title": "Producer Version",
+      "type": "string"
+    },
+    "prohibited_outputs": {
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Prohibited Outputs",
+      "type": "array"
+    },
+    "raw_http_receipt_custody": {
+      "const": "not_locally_receipted",
+      "default": "not_locally_receipted",
+      "title": "Raw Http Receipt Custody",
+      "type": "string"
+    },
+    "redistribution_license_receipt": {
+      "const": null,
+      "default": null,
+      "title": "Redistribution License Receipt",
+      "type": "null"
+    },
+    "redistribution_rights_custody": {
+      "const": "unreviewed",
+      "default": "unreviewed",
+      "title": "Redistribution Rights Custody",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "ushso.scale-tabular-input-family-acquisition.v2",
+      "default": "ushso.scale-tabular-input-family-acquisition.v2",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source_artifacts": {
+      "items": {
+        "$ref": "#/$defs/TabularSourceArtifact"
+      },
+      "maxItems": 2,
+      "minItems": 2,
+      "title": "Source Artifacts",
+      "type": "array"
+    },
+    "system_rows": {
+      "items": {
+        "$ref": "#/$defs/SystemRowExtraction"
+      },
+      "maxItems": 6,
+      "minItems": 6,
+      "title": "System Rows",
+      "type": "array"
+    },
+    "systems": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Systems",
+      "type": "array"
+    },
+    "technical_definition_custody": {
+      "const": "not_locally_receipted",
+      "default": "not_locally_receipted",
+      "title": "Technical Definition Custody",
+      "type": "string"
+    },
+    "technical_definition_receipt": {
+      "const": null,
+      "default": null,
+      "title": "Technical Definition Receipt",
+      "type": "null"
+    },
+    "workflow_id": {
+      "const": "scale-tabular-input-family-acquisition.v2",
+      "default": "scale-tabular-input-family-acquisition.v2",
+      "title": "Workflow Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "acquisition_id",
+    "input_family",
+    "systems",
+    "acquired_at",
+    "producer_version",
+    "cache_receipt",
+    "source_artifacts",
+    "system_rows",
+    "linkage_rows",
+    "candidates",
+    "prohibited_outputs",
+    "acquisition_sha256"
+  ],
+  "title": "AnnualDischargesAcquisition",
+  "type": "object"
+}

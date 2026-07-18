@@ -5,18 +5,26 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from shared.acquisition.scale_annual_discharges_packet import AnnualDischargesAcquisition
 from shared.contracts.public_evidence import PublicEvidenceBundle
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def main() -> None:
-    target = ROOT / "contracts" / "v1" / "public-evidence-bundle.schema.json"
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(
-        json.dumps(PublicEvidenceBundle.model_json_schema(), indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
+    schemas = {
+        ROOT / "contracts" / "v1" / "public-evidence-bundle.schema.json": PublicEvidenceBundle.model_json_schema(),
+        ROOT
+        / "contracts"
+        / "v2"
+        / "scale-tabular-input-family-acquisition.schema.json": AnnualDischargesAcquisition.model_json_schema(),
+    }
+    for target, schema in schemas.items():
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(
+            json.dumps(schema, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
 
 
 if __name__ == "__main__":

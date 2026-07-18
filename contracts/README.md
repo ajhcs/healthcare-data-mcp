@@ -94,3 +94,26 @@ rejects dirty or commit-drifted source trees and writes only outside that tree.
 
 Contract v1 is immutable. Add a new version and compatibility adapter for any
 breaking change; do not silently change the meaning of existing fields.
+
+The annual-discharges cycle uses the additive tabular acquisition contract
+`v2/scale-tabular-input-family-acquisition.schema.json`. It preserves exact
+AHRQ Compendium 2023 system/linkage rows and validated-cache hashes without
+labeling the source audited or changing Public Evidence Bundle v1. The raw
+CSVs remain outside Git; the generated acquisition is the portable hash-bound
+extract.
+
+Rebuild from a clean committed tree and the validated disposable cache:
+
+```bash
+python -m scripts.acquire_scale_input_family \
+  --family annual_discharges \
+  --source-commit <full-clean-checkout-sha> \
+  --cache-root ~/.healthcare-data-mcp/cache \
+  --acquisition-output /tmp/scale-annual-discharges-acquisition.json \
+  --evidence-output /tmp/scale-annual-discharges-input.json
+```
+
+All six numeric values are source-local candidates only. The official
+technical definition for `sys_dsch` was not present in the frozen local
+custody, so all six coverage rows remain `blocked_source_conflict` and no
+facility aggregation or Scale execution is permitted.

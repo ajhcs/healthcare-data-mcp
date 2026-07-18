@@ -13,13 +13,24 @@ from shared.acquisition.scale_input_family import (
     repository_top_level,
     verify_source_bytes,
 )
-from shared.acquisition.scale_operating_revenue_packet import acquisition
+from shared.acquisition.scale_annual_discharges_packet import (
+    acquisition as annual_discharges_acquisition,
+    verify_annual_discharges_source_bytes,
+)
+from shared.acquisition.scale_operating_revenue_packet import acquisition as operating_revenue_acquisition
+from shared.acquisition.scale_tabular_input_family import (
+    build_tabular_public_evidence_input,
+)
 from shared.utils.cache import write_atomic_json
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--family", choices=("operating_revenue_usd",), required=True)
+    parser.add_argument(
+        "--family",
+        choices=("operating_revenue_usd", "annual_discharges"),
+        required=True,
+    )
     parser.add_argument("--source-commit", required=True)
     parser.add_argument("--cache-root", type=Path, required=True)
     parser.add_argument("--acquisition-output", type=Path, required=True)
@@ -33,10 +44,20 @@ def main() -> None:
         repo_root,
         [args.acquisition_output, args.evidence_output],
     )
-    frozen = acquisition()
-    verify_source_bytes(frozen, args.cache_root)
-    evidence = build_public_evidence_input(frozen, producer_commit=args.source_commit)
-    write_atomic_json(args.acquisition_output, frozen.model_dump(mode="json"))
+    if args.family == "operating_revenue_usd":
+        frozen = operating_revenue_acquisition()
+        verify_source_bytes(frozen, args.cache_root)
+        evidence = build_public_evidence_input(frozen, producer_commit=args.source_commit)
+        frozen_payload = frozen.model_dump(mode="json")
+    else:
+        tabular_frozen = annual_discharges_acquisition()
+        verify_annual_discharges_source_bytes(tabular_frozen, args.cache_root)
+        evidence = build_tabular_public_evidence_input(
+            tabular_frozen,
+            producer_commit=args.source_commit,
+        )
+        frozen_payload = tabular_frozen.model_dump(mode="json")
+    write_atomic_json(args.acquisition_output, frozen_payload)
     write_atomic_json(args.evidence_output, evidence.model_dump(mode="json"))
 
 
