@@ -117,3 +117,27 @@ All six numeric values are source-local candidates only. The official
 technical definition for `sys_dsch` was not present in the frozen local
 custody, so all six coverage rows remain `blocked_source_conflict` and no
 facility aggregation or Scale execution is permitted.
+
+The physician-count cycle uses additive contract v3 at
+`v3/scale-physician-count-acquisition.schema.json`. It preserves the exact
+`total_mds` cells from the same validated AHRQ system CSV without broadening
+the annual-specific v2 contract or treating an AHRQ count as a verified active
+physician roster. The v3 fixture contains only the system CSV artifact and six
+exact system rows; hospital linkage rows are not fabricated as
+physician-count evidence.
+
+```bash
+python -m scripts.acquire_scale_input_family \
+  --family physician_count \
+  --source-commit <full-clean-checkout-sha> \
+  --cache-root ~/.healthcare-data-mcp/cache \
+  --acquisition-output /tmp/scale-physician-count-acquisition.json \
+  --evidence-output /tmp/scale-physician-count-input.json
+```
+
+The six values remain source-local, nonapproved candidates. AHRQ's technical
+definition, employed/affiliated/total basis, active-status rules,
+deduplication, current organizational boundary, and post-vintage membership
+are unresolved. All six coverage rows therefore remain
+`blocked_source_conflict`; no physician aggregation, Scale execution, or
+downstream authority is produced.
