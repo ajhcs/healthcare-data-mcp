@@ -43,45 +43,45 @@ def _expected_linkage_row(values: LinkageRowDeclaration) -> ExpectedLinkageRow:
     )
 
 _SYSTEM_ROWS = {
-    "christianacare": (110, "1b6d38a9266101556969e8f00be474811ffc62c6a94216f763eedb777d6a8d46", "HSI00000218", "ChristianaCare", "Wilmington", "DE", "71250", "2", "2", "2"),
-    "jefferson-health": (18, "6204ec1b304e076d15c96032dfbe732e172e43e293a45abf5eaf4980d6062b54", "HSI00000048", "Jefferson Health", "Philadelphia", "PA", "147361", "9", "7", "2"),
-    "temple-health": (466, "4e1ed4e4546f3a6bd74c3e8a9828b13efca87f1b2f2bd72214d63ba9c477e8c4", "HSI00001065", "Temple University Health System", "Philadelphia", "PA", "37387", "4", "3", "1"),
-    "penn-medicine": (361, "99ffd315130cc094008d33628785b3e5610aaa476de0f7a9da4ef245ac7e2d27", "HSI00000820", "University of Pennsylvania Health System", "Philadelphia", "PA", "144099", "9", "6", "2"),
-    "cooper-university-health-care": (475, "7246f2affd1de40325df2add2de4428d0ebad4e0370ef819ec12ea73c004cc1f", "HSI00001079", "Cooper University Health Care", "Camden", "NJ", "31354", "1", "1", "1"),
-    "main-line-health": (268, "af058d7b4dd8ec51d74d75647b58870266c14aaa6f712f827a512c3f207db185", "HSI00000608", "Main Line Health", "Bryn Mawr", "PA", "59916", "5", "4", "1"),
+    "christianacare": (110, "1b6d38a9266101556969e8f00be474811ffc62c6a94216f763eedb777d6a8d46", "HSI00000218", "ChristianaCare", "Wilmington", "DE", "71250", "2", "2", "2"),  # pragma: allowlist secret
+    "jefferson-health": (18, "6204ec1b304e076d15c96032dfbe732e172e43e293a45abf5eaf4980d6062b54", "HSI00000048", "Jefferson Health", "Philadelphia", "PA", "147361", "9", "7", "2"),  # pragma: allowlist secret
+    "temple-health": (466, "4e1ed4e4546f3a6bd74c3e8a9828b13efca87f1b2f2bd72214d63ba9c477e8c4", "HSI00001065", "Temple University Health System", "Philadelphia", "PA", "37387", "4", "3", "1"),  # pragma: allowlist secret
+    "penn-medicine": (361, "99ffd315130cc094008d33628785b3e5610aaa476de0f7a9da4ef245ac7e2d27", "HSI00000820", "University of Pennsylvania Health System", "Philadelphia", "PA", "144099", "9", "6", "2"),  # pragma: allowlist secret
+    "cooper-university-health-care": (475, "7246f2affd1de40325df2add2de4428d0ebad4e0370ef819ec12ea73c004cc1f", "HSI00001079", "Cooper University Health Care", "Camden", "NJ", "31354", "1", "1", "1"),  # pragma: allowlist secret
+    "main-line-health": (268, "af058d7b4dd8ec51d74d75647b58870266c14aaa6f712f827a512c3f207db185", "HSI00000608", "Main Line Health", "Bryn Mawr", "PA", "59916", "5", "4", "1"),  # pragma: allowlist secret
 }
 
 _LINKAGE_ROWS = (
-    ("jefferson-health", 20, "2b0621faf7f92a13f3b9cf57a582151aed5a6a20ad13823bda85743917816527", "CHSP00000032", "390231", "Abington Memorial Hospital", "1", "HSI00000048", "30683"),
-    ("jefferson-health", 21, "d358c32c5dbe88f60af7f7ab884f542934d7663cab5055def7821d10b197bfb6", "CHSP00000033", "390012", "Lansdale Hospital", "1", "HSI00000048", "5120"),
-    ("jefferson-health", 154, "d06f82f3559dbdbfde71df131a9f691ccc31bca14c4b98434d6140507fcf7957", "CHSP00000209", "390115", "Aria Health", "1", "HSI00000048", "22180"),
-    ("main-line-health", 589, "c27b7a970f6c63f8a70fbd799a2dcda17c80c4595ba936c4468785bb950593b8", "CHSP00000756", "390139", "Bryn Mawr Hospital", "1", "HSI00000608", "14792"),
-    ("main-line-health", 590, "949870b53a59b2ee7dc664e7b0fa460bb790de4d8695ab0e2396645709f4361b", "CHSP00000757", "393025", "Bryn Mawr Rehabilitation Hospital", "0", "HSI00000608", "2067"),
-    ("temple-health", 870, "f1342be7a822f1f95771b57b0ca15fd97e6a426765639692b13007f6615c154e", "CHSP00001125", "390026", "Chestnut Hill Hospital", "1", "HSI00001065", "6785"),
-    ("christianacare", 921, "7422b5d7b7287e3bfc435ee9f50b27eb77fcb60cabfa3a1e6fd54a119f017847", "CHSP00001204", "080001", "Christiana Care Health System", "1", "HSI00000218", "49852"),
-    ("cooper-university-health-care", 1110, "b6a64b3593b4d5b515bd2aa991b9000ba6008495626a5b70427a0a07947c8374", "CHSP00001449", "310014", "Cooper University Hospital", "1", "HSI00001079", "31354"),
-    ("jefferson-health", 1376, "80ff68adac4f815fe973ba95b8b5ad34344d51b93693fa1c1c7f6b521446e5e2", "CHSP00001815", "390329", "Einstein Medical Center Montgomery", "1", "HSI00000048", "10338"),
-    ("jefferson-health", 1377, "290625507fd6f6bd84a285fd1baf89511dd1c6f3025c79ee6fcd60fab0ef049b", "CHSP00001816", "390142", "Albert Einstein Medical Center", "1", "HSI00000048", "21159"),
-    ("temple-health", 1574, "d6846615d253d0b1f5325cddd7ca14c3652ef0a909b175369c032c5c1f431d64", "CHSP00002081", "390196", "American Oncologic Hospial", "0", "HSI00001065", "3554"),
-    ("penn-medicine", 1708, "255c1ccabbef2209b2b0070727d0ae17f25ad9a4ad1f2e6d0234c6131e1afe46", "CHSP00002249", "392050", "Good Shepherd Penn Partners", "0", "HSI00000820", "144"),
-    ("penn-medicine", 2124, "b640397c76e8484a52af122ca80fdc8c4e77ea805ff67ee8e19507d5c2efebbe", "CHSP00002791", "390111", "Hospital Of The Univ Of Penna", "1", "HSI00000820", "41921"),
-    ("temple-health", 2264, "7aea7d782cd69af63143b269e8f99ef18a05879a1b8aae9f6135ae13dd311f1c", "CHSP00002972", "390080", "Temple University Hospital Jeanes Campus", "1", "HSI00001065", ""),
-    ("jefferson-health", 2396, "aa475ca5b8cd2c7ac7a0d4c1e69e44bbe283c23e9e224b443568c1a8ba3e274e", "CHSP00003141", "310086", "Kennedy University Hospital", "1", "HSI00000048", "24777"),
-    ("penn-medicine", 2561, "d84f2a7f8d72f545663388541d753b6fa4c179dbf5fd60885e2090a9a65aa358", "CHSP00003399", "390100", "Lancaster General Hospital", "1", "HSI00000820", "26640"),
-    ("penn-medicine", 2562, "6c4e72f3d9ce93622397a3276ba5093399a5cd9fa240a24aa6d7854593487d5e", "CHSP00003401", "393054", "Lancaster Rehabilitation Hospital", "0", "HSI00000820", "1381"),
-    ("main-line-health", 2574, "f7727967224e7e723f7274455b8c516a14491d1c9c6a46e98347be8ceee42f4e", "CHSP00003416", "390195", "Lankenau Medical Center", "1", "HSI00000608", "19330"),
-    ("jefferson-health", 2763, "7bc05c99943a0373b0b4462327a1049fe7f4302412208e66e7ba8fd74643b9e0", "CHSP00003667", "393038", "Magee Rehabilitation Hospital", "0", "HSI00000048", "1003"),
-    ("main-line-health", 3793, "fde2e35b21cb349ce74f8f3a8dce4c289e6ca081b7bf6fb83f74f41325fe4b84", "CHSP00004950", "390153", "Paoli Hospital", "1", "HSI00000608", "15599"),
-    ("penn-medicine", 3871, "aaf5a6af61c403badd12cf3972c0be2aac0ef0ae6c29f53ca122932fc392acdc", "CHSP00005051", "390179", "The Chester County Hospital", "1", "HSI00000820", "20573"),
-    ("penn-medicine", 3872, "8e72b902e1dcf0ee0c073094490de4bc89306a983c8451110ba8964a6a413024", "CHSP00005052", "390223", "Presbyterian Medical Center", "1", "HSI00000820", "16788"),
-    ("penn-medicine", 3876, "650d1a87a905e43b912ec591dc93bc88bde22b01a1928b585db9dbc337d25f7a", "CHSP00005058", "390226", "Pennsylvania Hospital Of Uphs", "1", "HSI00000820", "22700"),
-    ("main-line-health", 4204, "960d3148646614cd88beda5e7099e2f4d672a35471ebe33b8e5f97123a36d0c9", "CHSP00005505", "390222", "Riddle Hospital", "1", "HSI00000608", "10195"),
-    ("temple-health", 5251, "c8b71bd68058f1f89d4b4d6d72b5074191f70ce10fbd6dbec92cece1b6901fc0", "CHSP00006817", "390027", "Temple University Hospital", "1", "HSI00001065", "30602"),
-    ("jefferson-health", 5360, "e9425d632026f1d51c362a068ea2d692c9380182a92c6dc7bf2133fabc378511", "CHSP00006988", "390174", "Thomas Jefferson Univ. Hospital", "1", "HSI00000048", "33104"),
-    ("christianacare", 5519, "1579e05ffe32584caca64875fa048fea3a766606eba3e692a289ec92c8e4e161", "CHSP00007214", "210032", "Union Hospital Of Cecil County", "1", "HSI00000218", "21398"),
-    ("penn-medicine", 5581, "3c52a89db59ed12a53f542eea2575afc67a76f2f532ffa551f00548a3ceb7ef9", "CHSP00007287", "310010", "Princeton Healthcare System", "1", "HSI00000820", "15477"),
-    ("penn-medicine", 6473, "3187c054b98b3cb3bb822ffc82d865537a873c2e714e2c05acf6299b4ef064ac", "CHSP00008463", "394055", "Lancaster Behavioral Health Hospital", "0", "HSI00000820", "3550"),
-    ("jefferson-health", 6571, "e5db5391bb5598bf4a8f489b6134ebe02d4b27c6a40728e49687a447e6cfa1d6", "CHSP00008565", "390289", "Albert Einstein Healthcare Network", "0", "HSI00000048", ""),
+    ("jefferson-health", 20, "2b0621faf7f92a13f3b9cf57a582151aed5a6a20ad13823bda85743917816527", "CHSP00000032", "390231", "Abington Memorial Hospital", "1", "HSI00000048", "30683"),  # pragma: allowlist secret
+    ("jefferson-health", 21, "d358c32c5dbe88f60af7f7ab884f542934d7663cab5055def7821d10b197bfb6", "CHSP00000033", "390012", "Lansdale Hospital", "1", "HSI00000048", "5120"),  # pragma: allowlist secret
+    ("jefferson-health", 154, "d06f82f3559dbdbfde71df131a9f691ccc31bca14c4b98434d6140507fcf7957", "CHSP00000209", "390115", "Aria Health", "1", "HSI00000048", "22180"),  # pragma: allowlist secret
+    ("main-line-health", 589, "c27b7a970f6c63f8a70fbd799a2dcda17c80c4595ba936c4468785bb950593b8", "CHSP00000756", "390139", "Bryn Mawr Hospital", "1", "HSI00000608", "14792"),  # pragma: allowlist secret
+    ("main-line-health", 590, "949870b53a59b2ee7dc664e7b0fa460bb790de4d8695ab0e2396645709f4361b", "CHSP00000757", "393025", "Bryn Mawr Rehabilitation Hospital", "0", "HSI00000608", "2067"),  # pragma: allowlist secret
+    ("temple-health", 870, "f1342be7a822f1f95771b57b0ca15fd97e6a426765639692b13007f6615c154e", "CHSP00001125", "390026", "Chestnut Hill Hospital", "1", "HSI00001065", "6785"),  # pragma: allowlist secret
+    ("christianacare", 921, "7422b5d7b7287e3bfc435ee9f50b27eb77fcb60cabfa3a1e6fd54a119f017847", "CHSP00001204", "080001", "Christiana Care Health System", "1", "HSI00000218", "49852"),  # pragma: allowlist secret
+    ("cooper-university-health-care", 1110, "b6a64b3593b4d5b515bd2aa991b9000ba6008495626a5b70427a0a07947c8374", "CHSP00001449", "310014", "Cooper University Hospital", "1", "HSI00001079", "31354"),  # pragma: allowlist secret
+    ("jefferson-health", 1376, "80ff68adac4f815fe973ba95b8b5ad34344d51b93693fa1c1c7f6b521446e5e2", "CHSP00001815", "390329", "Einstein Medical Center Montgomery", "1", "HSI00000048", "10338"),  # pragma: allowlist secret
+    ("jefferson-health", 1377, "290625507fd6f6bd84a285fd1baf89511dd1c6f3025c79ee6fcd60fab0ef049b", "CHSP00001816", "390142", "Albert Einstein Medical Center", "1", "HSI00000048", "21159"),  # pragma: allowlist secret
+    ("temple-health", 1574, "d6846615d253d0b1f5325cddd7ca14c3652ef0a909b175369c032c5c1f431d64", "CHSP00002081", "390196", "American Oncologic Hospial", "0", "HSI00001065", "3554"),  # pragma: allowlist secret
+    ("penn-medicine", 1708, "255c1ccabbef2209b2b0070727d0ae17f25ad9a4ad1f2e6d0234c6131e1afe46", "CHSP00002249", "392050", "Good Shepherd Penn Partners", "0", "HSI00000820", "144"),  # pragma: allowlist secret
+    ("penn-medicine", 2124, "b640397c76e8484a52af122ca80fdc8c4e77ea805ff67ee8e19507d5c2efebbe", "CHSP00002791", "390111", "Hospital Of The Univ Of Penna", "1", "HSI00000820", "41921"),  # pragma: allowlist secret
+    ("temple-health", 2264, "7aea7d782cd69af63143b269e8f99ef18a05879a1b8aae9f6135ae13dd311f1c", "CHSP00002972", "390080", "Temple University Hospital Jeanes Campus", "1", "HSI00001065", ""),  # pragma: allowlist secret
+    ("jefferson-health", 2396, "aa475ca5b8cd2c7ac7a0d4c1e69e44bbe283c23e9e224b443568c1a8ba3e274e", "CHSP00003141", "310086", "Kennedy University Hospital", "1", "HSI00000048", "24777"),  # pragma: allowlist secret
+    ("penn-medicine", 2561, "d84f2a7f8d72f545663388541d753b6fa4c179dbf5fd60885e2090a9a65aa358", "CHSP00003399", "390100", "Lancaster General Hospital", "1", "HSI00000820", "26640"),  # pragma: allowlist secret
+    ("penn-medicine", 2562, "6c4e72f3d9ce93622397a3276ba5093399a5cd9fa240a24aa6d7854593487d5e", "CHSP00003401", "393054", "Lancaster Rehabilitation Hospital", "0", "HSI00000820", "1381"),  # pragma: allowlist secret
+    ("main-line-health", 2574, "f7727967224e7e723f7274455b8c516a14491d1c9c6a46e98347be8ceee42f4e", "CHSP00003416", "390195", "Lankenau Medical Center", "1", "HSI00000608", "19330"),  # pragma: allowlist secret
+    ("jefferson-health", 2763, "7bc05c99943a0373b0b4462327a1049fe7f4302412208e66e7ba8fd74643b9e0", "CHSP00003667", "393038", "Magee Rehabilitation Hospital", "0", "HSI00000048", "1003"),  # pragma: allowlist secret
+    ("main-line-health", 3793, "fde2e35b21cb349ce74f8f3a8dce4c289e6ca081b7bf6fb83f74f41325fe4b84", "CHSP00004950", "390153", "Paoli Hospital", "1", "HSI00000608", "15599"),  # pragma: allowlist secret
+    ("penn-medicine", 3871, "aaf5a6af61c403badd12cf3972c0be2aac0ef0ae6c29f53ca122932fc392acdc", "CHSP00005051", "390179", "The Chester County Hospital", "1", "HSI00000820", "20573"),  # pragma: allowlist secret
+    ("penn-medicine", 3872, "8e72b902e1dcf0ee0c073094490de4bc89306a983c8451110ba8964a6a413024", "CHSP00005052", "390223", "Presbyterian Medical Center", "1", "HSI00000820", "16788"),  # pragma: allowlist secret
+    ("penn-medicine", 3876, "650d1a87a905e43b912ec591dc93bc88bde22b01a1928b585db9dbc337d25f7a", "CHSP00005058", "390226", "Pennsylvania Hospital Of Uphs", "1", "HSI00000820", "22700"),  # pragma: allowlist secret
+    ("main-line-health", 4204, "960d3148646614cd88beda5e7099e2f4d672a35471ebe33b8e5f97123a36d0c9", "CHSP00005505", "390222", "Riddle Hospital", "1", "HSI00000608", "10195"),  # pragma: allowlist secret
+    ("temple-health", 5251, "c8b71bd68058f1f89d4b4d6d72b5074191f70ce10fbd6dbec92cece1b6901fc0", "CHSP00006817", "390027", "Temple University Hospital", "1", "HSI00001065", "30602"),  # pragma: allowlist secret
+    ("jefferson-health", 5360, "e9425d632026f1d51c362a068ea2d692c9380182a92c6dc7bf2133fabc378511", "CHSP00006988", "390174", "Thomas Jefferson Univ. Hospital", "1", "HSI00000048", "33104"),  # pragma: allowlist secret
+    ("christianacare", 5519, "1579e05ffe32584caca64875fa048fea3a766606eba3e692a289ec92c8e4e161", "CHSP00007214", "210032", "Union Hospital Of Cecil County", "1", "HSI00000218", "21398"),  # pragma: allowlist secret
+    ("penn-medicine", 5581, "3c52a89db59ed12a53f542eea2575afc67a76f2f532ffa551f00548a3ceb7ef9", "CHSP00007287", "310010", "Princeton Healthcare System", "1", "HSI00000820", "15477"),  # pragma: allowlist secret
+    ("penn-medicine", 6473, "3187c054b98b3cb3bb822ffc82d865537a873c2e714e2c05acf6299b4ef064ac", "CHSP00008463", "394055", "Lancaster Behavioral Health Hospital", "0", "HSI00000820", "3550"),  # pragma: allowlist secret
+    ("jefferson-health", 6571, "e5db5391bb5598bf4a8f489b6134ebe02d4b27c6a40728e49687a447e6cfa1d6", "CHSP00008565", "390289", "Albert Einstein Healthcare Network", "0", "HSI00000048", ""),  # pragma: allowlist secret
 )
 
 EXPECTED_LINKAGE_ROWS = tuple(_expected_linkage_row(item) for item in _LINKAGE_ROWS)

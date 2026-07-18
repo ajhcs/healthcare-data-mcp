@@ -303,8 +303,8 @@ def test_operating_revenue_v1_models_and_bytes_remain_unchanged() -> None:
         REVENUE_ACQUISITION.read_text(encoding="utf-8")
     )
     assert hashlib.sha256(REVENUE_ACQUISITION.read_bytes()).hexdigest() == (
-        "ebf2be8cc8cd09705193b3e24aa2591af86dca6d3856892491a869bfcebe0cf0"
+        "ebf2be8cc8cd09705193b3e24aa2591af86dca6d3856892491a869bfcebe0cf0"  # pragma: allowlist secret
     )
     assert hashlib.sha256(REVENUE_EVIDENCE.read_bytes()).hexdigest() == (
-        "04fadae952898bc6dac87d0aaf4a3b04711cc9acc387ec751612f4b937b5b89f"
+        "04fadae952898bc6dac87d0aaf4a3b04711cc9acc387ec751612f4b937b5b89f"  # pragma: allowlist secret
     )
