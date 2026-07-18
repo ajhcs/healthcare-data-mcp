@@ -301,6 +301,7 @@ def test_json_schema_rejects_every_runtime_immutable_mutation() -> None:
 
     runtime_mutations = [
         {**payload, "acquired_at": "2026-07-18T12:01:00Z"},
+        {**payload, "acquired_at": "2026-07-18T12:00:00+00:00"},
         {**payload, "systems": list(reversed(payload["systems"]))},
         {**payload, "system_rows": rows, "candidates": candidates},
         {**payload, "candidates": invented_blockers},

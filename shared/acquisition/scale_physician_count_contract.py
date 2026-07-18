@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Literal, Mapping, Self
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator, model_validator
 from pydantic.json_schema import GenerateJsonSchema, JsonSchemaMode
 
 from shared.acquisition.scale_physician_count_declaration import (
@@ -145,6 +145,13 @@ class PhysicianCountAcquisition(StrictModel):
     redistribution_rights_custody: Literal["unreviewed"] = "unreviewed"
     prohibited_outputs: list[str] = Field(min_length=1)
     acquisition_sha256: str = Field(pattern=SHA256_PATTERN)
+
+    @field_validator("acquired_at", mode="before")
+    @classmethod
+    def preserve_exact_acquisition_timestamp_lexeme(cls, value: object) -> object:
+        if value != "2026-07-18T12:00:00Z":
+            raise ValueError("acquisition timestamp must use the exact reviewed JSON representation")
+        return value
 
     @model_validator(mode="after")
     def validate_graph_and_hash(self) -> Self:
