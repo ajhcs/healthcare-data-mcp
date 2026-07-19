@@ -142,6 +142,40 @@ whole tests, Ruff, strict mypy, schema parity, source line limits, package and
 installed-tree checks, exact external custody, two clean deterministic
 rebuilds, and independent Standards and mission reviews.
 
+The corrected implementation tree `455e225a5b261141c66def46171126bc8cc06491`
+was verified before publication. The exact service-line admission merge
+`46ed66e69bcd595aa8984d2c5b48d6b0ab4f13de` rebuilt to manifest semantic
+`sha256:71713d716b2fc59379f6fe0e7ca1c80ca73bdb54eca93e723076502dd216978e`
+and transport
+`sha256:1d7132ac0814cbfc629f007b06870740c1591c4ee16a715a69b9ba6fb8dfa7f9`.
+The v5 contract binds those exact roots together with the unchanged specialist
+review and assurance roots and rejects every independently mutated lineage
+field.
+
+Post-correction verification produced 927 passing repository tests with two
+documented skips, 33 passing exact-custody cases, clean Ruff and changed-file
+Pyright results, generated-schema parity, the secret baseline gate, MCPB
+manifest parity, and all registry, environment, and client-render parity
+checks. Two isolated clean exports were byte-identical. At the corrected
+implementation tree their producer-bound evidence canonical hash was
+`sha256:7098112c2c66473b68d4a1aa9fc768f40c32977a1c7cfbe7150fbd9a81e9e1d2`,
+their bundle self-hash was
+`sha256:66ca2bc5bdb96a44a4b9851e19589748a55ad14ed9e6c60334911ba98908c282`,
+and their bundle canonical transport hash was
+`sha256:8cff0229d0db22faa781a2f9344e210a6fb7978d56511f9b7bf7967ad303d493`.
+Both deterministic builds produced wheel
+`sha256:977d513bcc9b008d168625938661b1ab1875b0a138f8e773810bdc27eda3ea62`
+and sdist
+`sha256:b17d217a02bdbf90ec8cfec7be7acd66e52f4de39e55f1ee32ad5955f6907aea`;
+both distributions passed Twine and neutral-directory installed-tree
+reproduction. Independent Standards and mission reviews reported no remaining
+hard, high, or medium findings after correction.
+
+These producer-bound verification hashes identify the corrected implementation
+tree, not the eventual merge commit. The downstream binding owner must rebuild
+the merged tree from a clean export and freeze its exact producer-bound hashes;
+it must not relabel these pre-merge values as merge outputs.
+
 There is no route, migration, production configuration, API/cache mutation,
 profile write, patient-level data, PHI, credential, paid-source content, or
 deployed behavior. Runtime impact is limited to an additive repository CLI
