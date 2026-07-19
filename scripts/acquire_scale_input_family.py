@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+from typing import cast
 
 from shared.acquisition.scale_input_family import (
     build_public_evidence_input,
@@ -16,6 +17,13 @@ from shared.acquisition.scale_input_family import (
 from shared.acquisition.scale_annual_discharges_packet import (
     acquisition as annual_discharges_acquisition,
     verify_annual_discharges_source_bytes,
+)
+from shared.acquisition.scale_emergency_department_count_evidence import (
+    build_emergency_department_count_public_evidence_input,
+)
+from shared.acquisition.scale_emergency_department_count_packet import (
+    acquisition as emergency_department_count_acquisition,
+    verify_emergency_department_count_source_bytes,
 )
 from shared.acquisition.scale_operating_revenue_packet import acquisition as operating_revenue_acquisition
 from shared.acquisition.scale_physician_count_evidence import (
@@ -55,6 +63,7 @@ def main() -> None:
             "physician_count",
             "service_line_count",
             "safety_net_patient_mix_pct",
+            "emergency_department_count",
         ),
         required=True,
     )
@@ -62,6 +71,11 @@ def main() -> None:
     parser.add_argument("--cache-root", type=Path, required=True)
     parser.add_argument("--cms-rbcs-report", type=Path)
     parser.add_argument("--cms-dsh-report", type=Path)
+    parser.add_argument("--ahrq-linkage", type=Path)
+    parser.add_argument("--cms-hgi", type=Path)
+    parser.add_argument("--cms-hgi-metadata", type=Path)
+    parser.add_argument("--cms-hospital-dictionary", type=Path)
+    parser.add_argument("--ecfr-ed-definition", type=Path)
     parser.add_argument("--acquisition-output", type=Path, required=True)
     parser.add_argument("--evidence-output", type=Path, required=True)
     args = parser.parse_args()
@@ -108,7 +122,7 @@ def main() -> None:
             producer_commit=args.source_commit,
         )
         frozen_payload = service_line_frozen.model_dump(mode="json")
-    else:
+    elif args.family == "safety_net_patient_mix_pct":
         if args.cms_dsh_report is None:
             parser.error("--cms-dsh-report is required for safety_net_patient_mix_pct")
         safety_net_frozen = safety_net_patient_mix_acquisition()
@@ -122,6 +136,32 @@ def main() -> None:
             producer_commit=args.source_commit,
         )
         frozen_payload = safety_net_frozen.model_dump(mode="json")
+    else:
+        custody = (
+            args.ahrq_linkage,
+            args.cms_hgi,
+            args.cms_hgi_metadata,
+            args.cms_hospital_dictionary,
+            args.ecfr_ed_definition,
+        )
+        if any(path is None for path in custody):
+            parser.error(
+                "--ahrq-linkage, --cms-hgi, --cms-hgi-metadata, "
+                "--cms-hospital-dictionary, and --ecfr-ed-definition are required "
+                "for emergency_department_count"
+            )
+        emergency_frozen = emergency_department_count_acquisition()
+        exact_custody = tuple(cast(Path, path) for path in custody)
+        verify_emergency_department_count_source_bytes(
+            emergency_frozen,
+            args.cache_root,
+            *exact_custody,
+        )
+        evidence = build_emergency_department_count_public_evidence_input(
+            emergency_frozen,
+            producer_commit=args.source_commit,
+        )
+        frozen_payload = emergency_frozen.model_dump(mode="json")
     write_atomic_json(args.acquisition_output, frozen_payload)
     write_atomic_json(args.evidence_output, evidence.model_dump(mode="json"))
 
