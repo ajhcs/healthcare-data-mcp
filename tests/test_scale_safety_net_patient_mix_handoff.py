@@ -122,9 +122,9 @@ def test_public_bundle_has_seven_receipts_zero_observations_and_six_open_conflic
 
 def test_prior_service_line_lineage_is_exact_and_no_go() -> None:
     prior = _checked_in().prior_cycle
-    assert prior.admission_merge.replace("-", "") == "46ed66e69bcd595aa8984d2c5b48d6b0ab4f13de"
-    assert prior.tracker_merge.replace("-", "") == "df429e9ab47d60025258942e88df036c389c8731"
-    assert prior.cumulative_packet_sha256.endswith("6ff9754bf81441464150b0ea976b30f6")
+    assert prior.admission_merge.replace("-", "") == "46ed66e69bcd595aa8984d2c5b48d6b0ab4f13de"  # pragma: allowlist secret
+    assert prior.tracker_merge.replace("-", "") == "df429e9ab47d60025258942e88df036c389c8731"  # pragma: allowlist secret
+    assert prior.cumulative_packet_sha256.endswith("6ff9754bf81441464150b0ea976b30f6")  # pragma: allowlist secret
     assert prior.cumulative_review_transport_sha256 == "sha256:d78e39153a1fa7cc26232832b0f6e9d00229e51d7707e7896958acfcd7394920"
     assert prior.cumulative_assurance_transport_sha256 == "sha256:2397b4f3c1d8bbb2dbf940d2b0113269fbbca8c2a163a2c8ec2cc1eac4563d65"
     assert prior.reusable_manifest_sha256 == "sha256:71713d716b2fc59379f6fe0e7ca1c80ca73bdb54eca93e723076502dd216978e"
@@ -346,11 +346,11 @@ def test_json_schema_rejects_runtime_immutable_mutations() -> None:
 
 def test_v1_through_v4_fixture_bytes_remain_unchanged() -> None:
     expected = {
-        ROOT / "contracts/v1/fixtures/scale-operating-revenue-acquisition.json": "ebf2be8cc8cd09705193b3e24aa2591af86dca6d3856892491a869bfcebe0cf0",
-        ROOT / "contracts/v2/fixtures/scale-annual-discharges-acquisition.json": "aa0027e2af3dc5e29fc2e5245b6e3d36370b83560ed8bbf64f9de12c6908495a",
-        ROOT / "contracts/v3/fixtures/scale-physician-count-acquisition.json": "e7964104e56b389a19540b541cc490656578aede63d2dcbcbb8ab73571b3192b",
-        ROOT / "contracts/v4/fixtures/scale-service-line-count-acquisition.json": "59a1debb97e6dd3cb2cbc6ce680c996cac8dbd17050c3b55563d3c90fa1f3946",
-        ROOT / "contracts/v4/fixtures/scale-service-line-count-input.json": "22321f105525f32475d395739021ba6730e4b86ab044e85b24fac639e0b265f4",
+        ROOT / "contracts/v1/fixtures/scale-operating-revenue-acquisition.json": "ebf2be8cc8cd09705193b3e24aa2591af86dca6d3856892491a869bfcebe0cf0",  # pragma: allowlist secret
+        ROOT / "contracts/v2/fixtures/scale-annual-discharges-acquisition.json": "aa0027e2af3dc5e29fc2e5245b6e3d36370b83560ed8bbf64f9de12c6908495a",  # pragma: allowlist secret
+        ROOT / "contracts/v3/fixtures/scale-physician-count-acquisition.json": "e7964104e56b389a19540b541cc490656578aede63d2dcbcbb8ab73571b3192b",  # pragma: allowlist secret
+        ROOT / "contracts/v4/fixtures/scale-service-line-count-acquisition.json": "59a1debb97e6dd3cb2cbc6ce680c996cac8dbd17050c3b55563d3c90fa1f3946",  # pragma: allowlist secret
+        ROOT / "contracts/v4/fixtures/scale-service-line-count-input.json": "22321f105525f32475d395739021ba6730e4b86ab044e85b24fac639e0b265f4",  # pragma: allowlist secret
     }
     assert {path: hashlib.sha256(path.read_bytes()).hexdigest() for path in expected} == expected
 

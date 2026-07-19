@@ -61,12 +61,12 @@ class PriorServiceLineToolkitLineage(StrictModel):
     @model_validator(mode="after")
     def preserve_exact_commits(self) -> Self:
         expected = {
-            "binding_merge": "d57b1883044475f9dac87eae1ac6806fda1d9728",
-            "binding_tracker_merge": "3d612de3c5137624e845771334807e550bbf8b83",
-            "agents_review_merge": "97b248f22e95c335db4048b16c090792e7d37801",
-            "agents_tracker_merge": "0ead3b3831027ab2e03711efae5a30ca67b620a9",
-            "admission_merge": "46ed66e69bcd595aa8984d2c5b48d6b0ab4f13de",
-            "tracker_merge": "df429e9ab47d60025258942e88df036c389c8731",
+            "binding_merge": "d57b1883044475f9dac87eae1ac6806fda1d9728",  # pragma: allowlist secret
+            "binding_tracker_merge": "3d612de3c5137624e845771334807e550bbf8b83",  # pragma: allowlist secret
+            "agents_review_merge": "97b248f22e95c335db4048b16c090792e7d37801",  # pragma: allowlist secret
+            "agents_tracker_merge": "0ead3b3831027ab2e03711efae5a30ca67b620a9",  # pragma: allowlist secret
+            "admission_merge": "46ed66e69bcd595aa8984d2c5b48d6b0ab4f13de",  # pragma: allowlist secret
+            "tracker_merge": "df429e9ab47d60025258942e88df036c389c8731",  # pragma: allowlist secret
         }
         if any(getattr(self, key).replace("-", "") != value for key, value in expected.items()):
             raise ValueError("prior service-line commit lineage drift")
