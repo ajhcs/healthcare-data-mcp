@@ -121,6 +121,31 @@ definition markers. Required final gates are focused and whole tests, Ruff,
 targeted Pyright, schema parity, packaging and installed-tree checks, two clean
 deterministic rebuilds, and independent Standards and mission reviews.
 
+Implementation commit `95e7f51dfe9ec8c3f7b49e5145685fdc54df049c` passed
+981 repository tests with three documented opt-in skips, 55 exact-custody
+focused cases, Ruff, targeted Pyright, schema parity, the CI secret and baseline
+policy gates, MCPB manifest parity, compilation, build, and Twine. Two isolated
+clean clones emitted byte-identical acquisition
+`56f638d8fab0e0c769646a424f25bafb7107898f4ef7f7e8ec11e3440f3f5dd1`,
+producer-bound evidence
+`e42d5e4c69be175e93d175dcd7cec855f304ab0329ee982db986badeb8abd889`,
+wheel `966debbdc342323f48e196a822b23d7094f2bf92855e4c6d18fef666998a68bd`,
+and sdist `55abccff6007ed925c7fffec71091d5d167b1dd0802482cdacbac2279d4e289a`.
+The producer-bound evidence canonical hash was
+`sha256:8b8adee2b84fa2a408449d7bdf9a4636b82f9ae903d2071df0f208f7ba3cd621`;
+its Public Evidence Bundle self-hash and canonical transport were respectively
+`sha256:a7c2cab3b2a8e2915a3d642437dd512aea600a96394537c1507afa992ad5fd75`
+and
+`sha256:5cf51bfd79ee8c7103b1aa46407295f436b184f423b33e43596e93b65a9bac9d`.
+A neutral-directory installed-wheel build reproduced those exact models and
+hashes. Independent corrected-tree Standards and mission reviews reported no
+remaining hard, high, or medium findings.
+
+These producer-bound values identify the implementation commit, not this
+documentation record or the eventual merge. The downstream binding owner must
+rebuild the final merged tree and freeze that exact producer-bound evidence;
+it must not relabel pre-merge values as merge output.
+
 There is no route, migration, server registry, production configuration,
 API/cache mutation, profile write, patient-level data, PHI, credential,
 calculation, projection, promotion, or deployed behavior. Runtime impact is
