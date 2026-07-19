@@ -25,6 +25,13 @@ from shared.acquisition.scale_emergency_department_count_packet import (
     acquisition as emergency_department_count_acquisition,
     verify_emergency_department_count_source_bytes,
 )
+from shared.acquisition.scale_essential_service_designation_count_evidence import (
+    build_essential_service_designation_count_public_evidence_input,
+)
+from shared.acquisition.scale_essential_service_designation_count_packet import (
+    acquisition as essential_service_designation_count_acquisition,
+    verify_essential_service_designation_count_source_bytes,
+)
 from shared.acquisition.scale_operating_revenue_packet import acquisition as operating_revenue_acquisition
 from shared.acquisition.scale_physician_count_evidence import (
     build_physician_count_public_evidence_input,
@@ -64,6 +71,7 @@ def main() -> None:
             "service_line_count",
             "safety_net_patient_mix_pct",
             "emergency_department_count",
+            "essential_service_designation_count",
         ),
         required=True,
     )
@@ -76,6 +84,9 @@ def main() -> None:
     parser.add_argument("--cms-hgi-metadata", type=Path)
     parser.add_argument("--cms-hospital-dictionary", type=Path)
     parser.add_argument("--ecfr-ed-definition", type=Path)
+    parser.add_argument("--cms-psf-zip", type=Path)
+    parser.add_argument("--cms-provider-type-manual", type=Path)
+    parser.add_argument("--cms-psf-release-page", type=Path)
     parser.add_argument("--acquisition-output", type=Path, required=True)
     parser.add_argument("--evidence-output", type=Path, required=True)
     args = parser.parse_args()
@@ -136,7 +147,7 @@ def main() -> None:
             producer_commit=args.source_commit,
         )
         frozen_payload = safety_net_frozen.model_dump(mode="json")
-    else:
+    elif args.family == "emergency_department_count":
         custody = (
             args.ahrq_linkage,
             args.cms_hgi,
@@ -162,6 +173,26 @@ def main() -> None:
             producer_commit=args.source_commit,
         )
         frozen_payload = emergency_frozen.model_dump(mode="json")
+    else:
+        custody = (
+            args.ahrq_linkage, args.cms_psf_zip,
+            args.cms_provider_type_manual, args.cms_psf_release_page,
+        )
+        if any(path is None for path in custody):
+            parser.error(
+                "--ahrq-linkage, --cms-psf-zip, --cms-provider-type-manual, "
+                "and --cms-psf-release-page are required for "
+                "essential_service_designation_count"
+            )
+        designation_frozen = essential_service_designation_count_acquisition()
+        exact_custody = tuple(cast(Path, path) for path in custody)
+        verify_essential_service_designation_count_source_bytes(
+            designation_frozen, args.cache_root, *exact_custody,
+        )
+        evidence = build_essential_service_designation_count_public_evidence_input(
+            designation_frozen, producer_commit=args.source_commit,
+        )
+        frozen_payload = designation_frozen.model_dump(mode="json")
     write_atomic_json(args.acquisition_output, frozen_payload)
     write_atomic_json(args.evidence_output, evidence.model_dump(mode="json"))
 

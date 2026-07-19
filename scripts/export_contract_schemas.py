@@ -9,6 +9,9 @@ from shared.acquisition.scale_annual_discharges_packet import AnnualDischargesAc
 from shared.acquisition.scale_emergency_department_count_contract import (
     EmergencyDepartmentCountAcquisition,
 )
+from shared.acquisition.scale_essential_service_designation_count_contract import (
+    EssentialServiceDesignationCountAcquisition,
+)
 from shared.acquisition.scale_physician_count_contract import PhysicianCountAcquisition
 from shared.acquisition.scale_service_line_count_contract import ServiceLineCountAcquisition
 from shared.acquisition.scale_safety_net_patient_mix_contract import SafetyNetPatientMixAcquisition
@@ -40,6 +43,10 @@ def main() -> None:
         / "contracts"
         / "v6"
         / "scale-emergency-department-count-acquisition.schema.json": EmergencyDepartmentCountAcquisition.model_json_schema(),
+        ROOT
+        / "contracts"
+        / "v7"
+        / "scale-essential-service-designation-count-acquisition.schema.json": EssentialServiceDesignationCountAcquisition.model_json_schema(),
     }
     for target, schema in schemas.items():
         target.parent.mkdir(parents=True, exist_ok=True)
