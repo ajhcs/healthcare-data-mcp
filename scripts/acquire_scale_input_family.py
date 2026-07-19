@@ -32,6 +32,13 @@ from shared.acquisition.scale_service_line_count_packet import (
     acquisition as service_line_count_acquisition,
     verify_service_line_count_source_bytes,
 )
+from shared.acquisition.scale_safety_net_patient_mix_evidence import (
+    build_safety_net_patient_mix_public_evidence_input,
+)
+from shared.acquisition.scale_safety_net_patient_mix_packet import (
+    acquisition as safety_net_patient_mix_acquisition,
+    verify_safety_net_patient_mix_source_bytes,
+)
 from shared.acquisition.scale_tabular_input_family import (
     build_tabular_public_evidence_input,
 )
@@ -47,12 +54,14 @@ def main() -> None:
             "annual_discharges",
             "physician_count",
             "service_line_count",
+            "safety_net_patient_mix_pct",
         ),
         required=True,
     )
     parser.add_argument("--source-commit", required=True)
     parser.add_argument("--cache-root", type=Path, required=True)
     parser.add_argument("--cms-rbcs-report", type=Path)
+    parser.add_argument("--cms-dsh-report", type=Path)
     parser.add_argument("--acquisition-output", type=Path, required=True)
     parser.add_argument("--evidence-output", type=Path, required=True)
     args = parser.parse_args()
@@ -85,7 +94,7 @@ def main() -> None:
             producer_commit=args.source_commit,
         )
         frozen_payload = physician_frozen.model_dump(mode="json")
-    else:
+    elif args.family == "service_line_count":
         if args.cms_rbcs_report is None:
             parser.error("--cms-rbcs-report is required for service_line_count")
         service_line_frozen = service_line_count_acquisition()
@@ -99,6 +108,20 @@ def main() -> None:
             producer_commit=args.source_commit,
         )
         frozen_payload = service_line_frozen.model_dump(mode="json")
+    else:
+        if args.cms_dsh_report is None:
+            parser.error("--cms-dsh-report is required for safety_net_patient_mix_pct")
+        safety_net_frozen = safety_net_patient_mix_acquisition()
+        verify_safety_net_patient_mix_source_bytes(
+            safety_net_frozen,
+            args.cache_root,
+            args.cms_dsh_report,
+        )
+        evidence = build_safety_net_patient_mix_public_evidence_input(
+            safety_net_frozen,
+            producer_commit=args.source_commit,
+        )
+        frozen_payload = safety_net_frozen.model_dump(mode="json")
     write_atomic_json(args.acquisition_output, frozen_payload)
     write_atomic_json(args.evidence_output, evidence.model_dump(mode="json"))
 

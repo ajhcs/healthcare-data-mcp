@@ -174,3 +174,33 @@ HDM_KH4_AHRQ_CACHE_ROOT=/reviewed/cache/root \
 HDM_KH4_CMS_RBCS_REPORT=/reviewed/custody/RBCS_Final_Report_RY2025.pdf \
 pytest tests/test_scale_service_line_count_handoff.py -q
 ```
+
+The safety-net patient-mix cycle adds immutable contract v5 at
+`v5/scale-safety-net-patient-mix-acquisition.schema.json`. The exact AHRQ
+system file provides only binary high-DSH and uncompensated-care indicators,
+not a patient-mix numerator, denominator, or percentage. CMS MLN006741 defines
+hospital-level Medicare DPP as the sum of two fractions with different
+denominators and an IPPS inpatient scope; it is preserved as definition and
+exclusion evidence, never substituted for a product-system patient mix.
+
+```bash
+python -m scripts.acquire_scale_input_family \
+  --family safety_net_patient_mix_pct \
+  --source-commit <full-clean-checkout-sha> \
+  --cache-root ~/.healthcare-data-mcp/cache \
+  --cms-dsh-report /external/custody/disproportionate_share_hospital.pdf \
+  --acquisition-output /tmp/scale-safety-net-patient-mix-acquisition.json \
+  --evidence-output /tmp/scale-safety-net-patient-mix-input.json
+```
+
+All six cells remain `unavailable_public`, with six open numerator,
+denominator, setting, period, and product-boundary conflicts. The bundle has no
+numeric observation. Facility aggregation, denominator substitution,
+imputation, fabricated zero, Scale execution, and downstream authority remain
+prohibited.
+
+```bash
+HDM_JHH_AHRQ_CACHE_ROOT=/reviewed/cache/root \
+HDM_JHH_CMS_DSH_REPORT=/reviewed/custody/disproportionate_share_hospital.pdf \
+pytest tests/test_scale_safety_net_patient_mix_handoff.py -q
+```

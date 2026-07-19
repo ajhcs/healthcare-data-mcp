@@ -1,0 +1,1306 @@
+{
+  "$defs": {
+    "DshDefinitionArtifact": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_id": {
+          "const": "artifact:cms-mln:medicare-dsh:2024",
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "content_length": {
+          "const": 951147,
+          "default": 951147,
+          "title": "Content Length",
+          "type": "integer"
+        },
+        "custody_state": {
+          "const": "frozen_verified_external",
+          "default": "frozen_verified_external",
+          "title": "Custody State",
+          "type": "string"
+        },
+        "document_title": {
+          "const": "Medicare Disproportionate Share Hospital, MLN006741",
+          "title": "Document Title",
+          "type": "string"
+        },
+        "http_receipt": {
+          "$ref": "#/$defs/HttpReceipt"
+        },
+        "landing_page": {
+          "const": "https://www.cms.gov/medicare/payment/prospective-payment-systems/acute-inpatient-pps/disproportionate-share-hospital-dsh",
+          "title": "Landing Page",
+          "type": "string"
+        },
+        "media_type": {
+          "const": "application/pdf",
+          "default": "application/pdf",
+          "title": "Media Type",
+          "type": "string"
+        },
+        "page_count": {
+          "const": 8,
+          "default": 8,
+          "title": "Page Count",
+          "type": "integer"
+        },
+        "payload_sha256": {
+          "const": "sha256:a658fb1ec185cea715dbc175b8e225c39c806da2b353f8f86b617bcd8ebf390a",
+          "title": "Payload Sha256",
+          "type": "string"
+        },
+        "rights_basis": {
+          "const": "Public CMS fact sheet; linked MLN content disclaimer and registered-mark terms were not independently frozen or reviewed",
+          "title": "Rights Basis",
+          "type": "string"
+        },
+        "rights_classification": {
+          "const": "unknown_review_required",
+          "default": "unknown_review_required",
+          "title": "Rights Classification",
+          "type": "string"
+        },
+        "source_name": {
+          "const": "Centers for Medicare & Medicaid Services",
+          "title": "Source Name",
+          "type": "string"
+        },
+        "source_period": {
+          "const": "September 2024 policy fact sheet; FY 2024 DPP rules",
+          "title": "Source Period",
+          "type": "string"
+        },
+        "source_url": {
+          "const": "https://www.cms.gov/outreach-and-education/medicare-learning-network-mln/mlnproducts/downloads/disproportionate_share_hospital.pdf",
+          "title": "Source Url",
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "source_name",
+        "document_title",
+        "source_url",
+        "landing_page",
+        "source_period",
+        "payload_sha256",
+        "rights_basis",
+        "http_receipt"
+      ],
+      "title": "DshDefinitionArtifact",
+      "type": "object"
+    },
+    "HttpReceipt": {
+      "additionalProperties": false,
+      "properties": {
+        "content_length": {
+          "const": 951147,
+          "default": 951147,
+          "title": "Content Length",
+          "type": "integer"
+        },
+        "content_type": {
+          "const": "application/pdf",
+          "default": "application/pdf",
+          "title": "Content Type",
+          "type": "string"
+        },
+        "final_url": {
+          "const": "https://www.cms.gov/outreach-and-education/medicare-learning-network-mln/mlnproducts/downloads/disproportionate_share_hospital.pdf",
+          "title": "Final Url",
+          "type": "string"
+        },
+        "last_modified": {
+          "const": "Wed, 18 Sep 2024 20:23:56 GMT",
+          "title": "Last Modified",
+          "type": "string"
+        },
+        "payload_sha256": {
+          "const": "sha256:a658fb1ec185cea715dbc175b8e225c39c806da2b353f8f86b617bcd8ebf390a",
+          "title": "Payload Sha256",
+          "type": "string"
+        },
+        "receipt_sha256": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Receipt Sha256",
+          "type": "string"
+        },
+        "retrieved_at": {
+          "const": "2026-07-19T01:15:08Z",
+          "title": "Retrieved At",
+          "type": "string"
+        },
+        "status": {
+          "const": 200,
+          "default": 200,
+          "title": "Status",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "final_url",
+        "last_modified",
+        "retrieved_at",
+        "payload_sha256",
+        "receipt_sha256"
+      ],
+      "title": "HttpReceipt",
+      "type": "object"
+    },
+    "PriorServiceLineToolkitLineage": {
+      "additionalProperties": false,
+      "properties": {
+        "admission_merge": {
+          "const": "46ed66e6-9bcd-595a-a898-4d2c5b48d6b0-ab4f13de",
+          "title": "Admission Merge",
+          "type": "string"
+        },
+        "agents_review_merge": {
+          "const": "97b248f2-2e95-c335-db40-48b16c090792-e7d37801",
+          "title": "Agents Review Merge",
+          "type": "string"
+        },
+        "agents_tracker_merge": {
+          "const": "0ead3b38-3102-7ab2-e037-11efae5a30ca-67b620a9",
+          "title": "Agents Tracker Merge",
+          "type": "string"
+        },
+        "binding_merge": {
+          "const": "d57b1883-0444-75f9-dac8-7eae1ac6806f-da1d9728",
+          "title": "Binding Merge",
+          "type": "string"
+        },
+        "binding_tracker_merge": {
+          "const": "3d612de3-c513-7624-e845-771334807e55-0bbf8b83",
+          "title": "Binding Tracker Merge",
+          "type": "string"
+        },
+        "cumulative_assurance_sha256": {
+          "const": "sha256:0d5e9933a3538c6892f1050b42b5eeb3e56d040aa35af1478b683b207b77ad82",
+          "title": "Cumulative Assurance Sha256",
+          "type": "string"
+        },
+        "cumulative_packet_sha256": {
+          "const": "sha256:bb41a834d64c52ae65beef077292b6986ff9754bf81441464150b0ea976b30f6",
+          "title": "Cumulative Packet Sha256",
+          "type": "string"
+        },
+        "cumulative_review_sha256": {
+          "const": "sha256:004fcb8fbb6ae9a126bebb37dcba58496317fadfe7859df4415df43638808e55",
+          "title": "Cumulative Review Sha256",
+          "type": "string"
+        },
+        "failure_code": {
+          "const": "human_review_required",
+          "default": "human_review_required",
+          "title": "Failure Code",
+          "type": "string"
+        },
+        "input_family": {
+          "const": "service_line_count",
+          "default": "service_line_count",
+          "title": "Input Family",
+          "type": "string"
+        },
+        "repo": {
+          "const": "healthcare-toolkit",
+          "default": "healthcare-toolkit",
+          "title": "Repo",
+          "type": "string"
+        },
+        "reusable_manifest_sha256": {
+          "const": "sha256:fd0656221fdb0bddcfcd76f7e7cd55a68e43fc1528d3f89c1860f807d02a96a1",
+          "title": "Reusable Manifest Sha256",
+          "type": "string"
+        },
+        "reusable_manifest_transport_sha256": {
+          "const": "sha256:c3a45603378d036747830fd3375093f9cc83cd10f693d08e106ae6793cdaee9e",
+          "title": "Reusable Manifest Transport Sha256",
+          "type": "string"
+        },
+        "terminal_status": {
+          "const": "blocked",
+          "default": "blocked",
+          "title": "Terminal Status",
+          "type": "string"
+        },
+        "tracker_merge": {
+          "const": "df429e9a-b47d-6002-5258-942e88df036c-389c8731",
+          "title": "Tracker Merge",
+          "type": "string"
+        }
+      },
+      "required": [
+        "binding_merge",
+        "binding_tracker_merge",
+        "agents_review_merge",
+        "agents_tracker_merge",
+        "admission_merge",
+        "tracker_merge",
+        "cumulative_packet_sha256",
+        "cumulative_review_sha256",
+        "cumulative_assurance_sha256",
+        "reusable_manifest_sha256",
+        "reusable_manifest_transport_sha256"
+      ],
+      "title": "PriorServiceLineToolkitLineage",
+      "type": "object"
+    },
+    "SafetyNetIdentityRow": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_ref": {
+          "const": "artifact:ahrq-compendium:system:2023",
+          "title": "Artifact Ref",
+          "type": "string"
+        },
+        "health_sys_city": {
+          "minLength": 1,
+          "title": "Health Sys City",
+          "type": "string"
+        },
+        "health_sys_id": {
+          "pattern": "^HSI[0-9]{8}$",
+          "title": "Health Sys Id",
+          "type": "string"
+        },
+        "health_sys_name": {
+          "minLength": 1,
+          "title": "Health Sys Name",
+          "type": "string"
+        },
+        "health_sys_state": {
+          "pattern": "^[A-Z]{2}$",
+          "title": "Health Sys State",
+          "type": "string"
+        },
+        "row_key_column": {
+          "const": "health_sys_id",
+          "default": "health_sys_id",
+          "title": "Row Key Column",
+          "type": "string"
+        },
+        "row_number": {
+          "minimum": 2,
+          "title": "Row Number",
+          "type": "integer"
+        },
+        "source_row_sha256": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Source Row Sha256",
+          "type": "string"
+        },
+        "system_slug": {
+          "title": "System Slug",
+          "type": "string"
+        }
+      },
+      "required": [
+        "system_slug",
+        "artifact_ref",
+        "row_number",
+        "source_row_sha256",
+        "health_sys_id",
+        "health_sys_name",
+        "health_sys_city",
+        "health_sys_state"
+      ],
+      "title": "SafetyNetIdentityRow",
+      "type": "object"
+    },
+    "SafetyNetMissingCell": {
+      "additionalProperties": false,
+      "properties": {
+        "aggregated": {
+          "const": false,
+          "default": false,
+          "title": "Aggregated",
+          "type": "boolean"
+        },
+        "approved_for_scale": {
+          "const": false,
+          "default": false,
+          "title": "Approved For Scale",
+          "type": "boolean"
+        },
+        "blocker_codes": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 12,
+          "title": "Blocker Codes",
+          "type": "array"
+        },
+        "candidate_value": {
+          "const": null,
+          "default": null,
+          "title": "Candidate Value",
+          "type": "null"
+        },
+        "desired_definition": {
+          "const": "Percent of patients or encounters meeting one preapproved safety-net definition, using a common numerator, denominator, setting, organizational boundary, and aligned period across all six product systems",
+          "title": "Desired Definition",
+          "type": "string"
+        },
+        "fabricated_zero": {
+          "const": false,
+          "default": false,
+          "title": "Fabricated Zero",
+          "type": "boolean"
+        },
+        "finding": {
+          "minLength": 1,
+          "title": "Finding",
+          "type": "string"
+        },
+        "identity_row_ref": {
+          "minLength": 1,
+          "title": "Identity Row Ref",
+          "type": "string"
+        },
+        "imputed": {
+          "const": false,
+          "default": false,
+          "title": "Imputed",
+          "type": "boolean"
+        },
+        "input_family": {
+          "const": "safety_net_patient_mix_pct",
+          "default": "safety_net_patient_mix_pct",
+          "title": "Input Family",
+          "type": "string"
+        },
+        "missingness": {
+          "const": "unavailable_public",
+          "default": "unavailable_public",
+          "title": "Missingness",
+          "type": "string"
+        },
+        "source_artifact_refs": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "title": "Source Artifact Refs",
+          "type": "array"
+        },
+        "source_period": {
+          "const": "not_available_on_comparable_basis",
+          "title": "Source Period",
+          "type": "string"
+        },
+        "system_slug": {
+          "title": "System Slug",
+          "type": "string"
+        },
+        "unit": {
+          "const": "percent",
+          "default": "percent",
+          "title": "Unit",
+          "type": "string"
+        }
+      },
+      "required": [
+        "system_slug",
+        "desired_definition",
+        "source_period",
+        "source_artifact_refs",
+        "identity_row_ref",
+        "blocker_codes",
+        "finding"
+      ],
+      "title": "SafetyNetMissingCell",
+      "type": "object"
+    },
+    "SourceEvaluation": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_ref": {
+          "minLength": 1,
+          "title": "Artifact Ref",
+          "type": "string"
+        },
+        "common_numerator_denominator_available": {
+          "const": false,
+          "default": false,
+          "title": "Common Numerator Denominator Available",
+          "type": "boolean"
+        },
+        "evaluated_scope": {
+          "minLength": 1,
+          "title": "Evaluated Scope",
+          "type": "string"
+        },
+        "evaluation_id": {
+          "minLength": 1,
+          "title": "Evaluation Id",
+          "type": "string"
+        },
+        "exact_locator": {
+          "minLength": 1,
+          "title": "Exact Locator",
+          "type": "string"
+        },
+        "exclusion_reason": {
+          "minLength": 1,
+          "title": "Exclusion Reason",
+          "type": "string"
+        },
+        "query": {
+          "minLength": 1,
+          "title": "Query",
+          "type": "string"
+        },
+        "query_sha256": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Query Sha256",
+          "type": "string"
+        },
+        "system_level_identity_available": {
+          "title": "System Level Identity Available",
+          "type": "boolean"
+        },
+        "system_patient_mix_percentage_available": {
+          "const": false,
+          "default": false,
+          "title": "System Patient Mix Percentage Available",
+          "type": "boolean"
+        },
+        "usable_for_scale_input": {
+          "const": false,
+          "default": false,
+          "title": "Usable For Scale Input",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "evaluation_id",
+        "artifact_ref",
+        "query",
+        "query_sha256",
+        "exact_locator",
+        "evaluated_scope",
+        "system_level_identity_available",
+        "exclusion_reason"
+      ],
+      "title": "SourceEvaluation",
+      "type": "object"
+    },
+    "TabularSourceArtifact": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_id": {
+          "minLength": 1,
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "cache_promoted_at": {
+          "format": "date-time",
+          "title": "Cache Promoted At",
+          "type": "string"
+        },
+        "content_length": {
+          "minimum": 1,
+          "title": "Content Length",
+          "type": "integer"
+        },
+        "dataset_id": {
+          "const": "ahrq_health_system_compendium",
+          "title": "Dataset Id",
+          "type": "string"
+        },
+        "encoding": {
+          "const": "cp1252",
+          "title": "Encoding",
+          "type": "string"
+        },
+        "header_sha256": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Header Sha256",
+          "type": "string"
+        },
+        "landing_page": {
+          "pattern": "^https://www\\.ahrq\\.gov/",
+          "title": "Landing Page",
+          "type": "string"
+        },
+        "media_type": {
+          "const": "text/csv",
+          "title": "Media Type",
+          "type": "string"
+        },
+        "payload_sha256": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Payload Sha256",
+          "type": "string"
+        },
+        "relative_path": {
+          "pattern": "^[A-Za-z0-9._-]+$",
+          "title": "Relative Path",
+          "type": "string"
+        },
+        "rights_classification": {
+          "const": "unknown_review_required",
+          "title": "Rights Classification",
+          "type": "string"
+        },
+        "row_count": {
+          "minimum": 1,
+          "title": "Row Count",
+          "type": "integer"
+        },
+        "schema_fingerprint": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Schema Fingerprint",
+          "type": "string"
+        },
+        "source_name": {
+          "minLength": 1,
+          "title": "Source Name",
+          "type": "string"
+        },
+        "source_period": {
+          "const": "2023",
+          "title": "Source Period",
+          "type": "string"
+        },
+        "source_quality": {
+          "const": "validated_official_tabular_snapshot",
+          "title": "Source Quality",
+          "type": "string"
+        },
+        "source_url": {
+          "pattern": "^https://www\\.ahrq\\.gov/",
+          "title": "Source Url",
+          "type": "string"
+        },
+        "validation_status": {
+          "const": "pass",
+          "title": "Validation Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "relative_path",
+        "source_name",
+        "dataset_id",
+        "source_url",
+        "landing_page",
+        "source_period",
+        "cache_promoted_at",
+        "media_type",
+        "encoding",
+        "payload_sha256",
+        "content_length",
+        "row_count",
+        "schema_fingerprint",
+        "header_sha256",
+        "validation_status",
+        "source_quality",
+        "rights_classification"
+      ],
+      "title": "TabularSourceArtifact",
+      "type": "object"
+    },
+    "ValidatedCacheReceipt": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_role": {
+          "const": "silver",
+          "title": "Artifact Role",
+          "type": "string"
+        },
+        "cache_status": {
+          "const": "ready",
+          "title": "Cache Status",
+          "type": "string"
+        },
+        "dataset_artifact_id": {
+          "minLength": 1,
+          "title": "Dataset Artifact Id",
+          "type": "string"
+        },
+        "dataset_id": {
+          "const": "ahrq_health_system_compendium",
+          "title": "Dataset Id",
+          "type": "string"
+        },
+        "etag": {
+          "const": "",
+          "default": "",
+          "title": "Etag",
+          "type": "string"
+        },
+        "last_modified": {
+          "const": "",
+          "default": "",
+          "title": "Last Modified",
+          "type": "string"
+        },
+        "loader_version": {
+          "minLength": 1,
+          "title": "Loader Version",
+          "type": "string"
+        },
+        "manifest_content_length": {
+          "minimum": 1,
+          "title": "Manifest Content Length",
+          "type": "integer"
+        },
+        "manifest_sha256": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Manifest Sha256",
+          "type": "string"
+        },
+        "retrieved_at": {
+          "format": "date-time",
+          "title": "Retrieved At",
+          "type": "string"
+        },
+        "run_id": {
+          "minLength": 1,
+          "title": "Run Id",
+          "type": "string"
+        },
+        "source_period_metadata": {
+          "const": "Source-declared period, retrieved_at, or modified timestamp.",
+          "title": "Source Period Metadata",
+          "type": "string"
+        },
+        "validation_status": {
+          "const": "pass",
+          "title": "Validation Status",
+          "type": "string"
+        },
+        "validator_version": {
+          "minLength": 1,
+          "title": "Validator Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "dataset_id",
+        "dataset_artifact_id",
+        "run_id",
+        "artifact_role",
+        "cache_status",
+        "retrieved_at",
+        "manifest_sha256",
+        "manifest_content_length",
+        "validation_status",
+        "loader_version",
+        "validator_version",
+        "source_period_metadata"
+      ],
+      "title": "ValidatedCacheReceipt",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "const": {
+    "acquired_at": "2026-07-19T01:15:08Z",
+    "acquisition_id": "scale-safety-net-patient-mix-all-six-2026-07-19",
+    "acquisition_sha256": "sha256:85014d6e615591ced961b321adfb245112d1185abaa68417fe620689499a778d",
+    "ahrq_header_columns": [
+      "health_sys_id",
+      "health_sys_name",
+      "health_sys_city",
+      "health_sys_state",
+      "in_onekey",
+      "in_aha",
+      "onekey_id",
+      "aha_sysid",
+      "total_mds",
+      "prim_care_mds",
+      "total_nps",
+      "total_pas",
+      "grp_cnt",
+      "grp_cnt_restricted",
+      "hosp_cnt",
+      "acutehosp_cnt",
+      "nh_cnt",
+      "nh_cnt_restricted",
+      "hhco_cnt",
+      "hhco_cnt_restricted",
+      "sys_multistate",
+      "sys_beds",
+      "sys_dsch",
+      "sys_res",
+      "deg_children",
+      "sys_incl_majteachhosp",
+      "sys_incl_vmajteachhosp",
+      "sys_teachint",
+      "sys_incl_highdpphosp",
+      "sys_highucburden",
+      "sys_incl_highuchosp",
+      "sys_anyins_product",
+      "sys_mcare_adv",
+      "sys_mcaid_mngcare",
+      "sys_healthins_mktplc",
+      "sys_ma_plan_contracts",
+      "sys_ma_plan_enroll",
+      "sys_ownership",
+      "hos_net_revenue",
+      "hos_total_revenue"
+    ],
+    "ahrq_source_artifact": {
+      "artifact_id": "artifact:ahrq-compendium:system:2023",
+      "cache_promoted_at": "2026-06-15T20:15:44.056206Z",
+      "content_length": 106647,
+      "dataset_id": "ahrq_health_system_compendium",
+      "encoding": "cp1252",
+      "header_sha256": "sha256:9cc022051910c61c2f66e60b81a450985996cca7fa981c85bd38fa8a9853a79f",
+      "landing_page": "https://www.ahrq.gov/sites/default/files/wysiwyg/chsp/compendium/chsp-system-2023.csv",
+      "media_type": "text/csv",
+      "payload_sha256": "sha256:7bd62db33d2241236c662afdbd0ff9b30032da817f5ec0a2326311f77c5371b6",
+      "relative_path": "ahrq_system_2023.csv",
+      "rights_classification": "unknown_review_required",
+      "row_count": 639,
+      "schema_fingerprint": "sha256:65e32ad895ad8f21964650352978e59c23b3ee739268ab631a9ad487600f487f",
+      "source_name": "AHRQ Compendium of U.S. Health Systems 2023 system file",
+      "source_period": "2023",
+      "source_quality": "validated_official_tabular_snapshot",
+      "source_url": "https://www.ahrq.gov/sites/default/files/wysiwyg/chsp/compendium/chsp-system-2023.csv",
+      "validation_status": "pass"
+    },
+    "approved_denominator_receipt": null,
+    "approved_numerator_receipt": null,
+    "cache_receipt": {
+      "artifact_role": "silver",
+      "cache_status": "ready",
+      "dataset_artifact_id": "ahrq_health_system_compendium-977328e42c6e",
+      "dataset_id": "ahrq_health_system_compendium",
+      "etag": "",
+      "last_modified": "",
+      "loader_version": "cache-manager-v1",
+      "manifest_content_length": 2895,
+      "manifest_sha256": "sha256:0e647fdcd3ec8bf7f95c0936ae214de422132022b6ce53eabe090988eb529bea",
+      "retrieved_at": "2026-06-15T20:15:44.083900Z",
+      "run_id": "local-promote-20260615-v040",
+      "source_period_metadata": "Source-declared period, retrieved_at, or modified timestamp.",
+      "validation_status": "pass",
+      "validator_version": "cache-manager-v1"
+    },
+    "cells": [
+      {
+        "aggregated": false,
+        "approved_for_scale": false,
+        "blocker_codes": [
+          "ahrq_binary_flags_not_patient_mix_percentage",
+          "approved_patient_denominator_not_receipted",
+          "approved_safety_net_numerator_not_receipted",
+          "common_period_not_receipted",
+          "current_four_facility_boundary_mismatch",
+          "current_roster_membership_unresolved",
+          "dpp_combines_two_different_denominators",
+          "facility_to_system_aggregation_prohibited",
+          "hospital_ipps_scope_not_product_system_scope",
+          "no_system_level_patient_mix_percentage_reported",
+          "organizational_boundary_unresolved",
+          "setting_and_encounter_basis_unresolved",
+          "uncompensated_care_cost_not_patient_mix",
+          "west_grove_post_vintage_membership"
+        ],
+        "candidate_value": null,
+        "desired_definition": "Percent of patients or encounters meeting one preapproved safety-net definition, using a common numerator, denominator, setting, organizational boundary, and aligned period across all six product systems",
+        "fabricated_zero": false,
+        "finding": "The exact AHRQ system row supplies only binary high-DSH/uncompensated-care indicators, while CMS DPP is a hospital IPPS measure formed from two fractions with different denominators. Neither source reports a comparable patient-mix percentage for the current four-facility product boundary or post-vintage West Grove membership.",
+        "identity_row_ref": "row:system:HSI00000218:110",
+        "imputed": false,
+        "input_family": "safety_net_patient_mix_pct",
+        "missingness": "unavailable_public",
+        "source_artifact_refs": [
+          "artifact:ahrq-compendium:system:2023",
+          "artifact:cms-mln:medicare-dsh:2024"
+        ],
+        "source_period": "not_available_on_comparable_basis",
+        "system_slug": "christianacare",
+        "unit": "percent"
+      },
+      {
+        "aggregated": false,
+        "approved_for_scale": false,
+        "blocker_codes": [
+          "ahrq_binary_flags_not_patient_mix_percentage",
+          "approved_patient_denominator_not_receipted",
+          "approved_safety_net_numerator_not_receipted",
+          "common_period_not_receipted",
+          "current_roster_membership_unresolved",
+          "dpp_combines_two_different_denominators",
+          "facility_to_system_aggregation_prohibited",
+          "frozen_33_facility_boundary_mismatch",
+          "hospital_ipps_scope_not_product_system_scope",
+          "lvhn_post_vintage_membership",
+          "no_system_level_patient_mix_percentage_reported",
+          "organizational_boundary_unresolved",
+          "setting_and_encounter_basis_unresolved",
+          "uncompensated_care_cost_not_patient_mix"
+        ],
+        "candidate_value": null,
+        "desired_definition": "Percent of patients or encounters meeting one preapproved safety-net definition, using a common numerator, denominator, setting, organizational boundary, and aligned period across all six product systems",
+        "fabricated_zero": false,
+        "finding": "The exact AHRQ system row supplies only binary high-DSH/uncompensated-care indicators, while CMS DPP is a hospital IPPS measure formed from two fractions with different denominators. Neither source reports a comparable patient-mix percentage for the frozen 33-facility product boundary or later LVHN membership.",
+        "identity_row_ref": "row:system:HSI00000048:18",
+        "imputed": false,
+        "input_family": "safety_net_patient_mix_pct",
+        "missingness": "unavailable_public",
+        "source_artifact_refs": [
+          "artifact:ahrq-compendium:system:2023",
+          "artifact:cms-mln:medicare-dsh:2024"
+        ],
+        "source_period": "not_available_on_comparable_basis",
+        "system_slug": "jefferson-health",
+        "unit": "percent"
+      },
+      {
+        "aggregated": false,
+        "approved_for_scale": false,
+        "blocker_codes": [
+          "ahrq_binary_flags_not_patient_mix_percentage",
+          "approved_patient_denominator_not_receipted",
+          "approved_safety_net_numerator_not_receipted",
+          "common_period_not_receipted",
+          "current_roster_membership_unresolved",
+          "dpp_combines_two_different_denominators",
+          "facility_to_system_aggregation_prohibited",
+          "faculty_practice_scope_unresolved",
+          "fox_chase_patient_boundary_unresolved",
+          "hospital_ipps_scope_not_product_system_scope",
+          "no_system_level_patient_mix_percentage_reported",
+          "organizational_boundary_unresolved",
+          "setting_and_encounter_basis_unresolved",
+          "uncompensated_care_cost_not_patient_mix"
+        ],
+        "candidate_value": null,
+        "desired_definition": "Percent of patients or encounters meeting one preapproved safety-net definition, using a common numerator, denominator, setting, organizational boundary, and aligned period across all six product systems",
+        "fabricated_zero": false,
+        "finding": "The exact AHRQ system row supplies only binary high-DSH/uncompensated-care indicators, while CMS DPP is a hospital IPPS measure formed from two fractions with different denominators. Neither source resolves a comparable patient-mix percentage across Temple, Fox Chase, faculty-practice, and current product boundaries.",
+        "identity_row_ref": "row:system:HSI00001065:466",
+        "imputed": false,
+        "input_family": "safety_net_patient_mix_pct",
+        "missingness": "unavailable_public",
+        "source_artifact_refs": [
+          "artifact:ahrq-compendium:system:2023",
+          "artifact:cms-mln:medicare-dsh:2024"
+        ],
+        "source_period": "not_available_on_comparable_basis",
+        "system_slug": "temple-health",
+        "unit": "percent"
+      },
+      {
+        "aggregated": false,
+        "approved_for_scale": false,
+        "blocker_codes": [
+          "ahrq_binary_flags_not_patient_mix_percentage",
+          "approved_patient_denominator_not_receipted",
+          "approved_safety_net_numerator_not_receipted",
+          "common_period_not_receipted",
+          "current_roster_membership_unresolved",
+          "dpp_combines_two_different_denominators",
+          "facility_to_system_aggregation_prohibited",
+          "faculty_practice_scope_unresolved",
+          "hospital_ipps_scope_not_product_system_scope",
+          "no_system_level_patient_mix_percentage_reported",
+          "organizational_boundary_unresolved",
+          "post_vintage_membership_drift",
+          "setting_and_encounter_basis_unresolved",
+          "uncompensated_care_cost_not_patient_mix"
+        ],
+        "candidate_value": null,
+        "desired_definition": "Percent of patients or encounters meeting one preapproved safety-net definition, using a common numerator, denominator, setting, organizational boundary, and aligned period across all six product systems",
+        "fabricated_zero": false,
+        "finding": "The exact AHRQ system row supplies only binary high-DSH/uncompensated-care indicators, while CMS DPP is a hospital IPPS measure formed from two fractions with different denominators. Neither source resolves a comparable patient-mix percentage across the faculty-practice and current product boundaries.",
+        "identity_row_ref": "row:system:HSI00000820:361",
+        "imputed": false,
+        "input_family": "safety_net_patient_mix_pct",
+        "missingness": "unavailable_public",
+        "source_artifact_refs": [
+          "artifact:ahrq-compendium:system:2023",
+          "artifact:cms-mln:medicare-dsh:2024"
+        ],
+        "source_period": "not_available_on_comparable_basis",
+        "system_slug": "penn-medicine",
+        "unit": "percent"
+      },
+      {
+        "aggregated": false,
+        "approved_for_scale": false,
+        "blocker_codes": [
+          "ahrq_binary_flags_not_patient_mix_percentage",
+          "approved_patient_denominator_not_receipted",
+          "approved_safety_net_numerator_not_receipted",
+          "cape_regional_post_vintage_membership",
+          "childrens_patient_boundary_unresolved",
+          "common_period_not_receipted",
+          "current_roster_membership_unresolved",
+          "dpp_combines_two_different_denominators",
+          "facility_to_system_aggregation_prohibited",
+          "hospital_ipps_scope_not_product_system_scope",
+          "no_system_level_patient_mix_percentage_reported",
+          "organizational_boundary_unresolved",
+          "setting_and_encounter_basis_unresolved",
+          "uncompensated_care_cost_not_patient_mix"
+        ],
+        "candidate_value": null,
+        "desired_definition": "Percent of patients or encounters meeting one preapproved safety-net definition, using a common numerator, denominator, setting, organizational boundary, and aligned period across all six product systems",
+        "fabricated_zero": false,
+        "finding": "The exact AHRQ system row supplies only binary high-DSH/uncompensated-care indicators, while CMS DPP is a hospital IPPS measure formed from two fractions with different denominators. Neither source reports a comparable percentage covering Cape Regional or resolves the Children's boundary.",
+        "identity_row_ref": "row:system:HSI00001079:475",
+        "imputed": false,
+        "input_family": "safety_net_patient_mix_pct",
+        "missingness": "unavailable_public",
+        "source_artifact_refs": [
+          "artifact:ahrq-compendium:system:2023",
+          "artifact:cms-mln:medicare-dsh:2024"
+        ],
+        "source_period": "not_available_on_comparable_basis",
+        "system_slug": "cooper-university-health-care",
+        "unit": "percent"
+      },
+      {
+        "aggregated": false,
+        "approved_for_scale": false,
+        "blocker_codes": [
+          "ahrq_binary_flags_not_patient_mix_percentage",
+          "approved_patient_denominator_not_receipted",
+          "approved_safety_net_numerator_not_receipted",
+          "common_period_not_receipted",
+          "current_roster_membership_unresolved",
+          "dpp_combines_two_different_denominators",
+          "facility_to_system_aggregation_prohibited",
+          "hospital_ipps_scope_not_product_system_scope",
+          "no_system_level_patient_mix_percentage_reported",
+          "organizational_boundary_unresolved",
+          "rehabilitation_patient_scope_unresolved",
+          "setting_and_encounter_basis_unresolved",
+          "system_patient_boundary_unresolved",
+          "uncompensated_care_cost_not_patient_mix"
+        ],
+        "candidate_value": null,
+        "desired_definition": "Percent of patients or encounters meeting one preapproved safety-net definition, using a common numerator, denominator, setting, organizational boundary, and aligned period across all six product systems",
+        "fabricated_zero": false,
+        "finding": "The exact AHRQ system row supplies only binary high-DSH/uncompensated-care indicators, while CMS DPP is a hospital IPPS measure formed from two fractions with different denominators. Neither source resolves a comparable percentage across acute, rehabilitation, and current system patient boundaries.",
+        "identity_row_ref": "row:system:HSI00000608:268",
+        "imputed": false,
+        "input_family": "safety_net_patient_mix_pct",
+        "missingness": "unavailable_public",
+        "source_artifact_refs": [
+          "artifact:ahrq-compendium:system:2023",
+          "artifact:cms-mln:medicare-dsh:2024"
+        ],
+        "source_period": "not_available_on_comparable_basis",
+        "system_slug": "main-line-health",
+        "unit": "percent"
+      }
+    ],
+    "cms_dsh_artifact": {
+      "artifact_id": "artifact:cms-mln:medicare-dsh:2024",
+      "content_length": 951147,
+      "custody_state": "frozen_verified_external",
+      "document_title": "Medicare Disproportionate Share Hospital, MLN006741",
+      "http_receipt": {
+        "content_length": 951147,
+        "content_type": "application/pdf",
+        "final_url": "https://www.cms.gov/outreach-and-education/medicare-learning-network-mln/mlnproducts/downloads/disproportionate_share_hospital.pdf",
+        "last_modified": "Wed, 18 Sep 2024 20:23:56 GMT",
+        "payload_sha256": "sha256:a658fb1ec185cea715dbc175b8e225c39c806da2b353f8f86b617bcd8ebf390a",
+        "receipt_sha256": "sha256:cb06e3e7af69f4f5c5c466ce7fd7d3e316b3bb1a17e8f48334d8fb23da0e817d",
+        "retrieved_at": "2026-07-19T01:15:08Z",
+        "status": 200
+      },
+      "landing_page": "https://www.cms.gov/medicare/payment/prospective-payment-systems/acute-inpatient-pps/disproportionate-share-hospital-dsh",
+      "media_type": "application/pdf",
+      "page_count": 8,
+      "payload_sha256": "sha256:a658fb1ec185cea715dbc175b8e225c39c806da2b353f8f86b617bcd8ebf390a",
+      "rights_basis": "Public CMS fact sheet; linked MLN content disclaimer and registered-mark terms were not independently frozen or reviewed",
+      "rights_classification": "unknown_review_required",
+      "source_name": "Centers for Medicare & Medicaid Services",
+      "source_period": "September 2024 policy fact sheet; FY 2024 DPP rules",
+      "source_url": "https://www.cms.gov/outreach-and-education/medicare-learning-network-mln/mlnproducts/downloads/disproportionate_share_hospital.pdf"
+    },
+    "identity_rows": [
+      {
+        "artifact_ref": "artifact:ahrq-compendium:system:2023",
+        "health_sys_city": "Wilmington",
+        "health_sys_id": "HSI00000218",
+        "health_sys_name": "ChristianaCare",
+        "health_sys_state": "DE",
+        "row_key_column": "health_sys_id",
+        "row_number": 110,
+        "source_row_sha256": "sha256:1b6d38a9266101556969e8f00be474811ffc62c6a94216f763eedb777d6a8d46",
+        "system_slug": "christianacare"
+      },
+      {
+        "artifact_ref": "artifact:ahrq-compendium:system:2023",
+        "health_sys_city": "Philadelphia",
+        "health_sys_id": "HSI00000048",
+        "health_sys_name": "Jefferson Health",
+        "health_sys_state": "PA",
+        "row_key_column": "health_sys_id",
+        "row_number": 18,
+        "source_row_sha256": "sha256:6204ec1b304e076d15c96032dfbe732e172e43e293a45abf5eaf4980d6062b54",
+        "system_slug": "jefferson-health"
+      },
+      {
+        "artifact_ref": "artifact:ahrq-compendium:system:2023",
+        "health_sys_city": "Philadelphia",
+        "health_sys_id": "HSI00001065",
+        "health_sys_name": "Temple University Health System",
+        "health_sys_state": "PA",
+        "row_key_column": "health_sys_id",
+        "row_number": 466,
+        "source_row_sha256": "sha256:4e1ed4e4546f3a6bd74c3e8a9828b13efca87f1b2f2bd72214d63ba9c477e8c4",
+        "system_slug": "temple-health"
+      },
+      {
+        "artifact_ref": "artifact:ahrq-compendium:system:2023",
+        "health_sys_city": "Philadelphia",
+        "health_sys_id": "HSI00000820",
+        "health_sys_name": "University of Pennsylvania Health System",
+        "health_sys_state": "PA",
+        "row_key_column": "health_sys_id",
+        "row_number": 361,
+        "source_row_sha256": "sha256:99ffd315130cc094008d33628785b3e5610aaa476de0f7a9da4ef245ac7e2d27",
+        "system_slug": "penn-medicine"
+      },
+      {
+        "artifact_ref": "artifact:ahrq-compendium:system:2023",
+        "health_sys_city": "Camden",
+        "health_sys_id": "HSI00001079",
+        "health_sys_name": "Cooper University Health Care",
+        "health_sys_state": "NJ",
+        "row_key_column": "health_sys_id",
+        "row_number": 475,
+        "source_row_sha256": "sha256:7246f2affd1de40325df2add2de4428d0ebad4e0370ef819ec12ea73c004cc1f",
+        "system_slug": "cooper-university-health-care"
+      },
+      {
+        "artifact_ref": "artifact:ahrq-compendium:system:2023",
+        "health_sys_city": "Bryn Mawr",
+        "health_sys_id": "HSI00000608",
+        "health_sys_name": "Main Line Health",
+        "health_sys_state": "PA",
+        "row_key_column": "health_sys_id",
+        "row_number": 268,
+        "source_row_sha256": "sha256:af058d7b4dd8ec51d74d75647b58870266c14aaa6f712f827a512c3f207db185",
+        "system_slug": "main-line-health"
+      }
+    ],
+    "input_family": "safety_net_patient_mix_pct",
+    "prior_cycle": {
+      "admission_merge": "46ed66e6-9bcd-595a-a898-4d2c5b48d6b0-ab4f13de",
+      "agents_review_merge": "97b248f2-2e95-c335-db40-48b16c090792-e7d37801",
+      "agents_tracker_merge": "0ead3b38-3102-7ab2-e037-11efae5a30ca-67b620a9",
+      "binding_merge": "d57b1883-0444-75f9-dac8-7eae1ac6806f-da1d9728",
+      "binding_tracker_merge": "3d612de3-c513-7624-e845-771334807e55-0bbf8b83",
+      "cumulative_assurance_sha256": "sha256:0d5e9933a3538c6892f1050b42b5eeb3e56d040aa35af1478b683b207b77ad82",
+      "cumulative_packet_sha256": "sha256:bb41a834d64c52ae65beef077292b6986ff9754bf81441464150b0ea976b30f6",
+      "cumulative_review_sha256": "sha256:004fcb8fbb6ae9a126bebb37dcba58496317fadfe7859df4415df43638808e55",
+      "failure_code": "human_review_required",
+      "input_family": "service_line_count",
+      "repo": "healthcare-toolkit",
+      "reusable_manifest_sha256": "sha256:fd0656221fdb0bddcfcd76f7e7cd55a68e43fc1528d3f89c1860f807d02a96a1",
+      "reusable_manifest_transport_sha256": "sha256:c3a45603378d036747830fd3375093f9cc83cd10f693d08e106ae6793cdaee9e",
+      "terminal_status": "blocked",
+      "tracker_merge": "df429e9a-b47d-6002-5258-942e88df036c-389c8731"
+    },
+    "producer_version": "HDM-jhh",
+    "prohibited_outputs": [
+      "adjudication",
+      "component_score",
+      "projection",
+      "promotion",
+      "recommendation",
+      "scale_score",
+      "sensitivity_result"
+    ],
+    "safety_net_indicator_columns": [
+      "sys_incl_highdpphosp",
+      "sys_highucburden",
+      "sys_incl_highuchosp"
+    ],
+    "schema_version": "ushso.scale-safety-net-patient-mix-acquisition.v5",
+    "source_evaluations": [
+      {
+        "artifact_ref": "artifact:ahrq-compendium:system:2023",
+        "common_numerator_denominator_available": false,
+        "evaluated_scope": "All 639 AHRQ highest-ownership health-system rows, including exact rows for the six frozen product systems",
+        "evaluation_id": "evaluation:ahrq-system-safety-net-schema",
+        "exact_locator": "CSV header, columns sys_incl_highdpphosp, sys_highucburden, and sys_incl_highuchosp; exact header SHA-256 9cc022051910c61c2f66e60b81a450985996cca7fa981c85bd38fa8a9853a79f",
+        "exclusion_reason": "The system file reports only binary high-DSH and uncompensated-care flags; it has no patient-mix numerator, denominator, or percentage and cannot be converted into one.",
+        "query": "inspect the exact 2023 AHRQ system-file schema for a system-level safety_net_patient_mix_pct numerator, denominator, or percentage",
+        "query_sha256": "sha256:d09d0c2906f2d34aa6b00921a06b5611f5655c077c68b2273f0e18594412c79b",
+        "system_level_identity_available": true,
+        "system_patient_mix_percentage_available": false,
+        "usable_for_scale_input": false
+      },
+      {
+        "artifact_ref": "artifact:cms-mln:medicare-dsh:2024",
+        "common_numerator_denominator_available": false,
+        "evaluated_scope": "Medicare DSH hospital-level IPPS disproportionate patient percentage and uncompensated-care payment context",
+        "evaluation_id": "evaluation:cms-medicare-dsh-definition",
+        "exact_locator": "PDF physical pages 3, 5, and 7: DPP two-fraction definition, IPPS patient-day scope, and worked two-denominator example",
+        "exclusion_reason": "CMS DPP is hospital-specific and sums a Medicare/SSI fraction and a Medicaid/non-Medicare fraction with different denominators; its IPPS inpatient scope is not a common full product-system patient denominator.",
+        "query": "evaluate the CMS Medicare DSH disproportionate patient percentage as a common all-patient safety-net patient-mix percentage for the six product systems",
+        "query_sha256": "sha256:3ed0c0d170b36b125e892994c153fce6e7d7c9254e931ee8c14dcdece73d3f9f",
+        "system_level_identity_available": false,
+        "system_patient_mix_percentage_available": false,
+        "usable_for_scale_input": false
+      }
+    ],
+    "systems": [
+      "christianacare",
+      "jefferson-health",
+      "temple-health",
+      "penn-medicine",
+      "cooper-university-health-care",
+      "main-line-health"
+    ],
+    "workflow_id": "scale-safety-net-patient-mix-acquisition.v5"
+  },
+  "properties": {
+    "acquired_at": {
+      "format": "date-time",
+      "title": "Acquired At",
+      "type": "string"
+    },
+    "acquisition_id": {
+      "const": "scale-safety-net-patient-mix-all-six-2026-07-19",
+      "title": "Acquisition Id",
+      "type": "string"
+    },
+    "acquisition_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Acquisition Sha256",
+      "type": "string"
+    },
+    "ahrq_header_columns": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 40,
+      "minItems": 40,
+      "title": "Ahrq Header Columns",
+      "type": "array"
+    },
+    "ahrq_source_artifact": {
+      "$ref": "#/$defs/TabularSourceArtifact"
+    },
+    "approved_denominator_receipt": {
+      "const": null,
+      "default": null,
+      "title": "Approved Denominator Receipt",
+      "type": "null"
+    },
+    "approved_numerator_receipt": {
+      "const": null,
+      "default": null,
+      "title": "Approved Numerator Receipt",
+      "type": "null"
+    },
+    "cache_receipt": {
+      "$ref": "#/$defs/ValidatedCacheReceipt"
+    },
+    "cells": {
+      "items": {
+        "$ref": "#/$defs/SafetyNetMissingCell"
+      },
+      "maxItems": 6,
+      "minItems": 6,
+      "title": "Cells",
+      "type": "array"
+    },
+    "cms_dsh_artifact": {
+      "$ref": "#/$defs/DshDefinitionArtifact"
+    },
+    "identity_rows": {
+      "items": {
+        "$ref": "#/$defs/SafetyNetIdentityRow"
+      },
+      "maxItems": 6,
+      "minItems": 6,
+      "title": "Identity Rows",
+      "type": "array"
+    },
+    "input_family": {
+      "const": "safety_net_patient_mix_pct",
+      "default": "safety_net_patient_mix_pct",
+      "title": "Input Family",
+      "type": "string"
+    },
+    "prior_cycle": {
+      "$ref": "#/$defs/PriorServiceLineToolkitLineage"
+    },
+    "producer_version": {
+      "const": "HDM-jhh",
+      "title": "Producer Version",
+      "type": "string"
+    },
+    "prohibited_outputs": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Prohibited Outputs",
+      "type": "array"
+    },
+    "safety_net_indicator_columns": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 3,
+      "minItems": 3,
+      "title": "Safety Net Indicator Columns",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "ushso.scale-safety-net-patient-mix-acquisition.v5",
+      "default": "ushso.scale-safety-net-patient-mix-acquisition.v5",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source_evaluations": {
+      "items": {
+        "$ref": "#/$defs/SourceEvaluation"
+      },
+      "maxItems": 2,
+      "minItems": 2,
+      "title": "Source Evaluations",
+      "type": "array"
+    },
+    "systems": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Systems",
+      "type": "array"
+    },
+    "workflow_id": {
+      "const": "scale-safety-net-patient-mix-acquisition.v5",
+      "default": "scale-safety-net-patient-mix-acquisition.v5",
+      "title": "Workflow Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "acquisition_id",
+    "systems",
+    "acquired_at",
+    "producer_version",
+    "prior_cycle",
+    "cache_receipt",
+    "ahrq_source_artifact",
+    "cms_dsh_artifact",
+    "ahrq_header_columns",
+    "safety_net_indicator_columns",
+    "identity_rows",
+    "source_evaluations",
+    "cells",
+    "prohibited_outputs",
+    "acquisition_sha256"
+  ],
+  "title": "SafetyNetPatientMixAcquisition",
+  "type": "object"
+}
