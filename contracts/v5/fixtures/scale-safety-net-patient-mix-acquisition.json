@@ -1,7 +1,7 @@
 {
   "acquired_at": "2026-07-19T01:15:08Z",
   "acquisition_id": "scale-safety-net-patient-mix-all-six-2026-07-19",
-  "acquisition_sha256": "sha256:85014d6e615591ced961b321adfb245112d1185abaa68417fe620689499a778d",
+  "acquisition_sha256": "sha256:4d134a8e9d6ebd31b9633e45e0fd7c42647e80f1d739fc0f77e505416bc98e7d",
   "ahrq_header_columns": [
     "health_sys_id",
     "health_sys_name",
@@ -395,13 +395,15 @@
     "binding_merge": "d57b1883-0444-75f9-dac8-7eae1ac6806f-da1d9728",
     "binding_tracker_merge": "3d612de3-c513-7624-e845-771334807e55-0bbf8b83",
     "cumulative_assurance_sha256": "sha256:0d5e9933a3538c6892f1050b42b5eeb3e56d040aa35af1478b683b207b77ad82",
+    "cumulative_assurance_transport_sha256": "sha256:2397b4f3c1d8bbb2dbf940d2b0113269fbbca8c2a163a2c8ec2cc1eac4563d65",
     "cumulative_packet_sha256": "sha256:bb41a834d64c52ae65beef077292b6986ff9754bf81441464150b0ea976b30f6",
     "cumulative_review_sha256": "sha256:004fcb8fbb6ae9a126bebb37dcba58496317fadfe7859df4415df43638808e55",
+    "cumulative_review_transport_sha256": "sha256:d78e39153a1fa7cc26232832b0f6e9d00229e51d7707e7896958acfcd7394920",
     "failure_code": "human_review_required",
     "input_family": "service_line_count",
     "repo": "healthcare-toolkit",
-    "reusable_manifest_sha256": "sha256:fd0656221fdb0bddcfcd76f7e7cd55a68e43fc1528d3f89c1860f807d02a96a1",
-    "reusable_manifest_transport_sha256": "sha256:c3a45603378d036747830fd3375093f9cc83cd10f693d08e106ae6793cdaee9e",
+    "reusable_manifest_sha256": "sha256:71713d716b2fc59379f6fe0e7ca1c80ca73bdb54eca93e723076502dd216978e",
+    "reusable_manifest_transport_sha256": "sha256:1d7132ac0814cbfc629f007b06870740c1591c4ee16a715a69b9ba6fb8dfa7f9",
     "terminal_status": "blocked",
     "tracker_merge": "df429e9a-b47d-6002-5258-942e88df036c-389c8731"
   },

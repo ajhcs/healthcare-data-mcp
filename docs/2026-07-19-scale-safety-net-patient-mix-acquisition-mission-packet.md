@@ -35,7 +35,14 @@ assurance, and manifest semantic roots are respectively
 `sha256:004fcb8fbb6ae9a126bebb37dcba58496317fadfe7859df4415df43638808e55`,
 `sha256:0d5e9933a3538c6892f1050b42b5eeb3e56d040aa35af1478b683b207b77ad82`,
 and
-`sha256:fd0656221fdb0bddcfcd76f7e7cd55a68e43fc1528d3f89c1860f807d02a96a1`.
+`sha256:71713d716b2fc59379f6fe0e7ca1c80ca73bdb54eca93e723076502dd216978e`.
+The exact-merge review, assurance, and manifest transports are respectively
+`sha256:d78e39153a1fa7cc26232832b0f6e9d00229e51d7707e7896958acfcd7394920`,
+`sha256:2397b4f3c1d8bbb2dbf940d2b0113269fbbca8c2a163a2c8ec2cc1eac4563d65`,
+and
+`sha256:1d7132ac0814cbfc629f007b06870740c1591c4ee16a715a69b9ba6fb8dfa7f9`.
+These were rebuilt from clean exports at the exact admission merge; earlier
+pre-correction implementation-tree manifest hashes are not used.
 It remains `blocked` / `human_review_required`.
 
 ## Primary-source evaluation and custody
@@ -108,9 +115,9 @@ and cannot promote missingness.
 Pre-merge identities are:
 
 - acquisition semantic
-  `sha256:85014d6e615591ced961b321adfb245112d1185abaa68417fe620689499a778d`;
+  `sha256:4d134a8e9d6ebd31b9633e45e0fd7c42647e80f1d739fc0f77e505416bc98e7d`;
 - acquisition fixture bytes
-  `76a5d15f7688676f9e2606cc10725d3c5e51e219d1c300df74c5476a30431bd5`;
+  `ea349d7b65bc0c44912b2dccecf87fed9cb173164a40dbfccd7b6351f1804288`;
 - normalized evidence bytes
   `fd10799454ff317ff8496888749a234a7934326016f3ddad814e60e4055fe537`;
 - normalized evidence canonical hash
@@ -118,7 +125,7 @@ Pre-merge identities are:
 - public bundle semantic self-hash
   `sha256:762b4096f65ee5aa415224944692bff421fc15e7840792e2bf5ed9002ac707ec`;
 - generated v5 schema bytes
-  `bb2c588b72e4760c76c2a512195460b03262aa2b2854e4fad6d7b54861087843`.
+  `30b8ca31a382991e54929df700ed092aab751d3c9a93149594331323c4dc5898`.
 
 The checked-in evidence input retains a forty-zero producer placeholder. After
 merge, the handoff owner must rebuild from the exact clean merge commit and

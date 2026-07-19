@@ -125,8 +125,32 @@ def test_prior_service_line_lineage_is_exact_and_no_go() -> None:
     assert prior.admission_merge.replace("-", "") == "46ed66e69bcd595aa8984d2c5b48d6b0ab4f13de"
     assert prior.tracker_merge.replace("-", "") == "df429e9ab47d60025258942e88df036c389c8731"
     assert prior.cumulative_packet_sha256.endswith("6ff9754bf81441464150b0ea976b30f6")
+    assert prior.cumulative_review_transport_sha256 == "sha256:d78e39153a1fa7cc26232832b0f6e9d00229e51d7707e7896958acfcd7394920"
+    assert prior.cumulative_assurance_transport_sha256 == "sha256:2397b4f3c1d8bbb2dbf940d2b0113269fbbca8c2a163a2c8ec2cc1eac4563d65"
+    assert prior.reusable_manifest_sha256 == "sha256:71713d716b2fc59379f6fe0e7ca1c80ca73bdb54eca93e723076502dd216978e"
+    assert prior.reusable_manifest_transport_sha256 == "sha256:1d7132ac0814cbfc629f007b06870740c1591c4ee16a715a69b9ba6fb8dfa7f9"
     assert prior.terminal_status == "blocked"
     assert prior.failure_code == "human_review_required"
+
+
+@pytest.mark.parametrize(
+    "field",
+    [
+        "admission_merge",
+        "cumulative_review_sha256",
+        "cumulative_review_transport_sha256",
+        "cumulative_assurance_sha256",
+        "cumulative_assurance_transport_sha256",
+        "reusable_manifest_sha256",
+        "reusable_manifest_transport_sha256",
+    ],
+)
+def test_rejects_prior_service_line_commit_and_artifact_tuple_drift(field: str) -> None:
+    payload = _checked_in().model_dump(mode="json")
+    prior = dict(payload["prior_cycle"])
+    prior[field] = "sha256:" + "a" * 64 if field.endswith("sha256") else "a" * 40
+    with pytest.raises(ValidationError):
+        build_safety_net_patient_mix_acquisition({**payload, "prior_cycle": prior})
 
 
 @pytest.mark.parametrize(
@@ -311,6 +335,7 @@ def test_json_schema_rejects_runtime_immutable_mutations() -> None:
         {**payload, "acquired_at": "2026-07-19T01:15:08+00:00"},
         {**payload, "systems": list(reversed(payload["systems"]))},
         {**payload, "safety_net_indicator_columns": ["fabricated"] * 3},
+        {**payload, "source_evaluations": list(reversed(payload["source_evaluations"]))},
         {**payload, "prohibited_outputs": payload["prohibited_outputs"][:-1]},
     ]
     for mutated in mutations:

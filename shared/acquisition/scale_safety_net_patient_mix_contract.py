@@ -50,9 +50,11 @@ class PriorServiceLineToolkitLineage(StrictModel):
     tracker_merge: Literal["df429e9a-b47d-6002-5258-942e88df036c-389c8731"]
     cumulative_packet_sha256: Literal["sha256:bb41a834d64c52ae65beef077292b6986ff9754bf81441464150b0ea976b30f6"]
     cumulative_review_sha256: Literal["sha256:004fcb8fbb6ae9a126bebb37dcba58496317fadfe7859df4415df43638808e55"]
+    cumulative_review_transport_sha256: Literal["sha256:d78e39153a1fa7cc26232832b0f6e9d00229e51d7707e7896958acfcd7394920"]
     cumulative_assurance_sha256: Literal["sha256:0d5e9933a3538c6892f1050b42b5eeb3e56d040aa35af1478b683b207b77ad82"]
-    reusable_manifest_sha256: Literal["sha256:fd0656221fdb0bddcfcd76f7e7cd55a68e43fc1528d3f89c1860f807d02a96a1"]
-    reusable_manifest_transport_sha256: Literal["sha256:c3a45603378d036747830fd3375093f9cc83cd10f693d08e106ae6793cdaee9e"]
+    cumulative_assurance_transport_sha256: Literal["sha256:2397b4f3c1d8bbb2dbf940d2b0113269fbbca8c2a163a2c8ec2cc1eac4563d65"]
+    reusable_manifest_sha256: Literal["sha256:71713d716b2fc59379f6fe0e7ca1c80ca73bdb54eca93e723076502dd216978e"]
+    reusable_manifest_transport_sha256: Literal["sha256:1d7132ac0814cbfc629f007b06870740c1591c4ee16a715a69b9ba6fb8dfa7f9"]
     terminal_status: Literal["blocked"] = "blocked"
     failure_code: Literal["human_review_required"] = "human_review_required"
 
@@ -68,6 +70,17 @@ class PriorServiceLineToolkitLineage(StrictModel):
         }
         if any(getattr(self, key).replace("-", "") != value for key, value in expected.items()):
             raise ValueError("prior service-line commit lineage drift")
+        exact_merge_artifacts = {
+            "cumulative_packet_sha256": "sha256:bb41a834d64c52ae65beef077292b6986ff9754bf81441464150b0ea976b30f6",
+            "cumulative_review_sha256": "sha256:004fcb8fbb6ae9a126bebb37dcba58496317fadfe7859df4415df43638808e55",
+            "cumulative_review_transport_sha256": "sha256:d78e39153a1fa7cc26232832b0f6e9d00229e51d7707e7896958acfcd7394920",
+            "cumulative_assurance_sha256": "sha256:0d5e9933a3538c6892f1050b42b5eeb3e56d040aa35af1478b683b207b77ad82",
+            "cumulative_assurance_transport_sha256": "sha256:2397b4f3c1d8bbb2dbf940d2b0113269fbbca8c2a163a2c8ec2cc1eac4563d65",
+            "reusable_manifest_sha256": "sha256:71713d716b2fc59379f6fe0e7ca1c80ca73bdb54eca93e723076502dd216978e",
+            "reusable_manifest_transport_sha256": "sha256:1d7132ac0814cbfc629f007b06870740c1591c4ee16a715a69b9ba6fb8dfa7f9",
+        }
+        if any(getattr(self, key) != value for key, value in exact_merge_artifacts.items()):
+            raise ValueError("prior service-line merged artifact tuple drift")
         return self
 
 
@@ -227,8 +240,8 @@ class SafetyNetPatientMixAcquisition(StrictModel):
                 CMS_LOCATOR, CMS_SCOPE, CMS_EXCLUSION,
             ),
         }
-        if {item.evaluation_id for item in self.source_evaluations} != set(expected_evaluations):
-            raise ValueError("source evaluation set drift")
+        if [item.evaluation_id for item in self.source_evaluations] != list(expected_evaluations):
+            raise ValueError("source evaluation order or set drift")
         for item in self.source_evaluations:
             expected = expected_evaluations[item.evaluation_id]
             actual = (item.artifact_ref, item.query, item.system_level_identity_available, item.exact_locator, item.evaluated_scope, item.exclusion_reason)
