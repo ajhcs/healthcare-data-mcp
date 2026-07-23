@@ -64,6 +64,7 @@ class CacheDatasetSpec:
     expected_grain: str = ""
     primary_keys: tuple[str, ...] = ()
     join_keys: tuple[str, ...] = ()
+    artifact_identity_fields: dict[str, tuple[str, ...]] = field(default_factory=dict)
     required_columns: tuple[str, ...] = ()
     recommended_indexes: tuple[str, ...] = ()
     column_aliases: dict[str, tuple[str, ...]] = field(default_factory=dict)
@@ -186,6 +187,11 @@ def dataset_specs() -> dict[str, CacheDatasetSpec]:
             expected_grain=str(dataset.get("grain") or ""),
             primary_keys=tuple(str(field) for field in schema.get("identity_fields", ())),
             join_keys=tuple(str(field) for field in schema.get("join_keys", ())),
+            artifact_identity_fields={
+                str(artifact): tuple(str(field) for field in fields)
+                for artifact, fields in schema.get("artifact_identity_fields", {}).items()
+                if isinstance(fields, (list, tuple))
+            },
             required_columns=tuple(str(field) for field in schema.get("required_fields", ())),
             recommended_indexes=tuple(str(field) for field in schema.get("join_keys", ())),
             column_aliases={
@@ -1587,7 +1593,9 @@ def _missing_required_identifier_groups(
     relative_path: str = "",
 ) -> list[str]:
     required_groups: dict[str, set[str]] = {}
-    for column_name in (*spec.primary_keys, *spec.join_keys):
+    artifact_fields = spec.artifact_identity_fields.get(relative_path, ()) if relative_path else ()
+    required_fields = artifact_fields or (*spec.primary_keys, *spec.join_keys)
+    for column_name in required_fields:
         normalized = _normalize_column(column_name)
         group = _IDENTIFIER_GROUPS.get(normalized)
         if group:

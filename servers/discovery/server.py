@@ -123,6 +123,10 @@ DATASET_CATALOG: dict[str, dict[str, Any]] = {
         ],
         "schema": {
             "identity_fields": ["health_sys_id", "health_sys_name", "ccn"],
+            "artifact_identity_fields": {
+                "ahrq_system_2023.csv": ["health_sys_id"],
+                "ahrq_hospital_linkage_2023.csv": ["health_sys_id", "ccn"],
+            },
             "common_fields": [
                 "health_sys_city",
                 "health_sys_state",
