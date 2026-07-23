@@ -188,6 +188,38 @@ def test_multi_artifact_dataset_is_partial_until_all_required_artifacts_are_prom
     assert status["report_eligible"] is False
 
 
+def test_ahrq_artifacts_validate_against_artifact_specific_identity(tmp_path: Path) -> None:
+    system_path = tmp_path / "bronze" / "ahrq" / "system.csv"
+    linkage_path = tmp_path / "bronze" / "ahrq" / "linkage.csv"
+    system_path.parent.mkdir(parents=True)
+    system_path.write_text(
+        "health_sys_id,health_sys_name,health_sys_city,health_sys_state,hosp_cnt,sys_beds\n"
+        "1001,Example Health,Philadelphia,PA,2,500\n",
+        encoding="utf-8",
+    )
+    linkage_path.write_text(
+        "compendium_hospital_id,ccn,hospital_name,health_sys_id,health_sys_name,hos_beds\n"
+        "H1,390001,Example Hospital,1001,Example Health,250\n",
+        encoding="utf-8",
+    )
+
+    system_validation = core.validate_cache_source(
+        "ahrq_health_system_compendium",
+        cache_root=tmp_path,
+        staged_path=system_path,
+        relative_path="ahrq_system_2023.csv",
+    )["validation"]
+    linkage_validation = core.validate_cache_source(
+        "ahrq_health_system_compendium",
+        cache_root=tmp_path,
+        staged_path=linkage_path,
+        relative_path="ahrq_hospital_linkage_2023.csv",
+    )["validation"]
+
+    assert system_validation["status"] == "pass"
+    assert linkage_validation["status"] == "pass"
+
+
 def test_multi_artifact_dataset_requires_all_artifacts_for_ready(tmp_path: Path) -> None:
     spec = core.get_dataset_spec("cms_hospital_quality")
     staged_artifacts = []
