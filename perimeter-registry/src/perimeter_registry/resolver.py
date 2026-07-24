@@ -150,9 +150,20 @@ class DeterministicResolver:
         )
 
     def _form_990(self, query: str, as_of: str | None) -> Resolution:
+        ein_matches = set(re.findall(r"(?<!\d)\d{2}-\d{7}(?!\d)", query))
+        year_matches = {
+            int(value) for value in re.findall(r"(?<!\d)(?:19\d{2}|20\d{2}|2100)(?!\d)", query)
+        }
+        if len(ein_matches) > 1 or len(year_matches) > 1:
+            return Resolution(
+                status="needs_clarification",
+                question="Which one EIN and tax year?",
+                options=self._form_990_options(),
+                flags=("Form 990 requires exactly one EIN and tax-period year",),
+                as_of=as_of,
+            )
         entity = self._form_990_entity(query)
-        year_match = re.search(r"(?<!\d)((?:19|20)\d{2})(?!\d)", query)
-        tax_period_year = int(year_match.group(1)) if year_match else None
+        tax_period_year = next(iter(year_matches), None)
         if entity is not None and tax_period_year is not None:
             return Resolution(
                 status="resolved",
@@ -182,15 +193,18 @@ class DeterministicResolver:
         return Resolution(
             status="needs_clarification",
             question="Which legal filer and tax year?",
-            options=tuple(
-                ScopeOption(
-                    scope_id=f"form990:{candidate.entity_id}",
-                    label=f"{candidate.name} ({candidate.identifier_pairs()[0][1]})",
-                )
-                for candidate in self._store.entities
-            ),
+            options=self._form_990_options(),
             flags=("Form 990 requires one exact EIN and tax-period year",),
             as_of=as_of,
+        )
+
+    def _form_990_options(self) -> tuple[ScopeOption, ...]:
+        return tuple(
+            ScopeOption(
+                scope_id=f"form990:{candidate.entity_id}",
+                label=f"{candidate.name} ({candidate.identifier_pairs()[0][1]})",
+            )
+            for candidate in self._store.entities
         )
 
     def _form_990_entity(self, query: str) -> EntityRecord | None:
