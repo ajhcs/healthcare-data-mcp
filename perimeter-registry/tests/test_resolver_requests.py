@@ -93,3 +93,18 @@ def test_pre_august_debt_does_not_expose_2025_lvhn_membership() -> None:
     assert result.entity_ids == ()
     assert "LVHN" in result.options[0].excludes
     assert result.options[0].amount_usd is None
+
+
+def test_form_990_multiple_eins_or_years_require_clarification() -> None:
+    result = Registry.jefferson().resolve("Form 990 23-2829095 23-1352651 2022 2023")
+
+    assert result.status == "needs_clarification"
+    assert result.question == "Which one EIN and tax year?"
+    assert result.entity_ids == ()
+
+
+def test_form_990_year_2100_matches_adapter_contract() -> None:
+    result = Registry.jefferson().resolve("Form 990 23-2829095 2100")
+
+    assert result.status == "resolved"
+    assert result.tax_period_year == 2100
