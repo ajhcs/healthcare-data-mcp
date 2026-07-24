@@ -82,4 +82,4 @@ First rerun one fresh repetition per arm on six newly frozen adversarial questio
 
 ## Publication status
 
-Focused branch: `codex/perimeter-registry-benchmark`. PR and merge status are updated after review and CI.
+Focused branch: `codex/perimeter-registry-benchmark`; focused PR [#58](https://github.com/ajhcs/healthcare-data-mcp/pull/58) targets `codex/perimeter-registry`. Merge is gated on its checks.
