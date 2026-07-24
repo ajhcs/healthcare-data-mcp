@@ -353,7 +353,7 @@ class DeterministicResolver:
         for evidence_id in evidence_ids:
             observation = self._store.evidence_observation(evidence_id)
             limitation = normalize_text(observation.limitation or "")
-            if "current continuity" in limitation and "not" in limitation:
+            if "current continuity is not" in limitation:
                 flags.append(
                     f"identifier evidence is dated to {observation.source_period}; "
                     "current continuity is not reverified"
