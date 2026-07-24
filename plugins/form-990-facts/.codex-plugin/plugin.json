@@ -1,0 +1,22 @@
+{
+  "name": "form-990-facts",
+  "version": "0.1.0",
+  "description": "Exact pre-ingested IRS Form 990 facts with field-level XML provenance.",
+  "author": {
+    "name": "Healthcare Data MCP"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Form 990 Exact Facts",
+    "shortDescription": "Exact IRS 990 facts with XML provenance.",
+    "longDescription": "Queries a known legal-filer EIN and tax-period year against Plumbob's LAN-only, read-only official IRS e-file XML fact store.",
+    "developerName": "Healthcare Data MCP",
+    "category": "Productivity",
+    "capabilities": [
+      "Exact Form 990 fact retrieval",
+      "Field-level IRS XML provenance"
+    ],
+    "defaultPrompt": "Use $form-990-facts to answer a known-EIN and tax-year Form 990 question."
+  },
+  "mcpServers": "./.mcp.json"
+}

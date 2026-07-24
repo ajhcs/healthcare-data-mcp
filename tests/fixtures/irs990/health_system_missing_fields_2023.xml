@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Return xmlns="http://www.irs.gov/efile" returnVersion="2023v5.1">
+  <ReturnHeader>
+    <TaxPeriodEndDate>2023-06-30</TaxPeriodEndDate>
+    <ReturnType>990</ReturnType>
+    <Filer>
+      <EIN>251423657</EIN>
+      <BusinessName>
+        <BusinessNameLine1>UPMC</BusinessNameLine1>
+      </BusinessName>
+    </Filer>
+  </ReturnHeader>
+  <ReturnData>
+    <IRS990>
+      <TotalRevenueCurrentYear>28000000000</TotalRevenueCurrentYear>
+      <TotalExpensesCurrentYear>27500000000</TotalExpensesCurrentYear>
+    </IRS990>
+  </ReturnData>
+</Return>
