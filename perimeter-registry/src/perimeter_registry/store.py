@@ -53,6 +53,7 @@ class RegistryStore:
     def __init__(self, raw: Mapping[str, Any]) -> None:
         self._raw = MappingProxyType(dict(raw))
         self._validate()
+        self.fixture_id = raw["fixture_id"]
         self.systems = tuple(SystemConcept.from_raw(item) for item in raw["systems"])
         self.entities = tuple(EntityRecord.from_raw(item) for item in raw["entities"])
         self.relationships = tuple(
@@ -71,7 +72,15 @@ class RegistryStore:
 
     @classmethod
     def jefferson(cls) -> RegistryStore:
-        fixture = files("perimeter_registry.data").joinpath("jefferson.json")
+        return cls.from_fixture("jefferson")
+
+    @classmethod
+    def from_fixture(cls, fixture_name: str) -> RegistryStore:
+        if not fixture_name or any(
+            character not in "abcdefghijklmnopqrstuvwxyz_-" for character in fixture_name
+        ):
+            raise RegistryDataError("invalid fixture_name")
+        fixture = files("perimeter_registry.data").joinpath(f"{fixture_name}.json")
         with fixture.open(encoding="utf-8") as handle:
             return cls(json.load(handle))
 

@@ -1,0 +1,138 @@
+{
+  "version": 1,
+  "frozen_at": "2026-07-24",
+  "questions": [
+    {
+      "id": "J1",
+      "system": "Jefferson Health",
+      "fixture": "jefferson",
+      "question": "For an enterprise analysis, what does Jefferson include? Is Jefferson Health the same as Thomas Jefferson University Hospitals?",
+      "tags": [
+        "natural_brand",
+        "enterprise_scope",
+        "legal_entity_distinction"
+      ]
+    },
+    {
+      "id": "J2",
+      "system": "Jefferson Health",
+      "fixture": "jefferson",
+      "question": "Which EIN should I use for a 2023 Form 990 request about Jefferson Health Plans?",
+      "tags": [
+        "health_plan",
+        "exact_ein",
+        "tax_period"
+      ]
+    },
+    {
+      "id": "J3",
+      "system": "Jefferson Health",
+      "fixture": "jefferson",
+      "question": "As of 2024-07-31, was LVHN part of Jefferson?",
+      "tags": [
+        "dated_membership",
+        "merger"
+      ]
+    },
+    {
+      "id": "J4",
+      "system": "Jefferson Health",
+      "fixture": "jefferson",
+      "question": "For Thomas Jefferson University Hospital, which exact EIN and CCN identify the hospital operator and facility?",
+      "tags": [
+        "facility",
+        "exact_ein",
+        "exact_ccn"
+      ]
+    },
+    {
+      "id": "P1",
+      "system": "Penn Medicine / UPHS",
+      "fixture": "penn",
+      "question": "For a Penn Medicine analysis, does that label mean UPHS only or the whole University?",
+      "tags": [
+        "natural_brand",
+        "university",
+        "scope_ambiguity"
+      ]
+    },
+    {
+      "id": "P2",
+      "system": "Penn Medicine / UPHS",
+      "fixture": "penn",
+      "question": "What CCN should I use for Hospital of the University of Pennsylvania, and should I treat it as a separate Penn Medicine enterprise?",
+      "tags": [
+        "facility",
+        "exact_ccn",
+        "enterprise_distinction"
+      ]
+    },
+    {
+      "id": "P3",
+      "system": "Penn Medicine / UPHS",
+      "fixture": "penn",
+      "question": "As of 2025-03-31, was Doylestown Health part of UPHS?",
+      "tags": [
+        "dated_membership",
+        "merger"
+      ]
+    },
+    {
+      "id": "P4",
+      "system": "Penn Medicine / UPHS",
+      "fixture": "penn",
+      "question": "What is Penn Medicine's EIN?",
+      "tags": [
+        "natural_brand",
+        "exact_ein",
+        "accepted_clarification"
+      ]
+    },
+    {
+      "id": "U1",
+      "system": "UPMC",
+      "fixture": "upmc",
+      "question": "For UPMC as a whole, should I include hospitals, Insurance Services, and the University of Pittsburgh? State the selected perimeter.",
+      "tags": [
+        "natural_brand",
+        "provider_insurer",
+        "university",
+        "enterprise_scope"
+      ]
+    },
+    {
+      "id": "U2",
+      "system": "UPMC",
+      "fixture": "upmc",
+      "question": "What EIN should I use for UPMC Health Plan?",
+      "tags": [
+        "health_plan",
+        "exact_ein",
+        "accepted_clarification"
+      ]
+    },
+    {
+      "id": "U3",
+      "system": "UPMC",
+      "fixture": "upmc",
+      "question": "I want UPMC's parent-organization Form 990 for FY2023. Which exact EIN should I use?",
+      "tags": [
+        "parent_filer",
+        "exact_ein",
+        "tax_period"
+      ]
+    },
+    {
+      "id": "U4",
+      "system": "UPMC",
+      "fixture": "upmc",
+      "question": "Are UPMC Presbyterian and UPMC Shadyside one facility? Which EIN and CCN apply to the combined record?",
+      "tags": [
+        "facility",
+        "campus_distinction",
+        "exact_ein",
+        "exact_ccn"
+      ]
+    }
+  ]
+}

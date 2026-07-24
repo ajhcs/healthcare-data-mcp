@@ -1,0 +1,179 @@
+{
+  "arm": "manual_style_source_research_baseline",
+  "repetition": 2,
+  "order": [
+    "J1",
+    "P1",
+    "U1",
+    "J2",
+    "P2",
+    "U2",
+    "J3",
+    "P3",
+    "U3",
+    "J4",
+    "P4",
+    "U4"
+  ],
+  "started_at_utc": "2026-07-24T19:21:50.222712199Z",
+  "ended_at_utc": "2026-07-24T19:28:52.408703607Z",
+  "wall_latency_seconds": 422.185991408,
+  "input_tokens": null,
+  "input_token_note": "Input-token usage is unavailable from the agent API.",
+  "tool_call_counting": {
+    "rule": "Each web research-tool invocation was counted as one, even when it contained batched searches, opens, or clicks. Failed research invocations were also counted. Local-file reads were counted per successful command invocation reading the authorized files."
+  },
+  "local_file_read_calls": 1,
+  "research_tool_calls": 24,
+  "answers": [
+    {
+      "question_id": "J1",
+      "started_at_utc": "2026-07-24T19:22:12.485602163Z",
+      "ended_at_utc": "2026-07-24T19:22:24.660963930Z",
+      "answer": "Selected scope/perimeter: the Jefferson enterprise, rather than only its clinical arm or one hospital operator. On that perimeter, Jefferson includes Thomas Jefferson University, Jefferson Health, and Jefferson Health Plans. Jefferson Health is not the same entity or perimeter as Thomas Jefferson University Hospitals, Inc. (TJUH): Jefferson Health is the broader clinical health system, while TJUH is a hospital-operating organization within it whose facilities include Thomas Jefferson University Hospital, Jefferson Hospital for Neuroscience, and Jefferson Methodist Hospital. Material caveats/ambiguity: \u201cJefferson\u201d is used variously for the enterprise, Jefferson Health, and individual facilities; the intended analytic perimeter should therefore be stated explicitly, and legal-entity or facility analysis should not aggregate every Jefferson component automatically.",
+      "primary_source_urls": [
+        "https://www.jefferson.edu/about.html",
+        "https://www.jeffersonhealth.org/locations/thomas-jefferson-university-hospital/about-us"
+      ],
+      "latency_seconds": 12.175361767,
+      "research_tool_calls": 1
+    },
+    {
+      "question_id": "P1",
+      "started_at_utc": "2026-07-24T19:22:38.479625216Z",
+      "ended_at_utc": "2026-07-24T19:22:49.822102639Z",
+      "answer": "Selected scope/perimeter: the Penn Medicine academic-medical-center umbrella. Penn Medicine means the University of Pennsylvania Health System (UPHS) plus Penn\u2019s Perelman School of Medicine. It therefore means more than UPHS alone but less than the whole University of Pennsylvania; unrelated University schools and operations are outside this perimeter. Material caveats/ambiguity: UPHS-only clinical, financial, or facility work should be labeled UPHS, while Penn Medicine includes the medical school. Penn Medicine remains governed within the University, but that does not make the label synonymous with the entire University.",
+      "primary_source_urls": [
+        "https://www.pennmedicine.org/about",
+        "https://secretary.upenn.edu/trustees-governance/penn-medicine-board",
+        "https://web-standards.pennmedicine.org/content-guidelines/the-penn-medicine-style"
+      ],
+      "latency_seconds": 11.342477423,
+      "research_tool_calls": 1
+    },
+    {
+      "question_id": "U1",
+      "started_at_utc": "2026-07-24T19:22:56.382845020Z",
+      "ended_at_utc": "2026-07-24T19:23:08.931646402Z",
+      "answer": "Selected scope/perimeter: the consolidated UPMC provider-insurer enterprise. Include UPMC\u2019s hospitals and other Health Services operations, Insurance Services, and UPMC Enterprises. Exclude the University of Pittsburgh itself. UPMC describes itself as a health care provider and insurer affiliated with the University, while the University\u2019s audited statements describe UPMC as a separately incorporated related entity. Material caveats/ambiguity: the University and UPMC have extensive academic, research, governance, faculty, and financial relationships, but affiliation is not enterprise membership. University of Pittsburgh Physicians is a UPMC-related clinical entity and should not be confused with the University itself.",
+      "primary_source_urls": [
+        "https://www.upmc.com/about/why-upmc",
+        "https://enterprises.upmc.com/about/",
+        "https://www.controller.pitt.edu/wp-content/uploads/FY19-Audit-UG.pdf"
+      ],
+      "latency_seconds": 12.548801382,
+      "research_tool_calls": 1
+    },
+    {
+      "question_id": "J2",
+      "started_at_utc": "2026-07-24T19:23:16.987339257Z",
+      "ended_at_utc": "2026-07-24T19:23:54.123120852Z",
+      "answer": "Selected scope/perimeter: the legal Form 990 filer behind the Jefferson Health Plans name for the tax year ending December 31, 2023. Use Health Partners Plans, Inc., EIN 23-2379751. Material caveats/ambiguity: Jefferson Health Plans was a marketing name introduced for selected Health Partners Plans products in July 2023, not a newly created filer with a different EIN. In 2023, Medicaid and CHIP products still retained the Health Partners Plans names. A request should specify tax year 2023 rather than filing year, because the 2023 return was filed in 2024.",
+      "primary_source_urls": [
+        "https://apps.irs.gov/pub/epostcard/990/xml/2024/202403139349303295_public.xml",
+        "https://www.jeffersonhealthplans.com/providers/provider-news/branding-update-october-2024/",
+        "https://www.jeffersonhealthplans.com/home/about-us/terms-of-service/"
+      ],
+      "latency_seconds": 37.135781595,
+      "research_tool_calls": 5
+    },
+    {
+      "question_id": "P2",
+      "started_at_utc": "2026-07-24T19:24:05.580350483Z",
+      "ended_at_utc": "2026-07-24T19:24:21.730678572Z",
+      "answer": "Selected scope/perimeter: the Medicare-certified Hospital of the University of Pennsylvania facility record. Use CCN 390111. Do not treat HUP as a separate Penn Medicine enterprise; it is a hospital facility within UPHS, which is a constituent of Penn Medicine. Material caveats/ambiguity: a CCN identifies a Medicare-certified provider record, not the entire UPHS enterprise or every Penn Medicine location. Associated campuses and provider-based locations may report through the HUP record, so physical-site analysis may require a finer campus perimeter.",
+      "primary_source_urls": [
+        "https://data.cms.gov/tools/medicare-inpatient-hospital-look-up-tool/provider/390111",
+        "https://www.cms.gov/medicare/medicare-general-information/medicareapprovedfacilitie/carotid-artery-stenting-facilities-items/hospital-of-the-university-of-pennsylvania",
+        "https://www.pennmedicine.org/about"
+      ],
+      "latency_seconds": 16.150328089,
+      "research_tool_calls": 2
+    },
+    {
+      "question_id": "U2",
+      "started_at_utc": "2026-07-24T19:24:30.359435538Z",
+      "ended_at_utc": "2026-07-24T19:24:48.485014831Z",
+      "answer": "Selected scope/perimeter: the specifically named legal entity UPMC Health Plan, Inc. Its EIN is 23-2813536. Material caveats/ambiguity: \u201cUPMC Health Plan\u201d is also a marketing umbrella for multiple licensed insurance and administration companies, including UPMC Health Network, UPMC Health Options, UPMC Health Coverage, UPMC Health Benefits, UPMC for You, and others. Consequently, the EIN for a particular insurance product may differ; 23-2813536 is correct only when the intended entity is UPMC Health Plan, Inc.",
+      "primary_source_urls": [
+        "https://dam.upmc.com/-/media/upmc/about/finances/irs-filings/documents/upmc-fy22-parent-media.pdf",
+        "https://www.upmchealthplan.com/marketplace/find_insurance.aspx",
+        "https://apps.irs.gov/pub/epostcard/cor/240806023_201806_990_2019081216561832.pdf"
+      ],
+      "latency_seconds": 18.125579293,
+      "research_tool_calls": 2
+    },
+    {
+      "question_id": "J3",
+      "started_at_utc": "2026-07-24T19:24:56.578154777Z",
+      "ended_at_utc": "2026-07-24T19:25:07.637862304Z",
+      "answer": "Selected scope/perimeter: legal/system membership as of the end of July 31, 2024. No\u2014LVHN was not yet part of Jefferson on that date. Jefferson and LVHN announced that the transaction closed and made them one health system on August 1, 2024. Material caveats/ambiguity: the organizations had already signed a definitive agreement and were preparing to combine, but agreement, regulatory review, and integration planning did not constitute completed membership before closing.",
+      "primary_source_urls": [
+        "https://www.jefferson.edu/about/news-and-events/2024/08/jefferson-lehigh-valley-health-network-complete-combination.html"
+      ],
+      "latency_seconds": 11.059707527,
+      "research_tool_calls": 1
+    },
+    {
+      "question_id": "P3",
+      "started_at_utc": "2026-07-24T19:25:17.773666640Z",
+      "ended_at_utc": "2026-07-24T19:25:29.084167172Z",
+      "answer": "Selected scope/perimeter: formal UPHS system membership as of the end of March 31, 2025. No\u2014Doylestown Health officially joined UPHS on April 1, 2025, one day later. Material caveats/ambiguity: Doylestown had earlier clinical collaborations with Penn Medicine and had signed an integration agreement, but those relationships did not make it a UPHS member by March 31.",
+      "primary_source_urls": [
+        "https://www.pennmedicine.org/news/doylestown-health-joins-university-of-pennsylvania-health-system"
+      ],
+      "latency_seconds": 11.310500532,
+      "research_tool_calls": 1
+    },
+    {
+      "question_id": "U3",
+      "started_at_utc": "2026-07-24T19:25:43.010546680Z",
+      "ended_at_utc": "2026-07-24T19:26:01.902535058Z",
+      "answer": "Selected scope/perimeter: UPMC\u2019s separate parent-organization Form 990 for the fiscal year ended June 30, 2023. Use EIN 25-1423657. Material caveats/ambiguity: UPMC publishes both a parent return and a group/consolidated return. This answer selects the parent return requested, not the group return and not a calendar-year financial report. \u201cFY2023\u201d here means the fiscal year ending June 30, 2023.",
+      "primary_source_urls": [
+        "https://www.upmc.com/about/finances/irs-filings/filings",
+        "https://dam.upmc.com/-/media/upmc/about/finances/irs-filings/documents/upmc-fy23-form-990--media.pdf?hash=3D46DD159AA44D120CFA68BE8A674ECB&rev=edf8fe581a5c47a484e8e6f942352e6b"
+      ],
+      "latency_seconds": 18.891988378,
+      "research_tool_calls": 3
+    },
+    {
+      "question_id": "J4",
+      "started_at_utc": "2026-07-24T19:26:11.199505514Z",
+      "ended_at_utc": "2026-07-24T19:26:35.494095252Z",
+      "answer": "Selected scope/perimeter: the hospital operator Thomas Jefferson University Hospitals, Inc. and the Medicare-certified Thomas Jefferson University Hospital facility at 111 South 11th Street. The operator EIN is 23-2829095, and the facility CCN is 390174. Material caveats/ambiguity: the EIN identifies the hospital-operating legal organization and may encompass more than the single named facility, while the CCN identifies the Medicare provider record. Do not substitute Thomas Jefferson University\u2019s separate EIN, 23-1352651.",
+      "primary_source_urls": [
+        "https://www.cms.gov/medicare/medicare-general-information/medicareapprovedfacilitie/carotid-artery-stenting-facilities-items/thomas-jefferson-university-hospital-",
+        "https://www.jeffersonhealth.org/content/dam/health2021/documents/financial/new-jersey-financial-statements/kennedy-university-hospital%2C-inc.-2023-form-990-public-disclosure.pdf"
+      ],
+      "latency_seconds": 24.294589738,
+      "research_tool_calls": 3
+    },
+    {
+      "question_id": "P4",
+      "started_at_utc": "2026-07-24T19:26:42.857493432Z",
+      "ended_at_utc": "2026-07-24T19:26:56.553327710Z",
+      "answer": "Selected scope/perimeter: the University-controlled core Penn Medicine umbrella represented by the Trustees of the University of Pennsylvania, owner/operator of UPHS and institutional home of the Perelman School of Medicine. On that perimeter, use EIN 23-1352685. Material caveats/ambiguity: Penn Medicine is an umbrella brand and academic-medical-center structure, not a standalone legal entity with one universally applicable EIN. Its hospitals, subsidiaries, and affiliates can have separate EINs; a facility-specific, grant, tax-return, or contracting request should name the actual legal counterparty before applying this number.",
+      "primary_source_urls": [
+        "https://www.pennmedicine.org/about",
+        "https://www.med.upenn.edu/pennmedplannedgiving/charitable-bequest.html",
+        "https://www.pennmedicine.org/patient-resources/policies/terms-of-use"
+      ],
+      "latency_seconds": 13.695834278,
+      "research_tool_calls": 1
+    },
+    {
+      "question_id": "U4",
+      "started_at_utc": "2026-07-24T19:27:05.679760499Z",
+      "ended_at_utc": "2026-07-24T19:27:35.691512265Z",
+      "answer": "Selected scope/perimeter: the combined UPMC Presbyterian Shadyside hospital operator and Medicare-certified provider record. Use EIN 25-0965480 and CCN 390164. Presbyterian and Shadyside are not one physical site: UPMC describes the combined hospital as operating an Oakland campus and a Shadyside campus about two miles apart. They are, however, combined for the selected operator/Medicare-record perimeter under UPMC Presbyterian Shadyside. Material caveats/ambiguity: campus-level operational analysis should preserve the two locations, while Medicare-provider or operator-level analysis should use the combined record. Other Oakland buildings and services may also fall within the broader campus configuration.",
+      "primary_source_urls": [
+        "https://www.cms.gov/medicare/medicare-general-information/medicareapprovedfacilitie/vad-destination-therapy-facilities-aug2007-items/-upmc-presbyterian",
+        "https://www.upmc.com/careers/admin-fellowship/health-services-admin/presbyterian-shadyside",
+        "https://www.upmc.com/-/media/upmc/about/finances/irs-filings/documents/upmc-fy17-group-media.pdf"
+      ],
+      "latency_seconds": 30.011751766,
+      "research_tool_calls": 3
+    }
+  ]
+}
