@@ -1,0 +1,66 @@
+from perimeter_registry import Registry
+
+
+def test_jefferson_health_revenue_discloses_care_intent_and_university_inclusion() -> None:
+    result = Registry.jefferson().resolve("Jefferson Health revenue")
+
+    assert result.status == "resolved"
+    assert result.options[0].scope_id == "system_excluding_insurance_fy2025"
+    assert result.flags == (
+        "care-delivery intent inferred from Jefferson Health",
+        "published System amount still includes university activity",
+    )
+
+
+def test_generic_form_990_question_asks_one_short_question() -> None:
+    result = Registry.jefferson().resolve("Jefferson Form 990")
+
+    assert result.status == "needs_clarification"
+    assert result.question == "Which legal filer and tax year?"
+    assert len(result.options) == 5
+    assert all(option.scope_id.startswith("form990:") for option in result.options)
+
+
+def test_unmatched_request_asks_for_scope_instead_of_returning_a_scalar() -> None:
+    result = Registry.jefferson().resolve("Jefferson operating margin")
+
+    assert result.status == "needs_clarification"
+    assert result.question == "Which Jefferson legal entity or reporting scope do you mean?"
+    assert result.options
+
+
+def test_invalid_as_of_date_is_rejected_deterministically() -> None:
+    try:
+        Registry.jefferson().resolve("Jefferson revenue", as_of="July 2024")
+    except ValueError as error:
+        assert str(error) == "as_of must be an ISO date (YYYY-MM-DD)"
+    else:
+        raise AssertionError("non-ISO as_of date was accepted")
+
+
+def test_bare_jefferson_health_uses_care_delivery_intent() -> None:
+    result = Registry.jefferson().resolve("Jefferson Health")
+
+    assert result.status == "resolved"
+    assert result.options[0].scope_id == "system_excluding_insurance_fy2025"
+    assert "published System amount still includes university activity" in result.flags
+
+
+def test_tjuh_acronym_form_990_does_not_match_tju_prefix() -> None:
+    result = Registry.jefferson().resolve("TJUH Form 990")
+
+    assert result.entity_ids == ("tjuh",)
+    assert result.identifiers[0] == ("EIN", "23-2829095")
+
+
+def test_resolved_pre_august_scope_carries_lvhn_exclusion() -> None:
+    result = Registry.jefferson().resolve("Jefferson Health", as_of="2024-07-31")
+
+    assert result.options[0].excludes == ("insurance", "LVHN")
+    assert result.flags[-1] == "LVHN entered the perimeter on 2024-08-01"
+
+
+def test_health_plans_resolution_carries_hpp_ein() -> None:
+    result = Registry.jefferson().resolve("Jefferson Health Plans")
+
+    assert result.identifiers == (("EIN", "23-2379751"),)
