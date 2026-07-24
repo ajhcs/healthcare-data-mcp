@@ -1,0 +1,32 @@
+{
+  "rerun_id": "2026-07-24T203452Z",
+  "started_at_utc": "2026-07-24T20:34:52Z",
+  "resolver_snapshot_generated_at_utc": "2026-07-24T20:34:52Z",
+  "lookup_result_generated_at_utc": "2026-07-24T20:44:22Z",
+  "scoring_and_report_generated_at_utc": "2026-07-24T20:59:22Z",
+  "base_commit": "7dc499ee400005729afc68c3dcb57a3e8e17d63b",
+  "prior_evidence_preserved": true,
+  "form_990_change_audit": {
+    "recorded_at_utc": "2026-07-24T20:59:22Z",
+    "changes": [],
+    "note": "No Form 990 fact, source locator, fixture, or IRS 990 Evidence Service change; existing official evidence was read only."
+  },
+  "production_changes": [],
+  "secret_changes": [],
+  "artifacts": [
+    "questions.snapshot.json",
+    "orders.snapshot.json",
+    "gold.snapshot.json",
+    "registry_resolver_outputs.json",
+    "runs/registry_r1.json",
+    "runs/registry_r2.json",
+    "runs/baseline_r1.json",
+    "runs/baseline_r2.json",
+    "runs/lookup_timings.json",
+    "scores.json",
+    "SCORING_REVIEW.md",
+    "RESULTS.md",
+    "baseline_r1_research.md",
+    "runs/baseline_r2_research.md"
+  ]
+}

@@ -1,0 +1,175 @@
+{
+  "version": 1,
+  "blinding": "Answering agents were not permitted to read this file; it was opened only after all run files existed.",
+  "scoring": {
+    "per_question_correctness": "1 only if all required perimeter/identifier points are correct and no failure condition occurs; otherwise 0.",
+    "scope_and_caveat": "1 if the answer explicitly labels the selected perimeter and all material ambiguity/date/source-period caveats; otherwise 0.",
+    "false_aggregation": "1 if the answer silently combines excluded, affiliated, branded, or non-additive entities/perimeters; otherwise 0.",
+    "provenance_coverage": "number of gold-required factual claims supported by a primary-source URL divided by required factual claims; clarification-only answers receive full credit when clarification is the gold answer and the ambiguity source is cited."
+  },
+  "questions": {
+    "J1": {
+      "required": [
+        "Select audited consolidated enterprise for enterprise analysis",
+        "Include university education/research, care delivery, insurance, and 11 months of LVHN from 2024-08-01",
+        "Distinguish Jefferson Health brand from Thomas Jefferson University Hospitals legal entity"
+      ],
+      "accepted": [
+        "May ask whether a narrower care-delivery perimeter was intended after answering the stated enterprise scope"
+      ],
+      "failures": [
+        "Treat Jefferson Health and TJUH as identical",
+        "Use hospital-only scope",
+        "Silently add separate Form 990 filers"
+      ]
+    },
+    "J2": {
+      "required": [
+        "Select Health Partners Plans, Inc. exact filer",
+        "EIN 23-2379751",
+        "Tax-period year 2023"
+      ],
+      "accepted": [
+        "May state Jefferson Health Plans is a marketing/current name mapped to the selected filer in the registry evidence"
+      ],
+      "failures": [
+        "Return Jefferson parent, university, or hospital EIN",
+        "Aggregate multiple filers"
+      ]
+    },
+    "J3": {
+      "required": [
+        "Exclude LVHN as of 2024-07-31",
+        "State documented entry date 2024-08-01"
+      ],
+      "accepted": [
+        "May mention later legal merger into Jefferson Health Care on 2025-06-30"
+      ],
+      "failures": [
+        "Back-project LVHN membership before 2024-08-01"
+      ]
+    },
+    "J4": {
+      "required": [
+        "Select Thomas Jefferson University Hospitals, Inc. operator",
+        "EIN 23-2829095",
+        "CCN 390174",
+        "Distinguish operator/facility from enterprise"
+      ],
+      "accepted": [],
+      "failures": [
+        "Confuse EIN and CCN",
+        "Return a Jefferson brand or university EIN"
+      ]
+    },
+    "P1": {
+      "required": [
+        "Explain Penn Medicine governance umbrella is PSOM plus UPHS",
+        "Distinguish UPHS delivery component from whole-University audited consolidation",
+        "Ask or label which of the three perimeters is selected"
+      ],
+      "accepted": [
+        "A clarification menu among Penn Medicine governance, UPHS, and University consolidation is fully correct"
+      ],
+      "failures": [
+        "Treat Penn Medicine, UPHS, and whole University as silently identical"
+      ]
+    },
+    "P2": {
+      "required": [
+        "CCN 390111",
+        "Identify Trustees of the University of Pennsylvania as operator in the fixture, EIN 23-1352685",
+        "State HUP is a facility/operator record, not a separate Penn Medicine enterprise"
+      ],
+      "accepted": [
+        "May note the exact EIN conclusion is based on Trustees/HUP operating-division evidence"
+      ],
+      "failures": [
+        "Treat HUP as an enterprise",
+        "Confuse HUP with Pennsylvania Hospital"
+      ]
+    },
+    "P3": {
+      "required": [
+        "Exclude Doylestown Health from UPHS as of 2025-03-31",
+        "State documented join date 2025-04-01"
+      ],
+      "accepted": [
+        "May note integration planning predated close"
+      ],
+      "failures": [
+        "Back-project current membership into March 2025"
+      ]
+    },
+    "P4": {
+      "required": [
+        "State no universal standalone EIN is asserted for Penn Medicine governance/brand umbrella",
+        "Ask which legal filer or perimeter is meant"
+      ],
+      "accepted": [
+        "May give Trustees EIN 23-1352685 only if explicitly labeled as the University/Trustees filer rather than universal Penn Medicine EIN"
+      ],
+      "failures": [
+        "Return 23-1352685 as an unlabeled universal Penn Medicine EIN"
+      ]
+    },
+    "U1": {
+      "required": [
+        "Select audited consolidated UPMC enterprise",
+        "Include Health Services and Insurance Services",
+        "Exclude University of Pittsburgh from consolidation while preserving close academic affiliation"
+      ],
+      "accepted": [
+        "May offer Health Services as a narrower provider-only alternative"
+      ],
+      "failures": [
+        "Include Pitt in UPMC consolidation",
+        "Use hospital-only scope for as-a-whole",
+        "Add divisional revenues without eliminations"
+      ]
+    },
+    "U2": {
+      "required": [
+        "State UPMC Health Plan is a marketing name spanning multiple licensed companies",
+        "Refuse a universal brand EIN and request product/policy issuer/legal company"
+      ],
+      "accepted": [
+        "May mention dated EIN 23-2813536 only for UPMC Health Plan, Inc., with explicit non-universality and source-period caveat"
+      ],
+      "failures": [
+        "Return parent EIN 25-1423657",
+        "Treat 23-2813536 as universal across the brand"
+      ]
+    },
+    "U3": {
+      "required": [
+        "Select UPMC legal parent filer",
+        "EIN 25-1423657",
+        "Tax-period year 2023",
+        "State exact identifier evidence is dated FY2022 and current continuity was not reverified"
+      ],
+      "accepted": [
+        "May distinguish UPMC Group EIN 20-8295721 as a different filing perimeter"
+      ],
+      "failures": [
+        "Return group EIN 20-8295721 as parent",
+        "Claim one universal UPMC EIN"
+      ]
+    },
+    "U4": {
+      "required": [
+        "State Presbyterian and Shadyside are distinct campuses/facilities despite combined records",
+        "Combined-filer EIN 25-0965480 from FY2022 evidence",
+        "CMS CCN 390164 for combined record",
+        "Distinguish EIN, CCN, and campus identity and caveat dated EIN"
+      ],
+      "accepted": [],
+      "failures": [
+        "Say the campuses are one physical facility",
+        "Use UPMC Group EIN 20-8295721",
+        "Treat CCN as EIN",
+        "Claim undated/current EIN continuity"
+      ]
+    }
+  }
+}

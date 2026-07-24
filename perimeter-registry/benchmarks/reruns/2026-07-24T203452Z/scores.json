@@ -1,0 +1,1069 @@
+{
+  "schema_version": 1,
+  "rerun_timestamp": "2026-07-24T203452Z",
+  "scoring_basis": {
+    "strict": "Frozen gold.snapshot.json as written.",
+    "reviewer_adjusted": [
+      "J1 does not require unasked FY2025/11-month detail.",
+      "P2 does not require the unasked operator EIN.",
+      "U3 accepts a newer official FY2023 parent return without the FY2022 caveat."
+    ],
+    "not_relaxed": [
+      "U2",
+      "U4"
+    ],
+    "provenance_unit": "Each entry in gold.required is one claim. A claim is covered only when at least one listed primary-source URL is sufficiently claim-specific. Adjusted denominators change only for the three declared corrections.",
+    "false_aggregation_encoding": "0 = no false aggregation; 1 = false aggregation occurred."
+  },
+  "runs": {
+    "baseline_r1": {
+      "arm": "manual_style_source_research_baseline",
+      "repetition": 1,
+      "telemetry": {
+        "wall_latency_seconds": 244.746,
+        "input_tokens": null,
+        "research_tool_calls": 19,
+        "local_file_read_calls": 1,
+        "per_answer_allocation_valid": false,
+        "allocation_note": "All 12 answers repeat the full-run 244.746-second interval; summed answer latency is 2936.952 seconds. Per-answer research calls sum to 38 versus 19 top-level calls, explicitly because batched calls overlap answers."
+      },
+      "answers": {
+        "J1": {
+          "strict_correct": 0,
+          "adjusted_correct": 1,
+          "strict_scope_caveat": 0,
+          "adjusted_scope_caveat": 1,
+          "false_aggregation": 0,
+          "strict_provenance": {
+            "supported": 2,
+            "required": 3
+          },
+          "adjusted_provenance": {
+            "supported": 3,
+            "required": 3
+          },
+          "rationale": "Correctly separates Jefferson Health from TJUH and gives the broad current enterprise, but frozen gold requires the audited FY2025/11-month LVHN formulation; the declared J1 adjustment removes that unasked detail."
+        },
+        "J2": {
+          "strict_correct": 1,
+          "adjusted_correct": 1,
+          "strict_scope_caveat": 1,
+          "adjusted_scope_caveat": 1,
+          "false_aggregation": 0,
+          "strict_provenance": {
+            "supported": 2,
+            "required": 3
+          },
+          "adjusted_provenance": {
+            "supported": 2,
+            "required": 3
+          },
+          "rationale": "Correct filer, EIN, year, and brand/legal-name distinction. The cited insurer materials support filer/EIN mapping, but no claim-specific FY2023 return URL is supplied."
+        },
+        "J3": {
+          "strict_correct": 1,
+          "adjusted_correct": 1,
+          "strict_scope_caveat": 1,
+          "adjusted_scope_caveat": 1,
+          "false_aggregation": 0,
+          "strict_provenance": {
+            "supported": 2,
+            "required": 2
+          },
+          "adjusted_provenance": {
+            "supported": 2,
+            "required": 2
+          },
+          "rationale": "Correctly excludes LVHN on 2024-07-31 and supplies the 2024-08-01 entry date with an official Jefferson source."
+        },
+        "J4": {
+          "strict_correct": 1,
+          "adjusted_correct": 1,
+          "strict_scope_caveat": 1,
+          "adjusted_scope_caveat": 1,
+          "false_aggregation": 0,
+          "strict_provenance": {
+            "supported": 4,
+            "required": 4
+          },
+          "adjusted_provenance": {
+            "supported": 4,
+            "required": 4
+          },
+          "rationale": "Correct operator, EIN, CCN, and enterprise distinction; CMS plus Jefferson filing evidence covers the claims."
+        },
+        "P1": {
+          "strict_correct": 1,
+          "adjusted_correct": 1,
+          "strict_scope_caveat": 1,
+          "adjusted_scope_caveat": 1,
+          "false_aggregation": 0,
+          "strict_provenance": {
+            "supported": 3,
+            "required": 3
+          },
+          "adjusted_provenance": {
+            "supported": 3,
+            "required": 3
+          },
+          "rationale": "Correctly identifies Penn Medicine as UPHS plus PSOM, distinguishes it from UPHS and the whole University, and labels UPHS as an alternate provider perimeter."
+        },
+        "P2": {
+          "strict_correct": 0,
+          "adjusted_correct": 1,
+          "strict_scope_caveat": 1,
+          "adjusted_scope_caveat": 1,
+          "false_aggregation": 0,
+          "strict_provenance": {
+            "supported": 2,
+            "required": 3
+          },
+          "adjusted_provenance": {
+            "supported": 2,
+            "required": 2
+          },
+          "rationale": "Correct CCN and facility-not-enterprise treatment. Frozen gold also requires operator/EIN; the declared P2 adjustment removes that unasked requirement."
+        },
+        "P3": {
+          "strict_correct": 1,
+          "adjusted_correct": 1,
+          "strict_scope_caveat": 1,
+          "adjusted_scope_caveat": 1,
+          "false_aggregation": 0,
+          "strict_provenance": {
+            "supported": 2,
+            "required": 2
+          },
+          "adjusted_provenance": {
+            "supported": 2,
+            "required": 2
+          },
+          "rationale": "Correct exclusion at 2025-03-31 and 2025-04-01 join date, directly supported by Penn's announcement."
+        },
+        "P4": {
+          "strict_correct": 1,
+          "adjusted_correct": 1,
+          "strict_scope_caveat": 1,
+          "adjusted_scope_caveat": 1,
+          "false_aggregation": 0,
+          "strict_provenance": {
+            "supported": 2,
+            "required": 2
+          },
+          "adjusted_provenance": {
+            "supported": 2,
+            "required": 2
+          },
+          "rationale": "Correctly refuses a universal Penn Medicine EIN, asks for the filer, and conditionally labels the Trustees EIN."
+        },
+        "U1": {
+          "strict_correct": 1,
+          "adjusted_correct": 1,
+          "strict_scope_caveat": 1,
+          "adjusted_scope_caveat": 1,
+          "false_aggregation": 0,
+          "strict_provenance": {
+            "supported": 3,
+            "required": 3
+          },
+          "adjusted_provenance": {
+            "supported": 3,
+            "required": 3
+          },
+          "rationale": "Correct consolidated provider-insurer perimeter and correct exclusion of the affiliated University of Pittsburgh."
+        },
+        "U2": {
+          "strict_correct": 0,
+          "adjusted_correct": 0,
+          "strict_scope_caveat": 0,
+          "adjusted_scope_caveat": 0,
+          "false_aggregation": 0,
+          "strict_provenance": {
+            "supported": 2,
+            "required": 2
+          },
+          "adjusted_provenance": {
+            "supported": 2,
+            "required": 2
+          },
+          "rationale": "It recognizes the multi-issuer brand but supplies dated EIN 23-2813536 without the required source-period caveat and does not cleanly refuse assignment until the issuer is identified. U2 is not relaxed."
+        },
+        "U3": {
+          "strict_correct": 0,
+          "adjusted_correct": 1,
+          "strict_scope_caveat": 0,
+          "adjusted_scope_caveat": 1,
+          "false_aggregation": 0,
+          "strict_provenance": {
+            "supported": 3,
+            "required": 4
+          },
+          "adjusted_provenance": {
+            "supported": 3,
+            "required": 3
+          },
+          "rationale": "Correct parent, EIN, and FY2023 return with an official FY2023 return URL. It lacks frozen gold's FY2022-evidence caveat, but the declared adjustment accepts the newer official return."
+        },
+        "U4": {
+          "strict_correct": 0,
+          "adjusted_correct": 0,
+          "strict_scope_caveat": 0,
+          "adjusted_scope_caveat": 0,
+          "false_aggregation": 0,
+          "strict_provenance": {
+            "supported": 3,
+            "required": 4
+          },
+          "adjusted_provenance": {
+            "supported": 3,
+            "required": 4
+          },
+          "rationale": "Correct campuses, EIN, and CCN, but omits the mandatory dated-EIN/current-continuity caveat and cites FY2017 rather than the required FY2022 evidence. U4 is not relaxed."
+        }
+      },
+      "aggregate": {
+        "strict_correct": "7/12",
+        "adjusted_correct": "10/12",
+        "strict_scope_caveat": "8/12",
+        "adjusted_scope_caveat": "10/12",
+        "false_aggregation": "0/12",
+        "strict_provenance": "30/35",
+        "adjusted_provenance": "31/33"
+      }
+    },
+    "baseline_r2": {
+      "arm": "manual_style_source_research_baseline",
+      "repetition": 2,
+      "telemetry": {
+        "wall_latency_seconds": 454.792,
+        "input_tokens": null,
+        "research_tool_calls": 24,
+        "local_file_read_calls": 1,
+        "per_answer_allocation_valid": true,
+        "allocation_note": "Sequential answer intervals sum to 454.792 seconds and per-answer research calls sum to the top-level 24. The single local read is top-level only."
+      },
+      "answers": {
+        "J1": {
+          "strict_correct": 0,
+          "adjusted_correct": 1,
+          "strict_scope_caveat": 0,
+          "adjusted_scope_caveat": 1,
+          "false_aggregation": 0,
+          "strict_provenance": {
+            "supported": 1,
+            "required": 3
+          },
+          "adjusted_provenance": {
+            "supported": 3,
+            "required": 3
+          },
+          "rationale": "Correctly distinguishes TJUH and states the broad Jefferson components, but omits the frozen FY2025/LVHN detail. It passes only under the declared J1 correction; the strict citations do not cover LVHN."
+        },
+        "J2": {
+          "strict_correct": 1,
+          "adjusted_correct": 1,
+          "strict_scope_caveat": 1,
+          "adjusted_scope_caveat": 1,
+          "false_aggregation": 0,
+          "strict_provenance": {
+            "supported": 1,
+            "required": 3
+          },
+          "adjusted_provenance": {
+            "supported": 1,
+            "required": 3
+          },
+          "rationale": "Correct legal filer, EIN, year, and brand caveat. The rebrand source supports the name mapping, but the supplied URLs do not provide claim-specific support for the EIN and FY2023 return."
+        },
+        "J3": {
+          "strict_correct": 1,
+          "adjusted_correct": 1,
+          "strict_scope_caveat": 1,
+          "adjusted_scope_caveat": 1,
+          "false_aggregation": 0,
+          "strict_provenance": {
+            "supported": 2,
+            "required": 2
+          },
+          "adjusted_provenance": {
+            "supported": 2,
+            "required": 2
+          },
+          "rationale": "Correct date-bounded exclusion and entry date with direct official support."
+        },
+        "J4": {
+          "strict_correct": 1,
+          "adjusted_correct": 1,
+          "strict_scope_caveat": 1,
+          "adjusted_scope_caveat": 1,
+          "false_aggregation": 0,
+          "strict_provenance": {
+            "supported": 4,
+            "required": 4
+          },
+          "adjusted_provenance": {
+            "supported": 4,
+            "required": 4
+          },
+          "rationale": "Correct operator/EIN, facility/CCN, and identifier distinction with claim-specific official sources."
+        },
+        "P1": {
+          "strict_correct": 1,
+          "adjusted_correct": 1,
+          "strict_scope_caveat": 1,
+          "adjusted_scope_caveat": 1,
+          "false_aggregation": 0,
+          "strict_provenance": {
+            "supported": 3,
+            "required": 3
+          },
+          "adjusted_provenance": {
+            "supported": 3,
+            "required": 3
+          },
+          "rationale": "Correct governance umbrella and perimeter distinctions, with a clear UPHS-only alternative."
+        },
+        "P2": {
+          "strict_correct": 0,
+          "adjusted_correct": 1,
+          "strict_scope_caveat": 1,
+          "adjusted_scope_caveat": 1,
+          "false_aggregation": 0,
+          "strict_provenance": {
+            "supported": 2,
+            "required": 3
+          },
+          "adjusted_provenance": {
+            "supported": 2,
+            "required": 2
+          },
+          "rationale": "Correct CCN and facility-not-enterprise conclusion; frozen gold's unasked operator/EIN is omitted, so only adjusted gold passes."
+        },
+        "P3": {
+          "strict_correct": 1,
+          "adjusted_correct": 1,
+          "strict_scope_caveat": 1,
+          "adjusted_scope_caveat": 1,
+          "false_aggregation": 0,
+          "strict_provenance": {
+            "supported": 2,
+            "required": 2
+          },
+          "adjusted_provenance": {
+            "supported": 2,
+            "required": 2
+          },
+          "rationale": "Correct date-bounded exclusion and join date, directly supported."
+        },
+        "P4": {
+          "strict_correct": 1,
+          "adjusted_correct": 1,
+          "strict_scope_caveat": 1,
+          "adjusted_scope_caveat": 1,
+          "false_aggregation": 0,
+          "strict_provenance": {
+            "supported": 2,
+            "required": 2
+          },
+          "adjusted_provenance": {
+            "supported": 2,
+            "required": 2
+          },
+          "rationale": "Correctly treats Penn Medicine as an umbrella rather than a filer and labels the conditional Trustees EIN."
+        },
+        "U1": {
+          "strict_correct": 1,
+          "adjusted_correct": 1,
+          "strict_scope_caveat": 1,
+          "adjusted_scope_caveat": 1,
+          "false_aggregation": 0,
+          "strict_provenance": {
+            "supported": 3,
+            "required": 3
+          },
+          "adjusted_provenance": {
+            "supported": 3,
+            "required": 3
+          },
+          "rationale": "Correct consolidated enterprise, Health Services plus Insurance Services, and Pitt exclusion/affiliation."
+        },
+        "U2": {
+          "strict_correct": 0,
+          "adjusted_correct": 0,
+          "strict_scope_caveat": 0,
+          "adjusted_scope_caveat": 0,
+          "false_aggregation": 0,
+          "strict_provenance": {
+            "supported": 2,
+            "required": 2
+          },
+          "adjusted_provenance": {
+            "supported": 2,
+            "required": 2
+          },
+          "rationale": "Although it explains the multi-company brand and requests issuer specificity, it asserts an unsupported conflicting EIN (25-1777713) for UPMC Health Plan, Inc. and supplies no source-period caveat. U2 is not relaxed."
+        },
+        "U3": {
+          "strict_correct": 0,
+          "adjusted_correct": 1,
+          "strict_scope_caveat": 0,
+          "adjusted_scope_caveat": 1,
+          "false_aggregation": 0,
+          "strict_provenance": {
+            "supported": 3,
+            "required": 4
+          },
+          "adjusted_provenance": {
+            "supported": 3,
+            "required": 3
+          },
+          "rationale": "Correct parent/EIN/FY2023 selection using UPMC's official filings page. It omits frozen gold's FY2022 caveat but passes under the declared newer-official-return correction."
+        },
+        "U4": {
+          "strict_correct": 0,
+          "adjusted_correct": 0,
+          "strict_scope_caveat": 0,
+          "adjusted_scope_caveat": 0,
+          "false_aggregation": 0,
+          "strict_provenance": {
+            "supported": 2,
+            "required": 4
+          },
+          "adjusted_provenance": {
+            "supported": 2,
+            "required": 4
+          },
+          "rationale": "Correct campuses, EIN, and CCN in text, but omits the mandatory dated-EIN/current-continuity caveat and supplies no claim-specific EIN filing URL. U4 is not relaxed."
+        }
+      },
+      "aggregate": {
+        "strict_correct": "7/12",
+        "adjusted_correct": "10/12",
+        "strict_scope_caveat": "8/12",
+        "adjusted_scope_caveat": "10/12",
+        "false_aggregation": "0/12",
+        "strict_provenance": "27/35",
+        "adjusted_provenance": "29/33"
+      }
+    },
+    "registry_r1": {
+      "arm": "registry_assisted",
+      "repetition": 1,
+      "telemetry": {
+        "wall_latency_seconds": 122.816,
+        "input_tokens": null,
+        "research_tool_calls": 0,
+        "local_file_read_calls": 10,
+        "per_answer_allocation_valid": true,
+        "allocation_note": "Sequential answer intervals sum to the run wall time. Per-answer research calls are all zero; the 10 local reads are not allocated per answer."
+      },
+      "answers": {
+        "J1": {
+          "strict_correct": 1,
+          "adjusted_correct": 1,
+          "strict_scope_caveat": 1,
+          "adjusted_scope_caveat": 1,
+          "false_aggregation": 0,
+          "strict_provenance": {
+            "supported": 3,
+            "required": 3
+          },
+          "adjusted_provenance": {
+            "supported": 3,
+            "required": 3
+          },
+          "rationale": "Complete audited enterprise composition, LVHN period detail, and Jefferson Health/TJUH distinction with the audited statement."
+        },
+        "J2": {
+          "strict_correct": 1,
+          "adjusted_correct": 1,
+          "strict_scope_caveat": 1,
+          "adjusted_scope_caveat": 1,
+          "false_aggregation": 0,
+          "strict_provenance": {
+            "supported": 1,
+            "required": 3
+          },
+          "adjusted_provenance": {
+            "supported": 1,
+            "required": 3
+          },
+          "rationale": "Complete correct filer/EIN/year and brand caveat. The listed official URLs support the brand/legal-entity mapping, but neither is a claim-specific 2023 Form 990/EIN record."
+        },
+        "J3": {
+          "strict_correct": 1,
+          "adjusted_correct": 1,
+          "strict_scope_caveat": 1,
+          "adjusted_scope_caveat": 1,
+          "false_aggregation": 0,
+          "strict_provenance": {
+            "supported": 2,
+            "required": 2
+          },
+          "adjusted_provenance": {
+            "supported": 2,
+            "required": 2
+          },
+          "rationale": "Complete date-bounded answer with official entry-date support."
+        },
+        "J4": {
+          "strict_correct": 1,
+          "adjusted_correct": 1,
+          "strict_scope_caveat": 1,
+          "adjusted_scope_caveat": 1,
+          "false_aggregation": 0,
+          "strict_provenance": {
+            "supported": 4,
+            "required": 4
+          },
+          "adjusted_provenance": {
+            "supported": 4,
+            "required": 4
+          },
+          "rationale": "Complete operator/EIN, facility/CCN, and enterprise distinction with CMS and Jefferson sources."
+        },
+        "P1": {
+          "strict_correct": 1,
+          "adjusted_correct": 1,
+          "strict_scope_caveat": 1,
+          "adjusted_scope_caveat": 1,
+          "false_aggregation": 0,
+          "strict_provenance": {
+            "supported": 3,
+            "required": 3
+          },
+          "adjusted_provenance": {
+            "supported": 3,
+            "required": 3
+          },
+          "rationale": "Complete governance, UPHS, and University-consolidation distinctions with explicit selection guidance."
+        },
+        "P2": {
+          "strict_correct": 1,
+          "adjusted_correct": 1,
+          "strict_scope_caveat": 1,
+          "adjusted_scope_caveat": 1,
+          "false_aggregation": 0,
+          "strict_provenance": {
+            "supported": 3,
+            "required": 3
+          },
+          "adjusted_provenance": {
+            "supported": 2,
+            "required": 2
+          },
+          "rationale": "Complete CCN, operator/EIN, and facility-not-enterprise answer with claim-specific official sources."
+        },
+        "P3": {
+          "strict_correct": 1,
+          "adjusted_correct": 1,
+          "strict_scope_caveat": 1,
+          "adjusted_scope_caveat": 1,
+          "false_aggregation": 0,
+          "strict_provenance": {
+            "supported": 2,
+            "required": 2
+          },
+          "adjusted_provenance": {
+            "supported": 2,
+            "required": 2
+          },
+          "rationale": "Complete exclusion and entry date with official Penn support."
+        },
+        "P4": {
+          "strict_correct": 1,
+          "adjusted_correct": 1,
+          "strict_scope_caveat": 1,
+          "adjusted_scope_caveat": 1,
+          "false_aggregation": 0,
+          "strict_provenance": {
+            "supported": 2,
+            "required": 2
+          },
+          "adjusted_provenance": {
+            "supported": 2,
+            "required": 2
+          },
+          "rationale": "Correctly refuses a universal EIN, requests the legal perimeter, and clearly labels the conditional Trustees EIN."
+        },
+        "U1": {
+          "strict_correct": 1,
+          "adjusted_correct": 1,
+          "strict_scope_caveat": 1,
+          "adjusted_scope_caveat": 1,
+          "false_aggregation": 0,
+          "strict_provenance": {
+            "supported": 3,
+            "required": 3
+          },
+          "adjusted_provenance": {
+            "supported": 3,
+            "required": 3
+          },
+          "rationale": "Complete consolidated UPMC perimeter, inclusion/exclusion, affiliation, and eliminations caveat."
+        },
+        "U2": {
+          "strict_correct": 1,
+          "adjusted_correct": 1,
+          "strict_scope_caveat": 1,
+          "adjusted_scope_caveat": 1,
+          "false_aggregation": 0,
+          "strict_provenance": {
+            "supported": 2,
+            "required": 2
+          },
+          "adjusted_provenance": {
+            "supported": 2,
+            "required": 2
+          },
+          "rationale": "Correctly refuses a universal brand EIN and requests product/issuer/legal-company specificity; official issuer materials cover both required claims."
+        },
+        "U3": {
+          "strict_correct": 1,
+          "adjusted_correct": 1,
+          "strict_scope_caveat": 1,
+          "adjusted_scope_caveat": 1,
+          "false_aggregation": 0,
+          "strict_provenance": {
+            "supported": 4,
+            "required": 4
+          },
+          "adjusted_provenance": {
+            "supported": 3,
+            "required": 3
+          },
+          "rationale": "Complete parent/EIN/year answer and exact frozen FY2022 evidence/current-continuity caveat."
+        },
+        "U4": {
+          "strict_correct": 1,
+          "adjusted_correct": 1,
+          "strict_scope_caveat": 1,
+          "adjusted_scope_caveat": 1,
+          "false_aggregation": 0,
+          "strict_provenance": {
+            "supported": 4,
+            "required": 4
+          },
+          "adjusted_provenance": {
+            "supported": 4,
+            "required": 4
+          },
+          "rationale": "Complete campus distinction, combined EIN, CCN, identifier separation, and FY2022/current-continuity caveat."
+        }
+      },
+      "aggregate": {
+        "strict_correct": "12/12",
+        "adjusted_correct": "12/12",
+        "strict_scope_caveat": "12/12",
+        "adjusted_scope_caveat": "12/12",
+        "false_aggregation": "0/12",
+        "strict_provenance": "33/35",
+        "adjusted_provenance": "31/33"
+      }
+    },
+    "registry_r2": {
+      "arm": "registry_assisted",
+      "repetition": 2,
+      "telemetry": {
+        "wall_latency_seconds": 138.313,
+        "input_tokens": null,
+        "research_tool_calls": 0,
+        "local_file_read_calls": 9,
+        "per_answer_allocation_valid": false,
+        "allocation_note": "The run total is valid, but 11 answers are assigned exactly 11.526 seconds and the last 11.527 seconds. This is an equal allocation, not credible independently observed per-answer timing. Local reads are not allocated per answer."
+      },
+      "answers": {
+        "J1": {
+          "strict_correct": 1,
+          "adjusted_correct": 1,
+          "strict_scope_caveat": 1,
+          "adjusted_scope_caveat": 1,
+          "false_aggregation": 0,
+          "strict_provenance": {
+            "supported": 3,
+            "required": 3
+          },
+          "adjusted_provenance": {
+            "supported": 3,
+            "required": 3
+          },
+          "rationale": "Complete audited enterprise composition, LVHN detail, and legal-entity distinction with audited evidence."
+        },
+        "J2": {
+          "strict_correct": 1,
+          "adjusted_correct": 1,
+          "strict_scope_caveat": 1,
+          "adjusted_scope_caveat": 1,
+          "false_aggregation": 0,
+          "strict_provenance": {
+            "supported": 1,
+            "required": 3
+          },
+          "adjusted_provenance": {
+            "supported": 1,
+            "required": 3
+          },
+          "rationale": "Complete correct filer/EIN/year and brand caveat; listed URLs support brand/legal mapping but not a claim-specific 2023 return/EIN record."
+        },
+        "J3": {
+          "strict_correct": 1,
+          "adjusted_correct": 1,
+          "strict_scope_caveat": 1,
+          "adjusted_scope_caveat": 1,
+          "false_aggregation": 0,
+          "strict_provenance": {
+            "supported": 2,
+            "required": 2
+          },
+          "adjusted_provenance": {
+            "supported": 2,
+            "required": 2
+          },
+          "rationale": "Complete date-bounded answer with official support."
+        },
+        "J4": {
+          "strict_correct": 1,
+          "adjusted_correct": 1,
+          "strict_scope_caveat": 1,
+          "adjusted_scope_caveat": 1,
+          "false_aggregation": 0,
+          "strict_provenance": {
+            "supported": 4,
+            "required": 4
+          },
+          "adjusted_provenance": {
+            "supported": 4,
+            "required": 4
+          },
+          "rationale": "Complete operator/EIN, facility/CCN, and enterprise distinction with official evidence."
+        },
+        "P1": {
+          "strict_correct": 1,
+          "adjusted_correct": 1,
+          "strict_scope_caveat": 1,
+          "adjusted_scope_caveat": 1,
+          "false_aggregation": 0,
+          "strict_provenance": {
+            "supported": 3,
+            "required": 3
+          },
+          "adjusted_provenance": {
+            "supported": 3,
+            "required": 3
+          },
+          "rationale": "Complete governance and financial-perimeter distinctions."
+        },
+        "P2": {
+          "strict_correct": 1,
+          "adjusted_correct": 1,
+          "strict_scope_caveat": 1,
+          "adjusted_scope_caveat": 1,
+          "false_aggregation": 0,
+          "strict_provenance": {
+            "supported": 3,
+            "required": 3
+          },
+          "adjusted_provenance": {
+            "supported": 2,
+            "required": 2
+          },
+          "rationale": "Complete CCN, operator/EIN, and facility-not-enterprise answer with claim-specific evidence."
+        },
+        "P3": {
+          "strict_correct": 1,
+          "adjusted_correct": 1,
+          "strict_scope_caveat": 1,
+          "adjusted_scope_caveat": 1,
+          "false_aggregation": 0,
+          "strict_provenance": {
+            "supported": 2,
+            "required": 2
+          },
+          "adjusted_provenance": {
+            "supported": 2,
+            "required": 2
+          },
+          "rationale": "Complete exclusion and entry date with official support."
+        },
+        "P4": {
+          "strict_correct": 1,
+          "adjusted_correct": 1,
+          "strict_scope_caveat": 1,
+          "adjusted_scope_caveat": 1,
+          "false_aggregation": 0,
+          "strict_provenance": {
+            "supported": 2,
+            "required": 2
+          },
+          "adjusted_provenance": {
+            "supported": 2,
+            "required": 2
+          },
+          "rationale": "Correct no-universal-EIN clarification with a properly labeled Trustees alternative."
+        },
+        "U1": {
+          "strict_correct": 1,
+          "adjusted_correct": 1,
+          "strict_scope_caveat": 1,
+          "adjusted_scope_caveat": 1,
+          "false_aggregation": 0,
+          "strict_provenance": {
+            "supported": 3,
+            "required": 3
+          },
+          "adjusted_provenance": {
+            "supported": 3,
+            "required": 3
+          },
+          "rationale": "Complete consolidated provider-insurer perimeter, Pitt exclusion, and eliminations caveat."
+        },
+        "U2": {
+          "strict_correct": 1,
+          "adjusted_correct": 1,
+          "strict_scope_caveat": 1,
+          "adjusted_scope_caveat": 1,
+          "false_aggregation": 0,
+          "strict_provenance": {
+            "supported": 2,
+            "required": 2
+          },
+          "adjusted_provenance": {
+            "supported": 2,
+            "required": 2
+          },
+          "rationale": "Correctly refuses a universal brand EIN and asks for issuer specificity with official support."
+        },
+        "U3": {
+          "strict_correct": 1,
+          "adjusted_correct": 1,
+          "strict_scope_caveat": 1,
+          "adjusted_scope_caveat": 1,
+          "false_aggregation": 0,
+          "strict_provenance": {
+            "supported": 4,
+            "required": 4
+          },
+          "adjusted_provenance": {
+            "supported": 3,
+            "required": 3
+          },
+          "rationale": "Complete parent/EIN/year answer with the frozen FY2022/current-continuity caveat."
+        },
+        "U4": {
+          "strict_correct": 1,
+          "adjusted_correct": 1,
+          "strict_scope_caveat": 1,
+          "adjusted_scope_caveat": 1,
+          "false_aggregation": 0,
+          "strict_provenance": {
+            "supported": 4,
+            "required": 4
+          },
+          "adjusted_provenance": {
+            "supported": 4,
+            "required": 4
+          },
+          "rationale": "Complete campus distinction, identifiers, identifier separation, and mandatory dated-evidence caveat."
+        }
+      },
+      "aggregate": {
+        "strict_correct": "12/12",
+        "adjusted_correct": "12/12",
+        "strict_scope_caveat": "12/12",
+        "adjusted_scope_caveat": "12/12",
+        "false_aggregation": "0/12",
+        "strict_provenance": "33/35",
+        "adjusted_provenance": "31/33"
+      }
+    }
+  },
+  "arm_aggregates": {
+    "manual_style_source_research_baseline": {
+      "answers": 24,
+      "strict_correct": "14/24",
+      "adjusted_correct": "20/24",
+      "strict_scope_caveat": "16/24",
+      "adjusted_scope_caveat": "20/24",
+      "false_aggregation": "0/24",
+      "strict_provenance": "57/70",
+      "adjusted_provenance": "60/66",
+      "wall_latency_seconds": 699.538,
+      "research_tool_calls": 43,
+      "local_file_read_calls": 2,
+      "input_tokens": null
+    },
+    "registry_assisted": {
+      "answers": 24,
+      "strict_correct": "24/24",
+      "adjusted_correct": "24/24",
+      "strict_scope_caveat": "24/24",
+      "adjusted_scope_caveat": "24/24",
+      "false_aggregation": "0/24",
+      "strict_provenance": "66/70",
+      "adjusted_provenance": "62/66",
+      "wall_latency_seconds": 261.129,
+      "research_tool_calls": 0,
+      "local_file_read_calls": 19,
+      "input_tokens": null
+    }
+  },
+  "system_aggregates": {
+    "Jefferson Health": {
+      "answers": 16,
+      "strict_correct": "14/16",
+      "adjusted_correct": "16/16",
+      "strict_scope_caveat": "14/16",
+      "adjusted_scope_caveat": "16/16",
+      "false_aggregation": "0/16",
+      "strict_provenance": "38/48",
+      "adjusted_provenance": "41/48"
+    },
+    "Penn Medicine / UPHS": {
+      "answers": 16,
+      "strict_correct": "14/16",
+      "adjusted_correct": "16/16",
+      "strict_scope_caveat": "16/16",
+      "adjusted_scope_caveat": "16/16",
+      "false_aggregation": "0/16",
+      "strict_provenance": "38/40",
+      "adjusted_provenance": "36/36"
+    },
+    "UPMC": {
+      "answers": 16,
+      "strict_correct": "10/16",
+      "adjusted_correct": "12/16",
+      "strict_scope_caveat": "10/16",
+      "adjusted_scope_caveat": "12/16",
+      "false_aggregation": "0/16",
+      "strict_provenance": "47/52",
+      "adjusted_provenance": "45/48"
+    }
+  },
+  "question_aggregates": {
+    "J1": {
+      "strict_correct": "2/4",
+      "adjusted_correct": "4/4",
+      "strict_scope_caveat": "2/4",
+      "adjusted_scope_caveat": "4/4",
+      "false_aggregation": "0/4",
+      "strict_provenance": "9/12",
+      "adjusted_provenance": "12/12"
+    },
+    "J2": {
+      "strict_correct": "4/4",
+      "adjusted_correct": "4/4",
+      "strict_scope_caveat": "4/4",
+      "adjusted_scope_caveat": "4/4",
+      "false_aggregation": "0/4",
+      "strict_provenance": "5/12",
+      "adjusted_provenance": "5/12"
+    },
+    "J3": {
+      "strict_correct": "4/4",
+      "adjusted_correct": "4/4",
+      "strict_scope_caveat": "4/4",
+      "adjusted_scope_caveat": "4/4",
+      "false_aggregation": "0/4",
+      "strict_provenance": "8/8",
+      "adjusted_provenance": "8/8"
+    },
+    "J4": {
+      "strict_correct": "4/4",
+      "adjusted_correct": "4/4",
+      "strict_scope_caveat": "4/4",
+      "adjusted_scope_caveat": "4/4",
+      "false_aggregation": "0/4",
+      "strict_provenance": "16/16",
+      "adjusted_provenance": "16/16"
+    },
+    "P1": {
+      "strict_correct": "4/4",
+      "adjusted_correct": "4/4",
+      "strict_scope_caveat": "4/4",
+      "adjusted_scope_caveat": "4/4",
+      "false_aggregation": "0/4",
+      "strict_provenance": "12/12",
+      "adjusted_provenance": "12/12"
+    },
+    "P2": {
+      "strict_correct": "2/4",
+      "adjusted_correct": "4/4",
+      "strict_scope_caveat": "4/4",
+      "adjusted_scope_caveat": "4/4",
+      "false_aggregation": "0/4",
+      "strict_provenance": "10/12",
+      "adjusted_provenance": "8/8"
+    },
+    "P3": {
+      "strict_correct": "4/4",
+      "adjusted_correct": "4/4",
+      "strict_scope_caveat": "4/4",
+      "adjusted_scope_caveat": "4/4",
+      "false_aggregation": "0/4",
+      "strict_provenance": "8/8",
+      "adjusted_provenance": "8/8"
+    },
+    "P4": {
+      "strict_correct": "4/4",
+      "adjusted_correct": "4/4",
+      "strict_scope_caveat": "4/4",
+      "adjusted_scope_caveat": "4/4",
+      "false_aggregation": "0/4",
+      "strict_provenance": "8/8",
+      "adjusted_provenance": "8/8"
+    },
+    "U1": {
+      "strict_correct": "4/4",
+      "adjusted_correct": "4/4",
+      "strict_scope_caveat": "4/4",
+      "adjusted_scope_caveat": "4/4",
+      "false_aggregation": "0/4",
+      "strict_provenance": "12/12",
+      "adjusted_provenance": "12/12"
+    },
+    "U2": {
+      "strict_correct": "2/4",
+      "adjusted_correct": "2/4",
+      "strict_scope_caveat": "2/4",
+      "adjusted_scope_caveat": "2/4",
+      "false_aggregation": "0/4",
+      "strict_provenance": "8/8",
+      "adjusted_provenance": "8/8"
+    },
+    "U3": {
+      "strict_correct": "2/4",
+      "adjusted_correct": "4/4",
+      "strict_scope_caveat": "2/4",
+      "adjusted_scope_caveat": "4/4",
+      "false_aggregation": "0/4",
+      "strict_provenance": "14/16",
+      "adjusted_provenance": "12/12"
+    },
+    "U4": {
+      "strict_correct": "2/4",
+      "adjusted_correct": "2/4",
+      "strict_scope_caveat": "2/4",
+      "adjusted_scope_caveat": "2/4",
+      "false_aggregation": "0/4",
+      "strict_provenance": "13/16",
+      "adjusted_provenance": "13/16"
+    }
+  },
+  "overall": {
+    "answers": 48,
+    "strict_correct": "38/48",
+    "adjusted_correct": "44/48",
+    "strict_scope_caveat": "40/48",
+    "adjusted_scope_caveat": "44/48",
+    "false_aggregation": "0/48",
+    "strict_provenance": "123/140",
+    "adjusted_provenance": "122/132",
+    "operational_totals": {
+      "wall_latency_seconds": 960.667,
+      "research_tool_calls": 43,
+      "local_file_read_calls": 21,
+      "input_tokens": null
+    }
+  },
+  "generated_at_utc": "2026-07-24T20:59:22Z"
+}
