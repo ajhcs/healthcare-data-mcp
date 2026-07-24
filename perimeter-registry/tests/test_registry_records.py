@@ -42,6 +42,13 @@ def test_relationships_preserve_types_dates_evidence_and_unresolved_start() -> N
     assert relationships["tju_member_of_jhc"].effective_start is None
     assert relationships["tju_member_of_jhc"].status == "current_as_of_source_period"
     assert relationships["tju_member_of_jhc"].evidence_ids == ("fy25_audit",)
+    assert relationships["hpp_marketed_as_jhp"].effective_start is None
+    assert "lvhn_obligated_group_member" not in relationships
+    assert relationships["jhc_controls_abington_operator"].effective_start == "2024-06-30"
+    assert (
+        relationships["jhc_controls_einstein_montgomery_operator"].relationship_type
+        == "controls_operator_of_facility"
+    )
 
 
 def test_evidence_preserves_exact_url_locator_period_and_confidence() -> None:

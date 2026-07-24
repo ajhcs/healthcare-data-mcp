@@ -225,3 +225,4 @@ class Resolution:
     flags: tuple[str, ...] = ()
     identifiers: tuple[tuple[str, str], ...] = ()
     as_of: str | None = None
+    tax_period_year: int | None = None

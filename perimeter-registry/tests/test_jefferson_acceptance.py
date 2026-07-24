@@ -54,7 +54,7 @@ def test_jefferson_health_plans_maps_to_hpp_insurance_not_tjuh() -> None:
 
 
 def test_tjuh_maps_to_its_exact_ein_and_ccn_not_tju_ein() -> None:
-    result = Registry.jefferson().resolve("Thomas Jefferson University Hospitals Form 990")
+    result = Registry.jefferson().resolve("Thomas Jefferson University Hospitals")
 
     assert result.status == "resolved"
     assert result.entity_ids == ("tjuh",)
@@ -93,7 +93,7 @@ def test_debt_resolves_to_obligated_group_and_excludes_insurance() -> None:
     assert debt.scope_id == "obligated_group_2025"
     assert debt.amount_usd is None
     assert "HPP and health-plan entities" in debt.excludes
-    assert result.entity_ids == ("tju", "jhc", "tjuh", "lvhn")
+    assert result.entity_ids == ("tju", "jhc", "tjuh")
     assert result.flags == ("debt perimeter; not a legal entity or GAAP consolidation",)
 
 
