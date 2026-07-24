@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from collections.abc import Iterable, Mapping
 from importlib.resources import files
+from string import ascii_lowercase
 from types import MappingProxyType
 from typing import Any
 
@@ -76,8 +77,9 @@ class RegistryStore:
 
     @classmethod
     def from_fixture(cls, fixture_name: str) -> RegistryStore:
+        allowed_characters = set(ascii_lowercase + "_-")
         if not fixture_name or any(
-            character not in "abcdefghijklmnopqrstuvwxyz_-" for character in fixture_name
+            character not in allowed_characters for character in fixture_name
         ):
             raise RegistryDataError("invalid fixture_name")
         fixture = files("perimeter_registry.data").joinpath(f"{fixture_name}.json")
