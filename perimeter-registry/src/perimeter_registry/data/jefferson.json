@@ -220,7 +220,7 @@
         "TJU",
         "JHC",
         "TJUH",
-        "specified LVHN and other obligated members"
+        "specified Lehigh Valley hospital and physician entities (not the LVHN parent node)"
       ],
       "excludes": ["HPP and health-plan entities"],
       "flags": ["debt perimeter; not a legal entity or GAAP consolidation"],
@@ -310,12 +310,12 @@
       "relationship_type": "has_marketing_name",
       "target_id": "Jefferson Health Plans",
       "target_kind": "documented_alias",
-      "effective_start": "2026",
+      "effective_start": null,
       "effective_end": null,
       "evidence_ids": ["jhp_2026_provider_manual"],
       "confidence": "high",
-      "status": "documented_with_incomplete_alias_history",
-      "notes": ["Branding expanded in 2026; earlier alias dates remain unresolved"]
+      "status": "documented_as_of_2026_with_unresolved_start",
+      "notes": ["The 2026 manual documents the marketing name and expanded branding; the start date remains unresolved"]
     },
     {
       "id": "tjuh_operates_390174",
@@ -329,6 +329,45 @@
       "confidence": "high",
       "status": "current_as_of_source_period",
       "notes": ["Start date is not resolved in this fixture"]
+    },
+    {
+      "id": "jhc_controls_abington_operator",
+      "source_id": "jhc",
+      "relationship_type": "controls_operator_of_facility",
+      "target_id": "facility_abington_390231",
+      "target_kind": "facility",
+      "effective_start": "2024-06-30",
+      "effective_end": null,
+      "evidence_ids": ["fy25_audit", "kennedy_2023_990"],
+      "confidence": "high",
+      "status": "documented_control_chain_operator_not_promoted",
+      "notes": ["The legal operator and EIN remain on the facility record rather than becoming a seventh entity node"]
+    },
+    {
+      "id": "jhc_controls_einstein_phila_operator",
+      "source_id": "jhc",
+      "relationship_type": "controls_operator_of_facility",
+      "target_id": "facility_einstein_phila_390142",
+      "target_kind": "facility",
+      "effective_start": "2024-06-30",
+      "effective_end": null,
+      "evidence_ids": ["fy25_audit", "kennedy_2023_990"],
+      "confidence": "high",
+      "status": "documented_control_chain_operator_not_promoted",
+      "notes": ["The legal operator and EIN remain on the facility record rather than becoming a seventh entity node"]
+    },
+    {
+      "id": "jhc_controls_einstein_montgomery_operator",
+      "source_id": "jhc",
+      "relationship_type": "controls_operator_of_facility",
+      "target_id": "facility_einstein_montgomery_390329",
+      "target_kind": "facility",
+      "effective_start": "2024-06-30",
+      "effective_end": null,
+      "evidence_ids": ["fy25_audit", "kennedy_2023_990"],
+      "confidence": "high",
+      "status": "documented_control_chain_operator_not_promoted",
+      "notes": ["The legal operator and EIN remain on the facility record rather than becoming a seventh entity node"]
     },
     {
       "id": "tju_obligated_group_member",
@@ -368,19 +407,6 @@
       "confidence": "high",
       "status": "documented",
       "notes": []
-    },
-    {
-      "id": "lvhn_obligated_group_member",
-      "source_id": "lvhn",
-      "relationship_type": "obligated_group_member",
-      "target_id": "obligated_group_2025",
-      "target_kind": "reporting_perimeter",
-      "effective_start": "2025",
-      "effective_end": null,
-      "evidence_ids": ["fy25_audit"],
-      "confidence": "high",
-      "status": "documented_for_specified_lvhn_members",
-      "notes": ["The complete obligated-group inventory is not modeled as entity nodes"]
     }
   ],
   "evidence": [

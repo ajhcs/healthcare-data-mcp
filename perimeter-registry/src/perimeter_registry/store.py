@@ -22,6 +22,10 @@ class RegistryDataError(ValueError):
     """Raised when inspectable registry data violates the local contract."""
 
 
+def normalize_text(value: str) -> str:
+    return " ".join(value.casefold().split())
+
+
 def _unique_by_id(records: list[RawRecord], record_type: str) -> dict[str, RawRecord]:
     indexed: dict[str, RawRecord] = {}
     for record in records:
@@ -78,7 +82,7 @@ class RegistryStore:
             raise LookupError(entity_id) from error
 
     def entity_for_alias(self, alias: str) -> EntityRecord:
-        normalized = " ".join(alias.casefold().split())
+        normalized = normalize_text(alias)
         try:
             return self._entity_aliases[normalized]
         except KeyError as error:
@@ -107,7 +111,7 @@ class RegistryStore:
         aliases: dict[str, EntityRecord] = {}
         for entity in self.entities:
             for alias in (entity.entity_id, entity.name, *entity.aliases):
-                normalized = " ".join(alias.casefold().split())
+                normalized = normalize_text(alias)
                 prior = aliases.get(normalized)
                 if prior is not None and prior.entity_id != entity.entity_id:
                     raise RegistryDataError(f"ambiguous entity alias: {alias}")

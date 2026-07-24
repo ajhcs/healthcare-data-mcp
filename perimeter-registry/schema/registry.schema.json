@@ -148,7 +148,7 @@
         "id": {"$ref": "#/$defs/id"},
         "source_id": {"$ref": "#/$defs/id"},
         "relationship_type": {
-          "enum": ["sole_corporate_member_of", "sole_member_of", "sole_owner_of", "merged_into", "has_marketing_name", "operates_facility", "obligated_group_member"]
+          "enum": ["sole_corporate_member_of", "sole_member_of", "sole_owner_of", "merged_into", "has_marketing_name", "operates_facility", "controls_operator_of_facility", "obligated_group_member"]
         },
         "target_id": {"$ref": "#/$defs/id"},
         "target_kind": {"enum": ["entity", "facility", "reporting_perimeter", "documented_alias"]},
