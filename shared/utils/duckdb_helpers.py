@@ -12,11 +12,13 @@ from pathlib import Path
 
 import duckdb
 
+from shared.utils.errors import EXPECTED_OPERATIONAL_EXCEPTIONS
+
 __all__ = [
-    "get_connection",
-    "get_connection_with_view",
     "detect_columns",
     "find_column",
+    "get_connection",
+    "get_connection_with_view",
 ]
 
 logger = logging.getLogger(__name__)
@@ -41,7 +43,7 @@ def get_connection(
             f"SELECT * FROM read_parquet('{parquet_path}')"
         )
         return con
-    except Exception:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS:
         logger.warning("Corrupt Parquet cache, deleting: %s", parquet_path)
         con.close()
         parquet_path.unlink(missing_ok=True)

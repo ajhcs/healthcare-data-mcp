@@ -1,0 +1,138 @@
+{
+  "generated_at_utc": "2026-07-25T20:55:04Z",
+  "arm": "manual_style_source_research_baseline",
+  "repetition": 2,
+  "order": [
+    "N1",
+    "K1",
+    "N2",
+    "K2",
+    "N3",
+    "K3",
+    "N4",
+    "K4"
+  ],
+  "started_at_utc": "2026-07-25T20:49:10Z",
+  "ended_at_utc": "2026-07-25T20:55:04Z",
+  "wall_latency_seconds": 354,
+  "input_tokens": null,
+  "input_token_note": "Input-token telemetry is unavailable to this AI baseline runner; no reliable token count was exposed by the execution environment.",
+  "research_tool_calls": 27,
+  "local_file_read_calls": 1,
+  "answers": [
+    {
+      "question_id": "N1",
+      "answer": "Selected scope/entity: the lean Nebraska Medicine clinical enterprise is the integrated clinical system under the Nebraska Medicine parent: The Nebraska Medical Center, Bellevue Medical Center, LLC, and UNMC Physicians, plus the clinics/clinical operations those entities operate. Nebraska Medicine's own current fast facts describe two hospitals (Nebraska Medical Center and Bellevue Medical Center), more than 70 clinics, and UNMC as its primary clinical partner; its history identifies the 2014 clinical integration of the two hospitals and UNMC Physicians under the Nebraska Medicine brand. Exclusion: the University of Nebraska Medical Center (UNMC) is the university/research-and-education partner, not an owned hospital or owned clinical subsidiary, and must not be rolled into the owned clinical enterprise merely because the organizations share a campus, mission, brand presentation, or HIPAA affiliated-covered-entity arrangement. Caveats/unresolved or missed data: 'Nebraska Medicine' is used both as a brand and as the name of the 2016 parent corporation; this answer selects the lean controlled clinical enterprise, not every affiliate, academic program, or co-branded activity. Typed identifiers: none selected for this perimeter-only question; entity names, rather than an EIN/CCN, define the scope.",
+      "primary_source_urls": [
+        "https://www.nebraskamed.com/about-us",
+        "https://www.nebraskamed.com/about-us/fast-facts",
+        "https://www.nebraskamed.com/about-us/nebraska-medicine-history",
+        "https://nebraska.edu/-/media/projects/unca/docs/board-of-regents/agendas-and-minutes/2014/may-board-meeting/agenda-5-30-14.pdf"
+      ],
+      "started_at_utc": "2026-07-25T20:49:21Z",
+      "ended_at_utc": "2026-07-25T20:49:36Z",
+      "latency_seconds": 15,
+      "research_tool_calls": 1
+    },
+    {
+      "question_id": "K1",
+      "answer": "Selected scope/entity: there is no single EIN for the natural-language brand 'Kaiser Permanente.' Kaiser Permanente officially says the organization comprises Kaiser Foundation Health Plan, Inc., Kaiser Foundation Hospitals and its subsidiaries, and the Permanente Medical Groups. Accepted clarification: if the intended entity is Kaiser Foundation Health Plan, Inc., the typed identifier is EIN 94-1340523. Do not use that EIN for Kaiser Foundation Hospitals, a regional health plan with its own legal entity, or a Permanente Medical Group. Caveats/unresolved or missed data: the question does not state region, contract/product, hospital, or physician-group purpose, so 94-1340523 is conditional on the named national health-plan corporation rather than an answer for the whole brand. Typed identifiers: EIN = 94-1340523 (Kaiser Foundation Health Plan, Inc.); no brand-level EIN exists.",
+      "primary_source_urls": [
+        "https://about.kaiserpermanente.org/who-we-are/fast-facts",
+        "https://about.kaiserpermanente.org/who-we-are/our-history/how-it-all-started",
+        "https://apps.irs.gov/pub/epostcard/cor/943299123_201612_990_2019050816278558.pdf"
+      ],
+      "started_at_utc": "2026-07-25T20:49:42Z",
+      "ended_at_utc": "2026-07-25T20:50:05Z",
+      "latency_seconds": 23,
+      "research_tool_calls": 2
+    },
+    {
+      "question_id": "N2",
+      "answer": "Selected governance scope/entity: Nebraska Medicine, the nonprofit parent, as of 2026-07-25. Omaha Community Foundation (OCF): no, not yet a governing member/owner on the official record reviewed. The June 29 University release says the July 1-September 30 structure is temporary while documents are finalized that 'would recognize' OCF as a governing member; equal voting representation on the board is not itself membership or ownership. Clarkson Regional Health Services (CRHS): no for the current interim governance selection; the University says CRHS announced withdrawal, and OCF representatives replaced directors representing CRHS effective July 1. The University of Nebraska is the continuing member in the interim structure. Caveats/unresolved or missed data: the public releases reviewed do not reproduce the executed change-of-membership agreement, a current member register, or the accepted July articles themselves. Accordingly, the conclusion should not be overstated beyond the effective interim governance described by the University; historic 50% CRHS membership and current board seats must not be silently treated as current ownership. Typed identifiers: no EIN, CCN, or NPI is selected; the relevant type is nonprofit governing-member status, distinct from director/board-representative status.",
+      "primary_source_urls": [
+        "https://nebraska.edu/news-and-events/news/2026/06/regents-approve-interim-structure",
+        "https://nebraska.edu/news-and-events/news/2026/06/board-of-regents-advance-nebraska-medicine-governance-transition-during-june-meeting",
+        "https://nebraska.edu/news-and-events/news/2026/01/board-of-regents-approves-move-toward-single-member-governance-of-nebraska-medicine"
+      ],
+      "started_at_utc": "2026-07-25T20:50:13Z",
+      "ended_at_utc": "2026-07-25T20:50:46Z",
+      "latency_seconds": 33,
+      "research_tool_calls": 3
+    },
+    {
+      "question_id": "K2",
+      "answer": "Selected Colorado scopes/entities: for health coverage use Kaiser Foundation Health Plan of Colorado, a Colorado nonprofit health-plan corporation; typed identifier EIN 84-0591617. For physician care use Colorado Permanente Medical Group, P.C. (CPMG), the independent physician-owned, for-profit medical corporation; typed identifier EIN 84-0832336. Kaiser officially describes Colorado as comprising these two entities, and its Colorado evidence of coverage separately defines 'Health Plan' and 'Medical Group.' Caveats/unresolved or missed data: these EINs identify legal entities, not a particular individual physician, medical office, claim location, NPI, or hospital; use the billing document's entity/NPI for claim-level work. CPMG's integration/exclusive partnership with Kaiser does not make it the same taxpayer as the health plan. Typed identifiers: EIN = 84-0591617 (Kaiser Foundation Health Plan of Colorado); EIN = 84-0832336 (Colorado Permanente Medical Group, P.C.). CMS organization NPI 1760599724 is a different identifier type and is not substituted for CPMG's EIN.",
+      "primary_source_urls": [
+        "https://about.kaiserpermanente.org/who-we-are/fast-facts",
+        "https://healthy.kaiserpermanente.org/content/dam/kporg/final/documents/health-plan-documents/eoc/co/individual-family/2026/on-colorado-option-bronze-ltd-co-en.pdf",
+        "https://apps.irs.gov/pub/epostcard/cor/943299123_201612_990_2019050816278558.pdf",
+        "https://www.pbgc.gov/search-plan?f%5B0%5D=plan_type%3Aplan&fulltext=&page=277",
+        "https://about.kaiserpermanente.org/news/press-release-archive/greg-berman-md-named-president-and-executive-medical-director",
+        "https://data.cms.gov/tools/medicare-revalidation-list/provider/I20070425000633"
+      ],
+      "started_at_utc": "2026-07-25T20:50:53Z",
+      "ended_at_utc": "2026-07-25T20:51:58Z",
+      "latency_seconds": 65,
+      "research_tool_calls": 8
+    },
+    {
+      "question_id": "N3",
+      "answer": "Selected facility/operator pairs: (1) The Nebraska Medical Center is the legal nonprofit hospital operator; typed identifiers operator EIN 91-1858433 and facility CCN 280013. (2) Bellevue Medical Center, LLC is the separate legal hospital operator; typed identifiers operator EIN 20-4305186 and facility CCN 280132. The Nebraska hospital roster names Bellevue Medical Center, LLC as licensee/operator for the Bellevue facility and The Nebraska Medical Center as licensee/operator for the Omaha facility. No: Bellevue's federal disregarded-entity treatment does not erase the LLC, its state hospital operator/licensee record, its NPI records, or its separately assigned CCN; it concerns federal tax reporting. Caveats/unresolved or missed data: do not join EINs and CCNs as though they were interchangeable. EIN identifies a taxpayer/legal operator; CCN identifies a Medicare-certified facility. Bellevue may be included in the parent's tax return while remaining a separately named operator/facility. Typed identifiers: EIN 91-1858433 -> The Nebraska Medical Center; CCN 280013 -> The Nebraska Medical Center facility; EIN 20-4305186 -> Bellevue Medical Center, LLC; CCN 280132 -> Bellevue Medical Center facility.",
+      "primary_source_urls": [
+        "https://www.cms.gov/medicare/medicare-general-information/medicareapprovedfacilitie/carotid-artery-stenting-facilities-items/the-nebraska-medical-center",
+        "https://govdocs.nebraska.gov/epubs/H8310/D002-2021.pdf",
+        "https://govdocs.nebraska.gov/epubs/H8310/D002-2011.pdf",
+        "https://www.heart.org/-/media/files/finance/2019-aha-990-public-inspection-copy.pdf?la=en",
+        "https://apps.irs.gov/app/eos/"
+      ],
+      "started_at_utc": "2026-07-25T20:52:06Z",
+      "ended_at_utc": "2026-07-25T20:53:13Z",
+      "latency_seconds": 67,
+      "research_tool_calls": 8
+    },
+    {
+      "question_id": "K3",
+      "answer": "Selected measurement/reporting scope: no, the $115.8 billion is not entity-only revenue of Kaiser Foundation Health Plan, Inc. (EIN 94-1340523). Kaiser labels it 2024 operating revenue for Kaiser Foundation Health Plan, Inc., Kaiser Foundation Hospitals, Risant Health, Inc., and their respective subsidiaries and affiliates. It therefore must remain attached to that consolidated reporting perimeter. Direct comparison caveat: 2023's reported $100.8 billion was for Kaiser Foundation Health Plan, Inc., Kaiser Foundation Hospitals, and their respective subsidiaries (KFHP/H); Kaiser states that 2024 year-end results include Risant Health for the first time. The 2024 perimeter also consolidates acquired systems from their acquisition dates, so a simple 115.8-versus-100.8 growth calculation mixes perimeter change with operating change unless a consistent-perimeter/recast series is supplied. Caveats/unresolved or missed data: the public headline does not disaggregate the $115.8 billion by EIN, and no entity-only amount for EIN 94-1340523 was found in the cited materials. Typed identifiers: EIN 94-1340523 identifies Kaiser Foundation Health Plan, Inc.; it does not type or own the consolidated $115.8 billion measurement.",
+      "primary_source_urls": [
+        "https://about.kaiserpermanente.org/news/press-release-archive/kaiser-foundation-health-plan-hospitals-risant-health-report-2024-financial-results",
+        "https://about.kaiserpermanente.org/content/dam/kp/mykp/documents/reports/2024_annual-report_ADA.pdf",
+        "https://about.kaiserpermanente.org/news/press-release-archive/kaiser-foundation-health-plan-and-hospitals-report-2023-financial-results",
+        "https://about.kaiserpermanente.org/news/kaiser-foundation-health-plan-and-hospitals-q1-2024-financials"
+      ],
+      "started_at_utc": "2026-07-25T20:53:22Z",
+      "ended_at_utc": "2026-07-25T20:53:36Z",
+      "latency_seconds": 14,
+      "research_tool_calls": 1
+    },
+    {
+      "question_id": "N4",
+      "answer": "Selected parent entity: Nebraska Medicine, the Nebraska nonprofit parent corporation formed in 2016; typed identifier EIN 81-3158267. Do not confuse it with subsidiary hospital operator The Nebraska Medical Center (EIN 91-1858433). UNMC Physicians is a separate nonprofit subsidiary/corporation with its own typed EIN 47-0785575 and may not inherit 81-3158267 merely because it is controlled/integrated under the parent. UNMC is also not the parent or subsidiary: its legal contracting identity is the Board of Regents of the University of Nebraska acting by and on behalf of UNMC, with typed EIN/TIN 47-0049123. Caveats/unresolved or missed data: shared branding, a common mission, campus proximity, clinical integration, and even parent-subsidiary control do not collapse taxpayers. Use 81-3158267 only when the legal party is Nebraska Medicine parent; use the separately named entity's own identifier for UNMC Physicians, The Nebraska Medical Center, or the Board of Regents/UNMC. Typed identifiers: EIN 81-3158267 -> Nebraska Medicine parent; EIN 47-0785575 -> UNMC Physicians; EIN/TIN 47-0049123 -> Board of Regents of the University of Nebraska acting for UNMC; EIN 91-1858433 -> The Nebraska Medical Center subsidiary/operator.",
+      "primary_source_urls": [
+        "https://apps.irs.gov/app/eos/",
+        "https://www.unmc.edu/spa/about/institutional.html",
+        "https://nebraska.edu/_files/docs/faculty-staff/health-benefits/dental-insurance.pdf",
+        "https://nebraska.edu/-/media/projects/unca/docs/board-of-regents/agendas-and-minutes/2014/may-board-meeting/agenda-5-30-14.pdf",
+        "https://www.nebraskamed.com/about-us/nebraska-medicine-history"
+      ],
+      "started_at_utc": "2026-07-25T20:53:50Z",
+      "ended_at_utc": "2026-07-25T20:54:24Z",
+      "latency_seconds": 34,
+      "research_tool_calls": 3
+    },
+    {
+      "question_id": "K4",
+      "answer": "Selected entity/facility: the legal hospital corporation is Kaiser Foundation Hospitals; typed identifier EIN 94-1105628. The Medicare-certified Santa Clara hospital facility at 700 Lawrence Expressway is Kaiser Foundation Hospital - Santa Clara; typed identifier CCN 050071 (also displayed by CMS as hyphenated provider number 05-0071). Caveats/unresolved or missed data: do not substitute Kaiser Foundation Health Plan, Inc.'s EIN, the Kaiser Permanente brand, or a Permanente Medical Group identifier. CMS page material also shows NPI 1326119967 in another provider-number field; that is an NPI, not the six-digit hospital CCN requested here. Typed identifiers: EIN 94-1105628 -> Kaiser Foundation Hospitals legal hospital entity; CCN 050071 -> Kaiser Foundation Hospital - Santa Clara facility; NPI 1326119967 -> separate provider identifier, not the requested CCN.",
+      "primary_source_urls": [
+        "https://www.cms.gov/medicare/medicare-general-information/medicareapprovedfacilitie/vad-destination-therapy-facilities/kaiser-foundation-hospital-santa-clara",
+        "https://www.cms.gov/files/document/mgcrb-ffy-2026-individual-decision-listing.pdf",
+        "https://apps.irs.gov/pub/epostcard/cor/416011702_202212_990_2024010522181827.pdf",
+        "https://www.cms.gov/medicare/medicare-general-information/medicareapprovedfacilitie/carotid-artery-stenting-facilities-items/kaiser-foundation-hospital-santa-clara-"
+      ],
+      "started_at_utc": "2026-07-25T20:54:32Z",
+      "ended_at_utc": "2026-07-25T20:54:46Z",
+      "latency_seconds": 14,
+      "research_tool_calls": 1
+    }
+  ]
+}

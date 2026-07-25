@@ -1,5 +1,6 @@
 """ZCTA shapefile loading, adjacency computation, and geographic utilities."""
 
+import asyncio
 import json
 import logging
 import zipfile
@@ -111,8 +112,8 @@ async def get_adjacency_dict() -> dict[str, list[str]]:
     # Try loading from cache file
     if ADJACENCY_CACHE.exists():
         logger.info("Loading adjacency cache from %s", ADJACENCY_CACHE)
-        with open(ADJACENCY_CACHE) as f:
-            _adjacency_dict = json.load(f)
+        payload = await asyncio.to_thread(ADJACENCY_CACHE.read_text, encoding="utf-8")
+        _adjacency_dict = json.loads(payload)
         return _adjacency_dict
 
     # Build from shapefile
@@ -120,8 +121,8 @@ async def get_adjacency_dict() -> dict[str, list[str]]:
     _adjacency_dict = _build_adjacency(gdf)
 
     # Save to cache
-    with open(ADJACENCY_CACHE, "w") as f:
-        json.dump(_adjacency_dict, f)
+    payload = json.dumps(_adjacency_dict)
+    await asyncio.to_thread(ADJACENCY_CACHE.write_text, payload, encoding="utf-8")
     logger.info("Adjacency cache saved to %s (%d ZCTAs)", ADJACENCY_CACHE, len(_adjacency_dict))
 
     return _adjacency_dict

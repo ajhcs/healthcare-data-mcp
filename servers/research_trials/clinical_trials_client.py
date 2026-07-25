@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
+from shared.utils.errors import EXPECTED_OPERATIONAL_EXCEPTIONS
 from shared.utils.http_client import resilient_request
 
-from .models import ClinicalTrial, ClinicalTrialLocation, ClinicalTrialSponsor, ClinicalTrialsMetadata
+from .models import ClinicalTrial, ClinicalTrialLocation, ClinicalTrialsMetadata, ClinicalTrialSponsor
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +80,7 @@ async def get_version() -> dict[str, Any]:
     try:
         resp = await resilient_request("GET", VERSION_URL, timeout=TIMEOUT)
         return resp.json()
-    except Exception as exc:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as exc:
         logger.warning("ClinicalTrials.gov version lookup failed: %s", exc)
         return {"error": str(exc)}
 
@@ -117,7 +118,7 @@ async def search_studies(
         data["_version"] = version
         data["_request_params"] = params
         return data
-    except Exception as exc:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as exc:
         logger.warning("ClinicalTrials.gov study search failed: %s", exc)
         return {"error": str(exc), "request": params}
 
@@ -131,7 +132,7 @@ async def get_study(nct_id: str) -> dict[str, Any]:
         data = resp.json()
         data["_version"] = version
         return data
-    except Exception as exc:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as exc:
         logger.warning("ClinicalTrials.gov study detail failed for %s: %s", normalized, exc)
         return {"error": str(exc), "nct_id": normalized}
 
@@ -222,7 +223,7 @@ def metadata_from_response(raw: dict[str, Any], page_size: int = 0) -> ClinicalT
         source_url=STUDIES_URL,
         api_version=_str(version.get("apiVersion")),
         data_timestamp=_str(version.get("dataTimestamp")),
-        retrieved_at=datetime.now(timezone.utc).isoformat(),
+        retrieved_at=datetime.now(UTC).isoformat(),
         next_page_token=_str(raw.get("nextPageToken")),
         page_size=page_size,
     )

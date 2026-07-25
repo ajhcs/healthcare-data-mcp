@@ -3,6 +3,7 @@
 import logging
 
 import pandas as pd
+
 from shared.utils.bed_resolver import resolve_hospital_bed_source
 
 from .models import (
@@ -60,9 +61,7 @@ def _service_available(row, col: str) -> bool:
     if col not in row.index:
         return False
     val = str(row[col]).strip()
-    if not val or val.upper() in ("0", "NAN", "NONE", ""):
-        return False
-    return True
+    return not (not val or val.upper() in ("0", "NAN", "NONE", ""))
 
 
 def enrich_facility(ccn: str, pos_df: pd.DataFrame) -> FacilitySummary | None:

@@ -3,22 +3,22 @@
 Uses the shared CMS client for NPPES API calls, enriched with cached
 CMS Physician Compare and Medicare Utilization PUF data.
 """
-
 import logging
+import sys as _sys
 from pathlib import Path
 
 import duckdb
-from shared.utils.duckdb_safe import safe_parquet_sql
-
-from shared.utils.http_client import resilient_request
 import pandas as pd
 
-import sys as _sys
+from shared.utils.duckdb_safe import safe_parquet_sql
+from shared.utils.errors import EXPECTED_OPERATIONAL_EXCEPTIONS
+from shared.utils.http_client import resilient_request
+
 _project_root = __import__("pathlib").Path(__file__).resolve().parent.parent.parent
 if str(_project_root) not in _sys.path:
     _sys.path.insert(0, str(_project_root))
 
-from shared.utils.cache import is_cache_valid, write_atomic_bytes, write_atomic_parquet  # noqa: E402
+from shared.utils.cache import is_cache_valid, write_atomic_bytes, write_atomic_parquet
 
 logger = logging.getLogger(__name__)
 
@@ -272,7 +272,7 @@ async def ensure_physician_compare_cached() -> bool:
         logger.info("Physician Compare cached: %d rows", len(df))
         return True
 
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("Failed to cache Physician Compare: %s", e)
         return False
 
@@ -318,7 +318,7 @@ def get_quality_info(npi: str) -> dict | None:
             "medical_school": str(row.get("med_sch", row.get("medical_school_name", ""))),
         }
 
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("Physician Compare query failed for NPI %s: %s", npi, e)
         return None
 
@@ -376,7 +376,7 @@ async def ensure_utilization_cached() -> bool:
         logger.warning("Could not download utilization data — unexpected response")
         return False
 
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("Failed to cache utilization data: %s", e)
         return False
 
@@ -446,6 +446,6 @@ def get_utilization_summary(npi: str) -> dict | None:
             "top_hcpcs": [],  # Populated when using per-service dataset
         }
 
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("Utilization query failed for NPI %s: %s", npi, e)
         return None

@@ -5,7 +5,6 @@ news-style search. All 5 tools route through this module.
 
 API docs: https://developers.google.com/custom-search/v1/reference/rest/v1/cse/list
 """
-
 import asyncio
 import copy
 import json
@@ -15,6 +14,7 @@ import time
 
 import httpx
 
+from shared.utils.errors import EXPECTED_OPERATIONAL_EXCEPTIONS
 from shared.utils.http_client import resilient_request
 
 logger = logging.getLogger(__name__)
@@ -277,7 +277,7 @@ async def search(
         payload: dict | None = None
         try:
             payload = e.response.json()
-        except Exception:
+        except EXPECTED_OPERATIONAL_EXCEPTIONS:
             payload = None
 
         if _is_quota_error(e.response.status_code, payload):
@@ -302,7 +302,7 @@ async def search(
             "error": f"Google CSE request failed: {e.response.status_code}",
             "quota": _quota_snapshot(backend="google_cse"),
         }
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("Google CSE request failed: %s", e)
         async with _state_lock:
             _runtime_state["last_error"] = str(e)

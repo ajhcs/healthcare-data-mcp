@@ -74,19 +74,19 @@ def test_mutating_paths_are_confined_to_cache_root(tmp_path: Path) -> None:
 
 def test_public_url_policy_rejects_private_and_unregistered_targets() -> None:
     with pytest.raises(ValueError, match="exact allowlisted"):
-        core._validate_public_url(  # noqa: SLF001 - policy-level regression test
+        core._validate_public_url(
             "https://example.com/file.csv",
             allowed_urls=("https://data.cms.gov/file.csv",),
         )
 
     with pytest.raises(ValueError, match="exact allowlisted"):
-        core._validate_public_url(  # noqa: SLF001 - policy-level regression test
+        core._validate_public_url(
             "https://data.cms.gov/other.csv",
             allowed_urls=("https://data.cms.gov/file.csv",),
         )
 
     with pytest.raises(ValueError, match="Private"):
-        core._validate_public_url(  # noqa: SLF001 - policy-level regression test
+        core._validate_public_url(
             "http://127.0.0.1/file.csv",
             allowed_urls=("http://127.0.0.1/file.csv",),
         )
@@ -236,7 +236,7 @@ def test_multi_artifact_dataset_requires_all_artifacts_for_ready(tmp_path: Path)
         assert validation["status"] == "pass"
         staged_artifacts.append((relative_path, staged, spec.source_urls[index], core.CacheValidationResult(**validation)))
 
-    manifest = core._promote_many(spec, tmp_path, staged_artifacts, "run-all")  # noqa: SLF001
+    manifest = core._promote_many(spec, tmp_path, staged_artifacts, "run-all")
     status = core.inspect_cache_source("cms_hospital_quality", cache_root=tmp_path)["status"]
 
     assert manifest.cache_status == "ready"
@@ -311,7 +311,7 @@ def test_checksum_mismatch_marks_ready_manifest_corrupt(tmp_path: Path) -> None:
             relative_path=relative_path,
         )["validation"]
         staged_artifacts.append((relative_path, staged, spec.source_urls[index], core.CacheValidationResult(**validation)))
-    manifest = core._promote_many(spec, tmp_path, staged_artifacts, "run-all")  # noqa: SLF001
+    manifest = core._promote_many(spec, tmp_path, staged_artifacts, "run-all")
     Path(manifest.artifacts[0]["path"]).write_text(_quality_csv(score="9.99"), encoding="utf-8")
 
     status = core.inspect_cache_source("cms_hospital_quality", cache_root=tmp_path)["status"]

@@ -2,11 +2,12 @@
 
 Loads static bundled CSV files for DRG classification and IPPS weights.
 """
-
 import logging
 from pathlib import Path
 
 import pandas as pd
+
+from shared.utils.errors import EXPECTED_OPERATIONAL_EXCEPTIONS
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +36,7 @@ def _load_service_line_map() -> dict[str, str]:
         df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
         _sl_map = dict(zip(df["drg_code"].str.strip().str.zfill(3), df["service_line"].str.strip()))
         logger.info("Loaded %d DRG->service-line mappings", len(_sl_map))
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("Failed to load service line map: %s", e)
         _sl_map = {}
 
@@ -64,7 +65,7 @@ def _load_drg_weights() -> dict[str, float]:
             except (ValueError, KeyError):
                 continue
         logger.info("Loaded %d DRG weights", len(_weights))
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("Failed to load DRG weights: %s", e)
         _weights = {}
 

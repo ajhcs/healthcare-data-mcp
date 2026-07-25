@@ -1,0 +1,503 @@
+{
+  "schema_version": 1,
+  "fixture_id": "jefferson_minimal",
+  "systems": [
+    {
+      "id": "jefferson",
+      "name": "Jefferson",
+      "aliases": ["Jefferson Health"],
+      "concept_type": "enterprise_and_clinical_brand",
+      "legal_entity": false,
+      "evidence_ids": ["fy25_audit"],
+      "confidence": "high"
+    }
+  ],
+  "entities": [
+    {
+      "id": "tju",
+      "name": "Thomas Jefferson University",
+      "entity_type": "independent_nonprofit_ultimate_parent",
+      "aliases": ["TJU"],
+      "identifiers": [{"scheme": "EIN", "value": "23-1352651"}],
+      "lifecycle_status": "active",
+      "effective_start": null,
+      "effective_end": null,
+      "evidence_ids": ["fy25_audit", "irs_teos"],
+      "notes": ["Audited consolidated reporting entity and ultimate parent"]
+    },
+    {
+      "id": "jhc",
+      "name": "Jefferson Health Corporation",
+      "entity_type": "healthcare_delivery_parent",
+      "aliases": ["JHC", "Albert Einstein Healthcare Network"],
+      "identifiers": [{"scheme": "EIN", "value": "23-2290323"}],
+      "lifecycle_status": "active",
+      "effective_start": null,
+      "effective_end": null,
+      "evidence_ids": ["fy25_audit", "kennedy_2023_990"],
+      "notes": ["Formerly Albert Einstein Healthcare Network"]
+    },
+    {
+      "id": "tjuh",
+      "name": "Thomas Jefferson University Hospitals, Inc.",
+      "entity_type": "hospital_legal_and_operating_entity",
+      "aliases": ["TJUH", "Thomas Jefferson University Hospitals"],
+      "identifiers": [
+        {"scheme": "EIN", "value": "23-2829095"},
+        {"scheme": "CCN", "value": "390174"}
+      ],
+      "lifecycle_status": "active",
+      "effective_start": null,
+      "effective_end": null,
+      "evidence_ids": ["fy25_audit", "cms_hospital_general", "irs_teos"],
+      "notes": ["Individual hospital filer; its Form 990 is not Jefferson enterprise"]
+    },
+    {
+      "id": "hpp",
+      "name": "Health Partners Plans, Inc.",
+      "entity_type": "not_for_profit_managed_care_legal_entity",
+      "aliases": ["HPP", "Jefferson Health Plans", "JHP"],
+      "identifiers": [{"scheme": "EIN", "value": "23-2379751"}],
+      "lifecycle_status": "active",
+      "effective_start": null,
+      "effective_end": null,
+      "evidence_ids": ["fy25_audit", "jhp_2026_provider_manual", "irs_teos"],
+      "notes": [
+        "Jefferson Health Plans is a marketing/reporting component; no standalone EIN is assumed",
+        "The insurance component includes additional related entities not inventoried as nodes"
+      ]
+    },
+    {
+      "id": "lvhn",
+      "name": "Lehigh Valley Health Network",
+      "entity_type": "historical_former_parent",
+      "aliases": ["LVHN"],
+      "identifiers": [{"scheme": "EIN", "value": "22-2458317"}],
+      "lifecycle_status": "merged",
+      "effective_start": null,
+      "effective_end": "2025-06-30",
+      "evidence_ids": [
+        "fy25_audit",
+        "official_merger_announcement",
+        "pa_facility_licensing",
+        "irs_teos"
+      ],
+      "notes": ["Historical node remains queryable after merger into JHC"]
+    }
+  ],
+  "facilities": [
+    {
+      "id": "facility_tjuh_390174",
+      "name": "Thomas Jefferson University Hospital",
+      "ccn": "390174",
+      "operator_entity_id": "tjuh",
+      "operator_name": "Thomas Jefferson University Hospitals, Inc.",
+      "operator_ein": "23-2829095",
+      "evidence_ids": ["cms_hospital_general"],
+      "confidence": "high"
+    },
+    {
+      "id": "facility_abington_390231",
+      "name": "Jefferson Abington Hospital",
+      "ccn": "390231",
+      "operator_entity_id": null,
+      "operator_name": "Abington Memorial Hospital",
+      "operator_ein": "23-1352152",
+      "evidence_ids": ["cms_hospital_general", "cms_hospital_owners"],
+      "confidence": "high"
+    },
+    {
+      "id": "facility_einstein_phila_390142",
+      "name": "Jefferson Einstein Philadelphia Hospital",
+      "ccn": "390142",
+      "operator_entity_id": null,
+      "operator_name": "Albert Einstein Medical Center",
+      "operator_ein": "23-1396794",
+      "evidence_ids": ["cms_hospital_general", "cms_hospital_owners"],
+      "confidence": "high"
+    },
+    {
+      "id": "facility_einstein_montgomery_390329",
+      "name": "Jefferson Einstein Montgomery Hospital",
+      "ccn": "390329",
+      "operator_entity_id": null,
+      "operator_name": "Albert Einstein Medical Center",
+      "operator_ein": "23-1396794",
+      "evidence_ids": ["cms_hospital_general", "cms_hospital_owners"],
+      "confidence": "high"
+    }
+  ],
+  "reporting_perimeters": [
+    {
+      "id": "enterprise_fy2025",
+      "label": "Audited consolidated enterprise",
+      "perimeter_type": "audited_gaap_consolidation",
+      "includes": [
+        "university education and research",
+        "care delivery",
+        "insurance",
+        "LVHN actual results from 2024-08-01 (11 months)"
+      ],
+      "excludes": [],
+      "flags": ["not hospital-only"],
+      "measurements": [
+        {
+          "id": "reported_actual",
+          "label": "Operating revenues, gains and other support",
+          "amount_usd": 15755857000,
+          "period": "FY ended 2025-06-30",
+          "basis": "audited actual; 11 months of LVHN",
+          "audited": true
+        },
+        {
+          "id": "lvhn_pro_forma",
+          "label": "LVHN 12-month pro-forma consolidated revenue",
+          "amount_usd": 16148416000,
+          "period": "FY ended 2025-06-30",
+          "basis": "unaudited pro forma; 12 months of LVHN",
+          "audited": false
+        },
+        {
+          "id": "intercomponent_eliminations",
+          "label": "Intercomponent eliminations",
+          "amount_usd": 51914000,
+          "period": "FY ended 2025-06-30",
+          "basis": "System and Insurance component presentation",
+          "audited": null
+        }
+      ],
+      "evidence_ids": ["fy25_audit"],
+      "confidence": "high"
+    },
+    {
+      "id": "system_excluding_insurance_fy2025",
+      "label": "System excluding insurance",
+      "perimeter_type": "supplemental_system_component",
+      "includes": ["university education and research", "care delivery"],
+      "excludes": ["insurance"],
+      "flags": ["not healthcare-delivery-only"],
+      "measurements": [
+        {
+          "id": "reported_system_component",
+          "label": "System operating revenues, gains and other support",
+          "amount_usd": 13564443000,
+          "period": "FY ended 2025-06-30",
+          "basis": "supplemental System column excluding Insurance",
+          "audited": null
+        }
+      ],
+      "evidence_ids": ["fy25_audit"],
+      "confidence": "high"
+    },
+    {
+      "id": "insurance_fy2025",
+      "label": "Insurance component",
+      "perimeter_type": "supplemental_insurance_component",
+      "includes": ["HPP and related insurance entities"],
+      "excludes": ["TJUH"],
+      "flags": [
+        "before intercomponent eliminations",
+        "Jefferson Health Plans has no assumed standalone EIN"
+      ],
+      "measurements": [
+        {
+          "id": "reported_insurance_component",
+          "label": "Insurance operating revenues, gains and other support",
+          "amount_usd": 2243328000,
+          "period": "FY ended 2025-06-30",
+          "basis": "supplemental Insurance component before eliminations",
+          "audited": null
+        }
+      ],
+      "evidence_ids": ["fy25_audit", "jhp_2026_provider_manual"],
+      "confidence": "high"
+    },
+    {
+      "id": "obligated_group_2025",
+      "label": "2025 debt obligated group",
+      "perimeter_type": "debt_obligated_group",
+      "includes": [
+        "TJU",
+        "JHC",
+        "TJUH",
+        "specified Lehigh Valley hospital and physician entities (not the LVHN parent node)"
+      ],
+      "excludes": ["HPP and health-plan entities"],
+      "flags": ["debt perimeter; not a legal entity or GAAP consolidation"],
+      "measurements": [
+        {
+          "id": "membership_only",
+          "label": "Obligated-group membership",
+          "amount_usd": null,
+          "period": "2025",
+          "basis": "debt-specific named members",
+          "audited": null
+        }
+      ],
+      "evidence_ids": ["fy25_audit"],
+      "confidence": "high"
+    }
+  ],
+  "relationships": [
+    {
+      "id": "tju_member_of_jhc",
+      "source_id": "tju",
+      "relationship_type": "sole_corporate_member_of",
+      "target_id": "jhc",
+      "target_kind": "entity",
+      "effective_start": null,
+      "effective_end": null,
+      "evidence_ids": ["fy25_audit"],
+      "confidence": "high",
+      "status": "current_as_of_source_period",
+      "notes": ["Start date is not resolved in this fixture"]
+    },
+    {
+      "id": "jhc_controls_tjuh",
+      "source_id": "jhc",
+      "relationship_type": "sole_member_of",
+      "target_id": "tjuh",
+      "target_kind": "entity",
+      "effective_start": "2024-06-30",
+      "effective_end": null,
+      "evidence_ids": ["fy25_audit", "kennedy_2023_990"],
+      "confidence": "high",
+      "status": "documented",
+      "notes": ["Part of the 2024 clinical reorganization"]
+    },
+    {
+      "id": "tju_owns_hpp",
+      "source_id": "tju",
+      "relationship_type": "sole_owner_of",
+      "target_id": "hpp",
+      "target_kind": "entity",
+      "effective_start": "2021-11",
+      "effective_end": null,
+      "evidence_ids": ["jhp_2026_provider_manual"],
+      "confidence": "high",
+      "status": "documented",
+      "notes": []
+    },
+    {
+      "id": "jhc_member_of_lvhn",
+      "source_id": "jhc",
+      "relationship_type": "sole_corporate_member_of",
+      "target_id": "lvhn",
+      "target_kind": "entity",
+      "effective_start": "2024-08-01",
+      "effective_end": "2025-06-29",
+      "evidence_ids": ["fy25_audit", "official_merger_announcement"],
+      "confidence": "high",
+      "status": "historical",
+      "notes": []
+    },
+    {
+      "id": "lvhn_merged_into_jhc",
+      "source_id": "lvhn",
+      "relationship_type": "merged_into",
+      "target_id": "jhc",
+      "target_kind": "entity",
+      "effective_start": "2025-06-30",
+      "effective_end": null,
+      "evidence_ids": ["fy25_audit"],
+      "confidence": "high",
+      "status": "documented",
+      "notes": []
+    },
+    {
+      "id": "hpp_marketed_as_jhp",
+      "source_id": "hpp",
+      "relationship_type": "has_marketing_name",
+      "target_id": "Jefferson Health Plans",
+      "target_kind": "documented_alias",
+      "effective_start": null,
+      "effective_end": null,
+      "evidence_ids": ["jhp_2026_provider_manual"],
+      "confidence": "high",
+      "status": "documented_as_of_2026_with_unresolved_start",
+      "notes": ["The 2026 manual documents the marketing name and expanded branding; the start date remains unresolved"]
+    },
+    {
+      "id": "tjuh_operates_390174",
+      "source_id": "tjuh",
+      "relationship_type": "operates_facility",
+      "target_id": "facility_tjuh_390174",
+      "target_kind": "facility",
+      "effective_start": null,
+      "effective_end": null,
+      "evidence_ids": ["cms_hospital_general"],
+      "confidence": "high",
+      "status": "current_as_of_source_period",
+      "notes": ["Start date is not resolved in this fixture"]
+    },
+    {
+      "id": "jhc_controls_abington_operator",
+      "source_id": "jhc",
+      "relationship_type": "controls_operator_of_facility",
+      "target_id": "facility_abington_390231",
+      "target_kind": "facility",
+      "effective_start": "2024-06-30",
+      "effective_end": null,
+      "evidence_ids": ["fy25_audit", "kennedy_2023_990"],
+      "confidence": "high",
+      "status": "documented_control_chain_operator_not_promoted",
+      "notes": ["The legal operator and EIN remain on the facility record rather than becoming a seventh entity node"]
+    },
+    {
+      "id": "jhc_controls_einstein_phila_operator",
+      "source_id": "jhc",
+      "relationship_type": "controls_operator_of_facility",
+      "target_id": "facility_einstein_phila_390142",
+      "target_kind": "facility",
+      "effective_start": "2024-06-30",
+      "effective_end": null,
+      "evidence_ids": ["fy25_audit", "kennedy_2023_990"],
+      "confidence": "high",
+      "status": "documented_control_chain_operator_not_promoted",
+      "notes": ["The legal operator and EIN remain on the facility record rather than becoming a seventh entity node"]
+    },
+    {
+      "id": "jhc_controls_einstein_montgomery_operator",
+      "source_id": "jhc",
+      "relationship_type": "controls_operator_of_facility",
+      "target_id": "facility_einstein_montgomery_390329",
+      "target_kind": "facility",
+      "effective_start": "2024-06-30",
+      "effective_end": null,
+      "evidence_ids": ["fy25_audit", "kennedy_2023_990"],
+      "confidence": "high",
+      "status": "documented_control_chain_operator_not_promoted",
+      "notes": ["The legal operator and EIN remain on the facility record rather than becoming a seventh entity node"]
+    },
+    {
+      "id": "tju_obligated_group_member",
+      "source_id": "tju",
+      "relationship_type": "obligated_group_member",
+      "target_id": "obligated_group_2025",
+      "target_kind": "reporting_perimeter",
+      "effective_start": "2025",
+      "effective_end": null,
+      "evidence_ids": ["fy25_audit"],
+      "confidence": "high",
+      "status": "documented",
+      "notes": []
+    },
+    {
+      "id": "jhc_obligated_group_member",
+      "source_id": "jhc",
+      "relationship_type": "obligated_group_member",
+      "target_id": "obligated_group_2025",
+      "target_kind": "reporting_perimeter",
+      "effective_start": "2025",
+      "effective_end": null,
+      "evidence_ids": ["fy25_audit"],
+      "confidence": "high",
+      "status": "documented",
+      "notes": []
+    },
+    {
+      "id": "tjuh_obligated_group_member",
+      "source_id": "tjuh",
+      "relationship_type": "obligated_group_member",
+      "target_id": "obligated_group_2025",
+      "target_kind": "reporting_perimeter",
+      "effective_start": "2025",
+      "effective_end": null,
+      "evidence_ids": ["fy25_audit"],
+      "confidence": "high",
+      "status": "documented",
+      "notes": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fy25_audit",
+      "title": "FY25 TJU audited consolidated financial statements",
+      "url": "https://www.jeffersonhealth.org/content/dam/health2021/documents/financial/tjuh-financial-statements/tjuh-audited-financial-statements-2025.pdf",
+      "locator": "Note 1 pp7–8; Note 2 pp18–19; pp45–48; Note 13 / MTI",
+      "source_period": "FY ended 2025-06-30",
+      "confidence": "high",
+      "limitation": null
+    },
+    {
+      "id": "public_notices",
+      "title": "Jefferson public notices and financial disclosures",
+      "url": "https://www.jeffersonhealth.org/about-us/media-requests/public-notices",
+      "locator": "Public notices / financial disclosures index",
+      "source_period": "current index; accessed during fixture research",
+      "confidence": "high",
+      "limitation": "Index page; document-specific facts use their direct source records"
+    },
+    {
+      "id": "official_merger_announcement",
+      "title": "Official Jefferson-LVHN merger announcement",
+      "url": "https://www.jeffersonhealth.org/about-us/news/2024/08/jefferson-lehigh-valley-sign-agreement",
+      "locator": "Aug 1 2024 close announcement",
+      "source_period": "2024-08-01",
+      "confidence": "high",
+      "limitation": null
+    },
+    {
+      "id": "pa_facility_licensing",
+      "title": "Pennsylvania facility licensing record",
+      "url": "https://sais.health.pa.gov/CommonPOC/Licensing/IPA-NCF/InitialApplication.aspx?IPA_PUBLIC=y&amp;ipaappid=3282067",
+      "locator": "TJU to JHC to LVHN control language",
+      "source_period": "record current during fixture research",
+      "confidence": "high",
+      "limitation": "Corroborating control evidence"
+    },
+    {
+      "id": "jhp_2026_provider_manual",
+      "title": "2026 Jefferson Health Plans provider manual",
+      "url": "https://www.jeffersonhealthplans.com/content/dam/jeffersonhealthplans/documents/providers/provider-manual/2026-provider-manual-051126.pdf",
+      "locator": "p4",
+      "source_period": "2026",
+      "confidence": "high",
+      "limitation": null
+    },
+    {
+      "id": "kennedy_2023_990",
+      "title": "Kennedy University Hospital 2023 Form 990 public disclosure package",
+      "url": "https://www.jeffersonhealth.org/content/dam/health2021/documents/financial/new-jersey-financial-statements/kennedy-university-hospital%2C-inc.-2023-form-990-public-disclosure.pdf",
+      "locator": "JHC former Albert Einstein network and June 30 2024 clinical reorganization",
+      "source_period": "2023 Form 990 package with subsequent-event description",
+      "confidence": "high",
+      "limitation": null
+    },
+    {
+      "id": "cms_hospital_general",
+      "title": "CMS Hospital General Information",
+      "url": "https://data.cms.gov/provider-data/dataset/xubh-q36u",
+      "locator": "Facility identities and CMS Certification Numbers",
+      "source_period": "dataset current during fixture research",
+      "confidence": "high",
+      "limitation": "Facility identity evidence, not system financial perimeter evidence"
+    },
+    {
+      "id": "cms_hospital_owners",
+      "title": "CMS Hospital All Owners API documentation",
+      "url": "https://data.cms.gov/provider-characteristics/hospitals-and-other-facilities/hospital-all-owners/api-docs",
+      "locator": "Self-reported hospital ownership dataset API",
+      "source_period": "dataset current during fixture research",
+      "confidence": "medium",
+      "limitation": "Corroborating only; never elevated above audit or licensing evidence"
+    },
+    {
+      "id": "irs_teos",
+      "title": "IRS Tax Exempt Organization Search official XML filings",
+      "url": null,
+      "locator": "Exact-EIN XML filings and Schedule R where present",
+      "source_period": "filing-specific",
+      "confidence": "high",
+      "limitation": "Exact TEOS filing URLs were not supplied in the dossier; related-organization and debt coordination do not prove additive revenue or consolidation"
+    }
+  ],
+  "gaps": [
+    {"id": "no_delivery_only_audit", "status": "unresolved", "description": "No current audited healthcare-delivery-only revenue excluding both university and insurance"},
+    {"id": "schedule_r_h_ingestion", "status": "deferred", "description": "Current tax Schedule R/H still needs systematic ingestion"},
+    {"id": "post_merger_inventory", "status": "unresolved", "description": "Complete post-merger legal-entity inventory is absent"},
+    {"id": "cms_owner_layers", "status": "unresolved", "description": "CMS owner records may be layered and remain corroborating only"},
+    {"id": "plan_alias_dates", "status": "unresolved", "description": "Health-plan branding aliases are not fully effective-dated"},
+    {"id": "insurer_statutory_perimeter", "status": "unresolved", "description": "The insurer statutory perimeter is not fully inventoried"}
+  ]
+}

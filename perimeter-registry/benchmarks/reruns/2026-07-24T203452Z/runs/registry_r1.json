@@ -1,0 +1,172 @@
+{
+  "generated_at_utc": "2026-07-24T20:38:34.243Z",
+  "arm": "registry_assisted",
+  "repetition": 1,
+  "order": [
+    "J1",
+    "P1",
+    "U1",
+    "J2",
+    "P2",
+    "U2",
+    "J3",
+    "P3",
+    "U3",
+    "J4",
+    "P4",
+    "U4"
+  ],
+  "started_at_utc": "2026-07-24T20:35:00.000Z",
+  "ended_at_utc": "2026-07-24T20:37:02.816Z",
+  "wall_latency_seconds": 122.816,
+  "input_tokens": null,
+  "input_token_note": "Input-token telemetry was unavailable for this run.",
+  "research_tool_calls": 0,
+  "local_file_read_calls": 10,
+  "answers": [
+    {
+      "question_id": "J1",
+      "answer": "Use Jefferson's audited consolidated enterprise: Thomas Jefferson University education and research, care delivery, insurance, and LVHN results from 2024-08-01 (11 months in FY2025). Jefferson Health is a brand, not the same legal entity as Thomas Jefferson University Hospitals, Inc. Selected scope/identifier: enterprise_fy2025 — Audited consolidated enterprise Caveats: This is not a hospital-only perimeter. Thomas Jefferson University Hospitals, Inc. is an individual hospital filer, not the Jefferson enterprise.",
+      "primary_source_urls": [
+        "https://www.jeffersonhealth.org/content/dam/health2021/documents/financial/tjuh-financial-statements/tjuh-audited-financial-statements-2025.pdf"
+      ],
+      "started_at_utc": "2026-07-24T20:35:00.000Z",
+      "ended_at_utc": "2026-07-24T20:35:31.000Z",
+      "latency_seconds": 31,
+      "research_tool_calls": 0
+    },
+    {
+      "question_id": "P1",
+      "answer": "Penn Medicine means neither UPHS alone nor the whole University. Its governance umbrella includes UPHS and the Perelman School of Medicine. For financial analysis, separately choose UPHS health-system component or the audited consolidated University. Selected scope/identifier: penn_medicine_governance_2025 — Penn Medicine governance umbrella Caveats: Penn Medicine is a brand and governance scope, not a legal entity or standalone financial consolidation.",
+      "primary_source_urls": [
+        "https://secretary.upenn.edu/trustees-governance/penn-medicine-board",
+        "https://finance.upenn.edu/wp-content/uploads/Penn-Division-of-Finance-FY25-Annual-Report.pdf"
+      ],
+      "started_at_utc": "2026-07-24T20:35:31.000Z",
+      "ended_at_utc": "2026-07-24T20:35:48.000Z",
+      "latency_seconds": 17,
+      "research_tool_calls": 0
+    },
+    {
+      "question_id": "U1",
+      "answer": "Use the audited consolidated UPMC enterprise: Health Services, Insurance Services, and UPMC subsidiaries and controlled activities. Exclude the University of Pittsburgh. Selected scope/identifier: upmc_consolidated_cy2025 — Audited consolidated UPMC enterprise Caveats: This is a provider-insurer perimeter, with intercompany accounts and transactions eliminated. The University of Pittsburgh is academically affiliated but is not consolidated into UPMC.",
+      "primary_source_urls": [
+        "https://dam.upmc.com/-/media/upmc/about/finances/documents/cy2025-q4-financial-and-operating-report.pdf"
+      ],
+      "started_at_utc": "2026-07-24T20:35:48.000Z",
+      "ended_at_utc": "2026-07-24T20:35:59.000Z",
+      "latency_seconds": 11,
+      "research_tool_calls": 0
+    },
+    {
+      "question_id": "J2",
+      "answer": "Use EIN 23-2379751 for the 2023 Form 990 request, selecting the legal filer Health Partners Plans, Inc. Selected scope/identifier: Health Partners Plans, Inc. — EIN 23-2379751; tax period 2023 Caveats: Jefferson Health Plans is a marketing/reporting name; the broader insurance component includes related entities not fully inventoried in the fixture.",
+      "primary_source_urls": [
+        "https://www.jeffersonhealthplans.com/content/dam/jeffersonhealthplans/documents/providers/provider-manual/2026-provider-manual-051126.pdf",
+        "https://www.jeffersonhealth.org/content/dam/health2021/documents/financial/tjuh-financial-statements/tjuh-audited-financial-statements-2025.pdf"
+      ],
+      "started_at_utc": "2026-07-24T20:35:59.000Z",
+      "ended_at_utc": "2026-07-24T20:36:07.000Z",
+      "latency_seconds": 8,
+      "research_tool_calls": 0
+    },
+    {
+      "question_id": "P2",
+      "answer": "Use CCN 390111. Treat HUP as a facility operated by The Trustees of the University of Pennsylvania, not as a separate Penn Medicine enterprise. Selected scope/identifier: Hospital of the University of Pennsylvania — CCN 390111; operator EIN 23-1352685 Caveats: The facility/operator record does not define the Penn Medicine or UPHS enterprise perimeter.",
+      "primary_source_urls": [
+        "https://data.cms.gov/tools/medicare-inpatient-hospital-look-up-tool/provider/390111",
+        "https://finance.upenn.edu/wp-content/uploads/Penn-Division-of-Finance-FY25-Annual-Report.pdf",
+        "https://researchservices.upenn.edu/resources/penn-data-for-proposals/"
+      ],
+      "started_at_utc": "2026-07-24T20:36:07.000Z",
+      "ended_at_utc": "2026-07-24T20:36:15.000Z",
+      "latency_seconds": 8,
+      "research_tool_calls": 0
+    },
+    {
+      "question_id": "U2",
+      "answer": "Do not assign one EIN from the brand name alone. Specify the insurance product, policy issuer, or licensed company. Selected scope/identifier: Clarification required — no universal UPMC Health Plan EIN Caveats: UPMC Health Plan is a marketing name spanning multiple legal entities. The fixture does not contain a complete statutory entity inventory.",
+      "primary_source_urls": [
+        "https://www.upmchealthplan.com/marketplace/find_insurance.aspx",
+        "https://dam.upmc.com/-/media/upmc/about/finances/documents/cy2025-q4-financial-and-operating-report.pdf"
+      ],
+      "started_at_utc": "2026-07-24T20:36:15.000Z",
+      "ended_at_utc": "2026-07-24T20:36:21.000Z",
+      "latency_seconds": 6,
+      "research_tool_calls": 0
+    },
+    {
+      "question_id": "J3",
+      "answer": "No. LVHN was not part of Jefferson as of 2024-07-31; the documented entry date is 2024-08-01. Selected scope/identifier: LVHN — not in perimeter on 2024-07-31; entry date 2024-08-01 Caveats: The fixture preserves LVHN as a historical node after its later merger into Jefferson Health Corporation.",
+      "primary_source_urls": [
+        "https://www.jeffersonhealth.org/about-us/news/2024/08/jefferson-lehigh-valley-sign-agreement",
+        "https://www.jeffersonhealth.org/content/dam/health2021/documents/financial/tjuh-financial-statements/tjuh-audited-financial-statements-2025.pdf"
+      ],
+      "started_at_utc": "2026-07-24T20:36:21.000Z",
+      "ended_at_utc": "2026-07-24T20:36:27.000Z",
+      "latency_seconds": 6,
+      "research_tool_calls": 0
+    },
+    {
+      "question_id": "P3",
+      "answer": "No. Doylestown Health was not part of UPHS as of 2025-03-31; it joined on 2025-04-01. Selected scope/identifier: Doylestown Health — not in UPHS on 2025-03-31; entry date 2025-04-01 Caveats: Doylestown Hospital's facility CCN is 390203, but its exact EIN is unresolved in this fixture.",
+      "primary_source_urls": [
+        "https://www.pennmedicine.org/news/doylestown-health-joins-university-of-pennsylvania-health-system",
+        "https://finance.upenn.edu/wp-content/uploads/Penn-Division-of-Finance-FY25-Annual-Report.pdf"
+      ],
+      "started_at_utc": "2026-07-24T20:36:27.000Z",
+      "ended_at_utc": "2026-07-24T20:36:33.000Z",
+      "latency_seconds": 6,
+      "research_tool_calls": 0
+    },
+    {
+      "question_id": "U3",
+      "answer": "Use EIN 25-1423657 for UPMC's parent-organization FY2023 Form 990 request. Selected scope/identifier: UPMC parent organization — EIN 25-1423657; tax period 2023 Caveats: The fixture's exact-EIN evidence is UPMC's official FY2022 filing; continuity for FY2023 was not independently reverified. This is the parent EIN, not the UPMC Group return EIN or a hospital EIN.",
+      "primary_source_urls": [
+        "https://dam.upmc.com/-/media/upmc/about/finances/irs-filings/documents/upmc-fy22-parent-media.pdf?hash=5A388CBFF49176D82404FE7416E751E2&la=en&rev=4bb4f3cb8230482faf8cf7306ddab373",
+        "https://dam.upmc.com/-/media/upmc/about/finances/documents/cy2025-q4-financial-and-operating-report.pdf"
+      ],
+      "started_at_utc": "2026-07-24T20:36:33.000Z",
+      "ended_at_utc": "2026-07-24T20:36:40.000Z",
+      "latency_seconds": 7,
+      "research_tool_calls": 0
+    },
+    {
+      "question_id": "J4",
+      "answer": "Use operator EIN 23-2829095 and facility CCN 390174. Selected scope/identifier: Thomas Jefferson University Hospitals, Inc. — EIN 23-2829095; Thomas Jefferson University Hospital — CCN 390174 Caveats: This is an individual hospital legal/operator and facility record, not the Jefferson enterprise.",
+      "primary_source_urls": [
+        "https://data.cms.gov/provider-data/dataset/xubh-q36u",
+        "https://www.jeffersonhealth.org/content/dam/health2021/documents/financial/tjuh-financial-statements/tjuh-audited-financial-statements-2025.pdf"
+      ],
+      "started_at_utc": "2026-07-24T20:36:40.000Z",
+      "ended_at_utc": "2026-07-24T20:36:46.000Z",
+      "latency_seconds": 6,
+      "research_tool_calls": 0
+    },
+    {
+      "question_id": "P4",
+      "answer": "Penn Medicine has no standalone universal EIN. Specify the legal filer or reporting perimeter; if you mean The Trustees of the University of Pennsylvania, its EIN is 23-1352685. Selected scope/identifier: Clarification required — no universal Penn Medicine EIN Caveats: The University's EIN does not by itself define UPHS, Penn Medicine governance, or a facility perimeter.",
+      "primary_source_urls": [
+        "https://secretary.upenn.edu/trustees-governance/penn-medicine-board",
+        "https://researchservices.upenn.edu/resources/penn-data-for-proposals/",
+        "https://finance.upenn.edu/wp-content/uploads/Penn-Division-of-Finance-FY25-Annual-Report.pdf"
+      ],
+      "started_at_utc": "2026-07-24T20:36:46.000Z",
+      "ended_at_utc": "2026-07-24T20:36:52.000Z",
+      "latency_seconds": 6,
+      "research_tool_calls": 0
+    },
+    {
+      "question_id": "U4",
+      "answer": "They are distinct campuses represented by a combined filer/provider record, not literally one campus. For the combined record, use EIN 25-0965480 and CCN 390164. Selected scope/identifier: UPMC Presbyterian Shadyside combined record — EIN 25-0965480; CCN 390164 Caveats: The exact identifier evidence is dated to FY ended 2022-06-30; current continuity was not reverified. The combined-filer EIN, UPMC Group return EIN, CMS CCN, and campus identities are not interchangeable.",
+      "primary_source_urls": [
+        "https://dam.upmc.com/-/media/upmc/about/finances/irs-filings/documents/upmc-fy22-parent-media.pdf?hash=5A388CBFF49176D82404FE7416E751E2&la=en&rev=4bb4f3cb8230482faf8cf7306ddab373",
+        "https://www.cms.gov/medicare/medicare-general-information/medicareapprovedfacilitie/vad-destination-therapy-facilities-aug2007-items/-upmc-presbyterian"
+      ],
+      "started_at_utc": "2026-07-24T20:36:52.000Z",
+      "ended_at_utc": "2026-07-24T20:37:02.816Z",
+      "latency_seconds": 10.816,
+      "research_tool_calls": 0
+    }
+  ]
+}

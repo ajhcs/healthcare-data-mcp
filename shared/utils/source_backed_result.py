@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import asdict, dataclass
-import re
 from typing import Any
 
 from shared.utils.mcp_response import (
@@ -126,10 +126,13 @@ def values_at_path(payload: Any, path: str) -> list[Any]:
             if selector == "all":
                 if isinstance(child, Sequence) and not isinstance(child, str | bytes | bytearray):
                     next_values.extend(child)
-            elif isinstance(selector, int):
-                if isinstance(child, Sequence) and not isinstance(child, str | bytes | bytearray):
-                    if 0 <= selector < len(child):
-                        next_values.append(child[selector])
+            elif (
+                isinstance(selector, int)
+                and isinstance(child, Sequence)
+                and not isinstance(child, str | bytes | bytearray)
+                and 0 <= selector < len(child)
+            ):
+                next_values.append(child[selector])
             else:
                 next_values.append(child)
         values = next_values

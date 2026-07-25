@@ -122,10 +122,10 @@ def _column_number(label: str) -> int:
 def _extract_from_parsed(fact: FactSpec, parsed: str | ParsedCsv) -> JsonValue:
     if fact.table_match:
         if not isinstance(parsed, ParsedCsv):
-            raise ValueError(f"tabular extractor requires CSV source for fact {fact.fact_id}")
+            raise TypeError(f"tabular extractor requires CSV source for fact {fact.fact_id}")
         return _extract_table_value(fact, parsed)
     if isinstance(parsed, ParsedCsv):
-        raise ValueError(f"CSV source requires a structured table extractor for fact {fact.fact_id}")
+        raise TypeError(f"CSV source requires a structured table extractor for fact {fact.fact_id}")
     return _extract_pattern_value(fact, parsed)
 
 
@@ -151,7 +151,7 @@ def _verify_absence_checks(spec: AcquisitionSpec, parsed_by_source: dict[str, st
         for check in fact.absence_checks:
             parsed = parsed_by_source[check.source_id]
             if not isinstance(parsed, ParsedCsv):
-                raise ValueError(f"absence check requires a tabular source for fact {fact.fact_id}")
+                raise TypeError(f"absence check requires a tabular source for fact {fact.fact_id}")
             missing = set(check.table_match) - set(parsed.fieldnames)
             if missing:
                 raise ValueError(f"absence check source fields drifted for fact {fact.fact_id}: {sorted(missing)}")

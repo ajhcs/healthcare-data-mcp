@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from shared.utils.healthcare_identity import identity_from_public_record
@@ -153,7 +153,7 @@ def build_composite_source_input_evidence_pack(
 ) -> dict[str, Any]:
     """Build read-only FSI and Scale Score source-input rows with receipts."""
 
-    retrieved_at = datetime.now(timezone.utc).isoformat()
+    retrieved_at = datetime.now(UTC).isoformat()
     metric_keys = _valid_metric_keys(required_metric_keys or METRIC_KEYS)
     query = {
         "system_slug": system_slug,

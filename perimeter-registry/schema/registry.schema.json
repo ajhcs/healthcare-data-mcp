@@ -1,0 +1,188 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/health-system-perimeter-registry/v1",
+  "title": "Health-System Perimeter Registry v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "fixture_id",
+    "systems",
+    "entities",
+    "facilities",
+    "reporting_perimeters",
+    "relationships",
+    "evidence",
+    "gaps"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "fixture_id": {"type": "string", "minLength": 1},
+    "systems": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/system"}
+    },
+    "entities": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/entity"}
+    },
+    "facilities": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/facility"}
+    },
+    "reporting_perimeters": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/perimeter"}
+    },
+    "relationships": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/relationship"}
+    },
+    "evidence": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/evidence"}
+    },
+    "gaps": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/gap"}
+    }
+  },
+  "$defs": {
+    "id": {"type": "string", "minLength": 1},
+    "confidence": {"enum": ["high", "medium", "low"]},
+    "evidenceIds": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/id"}
+    },
+    "identifier": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scheme", "value"],
+      "properties": {
+        "scheme": {"enum": ["EIN", "CCN"]},
+        "value": {"type": "string", "minLength": 1}
+      }
+    },
+    "system": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "aliases", "concept_type", "legal_entity", "evidence_ids", "confidence"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "name": {"type": "string"},
+        "aliases": {"type": "array", "items": {"type": "string"}},
+        "concept_type": {"type": "string"},
+        "legal_entity": {"type": "boolean"},
+        "evidence_ids": {"$ref": "#/$defs/evidenceIds"},
+        "confidence": {"$ref": "#/$defs/confidence"}
+      }
+    },
+    "entity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "entity_type", "aliases", "identifiers", "lifecycle_status", "effective_start", "effective_end", "evidence_ids", "notes"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "name": {"type": "string"},
+        "entity_type": {"type": "string"},
+        "aliases": {"type": "array", "items": {"type": "string"}},
+        "identifiers": {"type": "array", "items": {"$ref": "#/$defs/identifier"}},
+        "lifecycle_status": {"enum": ["active", "merged", "historical"]},
+        "effective_start": {"type": ["string", "null"]},
+        "effective_end": {"type": ["string", "null"]},
+        "evidence_ids": {"$ref": "#/$defs/evidenceIds"},
+        "notes": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "facility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "ccn", "operator_entity_id", "operator_name", "operator_ein", "evidence_ids", "confidence"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "name": {"type": "string"},
+        "ccn": {"type": "string", "pattern": "^[0-9]{6}$"},
+        "operator_entity_id": {"type": ["string", "null"]},
+        "operator_name": {"type": "string"},
+        "operator_ein": {"type": ["string", "null"]},
+        "evidence_ids": {"$ref": "#/$defs/evidenceIds"},
+        "confidence": {"$ref": "#/$defs/confidence"}
+      }
+    },
+    "measurement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "amount_usd", "period", "basis", "audited"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "label": {"type": "string"},
+        "amount_usd": {"type": ["integer", "null"]},
+        "period": {"type": "string"},
+        "basis": {"type": "string"},
+        "audited": {"type": ["boolean", "null"]}
+      }
+    },
+    "perimeter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "perimeter_type", "includes", "excludes", "flags", "measurements", "evidence_ids", "confidence"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "label": {"type": "string"},
+        "perimeter_type": {"type": "string"},
+        "includes": {"type": "array", "items": {"type": "string"}},
+        "excludes": {"type": "array", "items": {"type": "string"}},
+        "flags": {"type": "array", "items": {"type": "string"}},
+        "measurements": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/measurement"}},
+        "evidence_ids": {"$ref": "#/$defs/evidenceIds"},
+        "confidence": {"$ref": "#/$defs/confidence"}
+      }
+    },
+    "relationship": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "source_id", "relationship_type", "target_id", "target_kind", "effective_start", "effective_end", "evidence_ids", "confidence", "status", "notes"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "source_id": {"$ref": "#/$defs/id"},
+        "relationship_type": {
+          "enum": ["sole_corporate_member_of", "sole_member_of", "sole_owner_of", "merged_into", "has_marketing_name", "operates_facility", "controls_operator_of_facility", "obligated_group_member", "academic_affiliation_with", "shares_board_with", "reported_direct_controlling_entity_of", "contracts_for_medical_services_with", "listed_as_legal_business_name_for_facility_enrollment"]
+        },
+        "target_id": {"$ref": "#/$defs/id"},
+        "target_kind": {"enum": ["entity", "facility", "reporting_perimeter", "documented_alias"]},
+        "effective_start": {"type": ["string", "null"]},
+        "effective_end": {"type": ["string", "null"]},
+        "evidence_ids": {"$ref": "#/$defs/evidenceIds"},
+        "confidence": {"$ref": "#/$defs/confidence"},
+        "status": {"type": "string"},
+        "notes": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "url", "locator", "source_period", "confidence", "limitation"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "title": {"type": "string"},
+        "url": {"type": ["string", "null"]},
+        "locator": {"type": "string"},
+        "source_period": {"type": "string"},
+        "confidence": {"$ref": "#/$defs/confidence"},
+        "limitation": {"type": ["string", "null"]}
+      }
+    },
+    "gap": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "status", "description"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "status": {"enum": ["unresolved", "deferred"]},
+        "description": {"type": "string"}
+      }
+    }
+  }
+}

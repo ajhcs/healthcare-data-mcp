@@ -4,22 +4,22 @@ Sources:
 - labordata/nlrb-data: https://github.com/labordata/nlrb-data
 - BLS Work Stoppages: https://www.bls.gov/wsp/
 """
-
 import logging
 import sqlite3
+import sys as _sys
 import zipfile
 from pathlib import Path
 
-
-from shared.utils.http_client import resilient_request
 import pandas as pd
 
-import sys as _sys
+from shared.utils.errors import EXPECTED_OPERATIONAL_EXCEPTIONS
+from shared.utils.http_client import resilient_request
+
 _project_root = __import__("pathlib").Path(__file__).resolve().parent.parent.parent
 if str(_project_root) not in _sys.path:
     _sys.path.insert(0, str(_project_root))
 
-from shared.utils.cache import is_cache_valid, write_atomic_bytes, write_atomic_parquet  # noqa: E402
+from shared.utils.cache import is_cache_valid, write_atomic_bytes, write_atomic_parquet
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +76,7 @@ async def ensure_nlrb_cached() -> bool:
         logger.info("NLRB database cached: %s", _NLRB_DB)
         return True
 
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("Failed to download NLRB database: %s", e)
         return False
 
@@ -177,7 +177,7 @@ def search_nlrb_elections(
 
         return results
 
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("NLRB query failed: %s", e)
         return []
 
@@ -214,7 +214,7 @@ async def ensure_stoppages_cached() -> bool:
         logger.info("Work stoppages cached: %d records", len(df))
         return True
 
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("Failed to cache work stoppages: %s", e)
         return False
 
@@ -226,6 +226,7 @@ def query_work_stoppages(year_start: int = 2015, year_end: int = 2026) -> list[d
 
     try:
         import duckdb
+
         from shared.utils.duckdb_safe import safe_parquet_sql
         con = duckdb.connect(":memory:")
         con.execute(f"CREATE VIEW ws AS SELECT * FROM {safe_parquet_sql(_STOPPAGES_CACHE)}")
@@ -259,6 +260,6 @@ def query_work_stoppages(year_start: int = 2015, year_end: int = 2026) -> list[d
 
         return results
 
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("Work stoppages query failed: %s", e)
         return []

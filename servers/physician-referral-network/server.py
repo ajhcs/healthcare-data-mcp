@@ -4,19 +4,20 @@ Provides tools for physician search, profiles with Medicare utilization,
 referral network mapping, health system employment mix analysis,
 and referral leakage detection.
 """
-
-from typing import Any
 import asyncio
 import logging
 import os as _os
+from typing import Any
 
 from mcp.server.fastmcp import FastMCP
+
+from shared.utils.errors import EXPECTED_OPERATIONAL_EXCEPTIONS
+from shared.utils.healthcare_identity import identity_from_public_record
 from shared.utils.mcp_observability import observe_tool
 from shared.utils.mcp_resources import register_standard_resources
-from shared.utils.healthcare_identity import identity_from_public_record
 from shared.utils.mcp_response import error_response, evidence_receipt, to_structured
 
-from . import nppes_client, referral_network, physician_mix
+from . import nppes_client, physician_mix, referral_network
 from .models import (
     LeakageDestination,
     LeakageResponse,
@@ -634,7 +635,7 @@ async def map_referral_network(
                     ))
                 else:
                     enriched_nodes.append(ReferralNode(npi=node["npi"]))
-            except Exception:
+            except EXPECTED_OPERATIONAL_EXCEPTIONS:
                 enriched_nodes.append(ReferralNode(npi=node["npi"]))
 
         center_name = ""
@@ -918,7 +919,7 @@ async def detect_leakage(
                     ))
                 else:
                     enriched_destinations.append(LeakageDestination(**dest))
-            except Exception:
+            except EXPECTED_OPERATIONAL_EXCEPTIONS:
                 enriched_destinations.append(LeakageDestination(**dest))
 
         response = LeakageResponse(

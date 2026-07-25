@@ -16,6 +16,7 @@ from typing import Any
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
+
 from shared.utils.server_registry import SERVER_BY_ID
 
 
@@ -111,81 +112,82 @@ async def smoke(args: argparse.Namespace) -> dict[str, Any]:
         cwd=os.getcwd(),
     )
 
-    async with stdio_client(params) as (read_stream, write_stream):
-        async with ClientSession(read_stream, write_stream) as session:
-            await session.initialize()
-            tools_result = await session.list_tools()
-            tool_names = sorted(tool.name for tool in tools_result.tools)
-            missing_tools = sorted(set(args.expect_tool) - set(tool_names))
-            if missing_tools:
-                raise SystemExit(f"{args.server} missing expected tool(s): {', '.join(missing_tools)}")
+    async with (
+        stdio_client(params) as (read_stream, write_stream),
+        ClientSession(read_stream, write_stream) as session,
+    ):
+        await session.initialize()
+        tools_result = await session.list_tools()
+        tool_names = sorted(tool.name for tool in tools_result.tools)
+        missing_tools = sorted(set(args.expect_tool) - set(tool_names))
+        if missing_tools:
+            raise SystemExit(f"{args.server} missing expected tool(s): {', '.join(missing_tools)}")
 
-            resource_uris: list[str] = []
-            if args.expect_resource:
-                resources_result = await session.list_resources()
-                resource_uris = sorted(str(resource.uri) for resource in resources_result.resources)
-                missing_resources = sorted(set(args.expect_resource) - set(resource_uris))
-                if missing_resources:
-                    raise SystemExit(f"{args.server} missing expected resource(s): {', '.join(missing_resources)}")
+        resource_uris: list[str] = []
+        if args.expect_resource:
+            resources_result = await session.list_resources()
+            resource_uris = sorted(str(resource.uri) for resource in resources_result.resources)
+            missing_resources = sorted(set(args.expect_resource) - set(resource_uris))
+            if missing_resources:
+                raise SystemExit(f"{args.server} missing expected resource(s): {', '.join(missing_resources)}")
 
-            tool_call_result = None
-            structured_content: Any = None
-            if args.call_tool:
-                tool_args = json.loads(args.tool_args)
-                if not isinstance(tool_args, dict):
-                    raise SystemExit("--tool-args must decode to a JSON object")
-                tool_call_result = await session.call_tool(args.call_tool, tool_args)
-                if bool(getattr(tool_call_result, "isError", False)):
-                    error_text = " ".join(str(getattr(item, "text", "")) for item in tool_call_result.content)
-                    raise SystemExit(f"{args.server} tool {args.call_tool} returned an MCP error: {error_text}")
-                structured_content = getattr(tool_call_result, "structuredContent", None) or {}
-                if args.expect_structured_key or args.expect_structured_path or args.expect_structured_path_all:
-                    if not isinstance(structured_content, dict):
-                        raise SystemExit(
-                            f"{args.server} tool {args.call_tool} did not return object structuredContent"
-                        )
-                if args.expect_structured_key:
-                    missing_keys = sorted(set(args.expect_structured_key) - set(structured_content))
-                    if missing_keys:
-                        raise SystemExit(
-                            f"{args.server} tool {args.call_tool} missing structuredContent key(s): "
-                            f"{', '.join(missing_keys)}"
-                        )
-                if args.expect_structured_path:
-                    missing_paths = sorted(
-                        path
-                        for path in args.expect_structured_path
-                        if not structured_path_exists(structured_content, path)
+        tool_call_result = None
+        structured_content: Any = None
+        if args.call_tool:
+            tool_args = json.loads(args.tool_args)
+            if not isinstance(tool_args, dict):
+                raise SystemExit("--tool-args must decode to a JSON object")
+            tool_call_result = await session.call_tool(args.call_tool, tool_args)
+            if bool(getattr(tool_call_result, "isError", False)):
+                error_text = " ".join(str(getattr(item, "text", "")) for item in tool_call_result.content)
+                raise SystemExit(f"{args.server} tool {args.call_tool} returned an MCP error: {error_text}")
+            structured_content = getattr(tool_call_result, "structuredContent", None) or {}
+            if (args.expect_structured_key or args.expect_structured_path or args.expect_structured_path_all) and not isinstance(structured_content, dict):
+                raise SystemExit(
+                    f"{args.server} tool {args.call_tool} did not return object structuredContent"
+                )
+            if args.expect_structured_key:
+                missing_keys = sorted(set(args.expect_structured_key) - set(structured_content))
+                if missing_keys:
+                    raise SystemExit(
+                        f"{args.server} tool {args.call_tool} missing structuredContent key(s): "
+                        f"{', '.join(missing_keys)}"
                     )
-                    if missing_paths:
-                        raise SystemExit(
-                            f"{args.server} tool {args.call_tool} missing structuredContent path(s): "
-                            f"{', '.join(missing_paths)}"
-                        )
-                if args.expect_structured_path_all:
-                    missing_all_paths = sorted(
-                        path
-                        for path in args.expect_structured_path_all
-                        if not structured_path_exists_for_all(structured_content, path)
+            if args.expect_structured_path:
+                missing_paths = sorted(
+                    path
+                    for path in args.expect_structured_path
+                    if not structured_path_exists(structured_content, path)
+                )
+                if missing_paths:
+                    raise SystemExit(
+                        f"{args.server} tool {args.call_tool} missing structuredContent path(s): "
+                        f"{', '.join(missing_paths)}"
                     )
-                    if missing_all_paths:
-                        raise SystemExit(
-                            f"{args.server} tool {args.call_tool} missing structuredContent path(s) "
-                            f"for one or more list items: {', '.join(missing_all_paths)}"
-                        )
+            if args.expect_structured_path_all:
+                missing_all_paths = sorted(
+                    path
+                    for path in args.expect_structured_path_all
+                    if not structured_path_exists_for_all(structured_content, path)
+                )
+                if missing_all_paths:
+                    raise SystemExit(
+                        f"{args.server} tool {args.call_tool} missing structuredContent path(s) "
+                        f"for one or more list items: {', '.join(missing_all_paths)}"
+                    )
 
-            return {
-                "server": args.server,
-                "tool_count": len(tool_names),
-                "tools": tool_names,
-                "resource_count": len(resource_uris),
-                "resources": resource_uris,
-                "called_tool": args.call_tool or "",
-                "call_content_count": len(tool_call_result.content) if tool_call_result is not None else 0,
-                "structured_keys": sorted(structured_content) if isinstance(structured_content, dict) else [],
-                "structured_paths": sorted(args.expect_structured_path),
-                "structured_paths_all": sorted(args.expect_structured_path_all),
-            }
+        return {
+            "server": args.server,
+            "tool_count": len(tool_names),
+            "tools": tool_names,
+            "resource_count": len(resource_uris),
+            "resources": resource_uris,
+            "called_tool": args.call_tool or "",
+            "call_content_count": len(tool_call_result.content) if tool_call_result is not None else 0,
+            "structured_keys": sorted(structured_content) if isinstance(structured_content, dict) else [],
+            "structured_paths": sorted(args.expect_structured_path),
+            "structured_paths_all": sorted(args.expect_structured_path_all),
+        }
 
 
 async def main_async() -> None:

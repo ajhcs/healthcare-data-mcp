@@ -3,7 +3,6 @@
 Uses monkeypatching to avoid real HTTP calls or file downloads.
 """
 
-from tests.helpers import parse_tool_result
 from unittest.mock import AsyncMock, patch
 
 import pandas as pd
@@ -12,6 +11,7 @@ import pytest
 from servers.hospital_quality import server
 from shared.utils.mcp_response import validate_evidence_receipt
 from shared.utils.source_backed_result import validate_source_claim_paths
+from tests.helpers import parse_tool_result
 
 
 def assert_quality_receipt(result: dict, *, ccn: str = "390223") -> None:

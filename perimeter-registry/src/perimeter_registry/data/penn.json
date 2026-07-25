@@ -1,0 +1,326 @@
+{
+  "schema_version": 1,
+  "fixture_id": "penn_minimal",
+  "systems": [
+    {
+      "id": "penn_medicine",
+      "name": "Penn Medicine",
+      "aliases": [
+        "University of Pennsylvania Health System",
+        "UPHS"
+      ],
+      "concept_type": "integrated_governance_and_clinical_brand",
+      "legal_entity": false,
+      "evidence_ids": [
+        "penn_medicine_board",
+        "penn_fy25_audit"
+      ],
+      "confidence": "high"
+    }
+  ],
+  "entities": [
+    {
+      "id": "trustees_upenn",
+      "name": "The Trustees of the University of Pennsylvania",
+      "entity_type": "independent_nonprofit_university_and_ultimate_governance_body",
+      "aliases": [
+        "University of Pennsylvania",
+        "Penn",
+        "UPenn"
+      ],
+      "identifiers": [
+        {
+          "scheme": "EIN",
+          "value": "23-1352685"
+        }
+      ],
+      "lifecycle_status": "active",
+      "effective_start": null,
+      "effective_end": null,
+      "evidence_ids": [
+        "upenn_ein",
+        "penn_fy25_audit",
+        "penn_medicine_board"
+      ],
+      "notes": [
+        "Penn Medicine is not a separate legal entity or assumed standalone EIN",
+        "The University's audited consolidation includes both Academic and UPHS activities"
+      ]
+    },
+    {
+      "id": "doylestown_hospital",
+      "name": "Doylestown Hospital",
+      "entity_type": "hospital_legal_and_operating_entity",
+      "aliases": [
+        "Penn Medicine Doylestown Hospital",
+        "Doylestown Health",
+        "PMDH"
+      ],
+      "identifiers": [
+        {
+          "scheme": "CCN",
+          "value": "390203"
+        }
+      ],
+      "lifecycle_status": "active",
+      "effective_start": "2025-04-01",
+      "effective_end": null,
+      "evidence_ids": [
+        "doylestown_join",
+        "penn_fy25_audit",
+        "cms_doylestown"
+      ],
+      "notes": [
+        "The University became sole member on 2025-04-01",
+        "The exact EIN is intentionally unresolved in this minimal fixture"
+      ]
+    }
+  ],
+  "facilities": [
+    {
+      "id": "facility_hup_390111",
+      "name": "Hospital of the University of Pennsylvania",
+      "ccn": "390111",
+      "operator_entity_id": "trustees_upenn",
+      "operator_name": "The Trustees of the University of Pennsylvania",
+      "operator_ein": "23-1352685",
+      "evidence_ids": [
+        "cms_hup",
+        "penn_fy25_audit",
+        "upenn_ein"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "facility_doylestown_390203",
+      "name": "Doylestown Hospital",
+      "ccn": "390203",
+      "operator_entity_id": "doylestown_hospital",
+      "operator_name": "Doylestown Hospital",
+      "operator_ein": null,
+      "evidence_ids": [
+        "cms_doylestown",
+        "doylestown_join"
+      ],
+      "confidence": "high"
+    }
+  ],
+  "reporting_perimeters": [
+    {
+      "id": "penn_medicine_governance_2025",
+      "label": "Penn Medicine governance umbrella",
+      "perimeter_type": "integrated_governance_scope",
+      "includes": [
+        "University of Pennsylvania Health System",
+        "Perelman School of Medicine"
+      ],
+      "excludes": [
+        "other University schools and activities"
+      ],
+      "flags": [
+        "brand and governance scope; not a legal entity or standalone financial consolidation"
+      ],
+      "measurements": [
+        {
+          "id": "membership_only",
+          "label": "Documented governance membership",
+          "amount_usd": null,
+          "period": "current as of FY ended 2025-06-30",
+          "basis": "Penn Medicine Board and FY25 audit definition",
+          "audited": null
+        }
+      ],
+      "evidence_ids": [
+        "penn_medicine_board",
+        "penn_fy25_audit"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "uphs_fy2025",
+      "label": "UPHS health-system component",
+      "perimeter_type": "audited_health_services_component",
+      "includes": [
+        "clinical practices and hospital operating entities",
+        "regional systems including Princeton and Doylestown after their effective dates",
+        "specified captive insurers"
+      ],
+      "excludes": [
+        "Perelman School of Medicine",
+        "other Academic Component activities"
+      ],
+      "flags": [
+        "health-system component; not the whole University or Penn Medicine governance umbrella"
+      ],
+      "measurements": [
+        {
+          "id": "membership_only",
+          "label": "Documented UPHS component membership",
+          "amount_usd": null,
+          "period": "FY ended 2025-06-30",
+          "basis": "audited Note 2 operating-entity list",
+          "audited": true
+        }
+      ],
+      "evidence_ids": [
+        "penn_fy25_audit"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "university_consolidated_fy2025",
+      "label": "Audited consolidated University",
+      "perimeter_type": "audited_gaap_consolidation",
+      "includes": [
+        "Academic Component",
+        "UPHS health-system component"
+      ],
+      "excludes": [],
+      "flags": [
+        "not health-system-only and not hospital-only"
+      ],
+      "measurements": [
+        {
+          "id": "total_revenue_support",
+          "label": "Total revenue and other support",
+          "amount_usd": 17302005000,
+          "period": "FY ended 2025-06-30",
+          "basis": "audited consolidated statement of activities",
+          "audited": true
+        }
+      ],
+      "evidence_ids": [
+        "penn_fy25_audit"
+      ],
+      "confidence": "high"
+    }
+  ],
+  "relationships": [
+    {
+      "id": "trustees_sole_member_doylestown",
+      "source_id": "trustees_upenn",
+      "relationship_type": "sole_member_of",
+      "target_id": "doylestown_hospital",
+      "target_kind": "entity",
+      "effective_start": "2025-04-01",
+      "effective_end": null,
+      "evidence_ids": [
+        "penn_fy25_audit",
+        "doylestown_join"
+      ],
+      "confidence": "high",
+      "status": "documented",
+      "notes": [
+        "Doylestown Health was not an UPHS component before 2025-04-01"
+      ]
+    },
+    {
+      "id": "trustees_operates_hup",
+      "source_id": "trustees_upenn",
+      "relationship_type": "operates_facility",
+      "target_id": "facility_hup_390111",
+      "target_kind": "facility",
+      "effective_start": null,
+      "effective_end": null,
+      "evidence_ids": [
+        "penn_fy25_audit",
+        "cms_hup"
+      ],
+      "confidence": "high",
+      "status": "current_as_of_source_period",
+      "notes": [
+        "Start date is not resolved in this fixture"
+      ]
+    },
+    {
+      "id": "doylestown_operates_390203",
+      "source_id": "doylestown_hospital",
+      "relationship_type": "operates_facility",
+      "target_id": "facility_doylestown_390203",
+      "target_kind": "facility",
+      "effective_start": null,
+      "effective_end": null,
+      "evidence_ids": [
+        "cms_doylestown"
+      ],
+      "confidence": "high",
+      "status": "current_as_of_source_period",
+      "notes": [
+        "Facility operation predates entry into UPHS"
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "penn_fy25_audit",
+      "title": "University of Pennsylvania FY2025 annual financial report and audited consolidated statements",
+      "url": "https://finance.upenn.edu/wp-content/uploads/Penn-Division-of-Finance-FY25-Annual-Report.pdf",
+      "locator": "Annual report p9; audited report pp1, 4, 12-13 (PDF pp29, 32, 40-41)",
+      "source_period": "FY ended 2025-06-30; issued 2025-09-25",
+      "confidence": "high",
+      "limitation": "The UPHS note is a reporting-component summary, not a complete legal-entity/EIN inventory"
+    },
+    {
+      "id": "penn_medicine_board",
+      "title": "Penn Medicine Board",
+      "url": "https://secretary.upenn.edu/trustees-governance/penn-medicine-board",
+      "locator": "Opening two paragraphs defining the umbrella and fiduciary governance",
+      "source_period": "current governance page; accessed 2026-07-24",
+      "confidence": "high",
+      "limitation": null
+    },
+    {
+      "id": "upenn_ein",
+      "title": "Penn Data for Proposals",
+      "url": "https://researchservices.upenn.edu/resources/penn-data-for-proposals/",
+      "locator": "Key identification numbers: Federal Entity / Employer ID 23-1352685",
+      "source_period": "current institutional data; accessed 2026-07-24",
+      "confidence": "high",
+      "limitation": "Identifier evidence does not by itself define a reporting perimeter"
+    },
+    {
+      "id": "doylestown_join",
+      "title": "Doylestown Health joins University of Pennsylvania Health System",
+      "url": "https://www.pennmedicine.org/news/doylestown-health-joins-university-of-pennsylvania-health-system",
+      "locator": "Opening paragraphs and hospital list; official integration date",
+      "source_period": "2025-04-01",
+      "confidence": "high",
+      "limitation": null
+    },
+    {
+      "id": "cms_hup",
+      "title": "CMS Medicare Inpatient Hospital lookup: Hospital of the University of Pennsylvania",
+      "url": "https://data.cms.gov/tools/medicare-inpatient-hospital-look-up-tool/provider/390111",
+      "locator": "Provider record: Hospital Of Univ Of Pennsylvania; CCN 390111",
+      "source_period": "2024 inpatient lookup data; accessed 2026-07-24",
+      "confidence": "high",
+      "limitation": "Facility identity evidence, not enterprise financial-perimeter evidence"
+    },
+    {
+      "id": "cms_doylestown",
+      "title": "CMS hospital provider record for Doylestown Hospital",
+      "url": "https://www.cms.gov/files/document/odacs-provider-ccn-table.pdf",
+      "locator": "Provider table row: 390203 Doylestown Hospital",
+      "source_period": "CMS table published 2026; accessed 2026-07-24",
+      "confidence": "high",
+      "limitation": "Facility identity evidence, not UPHS membership evidence"
+    }
+  ],
+  "gaps": [
+    {
+      "id": "penn_medicine_no_standalone_ein",
+      "status": "unresolved",
+      "description": "Penn Medicine is a governance/brand umbrella; no standalone EIN is asserted"
+    },
+    {
+      "id": "uphs_entity_inventory",
+      "status": "unresolved",
+      "description": "The fixture does not inventory every UPHS legal entity, affiliate, facility, or EIN"
+    },
+    {
+      "id": "doylestown_ein",
+      "status": "unresolved",
+      "description": "Doylestown Hospital's exact EIN is not validated in this minimal fixture"
+    }
+  ]
+}

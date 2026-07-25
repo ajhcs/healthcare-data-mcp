@@ -2,8 +2,8 @@
 
 
 from servers.health_system_profiler.outpatient_discovery import (
-    categorize_taxonomy,
     build_search_patterns,
+    categorize_taxonomy,
     parse_nppes_results,
 )
 

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from shared.utils.healthcare_identity import identity_from_public_record
@@ -61,7 +61,7 @@ def build_physician_platform_evidence_pack(
 ) -> dict[str, Any]:
     """Build read-only physician-platform evidence candidates with receipts."""
 
-    retrieved_at = datetime.now(timezone.utc).isoformat()
+    retrieved_at = datetime.now(UTC).isoformat()
     query = {
         "system_slug": system_slug,
         "system_name": system_name,

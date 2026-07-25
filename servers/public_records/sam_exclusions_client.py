@@ -8,12 +8,13 @@ API docs: https://open.gsa.gov/api/exclusions-api/
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
 import logging
 import os
 import re
+from datetime import UTC, datetime
 from typing import Any
 
+from shared.utils.errors import EXPECTED_OPERATIONAL_EXCEPTIONS
 from shared.utils.http_client import resilient_request
 from shared.utils.identity import normalize_npi
 
@@ -190,7 +191,7 @@ def _api_error_payload(exc: Exception, query: dict[str, Any], limit: int) -> dic
     if response is not None:
         try:
             detail["body"] = _redact_api_keys(response.json())
-        except Exception:
+        except EXPECTED_OPERATIONAL_EXCEPTIONS:
             detail["body"] = _redact_api_keys(getattr(response, "text", ""))
 
     retryable = bool(status_code in {429, 500, 502, 503, 504})
@@ -277,7 +278,7 @@ async def search_exclusions(
                 has_more=has_more,
             ),
         }
-    except Exception as exc:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as exc:
         logger.warning("SAM.gov Exclusions search failed: %s", _redact_api_keys(str(exc)))
         return _api_error_payload(exc, query, safe_limit)
 

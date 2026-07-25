@@ -4,29 +4,29 @@ Downloads CMS Provider-of-Services and Promoting Interoperability CSVs,
 converts to Parquet with zstd compression, and queries with DuckDB.
 Also handles manually-seeded HIPAA breach CSV and reviewed public-record caches.
 """
-
 import hashlib
 import json
 import logging
 import re
 import tempfile
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import duckdb
+import pandas as pd
 from bs4 import BeautifulSoup
+
+from shared.utils.cache import write_atomic_bytes, write_atomic_json
+from shared.utils.duckdb_safe import safe_parquet_sql
+from shared.utils.errors import EXPECTED_OPERATIONAL_EXCEPTIONS
+from shared.utils.http_client import resilient_request
 from shared.utils.identity import (
     conservative_fuzzy_score,
     normalize_name,
     normalize_npi,
     normalize_state,
 )
-from shared.utils.duckdb_safe import safe_parquet_sql
-
-from shared.utils.cache import write_atomic_bytes, write_atomic_json
-from shared.utils.http_client import resilient_request
 from shared.utils.tabular_normalization import normalize_tabular_columns, normalize_tabular_key, read_csv_strings
-import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -147,7 +147,7 @@ def _is_cache_valid(path: Path, ttl_days: int) -> bool:
     """Check if a cached file exists and is within TTL."""
     if not path.exists():
         return False
-    age_days = (datetime.now(timezone.utc).timestamp() - path.stat().st_mtime) / 86400
+    age_days = (datetime.now(UTC).timestamp() - path.stat().st_mtime) / 86400
     return age_days < ttl_days
 
 
@@ -155,7 +155,7 @@ def _cache_age_days(path: Path) -> float | None:
     """Return a cached file's age in days, or None if it does not exist."""
     if not path.exists():
         return None
-    age_seconds = datetime.now(timezone.utc).timestamp() - path.stat().st_mtime
+    age_seconds = datetime.now(UTC).timestamp() - path.stat().st_mtime
     return round(age_seconds / 86400, 3)
 
 
@@ -163,7 +163,7 @@ def _parse_iso_datetime(value: str) -> datetime | None:
     if not value:
         return None
     try:
-        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+        return datetime.fromisoformat(value)
     except ValueError:
         return None
 
@@ -174,7 +174,7 @@ def _read_json(path: Path) -> dict:
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
         return payload if isinstance(payload, dict) else {}
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("Failed to read JSON cache metadata %s: %s", path.name, e)
         return {}
 
@@ -240,7 +240,7 @@ def _normalize_leie_date(value: object) -> str:
 
     for fmt in ("%Y%m%d", "%m%d%Y"):
         try:
-            return datetime.strptime(digits, fmt).date().isoformat()
+            return datetime.strptime(digits, fmt).replace(tzinfo=UTC).date().isoformat()
         except ValueError:
             continue
     return digits
@@ -295,8 +295,8 @@ def _leie_download_is_older_than(days: int) -> bool:
     if downloaded_at is None:
         return True
     if downloaded_at.tzinfo is None:
-        downloaded_at = downloaded_at.replace(tzinfo=timezone.utc)
-    return (datetime.now(timezone.utc) - downloaded_at).days >= days
+        downloaded_at = downloaded_at.replace(tzinfo=UTC)
+    return (datetime.now(UTC) - downloaded_at).days >= days
 
 
 # ---------------------------------------------------------------------------
@@ -317,7 +317,7 @@ def _get_con(parquet_path: Path, view_name: str = "data") -> duckdb.DuckDBPyConn
             f"CREATE VIEW {view_name} AS SELECT * FROM {safe_parquet_sql(parquet_path)}"
         )
         return con
-    except Exception:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS:
         logger.warning("Corrupt Parquet cache, deleting: %s", parquet_path)
         con.close()
         parquet_path.unlink(missing_ok=True)
@@ -395,7 +395,7 @@ async def ensure_pos_cached() -> bool:
         logger.info("POS cached: %d records -> %s", len(df), _POS_PARQUET.name)
         return True
 
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("Failed to download CMS POS file: %s", e)
         return False
 
@@ -422,7 +422,7 @@ async def ensure_pi_cached() -> bool:
         logger.info("PI cached: %d records -> %s", len(df), _PI_PARQUET.name)
         return True
 
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("Failed to download CMS PI file: %s", e)
         return False
 
@@ -470,7 +470,7 @@ def ensure_breach_loaded() -> bool:
         logger.info("Breach data cached: %d records -> %s", len(df), _BREACH_PARQUET.name)
         return True
 
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("Failed to process HIPAA breach CSV: %s", e)
         return False
 
@@ -621,7 +621,7 @@ def ensure_ocr_enforcement_actions_indexed(force_reindex: bool = False) -> dict:
     if _OCR_ENFORCEMENT_PARQUET.exists() and not force_reindex:
         try:
             record_count = len(_read_parquet_dataframe(_OCR_ENFORCEMENT_PARQUET))
-        except Exception:
+        except EXPECTED_OPERATIONAL_EXCEPTIONS:
             record_count = 0
         return _source_status(
             source_name="HHS OCR enforcement actions",
@@ -672,7 +672,7 @@ def ensure_sec_cyber_disclosures_indexed(force_reindex: bool = False) -> dict:
     if _SEC_CYBER_DISCLOSURES_PARQUET.exists() and not force_reindex:
         try:
             record_count = len(_read_parquet_dataframe(_SEC_CYBER_DISCLOSURES_PARQUET))
-        except Exception:
+        except EXPECTED_OPERATIONAL_EXCEPTIONS:
             record_count = 0
         return _source_status(
             source_name="SEC EDGAR cyber disclosures",
@@ -930,8 +930,8 @@ def import_state_breach_notices(state: str, source_path: Path, *, source_url: st
     return {
         "status": "ready",
         "state": normalized_state,
-        "rows_imported": int(len(df)),
-        "record_count": int(len(combined)),
+        "rows_imported": len(df),
+        "record_count": len(combined),
         "cache_path": str(_STATE_BREACH_NOTICES_PARQUET),
     }
 
@@ -1015,7 +1015,7 @@ def search_state_breach_notices(
         "source_status": {
             "status": "ready",
             "source_type": "state_ag_breach_notice",
-            "record_count": int(len(df)),
+            "record_count": len(df),
             "cache_path": str(_STATE_BREACH_NOTICES_PARQUET),
         },
         "records": records,
@@ -1051,7 +1051,7 @@ async def ensure_leie_cached(force_refresh: bool = False) -> dict:
             should_refresh = True
         source_last_modified = remote_last_modified or source_last_modified
         source_etag = remote_etag or source_etag
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         head_error = f"HEAD failed: {e}"
         if has_cache and not should_refresh and _leie_cache_is_younger_than(_LEIE_STALE_MAX_DAYS):
             return _leie_metadata("stale", last_error=head_error)
@@ -1071,17 +1071,17 @@ async def ensure_leie_cached(force_refresh: bool = False) -> dict:
         _write_dataframe_parquet(df, _LEIE_PARQUET, compression="zstd")
 
         meta = {
-            "downloaded_at": datetime.now(timezone.utc).isoformat(),
+            "downloaded_at": datetime.now(UTC).isoformat(),
             "source_last_modified": source_last_modified,
             "source_etag": source_etag,
-            "record_count": int(len(df)),
+            "record_count": len(df),
             "cache_status": "refreshed",
             "last_error": head_error,
         }
         written = _write_leie_metadata(meta)
         logger.info("LEIE cached: %d records -> %s", len(df), _LEIE_PARQUET.name)
         return written
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         message = f"{head_error}; download failed: {e}" if head_error else f"download failed: {e}"
         logger.warning("Failed to refresh HHS OIG LEIE file: %s", message)
         if has_cache and _leie_cache_is_younger_than(_LEIE_STALE_MAX_DAYS):
@@ -1173,7 +1173,7 @@ def query_leie_by_individual(
             basis = "last_name_exact"
         if norm_first:
             first_score = conservative_fuzzy_score(norm_first, row.get("first_name", ""))
-            score = max(score, int(round((score + first_score) / 2)))
+            score = max(score, round((score + first_score) / 2))
             basis = "name_fuzzy" if first_score < 100 else "name_exact"
         if norm_state:
             score = min(100, score + 4)
@@ -1239,7 +1239,7 @@ def screen_leie_candidates(candidates: list[dict], limit_per_candidate: int = 5)
 
     limit = max(1, min(limit_per_candidate, 25))
     results: list[dict] = []
-    screened_at = datetime.now(timezone.utc).isoformat()
+    screened_at = datetime.now(UTC).isoformat()
     source_metadata = get_leie_source_metadata()
 
     for index, candidate in enumerate(candidates):
@@ -1430,7 +1430,7 @@ def query_pos(
 
         return results
 
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("POS query failed: %s", e)
         return []
     finally:
@@ -1503,7 +1503,7 @@ def query_pi(
 
         return results
 
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("PI query failed: %s", e)
         return []
     finally:
@@ -1594,7 +1594,7 @@ def query_breaches(
 
         return results
 
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("Breach query failed: %s", e)
         return []
     finally:
@@ -1616,7 +1616,7 @@ def cache_api_response(prefix: str, params: dict, data: dict | list) -> None:
     """Save an API response to the cache, keyed by SHA256 hash of params."""
     path = _api_cache_path(prefix, params)
     payload = {
-        "cached_at": datetime.now(timezone.utc).isoformat(),
+        "cached_at": datetime.now(UTC).isoformat(),
         "params": params,
         "data": data,
     }
@@ -1636,6 +1636,6 @@ def load_cached_api_response(prefix: str, params: dict) -> dict | list | None:
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
         return payload.get("data")
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("Failed to load cached API response %s: %s", path.name, e)
         return None

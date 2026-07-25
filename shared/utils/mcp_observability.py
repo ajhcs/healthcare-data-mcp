@@ -2,15 +2,16 @@
 
 from __future__ import annotations
 
-from collections import defaultdict, deque
-from collections.abc import Callable
-from functools import wraps
 import inspect
 import json
 import logging
 import time
+from collections import defaultdict, deque
+from collections.abc import Callable
+from functools import wraps
 from typing import Any, TypeVar
 
+from shared.utils.errors import EXPECTED_OPERATIONAL_EXCEPTIONS
 from shared.utils.mcp_response import to_structured
 
 logger = logging.getLogger(__name__)
@@ -101,7 +102,7 @@ def tooling_metrics_payload(server_id: str | None = None) -> dict[str, Any]:
 def _json_size(value: Any) -> int:
     try:
         return len(json.dumps(to_structured(value), default=str))
-    except Exception:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS:
         return 0
 
 

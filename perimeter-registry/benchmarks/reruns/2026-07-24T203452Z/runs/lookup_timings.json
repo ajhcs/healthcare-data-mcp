@@ -1,0 +1,105 @@
+{
+  "version": 1,
+  "clock": "time.perf_counter_ns",
+  "python": "3.12.3",
+  "platform": "Linux-6.8.0-124-generic-x86_64-with-glibc2.39",
+  "warm_iterations_per_question": 10000,
+  "cold_iterations_per_fixture": 300,
+  "warm_in_process_resolution": {
+    "J1": {
+      "mean_ms": 0.0151102393,
+      "median_ms": 0.009748,
+      "p95_ms": 0.028177,
+      "max_ms": 0.059112
+    },
+    "J2": {
+      "mean_ms": 0.1060430072,
+      "median_ms": 0.070036,
+      "p95_ms": 0.195128,
+      "max_ms": 0.557787
+    },
+    "J3": {
+      "mean_ms": 0.0046515246,
+      "median_ms": 0.003629,
+      "p95_ms": 0.008489,
+      "max_ms": 0.015109
+    },
+    "J4": {
+      "mean_ms": 0.011789779399999999,
+      "median_ms": 0.007855,
+      "p95_ms": 0.022893,
+      "max_ms": 0.372724
+    },
+    "P1": {
+      "mean_ms": 0.023449478699999998,
+      "median_ms": 0.016592,
+      "p95_ms": 0.042525,
+      "max_ms": 0.059993
+    },
+    "P2": {
+      "mean_ms": 0.0190229138,
+      "median_ms": 0.011837,
+      "p95_ms": 0.032826,
+      "max_ms": 0.563447
+    },
+    "P3": {
+      "mean_ms": 0.0682446028,
+      "median_ms": 0.047075,
+      "p95_ms": 0.114541,
+      "max_ms": 0.508986
+    },
+    "P4": {
+      "mean_ms": 0.013433956700000001,
+      "median_ms": 0.009547,
+      "p95_ms": 0.024982,
+      "max_ms": 0.034306
+    },
+    "U1": {
+      "mean_ms": 0.0150088833,
+      "median_ms": 0.012119,
+      "p95_ms": 0.032007,
+      "max_ms": 0.051594
+    },
+    "U2": {
+      "mean_ms": 0.0073582563,
+      "median_ms": 0.0053365,
+      "p95_ms": 0.013797,
+      "max_ms": 0.036371
+    },
+    "U3": {
+      "mean_ms": 0.07287414169999999,
+      "median_ms": 0.054201,
+      "p95_ms": 0.149536,
+      "max_ms": 0.537587
+    },
+    "U4": {
+      "mean_ms": 0.0952638751,
+      "median_ms": 0.0720345,
+      "p95_ms": 0.157503,
+      "max_ms": 0.871713
+    }
+  },
+  "cold_fixture_load_validate_and_resolution": {
+    "jefferson": {
+      "mean_ms": 0.4458971533333333,
+      "median_ms": 0.399797,
+      "p95_ms": 0.594051,
+      "max_ms": 0.656964
+    },
+    "penn": {
+      "mean_ms": 0.30664387333333337,
+      "median_ms": 0.337849,
+      "p95_ms": 0.396518,
+      "max_ms": 0.433918
+    },
+    "upmc": {
+      "mean_ms": 0.27894539,
+      "median_ms": 0.2495125,
+      "p95_ms": 0.389588,
+      "max_ms": 0.40116
+    }
+  },
+  "generated_at_utc": "2026-07-24T20:44:22Z",
+  "prior_artifact_checksum_verified": "matched pre-run checksum",
+  "metadata_corrected_at_utc": "2026-07-25T14:33:13Z"
+}

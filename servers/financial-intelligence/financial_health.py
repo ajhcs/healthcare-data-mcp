@@ -6,14 +6,15 @@ avoid deriving HFMA MAP revenue-cycle KPIs from HCRIS or HFMD fields.
 
 from __future__ import annotations
 
-from pathlib import Path
 import re
-from typing import Any
 import zipfile
+from pathlib import Path
+from typing import Any
 
 import pandas as pd
-from shared.utils.bed_resolver import resolve_hospital_bed_source
 
+from shared.utils.bed_resolver import resolve_hospital_bed_source
+from shared.utils.errors import EXPECTED_OPERATIONAL_EXCEPTIONS
 
 DEFAULT_CACHE_ROOT = Path.home() / ".healthcare-data-mcp" / "cache"
 AHRQ_HFMD_URL = "https://www.ahrq.gov/data/innovations/hfmd.html"
@@ -304,8 +305,8 @@ def load_ahrq_hfmd_profile(
             "source_url": AHRQ_HFMD_URL,
             "source_status": "ready" if records else "no_match",
             "cache_path": str(cache_dir),
-            "record_count": int(len(df)),
-            "matched_count": int(len(matches)),
+            "record_count": len(df),
+            "matched_count": len(matches),
             "ccn": selected.get("ccn", ccn) if selected else ccn,
             "state": selected.get("state", state.upper()) if selected else state.upper(),
             "matched_on": matched_on,
@@ -354,7 +355,7 @@ def _read_hfmd_artifacts(artifacts: list[Path]) -> list[pd.DataFrame]:
                     frame["_hfmd_source_file"] = str(artifact)
                     frame["_hfmd_source_member"] = member
                     frames.append(frame)
-        except Exception:
+        except EXPECTED_OPERATIONAL_EXCEPTIONS:
             continue
     return frames
 

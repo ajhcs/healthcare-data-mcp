@@ -3,13 +3,15 @@
 Tests each server's tools against live CMS APIs and data sources.
 Run with: python smoke_test.py
 """
-
 import asyncio
 import json
 import os
 import sys
 import time
 import traceback
+
+from shared.utils.errors import EXPECTED_OPERATIONAL_EXCEPTIONS
+
 
 # ============================================================
 # Test 1: CMS Facility Server
@@ -157,7 +159,7 @@ async def test_geo_demographics():
         else:
             print("  -> No data returned (may need CENSUS_API_KEY env var)")
             results["zcta_population"] = None
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         print(f"  -> Census API error: {e}")
         print("     (This is expected if CENSUS_API_KEY is not set)")
         results["zcta_population"] = "error"
@@ -172,7 +174,7 @@ async def test_geo_demographics():
             data = json.loads(result)
             print(f"  -> {json.dumps(data, indent=2)[:200]}")
             results["hud_crosswalk"] = "ok"
-        except Exception as e:
+        except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
             print(f"  -> HUD API error: {e}")
             results["hud_crosswalk"] = "error"
     else:
@@ -191,8 +193,8 @@ async def test_drive_time():
     print("TEST: drive-time-mcp")
     print("=" * 60)
 
-    from servers.drive_time.routing import OSRMRouter
     from servers.drive_time.accessibility import compute_e2sfca, summarize_scores
+    from servers.drive_time.routing import OSRMRouter
 
     results = {}
 
@@ -209,7 +211,7 @@ async def test_drive_time():
         print(f"  -> {duration_min:.0f} min, {distance_mi:.0f} miles ({elapsed:.1f}s)")
         results["osrm_route"] = f"{duration_min:.0f}min"
         assert 45 < duration_min < 120, f"Route time {duration_min}min seems wrong"
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         print(f"  -> OSRM error: {e}")
         results["osrm_route"] = "error"
 
@@ -231,7 +233,7 @@ async def test_drive_time():
             row_mins = [f"{d/60:.0f}min" if d else "N/A" for d in row]
             print(f"     Source {i}: {row_mins}")
         results["osrm_table"] = f"{len(durations)}x{len(durations[0]) if durations else 0}"
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         print(f"  -> OSRM table error: {e}")
         results["osrm_table"] = "error"
 
@@ -313,7 +315,7 @@ async def test_financial_intelligence():
     print("TEST: financial-intelligence-mcp")
     print("=" * 60)
 
-    from servers.financial_intelligence import propublica_client, edgar_client
+    from servers.financial_intelligence import edgar_client, propublica_client
 
     results = {}
 
@@ -417,7 +419,7 @@ async def test_price_transparency():
 
     # Test 2: CMS Physician Fee Schedule lookup
     print("\n[2/4] CMS PFS — looking up CPT 99213...")
-    from servers.price_transparency.benchmark_client import get_pfs_rate, calculate_medicare_allowed
+    from servers.price_transparency.benchmark_client import calculate_medicare_allowed, get_pfs_rate
     t0 = time.time()
     pfs = await get_pfs_rate("99213")
     elapsed = time.time() - t0
@@ -466,8 +468,8 @@ async def test_provider_enrollment_live_catalog():
         print("  -> Skipped (set HC_MCP_LIVE_EXPANSION=1)")
         return {"status": "skipped"}
 
-    from shared.utils.source_catalog import fetch_cms_catalog
     from servers.provider_enrollment import data_loaders
+    from shared.utils.source_catalog import fetch_cms_catalog
 
     print("\n[1/1] Resolving CMS Hospital Enrollments from data.cms.gov catalog...")
     catalog = await fetch_cms_catalog()
@@ -532,8 +534,8 @@ async def test_public_records_exclusions_live_metadata():
 
     if os.environ.get("HC_MCP_LIVE_LEIE", "").lower() in {"1", "true", "yes"}:
         print("\n[1/2] Checking HHS OIG LEIE current CSV availability with HEAD...")
-        from shared.utils.http_client import resilient_request
         from servers.public_records import data_loaders
+        from shared.utils.http_client import resilient_request
 
         response = await resilient_request("HEAD", data_loaders.LEIE_URL, timeout=30.0)
         print(f"  -> LEIE HEAD status: {response.status_code}")
@@ -586,7 +588,7 @@ async def main():
         try:
             result = await test_fn()
             all_results[name] = {"status": "PASSED", "details": result}
-        except Exception as e:
+        except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
             tb = traceback.format_exc()
             print(f"\n  {name.upper()}: FAILED — {e}")
             print(f"  {tb}")

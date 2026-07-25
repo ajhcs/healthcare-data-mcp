@@ -4,12 +4,12 @@ Optional — gracefully returns empty results when PROXYCURL_API_KEY is not set.
 API docs: https://nubela.co/proxycurl/docs
 Pricing: ~$0.01 per profile lookup.
 """
-
 import logging
 import os
 
 import httpx
 
+from shared.utils.errors import EXPECTED_OPERATIONAL_EXCEPTIONS
 from shared.utils.http_client import resilient_request
 
 logger = logging.getLogger(__name__)
@@ -62,7 +62,7 @@ async def lookup_profile(linkedin_url: str) -> dict:
         else:
             logger.warning("Proxycurl HTTP error: %s", e.response.status_code)
         return {}
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("Proxycurl lookup failed: %s", e)
         return {}
 

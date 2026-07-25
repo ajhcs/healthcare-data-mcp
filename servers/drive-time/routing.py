@@ -10,7 +10,7 @@ ORS (OpenRouteService):
   - Set ORS_API_KEY environment variable.
 """
 
-from shared.utils.http_client import resilient_request, osrm_rate_limiter
+from shared.utils.http_client import osrm_rate_limiter, resilient_request
 
 _OSRM_PUBLIC_HOST = "router.project-osrm.org"
 

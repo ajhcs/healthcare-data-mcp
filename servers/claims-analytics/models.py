@@ -2,7 +2,6 @@
 
 from pydantic import BaseModel, Field
 
-
 # --- Tool 1: get_inpatient_volumes ---
 
 class DRGDetail(BaseModel):

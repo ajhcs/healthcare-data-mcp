@@ -4,8 +4,8 @@ import pandas as pd
 import pytest
 
 from servers.health_system_profiler.facility_enrichment import (
-    enrich_facility,
     aggregate_off_site,
+    enrich_facility,
 )
 
 

@@ -11,22 +11,24 @@ Routing backends:
 NOTE: The OSRM public demo server (router.project-osrm.org) is rate-limited.
 For production use, deploy a self-hosted OSRM instance and set OSRM_BASE_URL.
 """
-
+import asyncio
 import io
 import json
 import logging
 import os
 import zipfile
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
-
-from shared.utils.http_client import resilient_request
 import pandas as pd
 from mcp.server.fastmcp import FastMCP
+
+from shared.utils.errors import EXPECTED_OPERATIONAL_EXCEPTIONS
+from shared.utils.healthcare_identity import identity_from_public_record
+from shared.utils.http_client import resilient_request
 from shared.utils.mcp_observability import observe_tool
 from shared.utils.mcp_resources import register_standard_resources
-from shared.utils.healthcare_identity import identity_from_public_record
 from shared.utils.mcp_response import error_response, evidence_receipt, to_structured
 from shared.utils.source_backed_result import source_claim
 
@@ -351,8 +353,7 @@ async def _load_facilities() -> pd.DataFrame:
     if not os.path.exists(cache_path):
         logger.info("Downloading Hospital General Info from CMS...")
         resp = await resilient_request("GET", HOSPITAL_INFO_URL, timeout=300.0)
-        with open(cache_path, "wb") as f:
-            f.write(resp.content)
+        await asyncio.to_thread(Path(cache_path).write_bytes, resp.content)
         logger.info("Saved to %s", cache_path)
 
     df = pd.read_csv(cache_path, dtype=str, keep_default_na=False)
@@ -381,8 +382,7 @@ async def _ensure_zip_centroids() -> dict[str, tuple[float, float]]:
         with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
             txt_files = [n for n in zf.namelist() if n.endswith(".txt")]
             content = zf.read(txt_files[0]) if txt_files else zf.read(zf.namelist()[0])
-        with open(cache_path, "wb") as f:
-            f.write(content)
+        await asyncio.to_thread(Path(cache_path).write_bytes, content)
 
     df = pd.read_csv(cache_path, sep="\t", dtype=str, keep_default_na=False)
     df.columns = [c.strip() for c in df.columns]
@@ -421,7 +421,7 @@ async def _parse_lat_lon(df: pd.DataFrame) -> pd.DataFrame:
             try:
                 obj = json.loads(val)
                 return float(obj[key])
-            except Exception:
+            except EXPECTED_OPERATIONAL_EXCEPTIONS:
                 return None
 
         df["_lat"] = df["location"].apply(lambda v: _extract(v, "latitude"))

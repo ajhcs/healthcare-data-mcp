@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
 from collections.abc import Mapping
+from dataclasses import asdict, dataclass, field
 from typing import Any
 
 from shared.utils.identity import (
@@ -339,9 +339,9 @@ def _merge_unresolved_identifiers(target: HealthcareIdentity, unresolved: list[d
 
 
 __all__ = [
-    "HealthcareIdentity",
     "IDENTITY_CANDIDATE_FIELDS",
     "IDENTITY_EXACT_FIELDS",
+    "HealthcareIdentity",
     "MatchDecision",
     "SourceAlias",
     "coerce_healthcare_identity",

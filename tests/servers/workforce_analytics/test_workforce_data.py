@@ -2,9 +2,9 @@
 
 from pathlib import Path
 
+import duckdb
 import pandas as pd
 import pytest
-import duckdb
 
 from servers.workforce_analytics import operations_data, server, workforce_data
 from shared.utils.mcp_response import validate_evidence_receipt

@@ -11,21 +11,23 @@ Combines:
 
 from __future__ import annotations
 
+import asyncio
 import csv
 import json
 import logging
 import os
 import re
 import shutil
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from difflib import SequenceMatcher
 from pathlib import Path
-from typing import Any
+from typing import Any, BinaryIO
 
 import duckdb
 import polars as pl
 
 from shared.utils.cache import write_atomic_json
+from shared.utils.errors import EXPECTED_OPERATIONAL_EXCEPTIONS
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +41,11 @@ _CACHE_TTL_DAYS = 30
 _DEFAULT_MAX_DOWNLOAD_BYTES = 10 * 1024 * 1024 * 1024
 _DEFAULT_MIN_FREE_BYTES = 2 * 1024 * 1024 * 1024
 _DEFAULT_PROGRESS_INTERVAL_BYTES = 250 * 1024 * 1024
+
+
+def _open_binary_writer(path: Path) -> BinaryIO:
+    """Open a binary writer from synchronous worker-thread code."""
+    return path.open("wb")
 
 
 def _hospital_cache_dir(hospital_id: str) -> Path:
@@ -98,10 +105,10 @@ def is_cached(hospital_id: str) -> bool:
         cached_ts = info.get("cached_at", "")
         if cached_ts:
             cached_dt = datetime.fromisoformat(cached_ts)
-            age_days = (datetime.now(timezone.utc) - cached_dt).days
+            age_days = (datetime.now(UTC) - cached_dt).days
             if age_days > _CACHE_TTL_DAYS:
                 return False
-    except Exception:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS:
         return False
     return True
 
@@ -144,19 +151,19 @@ _SKIP_PATTERNS: list[tuple[re.Pattern, None]] = [
 ]
 
 _KEYWORD_RULES: list[tuple[re.Pattern, str]] = [
-    (re.compile(r"\b(description|procedure|service_description|item_description|service)\b", re.I), "description"),
-    (re.compile(r"\b(code[_ ]?type|type[_ ]?of[_ ]?code)\b", re.I), "code_1_type"),
-    (re.compile(r"\b(cpt[_ ]?code|hcpcs[_ ]?code|procedure[_ ]?code|cpt|hcpcs|code)\b", re.I), "code_1"),
-    (re.compile(r"\b(payer|payer[_ ]?name|insurer|insurance|insurance[_ ]?company|carrier)\b", re.I), "payer_name"),
-    (re.compile(r"\b(plan|plan[_ ]?name|benefit[_ ]?plan)\b", re.I), "plan_name"),
-    (re.compile(r"\b(setting|care[_ ]?setting|place[_ ]?of[_ ]?service)\b", re.I), "setting"),
-    (re.compile(r"\b(billing[_ ]?class|billing[_ ]?code)\b", re.I), "billing_class"),
+    (re.compile(r"\b(description|procedure|service_description|item_description|service)\b", re.IGNORECASE), "description"),
+    (re.compile(r"\b(code[_ ]?type|type[_ ]?of[_ ]?code)\b", re.IGNORECASE), "code_1_type"),
+    (re.compile(r"\b(cpt[_ ]?code|hcpcs[_ ]?code|procedure[_ ]?code|cpt|hcpcs|code)\b", re.IGNORECASE), "code_1"),
+    (re.compile(r"\b(payer|payer[_ ]?name|insurer|insurance|insurance[_ ]?company|carrier)\b", re.IGNORECASE), "payer_name"),
+    (re.compile(r"\b(plan|plan[_ ]?name|benefit[_ ]?plan)\b", re.IGNORECASE), "plan_name"),
+    (re.compile(r"\b(setting|care[_ ]?setting|place[_ ]?of[_ ]?service)\b", re.IGNORECASE), "setting"),
+    (re.compile(r"\b(billing[_ ]?class|billing[_ ]?code)\b", re.IGNORECASE), "billing_class"),
 ]
 
 _CHARGE_RULES: list[tuple[re.Pattern, re.Pattern, str]] = [
-    (re.compile(r"\bgross\b", re.I), re.compile(r"\b(charge|price)\b", re.I), "gross_charge"),
-    (re.compile(r"\bcash\b", re.I), re.compile(r"\b(price|charge|discount)\b", re.I), "discounted_cash"),
-    (re.compile(r"\bnegotiated\b", re.I), re.compile(r"\b(dollar|rate|amount|price)\b", re.I), "negotiated_dollar"),
+    (re.compile(r"\bgross\b", re.IGNORECASE), re.compile(r"\b(charge|price)\b", re.IGNORECASE), "gross_charge"),
+    (re.compile(r"\bcash\b", re.IGNORECASE), re.compile(r"\b(price|charge|discount)\b", re.IGNORECASE), "discounted_cash"),
+    (re.compile(r"\bnegotiated\b", re.IGNORECASE), re.compile(r"\b(dollar|rate|amount|price)\b", re.IGNORECASE), "negotiated_dollar"),
 ]
 
 
@@ -238,7 +245,7 @@ def _parse_csv_line(line: str) -> list[str]:
     """Parse a single CSV line using csv.reader for proper quote handling."""
     try:
         return next(csv.reader([line]))
-    except Exception:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS:
         return [part.strip().strip('"') for part in line.split(",")]
 
 
@@ -271,7 +278,7 @@ def _find_data_header_row(file_path: Path, max_scan_rows: int = 50) -> int:
                 values = _parse_csv_line(stripped)
                 if _looks_like_data_header(values):
                     return idx
-    except Exception:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS:
         return 2
     return 2
 
@@ -337,7 +344,7 @@ def _extract_hospital_info(file_path: Path) -> dict[str, str]:
             }
 
         return default
-    except Exception:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS:
         return default
 
 
@@ -460,7 +467,7 @@ def _pivot_wide_to_tall(df: pl.DataFrame) -> pl.DataFrame:
         try:
             chunk = df.select(select_exprs)
             tall_frames.append(chunk)
-        except Exception as e:
+        except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
             logger.warning("Failed to pivot payer group %s: %s", payer_plan_key, e)
             continue
 
@@ -516,9 +523,12 @@ def parse_csv_mrf(file_path: str | Path) -> pl.DataFrame:
         for orig, target in fuzzy_mapping.items():
             if orig == target:
                 continue
-            if orig not in rename_mapping and target not in rename_mapping.values():
-                if target not in df.columns:
-                    rename_mapping[orig] = target
+            if (
+                orig not in rename_mapping
+                and target not in rename_mapping.values()
+                and target not in df.columns
+            ):
+                rename_mapping[orig] = target
 
     if rename_mapping:
         df = df.rename(rename_mapping)
@@ -832,7 +842,7 @@ def normalize_to_parquet(df: pl.DataFrame, hospital_name: str, output_dir: Path)
     for col_name, dtype in CHARGES_SCHEMA.items():
         try:
             charges = charges.with_columns(pl.col(col_name).cast(dtype, strict=False))
-        except Exception:
+        except EXPECTED_OPERATIONAL_EXCEPTIONS:
             pass
 
     # --- Write Parquet files ---
@@ -843,7 +853,7 @@ def normalize_to_parquet(df: pl.DataFrame, hospital_name: str, output_dir: Path)
 
     metadata = {
         "hospital_name": hospital_name,
-        "cached_at": datetime.now(timezone.utc).isoformat(),
+        "cached_at": datetime.now(UTC).isoformat(),
         "row_count": len(charges),
         "payer_count": len(payer_unique),
         "plan_count": len(plan_unique),
@@ -868,6 +878,7 @@ async def download_mrf(url: str, hospital_id: str) -> Path:
     Returns the path to the downloaded file.
     """
     import httpx as _httpx
+
     from shared.utils.http_client import get_client
 
     cache_dir = _hospital_cache_dir(hospital_id)
@@ -911,7 +922,8 @@ async def download_mrf(url: str, hospital_id: str) -> Path:
             next_progress_log = progress_interval
             next_capacity_check = progress_interval
 
-            with open(temp_dest, "wb") as f:
+            writer = await asyncio.to_thread(_open_binary_writer, temp_dest)
+            try:
                 async for chunk in response.aiter_bytes(chunk_size=1024 * 1024):
                     downloaded += len(chunk)
                     if downloaded > max_download_bytes:
@@ -926,7 +938,7 @@ async def download_mrf(url: str, hospital_id: str) -> Path:
                             remaining = max(0, content_length - downloaded)
                         _ensure_download_capacity(cache_dir, expected_bytes=remaining)
                         next_capacity_check += progress_interval
-                    f.write(chunk)
+                    await asyncio.to_thread(writer.write, chunk)
                     if downloaded >= next_progress_log:
                         logger.info(
                             "MRF download progress for %s: %s",
@@ -934,6 +946,8 @@ async def download_mrf(url: str, hospital_id: str) -> Path:
                             _format_bytes(downloaded),
                         )
                         next_progress_log += progress_interval
+            finally:
+                await asyncio.to_thread(writer.close)
 
         temp_dest.replace(dest)
     except Exception:
@@ -985,7 +999,7 @@ async def process_mrf(url: str, hospital_id: str, hospital_name: str = "") -> di
             if raw_file.exists() and raw_file.suffix.lower() in (".csv", ".json"):
                 raw_file.unlink()
                 logger.info("Cleaned up raw file: %s", raw_file.name)
-        except Exception:
+        except EXPECTED_OPERATIONAL_EXCEPTIONS:
             pass
 
 
@@ -1124,7 +1138,7 @@ def get_cache_metadata(hospital_id: str) -> dict:
     if meta_path.exists():
         try:
             return json.loads(meta_path.read_text(encoding="utf-8"))
-        except Exception:
+        except EXPECTED_OPERATIONAL_EXCEPTIONS:
             pass
     return {}
 
@@ -1148,7 +1162,7 @@ def get_all_cached_hospitals() -> list[dict]:
                 meta = json.loads(meta_path.read_text(encoding="utf-8"))
                 meta["hospital_id"] = d.name
                 results.append(meta)
-            except Exception:
+            except EXPECTED_OPERATIONAL_EXCEPTIONS:
                 continue
 
     return results
@@ -1170,7 +1184,7 @@ def get_cross_hospital_rates(cpt_codes: list[str]) -> list[dict]:
                 rate["hospital_name"] = hospital_name
                 rate["hospital_id"] = hospital_id
                 all_results.append(rate)
-        except Exception as e:
+        except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
             logger.warning("Failed to query %s: %s", hospital_id, e)
 
     return all_results

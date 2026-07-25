@@ -8,7 +8,7 @@ import sys
 from dataclasses import replace
 from pathlib import Path
 
-import shared.utils.workflows as workflows
+from shared.utils import workflows
 from shared.utils.mcp_response import REPORT_SOURCE_METADATA_FIELDS, validate_report_ingest_payload
 from shared.utils.workflows import (
     build_workflow_fact_manifest,
@@ -19,7 +19,6 @@ from shared.utils.workflows import (
     validate_workflow_contracts,
     validate_workflow_tool_references,
 )
-
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -289,6 +288,7 @@ def test_hc_mcp_workflow_cli_rejects_inputs_without_workflow_name() -> None:
             "ccn=390223",
         ],
         cwd=REPO_ROOT,
+        check=False,
         text=True,
         capture_output=True,
     )

@@ -5,7 +5,6 @@ import pytest
 from servers.community_health import data_loaders, server
 from shared.utils.mcp_response import validate_evidence_receipt
 
-
 SOURCE = {
     "name": "CDC PLACES: Local Data for Better Health",
     "dataset_title": "PLACES: Local Data for Better Health, County Data, 2025 release",

@@ -3,12 +3,11 @@
 Bureau of Labor Statistics Occupational Employment and Wage Statistics.
 API docs: https://www.bls.gov/developers/api_signature_v2.htm
 """
-
 import logging
 import os
 from pathlib import Path
 
-
+from shared.utils.errors import EXPECTED_OPERATIONAL_EXCEPTIONS
 from shared.utils.http_client import resilient_request
 
 logger = logging.getLogger(__name__)
@@ -207,6 +206,6 @@ async def get_oes_data(
 
         return result
 
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("BLS OES query failed: %s", e)
         return {"error": f"BLS API request failed: {e}"}

@@ -12,8 +12,8 @@ from pypdf import PdfReader
 
 from shared.acquisition.scale_emergency_department_count_contract import (
     ED_DEFINITION,
-    EXPECTED_ARTIFACTS,
     EXPECTED_ARTIFACT_URLS,
+    EXPECTED_ARTIFACTS,
     PROHIBITED_OUTPUTS,
     EmergencyDepartmentCountAcquisition,
     build_emergency_department_count_acquisition,
@@ -210,6 +210,8 @@ def verify_emergency_department_count_source_bytes(
 
     from shared.acquisition.scale_physician_count_packet import (
         acquisition as physician_acquisition,
+    )
+    from shared.acquisition.scale_physician_count_packet import (
         verify_physician_count_source_bytes,
     )
 

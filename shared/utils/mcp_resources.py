@@ -9,7 +9,6 @@ from shared.utils.mcp_observability import tooling_metrics_payload
 from shared.utils.server_registry import SERVER_BY_ID
 from shared.utils.tool_clusters import clusters_for_server
 
-
 SOURCE_BACKED_CONTRACT_DOC = "docs/SOURCE_BACKED_RESULT_CONTRACT.md"
 SOURCE_CAPABILITY_LEDGER_DOC = "docs/SOURCE_CAPABILITY_LEDGER.md"
 

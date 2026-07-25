@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "assignments": {
+    "registry_r1": [
+      "J1",
+      "P1",
+      "U1",
+      "J2",
+      "P2",
+      "U2",
+      "J3",
+      "P3",
+      "U3",
+      "J4",
+      "P4",
+      "U4"
+    ],
+    "registry_r2": [
+      "U4",
+      "P4",
+      "J4",
+      "U3",
+      "P3",
+      "J3",
+      "U2",
+      "P2",
+      "J2",
+      "U1",
+      "P1",
+      "J1"
+    ],
+    "baseline_r1": [
+      "U4",
+      "P4",
+      "J4",
+      "U3",
+      "P3",
+      "J3",
+      "U2",
+      "P2",
+      "J2",
+      "U1",
+      "P1",
+      "J1"
+    ],
+    "baseline_r2": [
+      "J1",
+      "P1",
+      "U1",
+      "J2",
+      "P2",
+      "U2",
+      "J3",
+      "P3",
+      "U3",
+      "J4",
+      "P4",
+      "U4"
+    ]
+  },
+  "counterbalance_note": "Each order appears once in each arm; questions alternate systems before the exact reverse."
+}

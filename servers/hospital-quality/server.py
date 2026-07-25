@@ -4,15 +4,16 @@ Provides tools for hospital quality metrics, readmission data, safety scores,
 patient experience, and financial profiling from public CMS data.
 """
 
-from typing import Any
 import logging
 import os
+from typing import Any
 
 from mcp.server.fastmcp import FastMCP
-from shared.utils.mcp_observability import observe_tool
-from shared.utils.mcp_resources import register_standard_resources
+
 from shared.utils.healthcare_identity import identity_from_public_record
 from shared.utils.identity import normalize_ccn, normalize_name
+from shared.utils.mcp_observability import observe_tool
+from shared.utils.mcp_resources import register_standard_resources
 from shared.utils.mcp_response import error_response, evidence_receipt, to_structured
 
 from . import data_loaders
@@ -346,9 +347,7 @@ def _quality_records(rows: Any) -> list[Any]:
 
 def _quality_record_value(record: Any, *keys: str) -> str:
     for key in keys:
-        if isinstance(record, dict):
-            value = record.get(key, "")
-        elif hasattr(record, "index") and key in record.index:
+        if isinstance(record, dict) or hasattr(record, "index") and key in record.index:
             value = record.get(key, "")
         else:
             continue
@@ -662,7 +661,7 @@ async def _quality_dataset_shape(dataset: str) -> dict[str, Any]:
             if dataset_id
             else ""
         ),
-        "row_count": 0 if df is None else int(len(df)),
+        "row_count": 0 if df is None else len(df),
         "columns_sample": columns[:25],
         "has_measure_column": bool(_find_measure_col(df)) if df is not None and not df.empty else False,
     }
@@ -1319,9 +1318,8 @@ async def get_patient_experience(ccn: str) -> dict[str, Any]:
             domain = domain_data[matched_domain]
 
             # Star rating measure
-            if _STAR_SUFFIX in measure_id or _LINEAR_SCORE in measure_id:
-                if star_col:
-                    domain.star_rating = str(row.get(star_col, "")).strip()
+            if (_STAR_SUFFIX in measure_id or _LINEAR_SCORE in measure_id) and star_col:
+                domain.star_rating = str(row.get(star_col, "")).strip()
 
             # Answer percent measures — categorize by top/middle/bottom box
             if answer_pct_col and answer_desc_col:

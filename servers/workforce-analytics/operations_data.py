@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
+import json
 from collections.abc import Awaitable, Callable
 from importlib import import_module
-import json
 from pathlib import Path
 from typing import Any
 
 from shared.utils.bed_resolver import resolve_hospital_bed_source
 from shared.utils.cost_report import cr_safe_float
-
+from shared.utils.errors import EXPECTED_OPERATIONAL_EXCEPTIONS
 
 HospitalRowLoader = Callable[[str], Awaitable[dict[str, Any]]]
 CostReportRowLoader = Callable[[str, int], Awaitable[Any | None]]
@@ -306,7 +306,7 @@ def _pa_bed_rows(*, state: str, ccn: str, state_facility_id: str, hospital_name:
             facility_name=hospital_name,
             year=year,
         )
-    except Exception:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS:
         return []
 
 
@@ -344,7 +344,7 @@ async def _pa_admissions_enhancement(*, state: str, hospital_name: str, year: in
 def _load_state_health_data() -> Any | None:
     try:
         return import_module("shared.state_health_data")
-    except Exception:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS:
         return None
 
 
@@ -355,7 +355,7 @@ def _phc4_normalized_tables_exist(state_health_data: Any) -> bool:
         return False
     try:
         records = json.loads(index.read_text(encoding="utf-8"))
-    except Exception:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS:
         return False
     return any(record.get("table_references") for record in records if isinstance(record, dict))
 
