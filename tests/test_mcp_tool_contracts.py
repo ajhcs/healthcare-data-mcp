@@ -7,7 +7,6 @@ from pathlib import Path
 
 from shared.utils.tool_clusters import TOOL_CLUSTERS
 
-
 REQUIRED_SECTIONS = (
     "Discovery",
     "When to use",
@@ -24,9 +23,13 @@ def _is_mcp_tool(node: ast.AST) -> bool:
         return False
     for dec in node.decorator_list:
         func = dec.func if isinstance(dec, ast.Call) else dec
-        if isinstance(func, ast.Attribute) and isinstance(func.value, ast.Name):
-            if func.value.id == "mcp" and func.attr == "tool":
-                return True
+        if (
+            isinstance(func, ast.Attribute)
+            and isinstance(func.value, ast.Name)
+            and func.value.id == "mcp"
+            and func.attr == "tool"
+        ):
+            return True
     return False
 
 

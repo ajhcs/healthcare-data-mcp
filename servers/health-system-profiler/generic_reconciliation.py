@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import UTC, date, datetime
 from typing import Any
 
 import pandas as pd
@@ -133,7 +133,7 @@ def reconcile_generic_system_facilities(
 
 def _parse_date(value: str | date | None) -> date:
     if value is None:
-        return date.today()
+        return datetime.now(UTC).date()
     if isinstance(value, date):
         return value
     return date.fromisoformat(value)
@@ -259,9 +259,8 @@ def _matches_provider_enrollment(facility: dict[str, Any], frame: pd.DataFrame) 
     name_col = columns.get("facility_name") or columns.get("hospital_name") or columns.get("provider_name")
 
     ccn = str(facility.get("ccn", "") or "").strip().zfill(6)
-    if ccn and ccn_col:
-        if bool(frame[ccn_col].astype(str).str.strip().str.zfill(6).eq(ccn).any()):
-            return True
+    if ccn and ccn_col and bool(frame[ccn_col].astype(str).str.strip().str.zfill(6).eq(ccn).any()):
+        return True
 
     name = normalize_system_name(facility.get("name", ""))
     if name and name_col:

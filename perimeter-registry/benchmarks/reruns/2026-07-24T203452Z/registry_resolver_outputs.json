@@ -1,0 +1,344 @@
+{
+  "version": 1,
+  "generated_at_utc": "2026-07-24T20:34:52Z",
+  "generated_from": "questions.snapshot.json plus deterministic local fixtures at git commit 7dc499e",
+  "outputs": {
+    "J1": {
+      "status": "resolved",
+      "question": null,
+      "options": [
+        {
+          "scope_id": "enterprise_fy2025",
+          "label": "Audited consolidated enterprise",
+          "amount_usd": 15755857000,
+          "period": "FY ended 2025-06-30",
+          "basis": "audited actual; 11 months of LVHN",
+          "includes": [
+            "university education and research",
+            "care delivery",
+            "insurance",
+            "LVHN actual results from 2024-08-01 (11 months)"
+          ],
+          "excludes": [],
+          "flags": [
+            "not hospital-only"
+          ]
+        }
+      ],
+      "entity_ids": [
+        "tju"
+      ],
+      "flags": [
+        "Jefferson Health brand is not the TJUH legal entity"
+      ],
+      "identifiers": [],
+      "as_of": null,
+      "tax_period_year": null,
+      "evidence_ids": [
+        "fy25_audit"
+      ]
+    },
+    "J2": {
+      "status": "resolved",
+      "question": null,
+      "options": [],
+      "entity_ids": [
+        "hpp"
+      ],
+      "flags": [
+        "exact filer and tax-period year selected; no facts fetched"
+      ],
+      "identifiers": [
+        [
+          "EIN",
+          "23-2379751"
+        ]
+      ],
+      "as_of": null,
+      "tax_period_year": 2023,
+      "evidence_ids": [
+        "fy25_audit",
+        "jhp_2026_provider_manual",
+        "irs_teos"
+      ]
+    },
+    "J3": {
+      "status": "resolved",
+      "question": null,
+      "options": [],
+      "entity_ids": [
+        "lvhn"
+      ],
+      "flags": [
+        "not in the Jefferson perimeter as of 2024-07-31",
+        "documented entry date is 2024-08-01"
+      ],
+      "identifiers": [
+        [
+          "EIN",
+          "22-2458317"
+        ]
+      ],
+      "as_of": "2024-07-31",
+      "tax_period_year": null,
+      "evidence_ids": [
+        "fy25_audit",
+        "official_merger_announcement"
+      ]
+    },
+    "J4": {
+      "status": "resolved",
+      "question": null,
+      "options": [],
+      "entity_ids": [
+        "tjuh"
+      ],
+      "flags": [
+        "individual filer; not Jefferson enterprise"
+      ],
+      "identifiers": [
+        [
+          "EIN",
+          "23-2829095"
+        ],
+        [
+          "CCN",
+          "390174"
+        ]
+      ],
+      "as_of": null,
+      "tax_period_year": null,
+      "evidence_ids": [
+        "fy25_audit",
+        "cms_hospital_general",
+        "irs_teos"
+      ]
+    },
+    "P1": {
+      "status": "menu",
+      "question": "Which Penn Medicine legal entity or reporting scope do you mean?",
+      "options": [
+        {
+          "scope_id": "penn_medicine_governance_2025",
+          "label": "Penn Medicine governance umbrella",
+          "amount_usd": null,
+          "period": null,
+          "basis": null,
+          "includes": [],
+          "excludes": [],
+          "flags": [
+            "brand and governance scope; not a legal entity or standalone financial consolidation"
+          ]
+        },
+        {
+          "scope_id": "uphs_fy2025",
+          "label": "UPHS health-system component",
+          "amount_usd": null,
+          "period": null,
+          "basis": null,
+          "includes": [],
+          "excludes": [],
+          "flags": [
+            "health-system component; not the whole University or Penn Medicine governance umbrella"
+          ]
+        },
+        {
+          "scope_id": "university_consolidated_fy2025",
+          "label": "Audited consolidated University",
+          "amount_usd": null,
+          "period": null,
+          "basis": null,
+          "includes": [],
+          "excludes": [],
+          "flags": [
+            "not health-system-only and not hospital-only"
+          ]
+        }
+      ],
+      "entity_ids": [],
+      "flags": [
+        "brand name does not determine one legal or reporting perimeter"
+      ],
+      "identifiers": [],
+      "as_of": null,
+      "tax_period_year": null,
+      "evidence_ids": [
+        "penn_medicine_board",
+        "penn_fy25_audit"
+      ]
+    },
+    "P2": {
+      "status": "resolved",
+      "question": null,
+      "options": [],
+      "entity_ids": [
+        "trustees_upenn"
+      ],
+      "flags": [
+        "facility/operator record; not the enterprise perimeter"
+      ],
+      "identifiers": [
+        [
+          "EIN",
+          "23-1352685"
+        ],
+        [
+          "CCN",
+          "390111"
+        ]
+      ],
+      "as_of": null,
+      "tax_period_year": null,
+      "evidence_ids": [
+        "cms_hup",
+        "penn_fy25_audit",
+        "upenn_ein"
+      ]
+    },
+    "P3": {
+      "status": "resolved",
+      "question": null,
+      "options": [],
+      "entity_ids": [
+        "doylestown_hospital"
+      ],
+      "flags": [
+        "not in the documented perimeter as of 2025-03-31",
+        "documented entry date is 2025-04-01"
+      ],
+      "identifiers": [
+        [
+          "CCN",
+          "390203"
+        ]
+      ],
+      "as_of": "2025-03-31",
+      "tax_period_year": null,
+      "evidence_ids": [
+        "doylestown_join",
+        "penn_fy25_audit",
+        "cms_doylestown"
+      ]
+    },
+    "P4": {
+      "status": "needs_clarification",
+      "question": "Which legal filer or reporting perimeter behind Penn Medicine do you mean?",
+      "options": [],
+      "entity_ids": [],
+      "flags": [
+        "brand/governance concept is not assigned a universal EIN"
+      ],
+      "identifiers": [],
+      "as_of": null,
+      "tax_period_year": null,
+      "evidence_ids": [
+        "penn_medicine_board",
+        "penn_fy25_audit"
+      ]
+    },
+    "U1": {
+      "status": "resolved",
+      "question": null,
+      "options": [
+        {
+          "scope_id": "upmc_consolidated_cy2025",
+          "label": "Audited consolidated UPMC enterprise",
+          "amount_usd": 33563000000,
+          "period": "CY ended 2025-12-31",
+          "basis": "audited consolidated statements; after interdivision eliminations",
+          "includes": [
+            "Health Services",
+            "Insurance Services",
+            "UPMC subsidiaries and controlled activities"
+          ],
+          "excludes": [
+            "University of Pittsburgh"
+          ],
+          "flags": [
+            "provider-insurer enterprise; intercompany accounts and transactions eliminated"
+          ]
+        }
+      ],
+      "entity_ids": [],
+      "flags": [
+        "provider-insurer enterprise; intercompany accounts and transactions eliminated"
+      ],
+      "identifiers": [],
+      "as_of": null,
+      "tax_period_year": null,
+      "evidence_ids": [
+        "upmc_fy25_audit"
+      ]
+    },
+    "U2": {
+      "status": "needs_clarification",
+      "question": "Which insurance product, policy issuer, or licensed company do you mean?",
+      "options": [],
+      "entity_ids": [],
+      "flags": [
+        "health-plan marketing name may span multiple legal entities",
+        "no universal brand EIN is asserted"
+      ],
+      "identifiers": [],
+      "as_of": null,
+      "tax_period_year": null,
+      "evidence_ids": [
+        "upmc_fy25_audit",
+        "upmc_health_plan_brand"
+      ]
+    },
+    "U3": {
+      "status": "resolved",
+      "question": null,
+      "options": [],
+      "entity_ids": [
+        "upmc_parent"
+      ],
+      "flags": [
+        "exact filer and tax-period year selected; no facts fetched",
+        "identifier evidence is dated to FY ended 2022-06-30; current continuity is not reverified"
+      ],
+      "identifiers": [
+        [
+          "EIN",
+          "25-1423657"
+        ]
+      ],
+      "as_of": null,
+      "tax_period_year": 2023,
+      "evidence_ids": [
+        "upmc_parent_990",
+        "upmc_fy25_audit"
+      ]
+    },
+    "U4": {
+      "status": "resolved",
+      "question": null,
+      "options": [],
+      "entity_ids": [
+        "upmc_presbyterian_shadyside"
+      ],
+      "flags": [
+        "exact legal/operating record; not an inferred enterprise total",
+        "identifier evidence is dated to FY ended 2022-06-30; current continuity is not reverified"
+      ],
+      "identifiers": [
+        [
+          "EIN",
+          "25-0965480"
+        ],
+        [
+          "CCN",
+          "390164"
+        ]
+      ],
+      "as_of": null,
+      "tax_period_year": null,
+      "evidence_ids": [
+        "upmc_group_990",
+        "cms_upmc_presby"
+      ]
+    }
+  },
+  "metadata_corrected_at_utc": "2026-07-25T14:33:13Z"
+}

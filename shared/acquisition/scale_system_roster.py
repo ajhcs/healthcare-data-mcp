@@ -46,8 +46,8 @@ SYSTEM_AHRQ_IDENTITIES = MappingProxyType(
 )
 
 __all__ = [
-    "AhrqSystemIdentity",
     "SYSTEM_AHRQ_IDENTITIES",
     "SYSTEM_NAMES",
     "SYSTEM_SLUGS",
+    "AhrqSystemIdentity",
 ]

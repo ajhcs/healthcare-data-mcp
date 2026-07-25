@@ -12,10 +12,10 @@ import csv
 import hashlib
 import json
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal, Mapping, Self, Sequence
+from typing import Literal, Self
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
 
@@ -197,10 +197,10 @@ class TabularScaleInputFamilyAcquisition(StrictModel):
     system_rows: list[SystemRowExtraction] = Field(min_length=6, max_length=6)
     linkage_rows: list[LinkageContextRow] = Field(min_length=1)
     candidates: list[TabularScaleInputCandidate] = Field(min_length=6, max_length=6)
-    technical_definition_receipt: Literal[None] = None
+    technical_definition_receipt: None = Field(default=None, json_schema_extra={"const": None})
     technical_definition_custody: Literal["not_locally_receipted"] = "not_locally_receipted"
     raw_http_receipt_custody: Literal["not_locally_receipted"] = "not_locally_receipted"
-    redistribution_license_receipt: Literal[None] = None
+    redistribution_license_receipt: None = Field(default=None, json_schema_extra={"const": None})
     redistribution_rights_custody: Literal["unreviewed"] = "unreviewed"
     prohibited_outputs: list[str] = Field(min_length=1)
     acquisition_sha256: str = Field(pattern=SHA256_PATTERN)
@@ -551,7 +551,7 @@ def verify_tabular_source_bytes(
         raise ValueError("validated cache manifest byte drift")
     manifest = json.loads(manifest_raw)
     if not isinstance(manifest, dict):
-        raise ValueError("validated cache manifest shape drift")
+        raise TypeError("validated cache manifest shape drift")
     expected_manifest = acquisition.cache_receipt
     for key, expected in (
         ("dataset_id", expected_manifest.dataset_id),
@@ -593,7 +593,7 @@ def verify_tabular_source_bytes(
                 raise ValueError(f"validated source artifact {key} drift")
         path_value = entry.get("path")
         if not isinstance(path_value, str):
-            raise ValueError("validated source artifact path missing")
+            raise TypeError("validated source artifact path missing")
         path = Path(path_value).resolve()
         if not path.is_relative_to(cache_root.resolve()):
             raise ValueError("validated source artifact escaped cache root")
@@ -733,8 +733,8 @@ def _sha256(raw: bytes) -> str:
 __all__ = [
     "COMMON_BLOCKERS",
     "ExpectedLinkageRow",
-    "LinkageRowIdentity",
     "LinkageContextRow",
+    "LinkageRowIdentity",
     "SystemRowExtraction",
     "TabularScaleInputCandidate",
     "TabularScaleInputFamilyAcquisition",

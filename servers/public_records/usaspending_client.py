@@ -3,11 +3,10 @@
 Searches federal awards by recipient name with optional filters.
 API docs: https://api.usaspending.gov/
 """
-
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 
-
+from shared.utils.errors import EXPECTED_OPERATIONAL_EXCEPTIONS
 from shared.utils.http_client import resilient_request
 
 logger = logging.getLogger(__name__)
@@ -32,7 +31,7 @@ async def search_awards(
         # Federal fiscal year runs Oct 1 -- Sep 30.
         # FY 2026 = Oct 1 2025 through Sep 30 2026.
         # If today is Oct-Dec 2025, we are in FY 2026.
-        now = datetime.now()
+        now = datetime.now(UTC)
         fy = now.year + 1 if now.month >= 10 else now.year
 
     # Map friendly award_type to USAspending codes
@@ -76,6 +75,6 @@ async def search_awards(
     try:
         resp = await resilient_request("POST", f"{_BASE_URL}/search/spending_by_award/", json=payload, timeout=_TIMEOUT)
         return resp.json()
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("USAspending search failed: %s", e)
         return {"error": str(e)}

@@ -1,0 +1,1272 @@
+{
+  "version": 1,
+  "reviewer": "independent artifact review",
+  "scored_answers": 48,
+  "rubric_corrections": [
+    {
+      "question_id": "J1",
+      "confirmed_defect": "Original gold requires FY2025 and exactly 11 months of LVHN although the question gives no date and the protocol excludes broad finance retrieval.",
+      "reviewer_adjustment": "Require labeled enterprise scope with university, delivery, and insurance plus Jefferson Health/TJUH distinction; do not require the 11-month fact."
+    },
+    {
+      "question_id": "P2",
+      "confirmed_defect": "Question asks CCN and whether HUP is a separate enterprise, not an operator EIN.",
+      "reviewer_adjustment": "Require CCN 390111 and facility-not-enterprise distinction; operator/EIN is optional."
+    },
+    {
+      "question_id": "U3",
+      "confirmed_defect": "Original gold requires an FY2022-evidence caveat even when an answer cites the newer official FY2023 parent return.",
+      "reviewer_adjustment": "Accept official FY2023 parent return/index as current-to-question evidence without the obsolete FY2022 caveat."
+    }
+  ],
+  "provenance_claim_denominators": {
+    "strict_original": {
+      "J1": 3,
+      "J2": 3,
+      "J3": 2,
+      "J4": 4,
+      "P1": 3,
+      "P2": 3,
+      "P3": 2,
+      "P4": 2,
+      "U1": 3,
+      "U2": 2,
+      "U3": 4,
+      "U4": 4
+    },
+    "reviewer_adjusted": {
+      "J1": 3,
+      "J2": 3,
+      "J3": 2,
+      "J4": 4,
+      "P1": 3,
+      "P2": 2,
+      "P3": 2,
+      "P4": 2,
+      "U1": 3,
+      "U2": 2,
+      "U3": 3,
+      "U4": 4
+    },
+    "claims": {
+      "J1": "enterprise; top-level components; JH/TJUH distinction",
+      "J2": "filer; EIN; tax period",
+      "J3": "date exclusion; entry date",
+      "J4": "operator; EIN; CCN; facility/enterprise distinction",
+      "P1": "PSOM+UPHS; UPHS/University distinction; selected-menu distinction",
+      "P2": "CCN; operator/EIN (strict only); facility-not-enterprise",
+      "P3": "date exclusion; join date",
+      "P4": "no universal EIN; clarification",
+      "U1": "consolidated perimeter; Health+Insurance; Pitt exclusion/affiliation",
+      "U2": "multi-company brand; no universal EIN/clarification",
+      "U3": "parent; EIN; FY2023; dated evidence caveat (strict only)",
+      "U4": "distinct campuses; EIN; CCN; identifier/source-period distinction"
+    }
+  },
+  "per_answer": [
+    {
+      "run": "baseline_r1",
+      "question_id": "U4",
+      "strict_correctness": 0,
+      "adjusted_correctness": 0,
+      "scope_and_caveat": {
+        "strict": 0,
+        "adjusted": 0
+      },
+      "false_aggregation": 0,
+      "provenance_coverage": {
+        "strict": 0.75,
+        "adjusted": 0.75
+      },
+      "note": "Correct campuses, EIN, and CCN; no explicit source-period/current-continuity caveat for the EIN."
+    },
+    {
+      "run": "baseline_r1",
+      "question_id": "P4",
+      "strict_correctness": 1,
+      "adjusted_correctness": 1,
+      "scope_and_caveat": {
+        "strict": 1,
+        "adjusted": 1
+      },
+      "false_aggregation": 0,
+      "provenance_coverage": {
+        "strict": 1.0,
+        "adjusted": 1.0
+      },
+      "note": "Rejects a universal Penn Medicine EIN and labels the Trustees EIN as conditional."
+    },
+    {
+      "run": "baseline_r1",
+      "question_id": "J4",
+      "strict_correctness": 1,
+      "adjusted_correctness": 1,
+      "scope_and_caveat": {
+        "strict": 1,
+        "adjusted": 1
+      },
+      "false_aggregation": 0,
+      "provenance_coverage": {
+        "strict": 1.0,
+        "adjusted": 1.0
+      },
+      "note": "Correctly separates operator EIN, facility CCN, and enterprise."
+    },
+    {
+      "run": "baseline_r1",
+      "question_id": "U3",
+      "strict_correctness": 0,
+      "adjusted_correctness": 1,
+      "scope_and_caveat": {
+        "strict": 0,
+        "adjusted": 1
+      },
+      "false_aggregation": 0,
+      "provenance_coverage": {
+        "strict": 0.75,
+        "adjusted": 1.0
+      },
+      "note": "Official FY2023 parent return supports the answer; strict failure is the obsolete FY2022-caveat requirement."
+    },
+    {
+      "run": "baseline_r1",
+      "question_id": "P3",
+      "strict_correctness": 1,
+      "adjusted_correctness": 1,
+      "scope_and_caveat": {
+        "strict": 1,
+        "adjusted": 1
+      },
+      "false_aggregation": 0,
+      "provenance_coverage": {
+        "strict": 1.0,
+        "adjusted": 1.0
+      },
+      "note": "Correct dated exclusion and join date."
+    },
+    {
+      "run": "baseline_r1",
+      "question_id": "J3",
+      "strict_correctness": 1,
+      "adjusted_correctness": 1,
+      "scope_and_caveat": {
+        "strict": 1,
+        "adjusted": 1
+      },
+      "false_aggregation": 0,
+      "provenance_coverage": {
+        "strict": 1.0,
+        "adjusted": 1.0
+      },
+      "note": "Correct dated exclusion and entry date."
+    },
+    {
+      "run": "baseline_r1",
+      "question_id": "U2",
+      "strict_correctness": 0,
+      "adjusted_correctness": 0,
+      "scope_and_caveat": {
+        "strict": 0,
+        "adjusted": 0
+      },
+      "false_aggregation": 0,
+      "provenance_coverage": {
+        "strict": 0.5,
+        "adjusted": 0.5
+      },
+      "note": "Selects UPMC Health Plan, Inc.; acknowledges non-universality but neither requests issuer clarification nor dates the FY2022 EIN evidence."
+    },
+    {
+      "run": "baseline_r1",
+      "question_id": "P2",
+      "strict_correctness": 0,
+      "adjusted_correctness": 1,
+      "scope_and_caveat": {
+        "strict": 0,
+        "adjusted": 1
+      },
+      "false_aggregation": 0,
+      "provenance_coverage": {
+        "strict": 0.666667,
+        "adjusted": 1.0
+      },
+      "note": "Answers the asked CCN and enterprise distinction; strict failure is solely the unasked operator/EIN requirement."
+    },
+    {
+      "run": "baseline_r1",
+      "question_id": "J2",
+      "strict_correctness": 1,
+      "adjusted_correctness": 1,
+      "scope_and_caveat": {
+        "strict": 1,
+        "adjusted": 1
+      },
+      "false_aggregation": 0,
+      "provenance_coverage": {
+        "strict": 0.333333,
+        "adjusted": 0.333333
+      },
+      "note": "Correct filer/EIN/year; cited IRS XML now redirects to 404, leaving exact EIN/year provenance unreproducible."
+    },
+    {
+      "run": "baseline_r1",
+      "question_id": "U1",
+      "strict_correctness": 1,
+      "adjusted_correctness": 1,
+      "scope_and_caveat": {
+        "strict": 1,
+        "adjusted": 1
+      },
+      "false_aggregation": 0,
+      "provenance_coverage": {
+        "strict": 1.0,
+        "adjusted": 1.0
+      },
+      "note": "Correct provider-insurer perimeter and Pitt exclusion with affiliation preserved."
+    },
+    {
+      "run": "baseline_r1",
+      "question_id": "P1",
+      "strict_correctness": 1,
+      "adjusted_correctness": 1,
+      "scope_and_caveat": {
+        "strict": 1,
+        "adjusted": 1
+      },
+      "false_aggregation": 0,
+      "provenance_coverage": {
+        "strict": 1.0,
+        "adjusted": 1.0
+      },
+      "note": "Correct PSOM+UPHS umbrella and three-scope distinction."
+    },
+    {
+      "run": "baseline_r1",
+      "question_id": "J1",
+      "strict_correctness": 0,
+      "adjusted_correctness": 1,
+      "scope_and_caveat": {
+        "strict": 0,
+        "adjusted": 1
+      },
+      "false_aggregation": 0,
+      "provenance_coverage": {
+        "strict": 0.666667,
+        "adjusted": 1.0
+      },
+      "note": "Correct natural enterprise scope and TJUH distinction; strict failure is the unasked FY2025/11-month detail."
+    },
+    {
+      "run": "baseline_r2",
+      "question_id": "J1",
+      "strict_correctness": 0,
+      "adjusted_correctness": 1,
+      "scope_and_caveat": {
+        "strict": 0,
+        "adjusted": 1
+      },
+      "false_aggregation": 0,
+      "provenance_coverage": {
+        "strict": 0.666667,
+        "adjusted": 1.0
+      },
+      "note": "Correct natural enterprise scope and TJUH distinction; strict failure is the unasked FY2025/11-month detail."
+    },
+    {
+      "run": "baseline_r2",
+      "question_id": "P1",
+      "strict_correctness": 1,
+      "adjusted_correctness": 1,
+      "scope_and_caveat": {
+        "strict": 1,
+        "adjusted": 1
+      },
+      "false_aggregation": 0,
+      "provenance_coverage": {
+        "strict": 1.0,
+        "adjusted": 1.0
+      },
+      "note": "Correct PSOM+UPHS umbrella and three-scope distinction."
+    },
+    {
+      "run": "baseline_r2",
+      "question_id": "U1",
+      "strict_correctness": 1,
+      "adjusted_correctness": 1,
+      "scope_and_caveat": {
+        "strict": 1,
+        "adjusted": 1
+      },
+      "false_aggregation": 0,
+      "provenance_coverage": {
+        "strict": 1.0,
+        "adjusted": 1.0
+      },
+      "note": "Correct provider-insurer perimeter and Pitt exclusion with affiliation preserved."
+    },
+    {
+      "run": "baseline_r2",
+      "question_id": "J2",
+      "strict_correctness": 1,
+      "adjusted_correctness": 1,
+      "scope_and_caveat": {
+        "strict": 1,
+        "adjusted": 1
+      },
+      "false_aggregation": 0,
+      "provenance_coverage": {
+        "strict": 0.333333,
+        "adjusted": 0.333333
+      },
+      "note": "Correct filer/EIN/year; cited IRS XML now redirects to 404, leaving exact EIN/year provenance unreproducible."
+    },
+    {
+      "run": "baseline_r2",
+      "question_id": "P2",
+      "strict_correctness": 0,
+      "adjusted_correctness": 1,
+      "scope_and_caveat": {
+        "strict": 0,
+        "adjusted": 1
+      },
+      "false_aggregation": 0,
+      "provenance_coverage": {
+        "strict": 0.666667,
+        "adjusted": 1.0
+      },
+      "note": "Answers the asked CCN and enterprise distinction; strict failure is solely the unasked operator/EIN requirement."
+    },
+    {
+      "run": "baseline_r2",
+      "question_id": "U2",
+      "strict_correctness": 0,
+      "adjusted_correctness": 0,
+      "scope_and_caveat": {
+        "strict": 0,
+        "adjusted": 0
+      },
+      "false_aggregation": 0,
+      "provenance_coverage": {
+        "strict": 1.0,
+        "adjusted": 1.0
+      },
+      "note": "Notes the multi-company brand but selects one corporation without first clarifying issuer and omits the source-period caveat."
+    },
+    {
+      "run": "baseline_r2",
+      "question_id": "J3",
+      "strict_correctness": 1,
+      "adjusted_correctness": 1,
+      "scope_and_caveat": {
+        "strict": 1,
+        "adjusted": 1
+      },
+      "false_aggregation": 0,
+      "provenance_coverage": {
+        "strict": 1.0,
+        "adjusted": 1.0
+      },
+      "note": "Correct dated exclusion and entry date."
+    },
+    {
+      "run": "baseline_r2",
+      "question_id": "P3",
+      "strict_correctness": 1,
+      "adjusted_correctness": 1,
+      "scope_and_caveat": {
+        "strict": 1,
+        "adjusted": 1
+      },
+      "false_aggregation": 0,
+      "provenance_coverage": {
+        "strict": 1.0,
+        "adjusted": 1.0
+      },
+      "note": "Correct dated exclusion and join date."
+    },
+    {
+      "run": "baseline_r2",
+      "question_id": "U3",
+      "strict_correctness": 0,
+      "adjusted_correctness": 1,
+      "scope_and_caveat": {
+        "strict": 0,
+        "adjusted": 1
+      },
+      "false_aggregation": 0,
+      "provenance_coverage": {
+        "strict": 0.75,
+        "adjusted": 1.0
+      },
+      "note": "Official FY2023 parent return supports the answer; strict failure is the obsolete FY2022-caveat requirement."
+    },
+    {
+      "run": "baseline_r2",
+      "question_id": "J4",
+      "strict_correctness": 1,
+      "adjusted_correctness": 1,
+      "scope_and_caveat": {
+        "strict": 1,
+        "adjusted": 1
+      },
+      "false_aggregation": 0,
+      "provenance_coverage": {
+        "strict": 1.0,
+        "adjusted": 1.0
+      },
+      "note": "Correctly separates operator EIN, facility CCN, and enterprise."
+    },
+    {
+      "run": "baseline_r2",
+      "question_id": "P4",
+      "strict_correctness": 1,
+      "adjusted_correctness": 1,
+      "scope_and_caveat": {
+        "strict": 1,
+        "adjusted": 1
+      },
+      "false_aggregation": 0,
+      "provenance_coverage": {
+        "strict": 1.0,
+        "adjusted": 1.0
+      },
+      "note": "Rejects a universal Penn Medicine EIN and requires the legal counterparty."
+    },
+    {
+      "run": "baseline_r2",
+      "question_id": "U4",
+      "strict_correctness": 0,
+      "adjusted_correctness": 0,
+      "scope_and_caveat": {
+        "strict": 0,
+        "adjusted": 0
+      },
+      "false_aggregation": 0,
+      "provenance_coverage": {
+        "strict": 0.75,
+        "adjusted": 0.75
+      },
+      "note": "Correct campuses, EIN, and CCN; no explicit source-period/current-continuity caveat for the EIN."
+    },
+    {
+      "run": "registry_r1",
+      "question_id": "J1",
+      "strict_correctness": 1,
+      "adjusted_correctness": 1,
+      "scope_and_caveat": {
+        "strict": 1,
+        "adjusted": 1
+      },
+      "false_aggregation": 0,
+      "provenance_coverage": {
+        "strict": 1.0,
+        "adjusted": 1.0
+      },
+      "note": "Complete original and adjusted scope answer."
+    },
+    {
+      "run": "registry_r1",
+      "question_id": "P1",
+      "strict_correctness": 1,
+      "adjusted_correctness": 1,
+      "scope_and_caveat": {
+        "strict": 1,
+        "adjusted": 1
+      },
+      "false_aggregation": 0,
+      "provenance_coverage": {
+        "strict": 1.0,
+        "adjusted": 1.0
+      },
+      "note": "Complete three-perimeter distinction."
+    },
+    {
+      "run": "registry_r1",
+      "question_id": "U1",
+      "strict_correctness": 1,
+      "adjusted_correctness": 1,
+      "scope_and_caveat": {
+        "strict": 1,
+        "adjusted": 1
+      },
+      "false_aggregation": 0,
+      "provenance_coverage": {
+        "strict": 1.0,
+        "adjusted": 1.0
+      },
+      "note": "Complete provider-insurer perimeter and Pitt exclusion."
+    },
+    {
+      "run": "registry_r1",
+      "question_id": "J2",
+      "strict_correctness": 1,
+      "adjusted_correctness": 1,
+      "scope_and_caveat": {
+        "strict": 1,
+        "adjusted": 1
+      },
+      "false_aggregation": 0,
+      "provenance_coverage": {
+        "strict": 0.333333,
+        "adjusted": 0.333333
+      },
+      "note": "Correct selection; exact EIN/tax-period provenance is a null-URL TEOS record and is not reproduced by cited URLs."
+    },
+    {
+      "run": "registry_r1",
+      "question_id": "P2",
+      "strict_correctness": 1,
+      "adjusted_correctness": 1,
+      "scope_and_caveat": {
+        "strict": 1,
+        "adjusted": 1
+      },
+      "false_aggregation": 0,
+      "provenance_coverage": {
+        "strict": 0.666667,
+        "adjusted": 1.0
+      },
+      "note": "Correct; this run omits the fixture direct institutional EIN URL, while adjusted asked claims are fully sourced."
+    },
+    {
+      "run": "registry_r1",
+      "question_id": "U2",
+      "strict_correctness": 1,
+      "adjusted_correctness": 1,
+      "scope_and_caveat": {
+        "strict": 1,
+        "adjusted": 1
+      },
+      "false_aggregation": 0,
+      "provenance_coverage": {
+        "strict": 1.0,
+        "adjusted": 1.0
+      },
+      "note": "Correctly refuses a universal brand EIN and requests issuer clarification."
+    },
+    {
+      "run": "registry_r1",
+      "question_id": "J3",
+      "strict_correctness": 1,
+      "adjusted_correctness": 1,
+      "scope_and_caveat": {
+        "strict": 1,
+        "adjusted": 1
+      },
+      "false_aggregation": 0,
+      "provenance_coverage": {
+        "strict": 1.0,
+        "adjusted": 1.0
+      },
+      "note": "Correct dated membership answer."
+    },
+    {
+      "run": "registry_r1",
+      "question_id": "P3",
+      "strict_correctness": 1,
+      "adjusted_correctness": 1,
+      "scope_and_caveat": {
+        "strict": 1,
+        "adjusted": 1
+      },
+      "false_aggregation": 0,
+      "provenance_coverage": {
+        "strict": 1.0,
+        "adjusted": 1.0
+      },
+      "note": "Correct dated membership answer."
+    },
+    {
+      "run": "registry_r1",
+      "question_id": "U3",
+      "strict_correctness": 1,
+      "adjusted_correctness": 1,
+      "scope_and_caveat": {
+        "strict": 1,
+        "adjusted": 1
+      },
+      "false_aggregation": 0,
+      "provenance_coverage": {
+        "strict": 1.0,
+        "adjusted": 1.0
+      },
+      "note": "Correct parent/EIN/year and explicitly preserves the FY2022 evidence limitation."
+    },
+    {
+      "run": "registry_r1",
+      "question_id": "J4",
+      "strict_correctness": 1,
+      "adjusted_correctness": 1,
+      "scope_and_caveat": {
+        "strict": 1,
+        "adjusted": 1
+      },
+      "false_aggregation": 0,
+      "provenance_coverage": {
+        "strict": 0.75,
+        "adjusted": 0.75
+      },
+      "note": "Correct identifiers/scope; cited URLs do not reproduce the EIN because the fixture TEOS URL is null."
+    },
+    {
+      "run": "registry_r1",
+      "question_id": "P4",
+      "strict_correctness": 1,
+      "adjusted_correctness": 1,
+      "scope_and_caveat": {
+        "strict": 1,
+        "adjusted": 1
+      },
+      "false_aggregation": 0,
+      "provenance_coverage": {
+        "strict": 1.0,
+        "adjusted": 1.0
+      },
+      "note": "Correct clarification and conditional Trustees EIN."
+    },
+    {
+      "run": "registry_r1",
+      "question_id": "U4",
+      "strict_correctness": 0,
+      "adjusted_correctness": 0,
+      "scope_and_caveat": {
+        "strict": 0,
+        "adjusted": 0
+      },
+      "false_aggregation": 0,
+      "provenance_coverage": {
+        "strict": 0.75,
+        "adjusted": 0.75
+      },
+      "note": "Correct campuses and identifiers; resolver/answer omits the explicit FY2022 EIN continuity caveat."
+    },
+    {
+      "run": "registry_r2",
+      "question_id": "U4",
+      "strict_correctness": 0,
+      "adjusted_correctness": 0,
+      "scope_and_caveat": {
+        "strict": 0,
+        "adjusted": 0
+      },
+      "false_aggregation": 0,
+      "provenance_coverage": {
+        "strict": 0.75,
+        "adjusted": 0.75
+      },
+      "note": "Correct campuses and identifiers; resolver/answer omits the explicit FY2022 EIN continuity caveat."
+    },
+    {
+      "run": "registry_r2",
+      "question_id": "P4",
+      "strict_correctness": 1,
+      "adjusted_correctness": 1,
+      "scope_and_caveat": {
+        "strict": 1,
+        "adjusted": 1
+      },
+      "false_aggregation": 0,
+      "provenance_coverage": {
+        "strict": 1.0,
+        "adjusted": 1.0
+      },
+      "note": "Correct clarification and conditional Trustees EIN."
+    },
+    {
+      "run": "registry_r2",
+      "question_id": "J4",
+      "strict_correctness": 1,
+      "adjusted_correctness": 1,
+      "scope_and_caveat": {
+        "strict": 1,
+        "adjusted": 1
+      },
+      "false_aggregation": 0,
+      "provenance_coverage": {
+        "strict": 0.75,
+        "adjusted": 0.75
+      },
+      "note": "Correct identifiers/scope; answer notes the fixture TEOS evidence has no direct URL."
+    },
+    {
+      "run": "registry_r2",
+      "question_id": "U3",
+      "strict_correctness": 1,
+      "adjusted_correctness": 1,
+      "scope_and_caveat": {
+        "strict": 1,
+        "adjusted": 1
+      },
+      "false_aggregation": 0,
+      "provenance_coverage": {
+        "strict": 1.0,
+        "adjusted": 1.0
+      },
+      "note": "Correct parent/EIN/year and explicitly preserves the FY2022 evidence limitation."
+    },
+    {
+      "run": "registry_r2",
+      "question_id": "P3",
+      "strict_correctness": 1,
+      "adjusted_correctness": 1,
+      "scope_and_caveat": {
+        "strict": 1,
+        "adjusted": 1
+      },
+      "false_aggregation": 0,
+      "provenance_coverage": {
+        "strict": 1.0,
+        "adjusted": 1.0
+      },
+      "note": "Correct dated membership answer."
+    },
+    {
+      "run": "registry_r2",
+      "question_id": "J3",
+      "strict_correctness": 1,
+      "adjusted_correctness": 1,
+      "scope_and_caveat": {
+        "strict": 1,
+        "adjusted": 1
+      },
+      "false_aggregation": 0,
+      "provenance_coverage": {
+        "strict": 1.0,
+        "adjusted": 1.0
+      },
+      "note": "Correct dated membership answer."
+    },
+    {
+      "run": "registry_r2",
+      "question_id": "U2",
+      "strict_correctness": 1,
+      "adjusted_correctness": 1,
+      "scope_and_caveat": {
+        "strict": 1,
+        "adjusted": 1
+      },
+      "false_aggregation": 0,
+      "provenance_coverage": {
+        "strict": 1.0,
+        "adjusted": 1.0
+      },
+      "note": "Correctly refuses a universal brand EIN and requests issuer clarification."
+    },
+    {
+      "run": "registry_r2",
+      "question_id": "P2",
+      "strict_correctness": 1,
+      "adjusted_correctness": 1,
+      "scope_and_caveat": {
+        "strict": 1,
+        "adjusted": 1
+      },
+      "false_aggregation": 0,
+      "provenance_coverage": {
+        "strict": 1.0,
+        "adjusted": 1.0
+      },
+      "note": "Correct and directly cites the institutional EIN source in addition to asked claims."
+    },
+    {
+      "run": "registry_r2",
+      "question_id": "J2",
+      "strict_correctness": 1,
+      "adjusted_correctness": 1,
+      "scope_and_caveat": {
+        "strict": 1,
+        "adjusted": 1
+      },
+      "false_aggregation": 0,
+      "provenance_coverage": {
+        "strict": 0.333333,
+        "adjusted": 0.333333
+      },
+      "note": "Correct selection; exact EIN/tax-period provenance is a null-URL TEOS record and is not reproduced by cited URLs."
+    },
+    {
+      "run": "registry_r2",
+      "question_id": "U1",
+      "strict_correctness": 1,
+      "adjusted_correctness": 1,
+      "scope_and_caveat": {
+        "strict": 1,
+        "adjusted": 1
+      },
+      "false_aggregation": 0,
+      "provenance_coverage": {
+        "strict": 1.0,
+        "adjusted": 1.0
+      },
+      "note": "Complete provider-insurer perimeter and Pitt exclusion."
+    },
+    {
+      "run": "registry_r2",
+      "question_id": "P1",
+      "strict_correctness": 1,
+      "adjusted_correctness": 1,
+      "scope_and_caveat": {
+        "strict": 1,
+        "adjusted": 1
+      },
+      "false_aggregation": 0,
+      "provenance_coverage": {
+        "strict": 1.0,
+        "adjusted": 1.0
+      },
+      "note": "Complete three-perimeter distinction."
+    },
+    {
+      "run": "registry_r2",
+      "question_id": "J1",
+      "strict_correctness": 1,
+      "adjusted_correctness": 1,
+      "scope_and_caveat": {
+        "strict": 1,
+        "adjusted": 1
+      },
+      "false_aggregation": 0,
+      "provenance_coverage": {
+        "strict": 1.0,
+        "adjusted": 1.0
+      },
+      "note": "Complete original and adjusted scope answer."
+    }
+  ],
+  "aggregates": {
+    "by_arm": {
+      "manual_style_source_research_baseline": {
+        "answers": 24,
+        "strict": {
+          "correctness_sum": 14,
+          "correctness_rate": 0.583333,
+          "scope_sum": 14,
+          "scope_rate": 0.583333,
+          "false_aggregation_sum": 0,
+          "provenance_mean": 0.826389
+        },
+        "adjusted": {
+          "correctness_sum": 20,
+          "correctness_rate": 0.833333,
+          "scope_sum": 20,
+          "scope_rate": 0.833333,
+          "false_aggregation_sum": 0,
+          "provenance_mean": 0.902778
+        }
+      },
+      "registry_assisted": {
+        "answers": 24,
+        "strict": {
+          "correctness_sum": 22,
+          "correctness_rate": 0.916667,
+          "scope_sum": 22,
+          "scope_rate": 0.916667,
+          "false_aggregation_sum": 0,
+          "provenance_mean": 0.888889
+        },
+        "adjusted": {
+          "correctness_sum": 22,
+          "correctness_rate": 0.916667,
+          "scope_sum": 22,
+          "scope_rate": 0.916667,
+          "false_aggregation_sum": 0,
+          "provenance_mean": 0.902778
+        }
+      }
+    },
+    "by_run": {
+      "baseline_r1": {
+        "answers": 12,
+        "strict": {
+          "correctness_sum": 7,
+          "correctness_rate": 0.583333,
+          "scope_sum": 7,
+          "scope_rate": 0.583333,
+          "false_aggregation_sum": 0,
+          "provenance_mean": 0.805556
+        },
+        "adjusted": {
+          "correctness_sum": 10,
+          "correctness_rate": 0.833333,
+          "scope_sum": 10,
+          "scope_rate": 0.833333,
+          "false_aggregation_sum": 0,
+          "provenance_mean": 0.881944
+        }
+      },
+      "baseline_r2": {
+        "answers": 12,
+        "strict": {
+          "correctness_sum": 7,
+          "correctness_rate": 0.583333,
+          "scope_sum": 7,
+          "scope_rate": 0.583333,
+          "false_aggregation_sum": 0,
+          "provenance_mean": 0.847222
+        },
+        "adjusted": {
+          "correctness_sum": 10,
+          "correctness_rate": 0.833333,
+          "scope_sum": 10,
+          "scope_rate": 0.833333,
+          "false_aggregation_sum": 0,
+          "provenance_mean": 0.923611
+        }
+      },
+      "registry_r1": {
+        "answers": 12,
+        "strict": {
+          "correctness_sum": 11,
+          "correctness_rate": 0.916667,
+          "scope_sum": 11,
+          "scope_rate": 0.916667,
+          "false_aggregation_sum": 0,
+          "provenance_mean": 0.875
+        },
+        "adjusted": {
+          "correctness_sum": 11,
+          "correctness_rate": 0.916667,
+          "scope_sum": 11,
+          "scope_rate": 0.916667,
+          "false_aggregation_sum": 0,
+          "provenance_mean": 0.902778
+        }
+      },
+      "registry_r2": {
+        "answers": 12,
+        "strict": {
+          "correctness_sum": 11,
+          "correctness_rate": 0.916667,
+          "scope_sum": 11,
+          "scope_rate": 0.916667,
+          "false_aggregation_sum": 0,
+          "provenance_mean": 0.902778
+        },
+        "adjusted": {
+          "correctness_sum": 11,
+          "correctness_rate": 0.916667,
+          "scope_sum": 11,
+          "scope_rate": 0.916667,
+          "false_aggregation_sum": 0,
+          "provenance_mean": 0.902778
+        }
+      }
+    },
+    "by_system": {
+      "UPMC": {
+        "answers": 16,
+        "strict": {
+          "correctness_sum": 8,
+          "correctness_rate": 0.5,
+          "scope_sum": 8,
+          "scope_rate": 0.5,
+          "false_aggregation_sum": 0,
+          "provenance_mean": 0.875
+        },
+        "adjusted": {
+          "correctness_sum": 10,
+          "correctness_rate": 0.625,
+          "scope_sum": 10,
+          "scope_rate": 0.625,
+          "false_aggregation_sum": 0,
+          "provenance_mean": 0.90625
+        }
+      },
+      "Penn Medicine / UPHS": {
+        "answers": 16,
+        "strict": {
+          "correctness_sum": 14,
+          "correctness_rate": 0.875,
+          "scope_sum": 14,
+          "scope_rate": 0.875,
+          "false_aggregation_sum": 0,
+          "provenance_mean": 0.9375
+        },
+        "adjusted": {
+          "correctness_sum": 16,
+          "correctness_rate": 1.0,
+          "scope_sum": 16,
+          "scope_rate": 1.0,
+          "false_aggregation_sum": 0,
+          "provenance_mean": 1.0
+        }
+      },
+      "Jefferson Health": {
+        "answers": 16,
+        "strict": {
+          "correctness_sum": 14,
+          "correctness_rate": 0.875,
+          "scope_sum": 14,
+          "scope_rate": 0.875,
+          "false_aggregation_sum": 0,
+          "provenance_mean": 0.760417
+        },
+        "adjusted": {
+          "correctness_sum": 16,
+          "correctness_rate": 1.0,
+          "scope_sum": 16,
+          "scope_rate": 1.0,
+          "false_aggregation_sum": 0,
+          "provenance_mean": 0.802083
+        }
+      }
+    },
+    "by_question": {
+      "U4": {
+        "answers": 4,
+        "strict": {
+          "correctness_sum": 0,
+          "correctness_rate": 0.0,
+          "scope_sum": 0,
+          "scope_rate": 0.0,
+          "false_aggregation_sum": 0,
+          "provenance_mean": 0.75
+        },
+        "adjusted": {
+          "correctness_sum": 0,
+          "correctness_rate": 0.0,
+          "scope_sum": 0,
+          "scope_rate": 0.0,
+          "false_aggregation_sum": 0,
+          "provenance_mean": 0.75
+        }
+      },
+      "P4": {
+        "answers": 4,
+        "strict": {
+          "correctness_sum": 4,
+          "correctness_rate": 1.0,
+          "scope_sum": 4,
+          "scope_rate": 1.0,
+          "false_aggregation_sum": 0,
+          "provenance_mean": 1.0
+        },
+        "adjusted": {
+          "correctness_sum": 4,
+          "correctness_rate": 1.0,
+          "scope_sum": 4,
+          "scope_rate": 1.0,
+          "false_aggregation_sum": 0,
+          "provenance_mean": 1.0
+        }
+      },
+      "J4": {
+        "answers": 4,
+        "strict": {
+          "correctness_sum": 4,
+          "correctness_rate": 1.0,
+          "scope_sum": 4,
+          "scope_rate": 1.0,
+          "false_aggregation_sum": 0,
+          "provenance_mean": 0.875
+        },
+        "adjusted": {
+          "correctness_sum": 4,
+          "correctness_rate": 1.0,
+          "scope_sum": 4,
+          "scope_rate": 1.0,
+          "false_aggregation_sum": 0,
+          "provenance_mean": 0.875
+        }
+      },
+      "U3": {
+        "answers": 4,
+        "strict": {
+          "correctness_sum": 2,
+          "correctness_rate": 0.5,
+          "scope_sum": 2,
+          "scope_rate": 0.5,
+          "false_aggregation_sum": 0,
+          "provenance_mean": 0.875
+        },
+        "adjusted": {
+          "correctness_sum": 4,
+          "correctness_rate": 1.0,
+          "scope_sum": 4,
+          "scope_rate": 1.0,
+          "false_aggregation_sum": 0,
+          "provenance_mean": 1.0
+        }
+      },
+      "P3": {
+        "answers": 4,
+        "strict": {
+          "correctness_sum": 4,
+          "correctness_rate": 1.0,
+          "scope_sum": 4,
+          "scope_rate": 1.0,
+          "false_aggregation_sum": 0,
+          "provenance_mean": 1.0
+        },
+        "adjusted": {
+          "correctness_sum": 4,
+          "correctness_rate": 1.0,
+          "scope_sum": 4,
+          "scope_rate": 1.0,
+          "false_aggregation_sum": 0,
+          "provenance_mean": 1.0
+        }
+      },
+      "J3": {
+        "answers": 4,
+        "strict": {
+          "correctness_sum": 4,
+          "correctness_rate": 1.0,
+          "scope_sum": 4,
+          "scope_rate": 1.0,
+          "false_aggregation_sum": 0,
+          "provenance_mean": 1.0
+        },
+        "adjusted": {
+          "correctness_sum": 4,
+          "correctness_rate": 1.0,
+          "scope_sum": 4,
+          "scope_rate": 1.0,
+          "false_aggregation_sum": 0,
+          "provenance_mean": 1.0
+        }
+      },
+      "U2": {
+        "answers": 4,
+        "strict": {
+          "correctness_sum": 2,
+          "correctness_rate": 0.5,
+          "scope_sum": 2,
+          "scope_rate": 0.5,
+          "false_aggregation_sum": 0,
+          "provenance_mean": 0.875
+        },
+        "adjusted": {
+          "correctness_sum": 2,
+          "correctness_rate": 0.5,
+          "scope_sum": 2,
+          "scope_rate": 0.5,
+          "false_aggregation_sum": 0,
+          "provenance_mean": 0.875
+        }
+      },
+      "P2": {
+        "answers": 4,
+        "strict": {
+          "correctness_sum": 2,
+          "correctness_rate": 0.5,
+          "scope_sum": 2,
+          "scope_rate": 0.5,
+          "false_aggregation_sum": 0,
+          "provenance_mean": 0.75
+        },
+        "adjusted": {
+          "correctness_sum": 4,
+          "correctness_rate": 1.0,
+          "scope_sum": 4,
+          "scope_rate": 1.0,
+          "false_aggregation_sum": 0,
+          "provenance_mean": 1.0
+        }
+      },
+      "J2": {
+        "answers": 4,
+        "strict": {
+          "correctness_sum": 4,
+          "correctness_rate": 1.0,
+          "scope_sum": 4,
+          "scope_rate": 1.0,
+          "false_aggregation_sum": 0,
+          "provenance_mean": 0.333333
+        },
+        "adjusted": {
+          "correctness_sum": 4,
+          "correctness_rate": 1.0,
+          "scope_sum": 4,
+          "scope_rate": 1.0,
+          "false_aggregation_sum": 0,
+          "provenance_mean": 0.333333
+        }
+      },
+      "U1": {
+        "answers": 4,
+        "strict": {
+          "correctness_sum": 4,
+          "correctness_rate": 1.0,
+          "scope_sum": 4,
+          "scope_rate": 1.0,
+          "false_aggregation_sum": 0,
+          "provenance_mean": 1.0
+        },
+        "adjusted": {
+          "correctness_sum": 4,
+          "correctness_rate": 1.0,
+          "scope_sum": 4,
+          "scope_rate": 1.0,
+          "false_aggregation_sum": 0,
+          "provenance_mean": 1.0
+        }
+      },
+      "P1": {
+        "answers": 4,
+        "strict": {
+          "correctness_sum": 4,
+          "correctness_rate": 1.0,
+          "scope_sum": 4,
+          "scope_rate": 1.0,
+          "false_aggregation_sum": 0,
+          "provenance_mean": 1.0
+        },
+        "adjusted": {
+          "correctness_sum": 4,
+          "correctness_rate": 1.0,
+          "scope_sum": 4,
+          "scope_rate": 1.0,
+          "false_aggregation_sum": 0,
+          "provenance_mean": 1.0
+        }
+      },
+      "J1": {
+        "answers": 4,
+        "strict": {
+          "correctness_sum": 2,
+          "correctness_rate": 0.5,
+          "scope_sum": 2,
+          "scope_rate": 0.5,
+          "false_aggregation_sum": 0,
+          "provenance_mean": 0.833333
+        },
+        "adjusted": {
+          "correctness_sum": 4,
+          "correctness_rate": 1.0,
+          "scope_sum": 4,
+          "scope_rate": 1.0,
+          "false_aggregation_sum": 0,
+          "provenance_mean": 1.0
+        }
+      }
+    },
+    "operational_by_arm": {
+      "manual_style_source_research_baseline": {
+        "runs": 2,
+        "answers": 24,
+        "wall_latency_seconds_total": 657.185991,
+        "wall_latency_seconds_mean_per_run": 328.592996,
+        "recorded_answer_latency_seconds_total": 451.742702,
+        "research_tool_calls": 46,
+        "input_tokens_observable": false
+      },
+      "registry_assisted": {
+        "runs": 2,
+        "answers": 24,
+        "wall_latency_seconds_total": 232.483571,
+        "wall_latency_seconds_mean_per_run": 116.241786,
+        "recorded_answer_latency_seconds_total": 61.745423,
+        "research_tool_calls": 0,
+        "input_tokens_observable": false
+      }
+    },
+    "deterministic_lookup": {
+      "warm_iterations_per_question": 10000,
+      "cold_iterations_per_fixture": 300,
+      "equal_weight_mean_of_warm_question_means_ms": 0.04131,
+      "equal_weight_mean_of_cold_fixture_means_ms": 0.370789,
+      "raw_samples_available": false
+    }
+  }
+}

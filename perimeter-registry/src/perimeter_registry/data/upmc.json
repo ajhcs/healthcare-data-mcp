@@ -1,0 +1,352 @@
+{
+  "schema_version": 1,
+  "fixture_id": "upmc_minimal",
+  "systems": [
+    {
+      "id": "upmc_system",
+      "name": "UPMC",
+      "aliases": [
+        "University of Pittsburgh Medical Center"
+      ],
+      "concept_type": "integrated_delivery_financing_brand_and_parent_name",
+      "legal_entity": false,
+      "evidence_ids": [
+        "upmc_fy25_audit",
+        "upmc_parent_990"
+      ],
+      "confidence": "high"
+    }
+  ],
+  "entities": [
+    {
+      "id": "upmc_parent",
+      "name": "UPMC",
+      "entity_type": "nonprofit_parent_organization",
+      "aliases": [
+        "UPMC Parent Organization",
+        "University of Pittsburgh Medical Center"
+      ],
+      "identifiers": [
+        {
+          "scheme": "EIN",
+          "value": "25-1423657"
+        }
+      ],
+      "lifecycle_status": "active",
+      "effective_start": null,
+      "effective_end": null,
+      "evidence_ids": [
+        "upmc_parent_990",
+        "upmc_fy25_audit"
+      ],
+      "notes": [
+        "Legal parent is distinct from the University of Pittsburgh"
+      ]
+    },
+    {
+      "id": "university_of_pittsburgh",
+      "name": "University of Pittsburgh",
+      "entity_type": "state_related_nonprofit_university",
+      "aliases": [
+        "Pitt",
+        "University of Pittsburgh of the Commonwealth System of Higher Education"
+      ],
+      "identifiers": [
+        {
+          "scheme": "EIN",
+          "value": "25-0965591"
+        }
+      ],
+      "lifecycle_status": "active",
+      "effective_start": null,
+      "effective_end": null,
+      "evidence_ids": [
+        "pitt_ein",
+        "upmc_fy25_audit"
+      ],
+      "notes": [
+        "Closely academically affiliated with UPMC but excluded from UPMC consolidation"
+      ]
+    },
+    {
+      "id": "upmc_presbyterian_shadyside",
+      "name": "UPMC Presbyterian Shadyside",
+      "entity_type": "hospital_combined_filer_record",
+      "aliases": [
+        "UPMC Presbyterian",
+        "UPMC Shadyside"
+      ],
+      "identifiers": [
+        {
+          "scheme": "EIN",
+          "value": "25-0965480"
+        },
+        {
+          "scheme": "CCN",
+          "value": "390164"
+        }
+      ],
+      "lifecycle_status": "active",
+      "effective_start": null,
+      "effective_end": null,
+      "evidence_ids": [
+        "upmc_group_990",
+        "cms_upmc_presby"
+      ],
+      "notes": [
+        "Official FY2022 filing uses this combined-filer name and EIN",
+        "Presbyterian and Shadyside remain distinct campuses even where CMS or tax records use a combined label"
+      ]
+    }
+  ],
+  "facilities": [
+    {
+      "id": "facility_upmc_presby_390164",
+      "name": "UPMC Presbyterian Shadyside",
+      "ccn": "390164",
+      "operator_entity_id": "upmc_presbyterian_shadyside",
+      "operator_name": "UPMC Presbyterian Shadyside (combined filer record)",
+      "operator_ein": "25-0965480",
+      "evidence_ids": [
+        "cms_upmc_presby",
+        "upmc_group_990"
+      ],
+      "confidence": "high"
+    }
+  ],
+  "reporting_perimeters": [
+    {
+      "id": "upmc_consolidated_cy2025",
+      "label": "Audited consolidated UPMC enterprise",
+      "perimeter_type": "audited_gaap_consolidation",
+      "includes": [
+        "Health Services",
+        "Insurance Services",
+        "UPMC subsidiaries and controlled activities"
+      ],
+      "excludes": [
+        "University of Pittsburgh"
+      ],
+      "flags": [
+        "provider-insurer enterprise; intercompany accounts and transactions eliminated"
+      ],
+      "measurements": [
+        {
+          "id": "operating_revenues",
+          "label": "Consolidated operating revenues",
+          "amount_usd": 33563000000,
+          "period": "CY ended 2025-12-31",
+          "basis": "audited consolidated statements; after interdivision eliminations",
+          "audited": true
+        }
+      ],
+      "evidence_ids": [
+        "upmc_fy25_audit"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "upmc_health_services_cy2025",
+      "label": "UPMC Health Services division",
+      "perimeter_type": "supplemental_health_services_component",
+      "includes": [
+        "hospitals",
+        "employed physician practices",
+        "pre- and post-acute care",
+        "international activities",
+        "supporting foundations and captive insurance programs"
+      ],
+      "excludes": [
+        "Insurance Services division",
+        "University of Pittsburgh"
+      ],
+      "flags": [
+        "care-delivery-oriented but not hospital-only",
+        "before interdivision eliminations"
+      ],
+      "measurements": [
+        {
+          "id": "health_services_operating_revenues",
+          "label": "Health Services operating revenues",
+          "amount_usd": 18818000000,
+          "period": "CY ended 2025-12-31",
+          "basis": "condensed consolidating statement before eliminations",
+          "audited": null
+        }
+      ],
+      "evidence_ids": [
+        "upmc_fy25_audit"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "upmc_insurance_services_cy2025",
+      "label": "UPMC Insurance Services division",
+      "perimeter_type": "supplemental_insurance_services_component",
+      "includes": [
+        "UPMC Health Plan and other financing/network product entities"
+      ],
+      "excludes": [
+        "Health Services division",
+        "University of Pittsburgh"
+      ],
+      "flags": [
+        "marketing names may span multiple licensed legal entities",
+        "before interdivision eliminations"
+      ],
+      "measurements": [
+        {
+          "id": "insurance_services_operating_revenues",
+          "label": "Insurance Services operating revenues",
+          "amount_usd": 18853000000,
+          "period": "CY ended 2025-12-31",
+          "basis": "condensed consolidating statement before eliminations",
+          "audited": null
+        }
+      ],
+      "evidence_ids": [
+        "upmc_fy25_audit",
+        "upmc_health_plan_brand"
+      ],
+      "confidence": "high"
+    }
+  ],
+  "relationships": [
+    {
+      "id": "upmc_academic_affiliation_pitt",
+      "source_id": "upmc_parent",
+      "relationship_type": "academic_affiliation_with",
+      "target_id": "university_of_pittsburgh",
+      "target_kind": "entity",
+      "effective_start": null,
+      "effective_end": null,
+      "evidence_ids": [
+        "upmc_fy25_audit",
+        "pitt_upmc_agreement"
+      ],
+      "confidence": "high",
+      "status": "current_as_of_2025_audit_with_unresolved_start",
+      "notes": [
+        "Close academic affiliation does not establish ownership or GAAP consolidation"
+      ]
+    },
+    {
+      "id": "upmc_controls_presby_operator",
+      "source_id": "upmc_parent",
+      "relationship_type": "controls_operator_of_facility",
+      "target_id": "facility_upmc_presby_390164",
+      "target_kind": "facility",
+      "effective_start": null,
+      "effective_end": null,
+      "evidence_ids": [
+        "upmc_fy25_audit",
+        "upmc_group_990"
+      ],
+      "confidence": "high",
+      "status": "current_as_of_source_period",
+      "notes": [
+        "Exact control-chain start is not resolved"
+      ]
+    },
+    {
+      "id": "presby_operates_390164",
+      "source_id": "upmc_presbyterian_shadyside",
+      "relationship_type": "operates_facility",
+      "target_id": "facility_upmc_presby_390164",
+      "target_kind": "facility",
+      "effective_start": null,
+      "effective_end": null,
+      "evidence_ids": [
+        "upmc_group_990",
+        "cms_upmc_presby"
+      ],
+      "confidence": "high",
+      "status": "current_as_of_source_period",
+      "notes": [
+        "Combined filer and CMS provider records use the same combined label; campus identity remains distinct"
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "upmc_fy25_audit",
+      "title": "UPMC 2025 year-end financial and operating report and audited consolidated financial statements",
+      "url": "https://dam.upmc.com/-/media/upmc/about/finances/documents/cy2025-q4-financial-and-operating-report.pdf",
+      "locator": "MD&A pp2, 7-9; audited Note 1 p26; Note 15 p53",
+      "source_period": "CY ended 2025-12-31",
+      "confidence": "high",
+      "limitation": "Divisional columns are supplemental and include stated non-hospital activities"
+    },
+    {
+      "id": "upmc_parent_990",
+      "title": "UPMC official FY2022 parent organization Form 990",
+      "url": "https://dam.upmc.com/-/media/upmc/about/finances/irs-filings/documents/upmc-fy22-parent-media.pdf?hash=5A388CBFF49176D82404FE7416E751E2&la=en&rev=4bb4f3cb8230482faf8cf7306ddab373",
+      "locator": "Schedule O p78 heading and Schedule A heading: parent EIN 25-1423657",
+      "source_period": "FY ended 2022-06-30",
+      "confidence": "high",
+      "limitation": "Older official filing used for the exact parent identifier; current continuity is not silently assumed"
+    },
+    {
+      "id": "upmc_group_990",
+      "title": "UPMC official FY2022 parent filing: combined-filer and group-return identifiers",
+      "url": "https://dam.upmc.com/-/media/upmc/about/finances/irs-filings/documents/upmc-fy22-parent-media.pdf?hash=5A388CBFF49176D82404FE7416E751E2&la=en&rev=4bb4f3cb8230482faf8cf7306ddab373",
+      "locator": "Schedule A p8: UPMC Presbyterian Shadyside EIN 25-0965480; Schedule O describes UPMC Group EIN 20-8295721",
+      "source_period": "FY ended 2022-06-30",
+      "confidence": "high",
+      "limitation": "FY2022 identifier evidence; current continuity is not reverified. The combined-filer EIN, UPMC Group return EIN, CMS CCN, and campus identities are not interchangeable"
+    },
+    {
+      "id": "upmc_health_plan_brand",
+      "title": "UPMC Health Plan individual and family coverage page",
+      "url": "https://www.upmchealthplan.com/marketplace/find_insurance.aspx",
+      "locator": "Footer disclosure beginning 'UPMC Health Plan is the marketing name'",
+      "source_period": "current page; accessed 2026-07-24",
+      "confidence": "high",
+      "limitation": "Marketing-name list is not a complete statutory reporting-perimeter inventory"
+    },
+    {
+      "id": "pitt_ein",
+      "title": "University of Pittsburgh proposal preparation data",
+      "url": "https://www.osp.pitt.edu/about/proposal-preparation-data",
+      "locator": "Key identification numbers: TIN/EIN 25-0965591",
+      "source_period": "current institutional data; accessed 2026-07-24",
+      "confidence": "high",
+      "limitation": "Identifier evidence does not imply inclusion in UPMC"
+    },
+    {
+      "id": "pitt_upmc_agreement",
+      "title": "Pitt-UPMC agreement strengthens research and delivery partnership",
+      "url": "https://www.upmc.com/media/news/pitt-upmc-agreement-strengthens-regions-world-class-health-care-r",
+      "locator": "Agreement description; University retains academic authority; UPP integrated into health system",
+      "source_period": "agreement announced 1998-09-01; page published 2006-12-13",
+      "confidence": "high",
+      "limitation": "Historic agreement does not by itself prove every current governance term"
+    },
+    {
+      "id": "cms_upmc_presby",
+      "title": "CMS UPMC Presbyterian Shadyside facility record",
+      "url": "https://www.cms.gov/medicare/medicare-general-information/medicareapprovedfacilitie/vad-destination-therapy-facilities-aug2007-items/-upmc-presbyterian",
+      "locator": "Facility UPMC Presbyterian Shadyside; provider number 390164; 200 Lothrop Street",
+      "source_period": "recertified 2024-08-14; accessed 2026-07-24",
+      "confidence": "high",
+      "limitation": "Facility identity evidence, not enterprise consolidation evidence"
+    }
+  ],
+  "gaps": [
+    {
+      "id": "insurance_entity_inventory",
+      "status": "unresolved",
+      "description": "UPMC Health Plan is a marketing name spanning multiple licensed entities; the full Insurance Services entity inventory is absent"
+    },
+    {
+      "id": "pitt_affiliation_terms",
+      "status": "unresolved",
+      "description": "Current detailed Pitt-UPMC governance rights are not exhaustively modeled; affiliation is not treated as consolidation"
+    },
+    {
+      "id": "presby_site_inventory",
+      "status": "unresolved",
+      "description": "All sites and license numbers under UPMC Presbyterian Shadyside are not inventoried"
+    }
+  ]
+}

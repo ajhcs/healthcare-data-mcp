@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal, Mapping, Self
+from collections.abc import Mapping
+from typing import Any, Literal, Self
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator, model_validator
 from pydantic.json_schema import GenerateJsonSchema, JsonSchemaMode
@@ -213,7 +214,7 @@ class EssentialServiceDesignationSourceEvaluation(StrictModel):
 class EssentialServiceDesignationMissingCell(StrictModel):
     system_slug: str
     input_family: Literal["essential_service_designation_count"] = "essential_service_designation_count"
-    candidate_value: Literal[None] = None
+    candidate_value: None = Field(default=None, json_schema_extra={"const": None})
     unit: Literal["eligible_current_designations"] = "eligible_current_designations"
     desired_definition: Literal[
         "Count of current eligible essential-service designations under one approved issuer taxonomy and duplicate rule, within one approved product-system boundary and common effective period"
@@ -253,8 +254,8 @@ class EssentialServiceDesignationCountAcquisition(StrictModel):
     identity_rows: tuple[EssentialServiceDesignationIdentityRow, ...] = Field(min_length=6, max_length=6)
     source_evaluations: tuple[EssentialServiceDesignationSourceEvaluation, ...] = Field(min_length=5, max_length=5)
     cells: tuple[EssentialServiceDesignationMissingCell, ...] = Field(min_length=6, max_length=6)
-    approved_designation_taxonomy_receipt: Literal[None] = None
-    approved_facility_system_crosswalk_receipt: Literal[None] = None
+    approved_designation_taxonomy_receipt: None = Field(default=None, json_schema_extra={"const": None})
+    approved_facility_system_crosswalk_receipt: None = Field(default=None, json_schema_extra={"const": None})
     prohibited_outputs: tuple[str, ...]
     acquisition_sha256: str = Field(pattern=SHA256_PATTERN)
 
@@ -353,11 +354,20 @@ def build_essential_service_designation_count_acquisition(
 
 
 __all__ = [
-    "DESIGNATION_DEFINITION", "EVALUATION_IDS", "EXPECTED_ARTIFACTS", "EXPECTED_ARTIFACT_URLS",
-    "EXPECTED_EVALUATIONS", "PROHIBITED_OUTPUTS",
-    "EssentialServiceDesignationArtifact", "EssentialServiceDesignationCountAcquisition",
-    "EssentialServiceDesignationIdentityRow", "EssentialServiceDesignationMissingCell",
-    "EssentialServiceDesignationSourceEvaluation", "PriorEmergencyDepartmentToolkitLineage",
-    "FrozenTabularSourceArtifact", "FrozenValidatedCacheReceipt",
-    "build_essential_service_designation_count_acquisition", "semantic_hash",
+    "DESIGNATION_DEFINITION",
+    "EVALUATION_IDS",
+    "EXPECTED_ARTIFACTS",
+    "EXPECTED_ARTIFACT_URLS",
+    "EXPECTED_EVALUATIONS",
+    "PROHIBITED_OUTPUTS",
+    "EssentialServiceDesignationArtifact",
+    "EssentialServiceDesignationCountAcquisition",
+    "EssentialServiceDesignationIdentityRow",
+    "EssentialServiceDesignationMissingCell",
+    "EssentialServiceDesignationSourceEvaluation",
+    "FrozenTabularSourceArtifact",
+    "FrozenValidatedCacheReceipt",
+    "PriorEmergencyDepartmentToolkitLineage",
+    "build_essential_service_designation_count_acquisition",
+    "semantic_hash",
 ]

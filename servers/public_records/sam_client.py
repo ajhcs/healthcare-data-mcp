@@ -4,12 +4,11 @@ Searches federal contract opportunities/solicitations.
 Requires SAM_GOV_API_KEY environment variable.
 API docs: https://open.gsa.gov/api/get-opportunities-public-api/
 """
-
 import logging
 import os
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
-
+from shared.utils.errors import EXPECTED_OPERATIONAL_EXCEPTIONS
 from shared.utils.http_client import resilient_request
 
 logger = logging.getLogger(__name__)
@@ -41,9 +40,9 @@ async def search_opportunities(
         }
 
     if not posted_from:
-        posted_from = (datetime.now() - timedelta(days=365)).strftime("%m/%d/%Y")
+        posted_from = (datetime.now(UTC) - timedelta(days=365)).strftime("%m/%d/%Y")
     if not posted_to:
-        posted_to = datetime.now().strftime("%m/%d/%Y")
+        posted_to = datetime.now(UTC).strftime("%m/%d/%Y")
 
     params: dict = {
         "api_key": api_key,
@@ -58,6 +57,6 @@ async def search_opportunities(
     try:
         resp = await resilient_request("GET", _BASE_URL, params=params, timeout=_TIMEOUT)
         return resp.json()
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("SAM.gov search failed: %s", e)
         return {"error": str(e)}

@@ -105,7 +105,7 @@ async def test_cms_download_csv_refreshes_stale_cache_and_writes_metadata(tmp_pa
     monkeypatch.setattr(cms_client, "DATA_DIR", tmp_path)
     calls = 0
 
-    async def fake_request(method: str, url: str, **kwargs):  # noqa: ARG001
+    async def fake_request(method: str, url: str, **kwargs):
         nonlocal calls
         calls += 1
         return SimpleNamespace(content=f"col\n{calls}\n".encode())
@@ -140,7 +140,7 @@ async def test_cms_download_csv_uses_stale_cache_when_refresh_fails(tmp_path, mo
     stale_mtime = time.time() - (2 * 86_400)
     os.utime(path, (stale_mtime, stale_mtime))
 
-    async def fake_request(method: str, url: str, **kwargs):  # noqa: ARG001
+    async def fake_request(method: str, url: str, **kwargs):
         raise RuntimeError("network unavailable")
 
     monkeypatch.setattr(cms_client, "resilient_request", fake_request)
@@ -162,7 +162,7 @@ async def test_hospital_general_info_uses_stale_cache_when_refresh_fails(tmp_pat
     monkeypatch.setattr(cms_client, "_hospital_info_raw", None)
     monkeypatch.setattr(cms_client, "_hospital_info_normalized", None)
 
-    async def fake_request(method: str, url: str, **kwargs):  # noqa: ARG001
+    async def fake_request(method: str, url: str, **kwargs):
         raise RuntimeError("network unavailable")
 
     monkeypatch.setattr(cms_client, "resilient_request", fake_request)

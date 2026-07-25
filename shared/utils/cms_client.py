@@ -3,12 +3,18 @@
 import hashlib
 import json
 import logging
-from pathlib import Path
 import re
+from pathlib import Path
 
 import pandas as pd
 
-from shared.utils.cache import CacheMetadata, is_cache_valid, write_atomic_bytes, write_atomic_json, write_cache_metadata
+from shared.utils.cache import (
+    CacheMetadata,
+    is_cache_valid,
+    write_atomic_bytes,
+    write_atomic_json,
+    write_cache_metadata,
+)
 from shared.utils.http_client import resilient_request
 
 logger = logging.getLogger(__name__)

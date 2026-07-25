@@ -5,20 +5,20 @@ Manages:
 2. Static GPO directory lookup from bundled CSV
 3. SHA256-keyed API/page response cache
 """
-
 import csv
 import hashlib
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import duckdb
-from shared.utils.duckdb_safe import safe_parquet_sql
+import pandas as pd
 
 from shared.utils.cache import write_atomic_bytes, write_atomic_json, write_atomic_parquet
+from shared.utils.duckdb_safe import safe_parquet_sql
+from shared.utils.errors import EXPECTED_OPERATIONAL_EXCEPTIONS
 from shared.utils.http_client import resilient_request
-import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +76,7 @@ def _is_cache_valid(path: Path, ttl_days: int) -> bool:
     """Check if a cached file exists and is within TTL."""
     if not path.exists():
         return False
-    age_days = (datetime.now(timezone.utc).timestamp() - path.stat().st_mtime) / 86400
+    age_days = (datetime.now(UTC).timestamp() - path.stat().st_mtime) / 86400
     return age_days < ttl_days
 
 
@@ -95,7 +95,7 @@ def _get_con(parquet_path: Path, view_name: str = "data") -> duckdb.DuckDBPyConn
             f"CREATE VIEW {view_name} AS SELECT * FROM {safe_parquet_sql(parquet_path)}"
         )
         return con
-    except Exception:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS:
         logger.warning("Corrupt Parquet cache, deleting: %s", parquet_path)
         con.close()
         parquet_path.unlink(missing_ok=True)
@@ -155,7 +155,7 @@ async def ensure_pi_cached() -> bool:
         csv_path.unlink(missing_ok=True)
         logger.info("PI cached: %d records -> %s", len(df), _PI_PARQUET.name)
         return True
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("Failed to download CMS PI file: %s", e)
         return False
 
@@ -215,7 +215,7 @@ def query_pi_for_ehr(
             })
 
         return results
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("PI EHR query failed: %s", e)
         return []
     finally:
@@ -291,7 +291,7 @@ def cache_response(prefix: str, params: dict, data: dict | list) -> None:
     """Save a response to the cache."""
     path = _api_cache_path(prefix, params)
     payload = {
-        "cached_at": datetime.now(timezone.utc).isoformat(),
+        "cached_at": datetime.now(UTC).isoformat(),
         "params": params,
         "data": data,
     }
@@ -306,6 +306,6 @@ def load_cached_response(prefix: str, params: dict, ttl_days: int) -> dict | lis
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
         return payload.get("data")
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("Failed to load cache %s: %s", path.name, e)
         return None

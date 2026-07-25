@@ -17,10 +17,10 @@ from shared.acquisition.scale_input_family import (
     ScaleInputFamilyAcquisition,
     build_acquisition,
     build_public_evidence_input,
+    repository_top_level,
     require_clean_repository,
     require_outputs_outside_repository,
     require_repository_commit,
-    repository_top_level,
     verify_source_bytes,
 )
 from shared.acquisition.scale_operating_revenue_packet import acquisition

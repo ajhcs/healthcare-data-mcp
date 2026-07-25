@@ -3,8 +3,8 @@ from __future__ import annotations
 import json
 from types import SimpleNamespace
 
-import pytest
 import pandas as pd
+import pytest
 
 from shared import state_health_data
 from shared.utils.cost_report import load_cost_report_row
@@ -103,7 +103,7 @@ def test_state_artifact_index_writes_normalized_json_and_metadata_table(tmp_path
 
 @pytest.mark.asyncio
 async def test_nj_public_data_combines_financial_and_charity_artifacts_without_network(tmp_path, monkeypatch) -> None:
-    async def fake_request(method: str, url: str, **kwargs):  # noqa: ARG001
+    async def fake_request(method: str, url: str, **kwargs):
         if url == state_health_data.NJ_HOSPITAL_FINANCIAL_URL:
             html = '<a href="/health/hcf/documents/financial-reports/hospital_financial_2024.xlsx">Hospital Financial 2024</a>'
             return SimpleNamespace(text=html, content=html.encode())
@@ -127,7 +127,7 @@ async def test_nj_public_data_combines_financial_and_charity_artifacts_without_n
 
 @pytest.mark.asyncio
 async def test_pa_hospital_reports_normalizes_record_level_bed_rows(tmp_path, monkeypatch) -> None:
-    async def fake_request(method: str, url: str, **kwargs):  # noqa: ARG001
+    async def fake_request(method: str, url: str, **kwargs):
         if url == state_health_data.PA_HOSPITAL_REPORTS_URL:
             html = """
             <a href="/content/dam/health/hospitalreports/documents/hospital%20extract%202024.csv">record level data</a>
@@ -143,7 +143,7 @@ async def test_pa_hospital_reports_normalizes_record_level_bed_rows(tmp_path, mo
     monkeypatch.setattr(state_health_data, "resilient_request", fake_request)
     read_excel_paths: list[str] = []
 
-    def fake_read_excel(path, sheet_name=None, dtype=str):  # noqa: ANN001, ARG001
+    def fake_read_excel(path, sheet_name=None, dtype=str):
         read_excel_paths.append(str(path))
         return {
             "Beds": pd.DataFrame(
@@ -255,7 +255,7 @@ def test_normalize_phc4_xlsx_table_fixture_without_engine_dependency(tmp_path, m
     artifact = tmp_path / "common-procedures.xlsx"
     artifact.write_bytes(b"not a real workbook; pandas is monkeypatched")
 
-    def fake_read_excel(path, sheet_name=None, dtype=None):  # noqa: ARG001
+    def fake_read_excel(path, sheet_name=None, dtype=None):
         return {
             "Procedures": pd.DataFrame(
                 [{"Facility": "Example Hospital", "FY": "2024", "Service": "Hip Replacement", "Count": "12"}]

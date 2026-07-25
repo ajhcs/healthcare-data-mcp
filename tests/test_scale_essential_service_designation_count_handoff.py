@@ -5,17 +5,16 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-from pathlib import Path
 import sys
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock
 
+import pytest
 from jsonschema import Draft202012Validator
 from pydantic import ValidationError
-import pytest
 
 import scripts.acquire_scale_input_family as acquisition_cli
-
 from shared.acquisition.scale_essential_service_designation_count_contract import (
     EssentialServiceDesignationCountAcquisition,
     build_essential_service_designation_count_acquisition,

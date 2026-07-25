@@ -8,7 +8,6 @@ import sys
 from pathlib import Path
 from typing import Any
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 ALLOWED_BASELINE_PREFIXES = ("tests/",)
 ALLOWED_BASELINE_TYPES = {"Secret Keyword", "Hex High Entropy String"}

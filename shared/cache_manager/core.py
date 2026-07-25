@@ -13,7 +13,7 @@ import socket
 import tempfile
 import uuid
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qsl, urlencode, urlparse, urlsplit, urlunsplit
@@ -21,6 +21,7 @@ from urllib.parse import parse_qsl, urlencode, urlparse, urlsplit, urlunsplit
 import httpx
 
 from shared.utils.cache import write_atomic_json
+from shared.utils.errors import EXPECTED_OPERATIONAL_EXCEPTIONS
 from shared.utils.server_registry import SERVER_REGISTRY
 from shared.utils.workflows import WORKFLOW_DEFINITIONS, WORKFLOW_SOURCE_ALIASES
 
@@ -428,7 +429,7 @@ def quarantine_cache_artifact(dataset_id: str, *, cache_root: str | Path | None 
     quarantine_dir.mkdir(parents=True, exist_ok=True)
     moved = []
     moved_artifacts = []
-    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     for artifact in _manifest_artifacts(spec, root, manifest):
         moved_artifact = dict(artifact)
         path = _confined_path(root, str(artifact.get("path") or ""))
@@ -559,7 +560,7 @@ def _refresh_one(spec: CacheDatasetSpec, root: Path, run: CacheRun, *, max_bytes
         completed = _replace_run(run, status="completed", phase="promoted", completed_at=_now(), output_manifests=(manifest.artifact_id,))
         _write_run(root, completed)
         return {"dataset_id": spec.dataset_id, "run": completed.to_dict(), "manifest": manifest.to_dict(), "validation": {"status": manifest.validation_status}}
-    except Exception as exc:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as exc:
         hint = "Current promoted artifact was left unchanged."
         if allow_stale_fallback:
             hint += " allow_stale_fallback was requested; downstream tools may use previous ready artifacts with stale caveats."
@@ -646,7 +647,7 @@ def _artifact_status(root: Path, relative_path: str, ttl_days: int | None) -> di
         "path": str(path),
         "status": "stale" if _is_stale(path, ttl_days) else "ready",
         "size_bytes": stat.st_size,
-        "modified_at": datetime.fromtimestamp(stat.st_mtime, timezone.utc).isoformat(),
+        "modified_at": datetime.fromtimestamp(stat.st_mtime, UTC).isoformat(),
     }
 
 
@@ -795,7 +796,7 @@ def _merge_artifact_statuses(filesystem_artifacts: list[dict[str, Any]], manifes
             if merged["status"] in READY_VALIDATION_STATUSES:
                 merged["status"] = "ready"
             merged["size_bytes"] = path.stat().st_size
-            merged["modified_at"] = datetime.fromtimestamp(path.stat().st_mtime, timezone.utc).isoformat()
+            merged["modified_at"] = datetime.fromtimestamp(path.stat().st_mtime, UTC).isoformat()
         by_relative[relative_path] = merged
     return list(by_relative.values())
 
@@ -809,7 +810,7 @@ def _combined_validation_status(statuses: set[str]) -> str:
         return "warn"
     if statuses == {"pass"}:
         return "pass"
-    return sorted(statuses)[0]
+    return min(statuses)
 
 
 def _artifact_entries(datasets: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -1364,7 +1365,7 @@ def _is_pattern(path: str) -> bool:
 def _is_stale(path: Path, ttl_days: int | None) -> bool:
     if ttl_days is None or not path.exists():
         return False
-    age_seconds = datetime.now(timezone.utc).timestamp() - path.stat().st_mtime
+    age_seconds = datetime.now(UTC).timestamp() - path.stat().st_mtime
     return age_seconds > ttl_days * 86400
 
 
@@ -1471,7 +1472,7 @@ def _validate_max_bytes(max_bytes: int) -> None:
 
 
 def _new_run_id(dataset_id: str) -> str:
-    return f"{dataset_id}-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}-{uuid.uuid4().hex[:8]}"
+    return f"{dataset_id}-{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}-{uuid.uuid4().hex[:8]}"
 
 
 def _replace_run(run: CacheRun, **changes: Any) -> CacheRun:
@@ -1485,7 +1486,7 @@ def _read_json(path: Path) -> Any:
         return None
     try:
         return json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS:
         return None
 
 
@@ -1531,7 +1532,7 @@ def _read_columns(path: Path) -> list[str]:
             import pyarrow.parquet as pq
 
             return [str(name).strip() for name in pq.read_schema(path).names if str(name).strip()]
-        except Exception:
+        except EXPECTED_OPERATIONAL_EXCEPTIONS:
             return []
     return []
 
@@ -1648,4 +1649,4 @@ def _audit(root: Path, action: str, dataset_id: str, payload: dict[str, Any]) ->
 
 
 def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()

@@ -5,9 +5,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from shared.utils.source_catalog import SourceManifest
-
 from servers.provider_enrollment import data_loaders
+from shared.utils.source_catalog import SourceManifest
 
 
 def test_resolve_dataset_manifest_uses_shared_cms_catalog_fixture() -> None:

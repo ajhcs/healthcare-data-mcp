@@ -1,20 +1,26 @@
 """Data loaders for CMS Geographic Variation PUF."""
-
 import logging
+import sys as _sys
 from pathlib import Path
 
 import duckdb
-
-from shared.utils.http_client import resilient_request
 import pandas as pd
 
-import sys as _sys
+from shared.utils.errors import EXPECTED_OPERATIONAL_EXCEPTIONS
+from shared.utils.http_client import resilient_request
+
 _project_root = __import__("pathlib").Path(__file__).resolve().parent.parent.parent
 if str(_project_root) not in _sys.path:
     _sys.path.insert(0, str(_project_root))
 
-from shared.utils.cache import CacheMetadata, is_cache_valid, write_atomic_bytes, write_atomic_parquet, write_cache_metadata  # noqa: E402
-from shared.utils.cms_url_resolver import resolve_cms_download_url  # noqa: E402
+from shared.utils.cache import (
+    CacheMetadata,
+    is_cache_valid,
+    write_atomic_bytes,
+    write_atomic_parquet,
+    write_cache_metadata,
+)
+from shared.utils.cms_url_resolver import resolve_cms_download_url
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +75,7 @@ async def ensure_gv_cached(force: bool = False) -> bool:
         csv_path.unlink(missing_ok=True)
         logger.info("GV PUF cached: %d rows", len(df))
         return True
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("Failed to cache GV PUF: %s", e)
         return False
 
@@ -145,6 +151,6 @@ def query_gv(geo_level: str, geo_code: str) -> dict | None:
             "er_visits_per_1000": _f("ER_VISITS_PER_1000_BENES"),
             "readmission_rate": _f("ACUTE_HOSP_READMSN_PCT"),
         }
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("GV query failed: %s", e)
         return None

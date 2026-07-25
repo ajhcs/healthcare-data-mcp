@@ -11,12 +11,14 @@ Recommended TTL defaults:
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
 import json
-from pathlib import Path
 import tempfile
+from dataclasses import asdict, dataclass, field
+from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
+
+from shared.utils.errors import EXPECTED_OPERATIONAL_EXCEPTIONS
 
 __all__ = [
     "CacheMetadata",
@@ -27,8 +29,8 @@ __all__ = [
     "read_cache_metadata",
     "write_atomic_bytes",
     "write_atomic_dataframe_csv",
-    "write_atomic_parquet",
     "write_atomic_json",
+    "write_atomic_parquet",
     "write_atomic_text",
     "write_cache_metadata",
 ]
@@ -49,7 +51,7 @@ class CacheMetadata:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "CacheMetadata":
+    def from_dict(cls, data: dict[str, Any]) -> CacheMetadata:
         known = {field_name: data[field_name] for field_name in cls.__dataclass_fields__ if field_name in data}
         known["extra"] = dict(known.get("extra") or {})
         return cls(**known)
@@ -66,7 +68,7 @@ def cache_age_days(path: Path) -> float | None:
 
     if not path.exists():
         return None
-    return (datetime.now(timezone.utc).timestamp() - path.stat().st_mtime) / 86_400
+    return (datetime.now(UTC).timestamp() - path.stat().st_mtime) / 86_400
 
 
 def is_cache_valid(path: Path, max_age_days: float = 90, *, min_size_bytes: int = 1) -> bool:
@@ -101,7 +103,7 @@ def read_cache_metadata(path: Path) -> CacheMetadata | None:
         return None
     try:
         payload = json.loads(metadata_path.read_text(encoding="utf-8"))
-    except Exception:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS:
         return None
     if not isinstance(payload, dict):
         return None
@@ -194,7 +196,7 @@ def cache_status(path: Path, *, ttl_days: float | None = 90) -> dict[str, Any]:
         {
             "status": "stale" if ttl_days is not None and age > ttl_days else "ready",
             "size_bytes": stat.st_size,
-            "modified_at": datetime.fromtimestamp(stat.st_mtime, timezone.utc).isoformat(),
+            "modified_at": datetime.fromtimestamp(stat.st_mtime, UTC).isoformat(),
             "age_days": round(age, 2),
             "metadata_path": str(cache_metadata_path(path)),
             "metadata_status": "ready" if metadata else "missing",

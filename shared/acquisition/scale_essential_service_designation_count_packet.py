@@ -13,8 +13,8 @@ from pypdf import PdfReader
 from shared.acquisition.scale_emergency_department_count_packet import acquisition as prior_acquisition
 from shared.acquisition.scale_essential_service_designation_count_contract import (
     DESIGNATION_DEFINITION,
-    EXPECTED_ARTIFACTS,
     EXPECTED_ARTIFACT_URLS,
+    EXPECTED_ARTIFACTS,
     PROHIBITED_OUTPUTS,
     EssentialServiceDesignationCountAcquisition,
     build_essential_service_designation_count_acquisition,
@@ -151,6 +151,8 @@ def verify_essential_service_designation_count_source_bytes(
 
     from shared.acquisition.scale_physician_count_packet import (
         acquisition as physician_acquisition,
+    )
+    from shared.acquisition.scale_physician_count_packet import (
         verify_physician_count_source_bytes,
     )
     verify_physician_count_source_bytes(physician_acquisition(), cache_root)

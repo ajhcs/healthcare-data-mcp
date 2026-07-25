@@ -6,7 +6,6 @@ import importlib
 
 import pytest
 
-
 STRUCTURED_SERVER_MODULES = [
     "servers.claims-analytics.server",
     "servers.cms-facility.server",

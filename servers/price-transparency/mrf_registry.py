@@ -4,14 +4,13 @@ Two-layer lookup:
 1. Curated JSON registry (cached at ~/.healthcare-data-mcp/cache/mrf/registry.json)
 2. Live discovery via CMS Provider Data Catalog + hospital cms-hpt.txt files
 """
-
 import json
 import logging
 import re
 from pathlib import Path
 
-
 from shared.utils.cache import write_atomic_json
+from shared.utils.errors import EXPECTED_OPERATIONAL_EXCEPTIONS
 from shared.utils.http_client import resilient_request
 
 logger = logging.getLogger(__name__)
@@ -182,7 +181,7 @@ def _load_registry() -> dict:
     if _REGISTRY_PATH.exists():
         try:
             return json.loads(_REGISTRY_PATH.read_text(encoding="utf-8"))
-        except Exception:
+        except EXPECTED_OPERATIONAL_EXCEPTIONS:
             logger.warning("Failed to load registry, starting fresh")
     return {"hospitals": {}}
 
@@ -263,7 +262,7 @@ async def search_cms_providers(query: str, state: str = "") -> list[dict]:
         resp = await resilient_request("POST", CMS_PROVIDER_API, json=payload, timeout=30.0)
         data = resp.json()
         return data.get("results", [])
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("CMS provider search failed: %s", e)
         return []
 
@@ -285,7 +284,7 @@ async def fetch_cms_hpt_txt(domain: str) -> list[dict]:
     try:
         resp = await resilient_request("GET", url, timeout=30.0)
         return _parse_cms_hpt_txt(resp.text)
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("Failed to fetch cms-hpt.txt from %s: %s", domain, e)
         return []
 

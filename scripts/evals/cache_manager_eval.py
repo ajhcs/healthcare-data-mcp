@@ -7,18 +7,19 @@ import json
 import os
 import shutil
 import time
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
-from shared.cache_manager import core
-from shared.utils.mcp_response import validate_report_ingest_payload
-from shared.utils.source_status import normalize_source_status
-from shared.utils.workflows import build_workflow_plan
 from servers.live_gateway.policy_runner import (
     LiveToolSpec,
     build_audit_evidence_export,
     evaluate_provenance_status,
 )
+from shared.cache_manager import core
+from shared.utils.mcp_response import validate_report_ingest_payload
+from shared.utils.source_status import normalize_source_status
+from shared.utils.workflows import build_workflow_plan
 
 
 def scenario_cache_planning(cache_root: Path) -> dict[str, Any]:
@@ -344,7 +345,7 @@ def _promote_general_info(cache_root: Path, run_id: str):
             "validation"
         ]
         staged_artifacts.append((relative_path, staged, spec.source_urls[0], core.CacheValidationResult(**validation)))
-    return core._promote_many(spec, cache_root, staged_artifacts, run_id)  # noqa: SLF001
+    return core._promote_many(spec, cache_root, staged_artifacts, run_id)
 
 
 def _staged_csv(cache_root: Path, dataset_id: str, run_id: str, index: int = 0) -> Path:

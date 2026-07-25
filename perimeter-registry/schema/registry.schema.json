@@ -88,7 +88,7 @@
         "name": {"type": "string"},
         "entity_type": {"type": "string"},
         "aliases": {"type": "array", "items": {"type": "string"}},
-        "identifiers": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/identifier"}},
+        "identifiers": {"type": "array", "items": {"$ref": "#/$defs/identifier"}},
         "lifecycle_status": {"enum": ["active", "merged", "historical"]},
         "effective_start": {"type": ["string", "null"]},
         "effective_end": {"type": ["string", "null"]},
@@ -148,7 +148,7 @@
         "id": {"$ref": "#/$defs/id"},
         "source_id": {"$ref": "#/$defs/id"},
         "relationship_type": {
-          "enum": ["sole_corporate_member_of", "sole_member_of", "sole_owner_of", "merged_into", "has_marketing_name", "operates_facility", "controls_operator_of_facility", "obligated_group_member"]
+          "enum": ["sole_corporate_member_of", "sole_member_of", "sole_owner_of", "merged_into", "has_marketing_name", "operates_facility", "controls_operator_of_facility", "obligated_group_member", "academic_affiliation_with", "shares_board_with", "reported_direct_controlling_entity_of", "contracts_for_medical_services_with", "listed_as_legal_business_name_for_facility_enrollment"]
         },
         "target_id": {"$ref": "#/$defs/id"},
         "target_kind": {"enum": ["entity", "facility", "reporting_perimeter", "documented_alias"]},

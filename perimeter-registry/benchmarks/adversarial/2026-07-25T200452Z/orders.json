@@ -1,0 +1,47 @@
+{
+  "version": 2,
+  "generated_at_utc": "2026-07-25T20:35:50Z",
+  "counterbalance": "Order A is registry R1 and baseline R2; reverse order B is registry R2 and baseline R1.",
+  "assignments": {
+    "registry_r1": [
+      "N1",
+      "K1",
+      "N2",
+      "K2",
+      "N3",
+      "K3",
+      "N4",
+      "K4"
+    ],
+    "registry_r2": [
+      "K4",
+      "N4",
+      "K3",
+      "N3",
+      "K2",
+      "N2",
+      "K1",
+      "N1"
+    ],
+    "baseline_r1": [
+      "K4",
+      "N4",
+      "K3",
+      "N3",
+      "K2",
+      "N2",
+      "K1",
+      "N1"
+    ],
+    "baseline_r2": [
+      "N1",
+      "K1",
+      "N2",
+      "K2",
+      "N3",
+      "K3",
+      "N4",
+      "K4"
+    ]
+  }
+}

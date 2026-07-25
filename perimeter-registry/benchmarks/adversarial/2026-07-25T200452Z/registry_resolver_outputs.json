@@ -1,0 +1,280 @@
+{
+  "generated_at_utc": "2026-07-25T20:42:41.620584+00:00",
+  "source": "deterministic resolver over frozen Nebraska and Kaiser fixtures",
+  "answers": [
+    {
+      "question_id": "N1",
+      "fixture": "nebraska",
+      "resolution": {
+        "status": "resolved",
+        "question": null,
+        "options": [
+          {
+            "scope_id": "nebraska_medicine_clinical_enterprise_2026",
+            "label": "Nebraska Medicine lean clinical enterprise",
+            "amount_usd": null,
+            "period": "current structure supported as of 2026-07-25",
+            "basis": "interim governing documents, direct IRS-hosted filings, current state licensure, CMS, and NPPES; not an audited financial consolidation",
+            "includes": [
+              "Nebraska Medicine parent corporation",
+              "The Nebraska Medical Center legal/operator entity and CCN 280013 facility",
+              "UNMC Physicians as a distinct faculty medical group",
+              "Bellevue Medical Center LLC and CCN 280132 facility beneath TNMC's supported tax-control chain"
+            ],
+            "excludes": [
+              "University of Nebraska Medical Center public-university campus from the owned clinical-operator core",
+              "Clarkson Regional Health Services from current governance after 2026-06-30",
+              "Omaha Community Foundation from current corporate membership under the interim articles"
+            ],
+            "flags": [
+              "The brand and parent corporation share a name but are distinct registry concepts",
+              "UNMC is a close academic and governance-related affiliate, not an owned hospital or alias",
+              "Bellevue remains a separately licensed LLC/operator and CCN even though the latest located federal return treats it as disregarded beneath TNMC",
+              "EINs, CCNs, and NPIs remain attached to their own entities or facilities"
+            ]
+          }
+        ],
+        "entity_ids": [],
+        "flags": [
+          "The brand and parent corporation share a name but are distinct registry concepts",
+          "UNMC is a close academic and governance-related affiliate, not an owned hospital or alias",
+          "Bellevue remains a separately licensed LLC/operator and CCN even though the latest located federal return treats it as disregarded beneath TNMC",
+          "EINs, CCNs, and NPIs remain attached to their own entities or facilities"
+        ],
+        "identifiers": [],
+        "as_of": null,
+        "tax_period_year": null,
+        "evidence_ids": [
+          "regents_interim_governing_documents_2026",
+          "irs_nebraska_medicine_return_2025",
+          "irs_tnmc_return_2024",
+          "nebraska_dhhs_hospital_roster_2026",
+          "unmc_shared_emblem_2015"
+        ]
+      }
+    },
+    {
+      "question_id": "K1",
+      "fixture": "kaiser",
+      "resolution": {
+        "status": "needs_clarification",
+        "question": "Which legal filer or reporting perimeter behind Kaiser Permanente do you mean?",
+        "options": [],
+        "entity_ids": [],
+        "flags": [
+          "brand/governance concept is not assigned a universal EIN"
+        ],
+        "identifiers": [],
+        "as_of": null,
+        "tax_period_year": null,
+        "evidence_ids": [
+          "kp_legal_structure_current",
+          "permanente_care_model_current",
+          "kfhp_2024_990_xml"
+        ]
+      }
+    },
+    {
+      "question_id": "N2",
+      "fixture": "nebraska",
+      "resolution": {
+        "status": "resolved",
+        "question": null,
+        "options": [
+          {
+            "scope_id": "nebraska_medicine_interim_governance_2026_07_01",
+            "label": "Nebraska Medicine interim legal-member and board-appointment perimeter",
+            "amount_usd": null,
+            "period": "2026-07-01 through 2026-09-30",
+            "basis": "approved interim articles and bylaws",
+            "includes": [
+              "University of Nebraska Board of Regents as sole legal member",
+              "Two Regents-appointed voting directors",
+              "Two Omaha Community Foundation-appointed voting directors"
+            ],
+            "excludes": [
+              "Omaha Community Foundation from corporate membership during the interim period",
+              "Clarkson Regional Health Services from current membership after 2026-06-30"
+            ],
+            "flags": [
+              "Effective only from 2026-07-01 through 2026-09-30 unless superseded",
+              "A director appointment right is not corporate membership or ownership",
+              "The Board of Regents governance fact must not be restated as ownership by the UNMC campus"
+            ]
+          }
+        ],
+        "entity_ids": [],
+        "flags": [
+          "Effective only from 2026-07-01 through 2026-09-30 unless superseded",
+          "A director appointment right is not corporate membership or ownership",
+          "The Board of Regents governance fact must not be restated as ownership by the UNMC campus"
+        ],
+        "identifiers": [],
+        "as_of": null,
+        "tax_period_year": null,
+        "evidence_ids": [
+          "regents_interim_governing_documents_2026",
+          "university_interim_structure_release_2026",
+          "university_transition_release_2026"
+        ]
+      }
+    },
+    {
+      "question_id": "K2",
+      "fixture": "kaiser",
+      "resolution": {
+        "status": "needs_clarification",
+        "question": "Which legal filer or reporting perimeter behind Kaiser Permanente do you mean?",
+        "options": [],
+        "entity_ids": [],
+        "flags": [
+          "brand/governance concept is not assigned a universal EIN"
+        ],
+        "identifiers": [],
+        "as_of": null,
+        "tax_period_year": null,
+        "evidence_ids": [
+          "kp_legal_structure_current",
+          "permanente_care_model_current",
+          "kfhp_2024_990_xml"
+        ]
+      }
+    },
+    {
+      "question_id": "N3",
+      "fixture": "nebraska",
+      "resolution": {
+        "status": "resolved",
+        "question": null,
+        "options": [],
+        "entity_ids": [
+          "the_nebraska_medical_center"
+        ],
+        "flags": [
+          "facility/operator record; not the enterprise perimeter"
+        ],
+        "identifiers": [
+          [
+            "EIN",
+            "91-1858433"
+          ],
+          [
+            "CCN",
+            "280013"
+          ]
+        ],
+        "as_of": null,
+        "tax_period_year": null,
+        "evidence_ids": [
+          "nebraska_dhhs_hospital_roster_2026",
+          "cms_nebraska_medical_center_2026",
+          "irs_nebraska_medicine_return_2025"
+        ]
+      }
+    },
+    {
+      "question_id": "K3",
+      "fixture": "kaiser",
+      "resolution": {
+        "status": "resolved",
+        "question": null,
+        "options": [
+          {
+            "scope_id": "kfhp_h_risant_2024_financial",
+            "label": "KFHP/H and Risant Health 2024 published financial-results perimeter",
+            "amount_usd": 115750000000,
+            "period": "year ended 2024-12-31",
+            "basis": "official 2024 annual financial summary for KFHP/H and Risant Health",
+            "includes": [
+              "Kaiser Foundation Health Plan, Inc.",
+              "Kaiser Foundation Hospitals",
+              "Risant Health",
+              "their respective subsidiaries and affiliates"
+            ],
+            "excludes": [
+              "Permanente Medical Groups unless separately shown by the source",
+              "attribution of the total to any one EIN"
+            ],
+            "flags": [
+              "2024 onward year-end results, membership, and facility counts include Risant Health",
+              "not a universal Kaiser Permanente legal-entity perimeter"
+            ]
+          }
+        ],
+        "entity_ids": [],
+        "flags": [
+          "2024 onward year-end results, membership, and facility counts include Risant Health",
+          "not a universal Kaiser Permanente legal-entity perimeter"
+        ],
+        "identifiers": [],
+        "as_of": null,
+        "tax_period_year": null,
+        "evidence_ids": [
+          "kp_2024_annual_report",
+          "kp_2024_financial_results"
+        ]
+      }
+    },
+    {
+      "question_id": "N4",
+      "fixture": "nebraska",
+      "resolution": {
+        "status": "resolved",
+        "question": null,
+        "options": [],
+        "entity_ids": [
+          "nebraska_medicine_parent"
+        ],
+        "flags": [
+          "academic affiliation does not imply ownership or consolidation"
+        ],
+        "identifiers": [
+          [
+            "EIN",
+            "81-3158267"
+          ]
+        ],
+        "as_of": null,
+        "tax_period_year": null,
+        "evidence_ids": [
+          "regents_interim_governing_documents_2026",
+          "irs_nebraska_medicine_return_2025",
+          "nebraska_medicine_history",
+          "unmc_shared_emblem_2015",
+          "unmc_governance_faq_2026"
+        ]
+      }
+    },
+    {
+      "question_id": "K4",
+      "fixture": "kaiser",
+      "resolution": {
+        "status": "resolved",
+        "question": null,
+        "options": [],
+        "entity_ids": [
+          "kfh"
+        ],
+        "flags": [
+          "facility/operator record; not the enterprise perimeter"
+        ],
+        "identifiers": [
+          [
+            "EIN",
+            "94-1105628"
+          ],
+          [
+            "CCN",
+            "050071"
+          ]
+        ],
+        "as_of": null,
+        "tax_period_year": null,
+        "evidence_ids": [
+          "kfh_2024_990_xml",
+          "cms_hospital_enrollments_2026_05"
+        ]
+      }
+    }
+  ]
+}

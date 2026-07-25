@@ -5,14 +5,14 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-from pathlib import Path
 import sys
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock
 
+import pytest
 from jsonschema import Draft202012Validator
 from pydantic import ValidationError
-import pytest
 
 import scripts.acquire_scale_input_family as acquisition_cli
 from shared.acquisition.scale_safety_net_patient_mix_contract import (

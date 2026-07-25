@@ -34,7 +34,6 @@ from scripts.render_env_example import expected_env_names, render_env_example
 from servers._launcher import SERVERS
 from shared.utils.server_registry import SERVER_BY_ID, SERVER_REGISTRY
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -413,6 +412,7 @@ def test_installer_help_and_unknown_args_are_read_only() -> None:
     typo_result = subprocess.run(
         ["bash", str(REPO_ROOT / "install.sh"), "--dryrun"],
         cwd=REPO_ROOT,
+        check=False,
         capture_output=True,
         text=True,
     )

@@ -36,7 +36,7 @@ class SourceManifest:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "SourceManifest":
+    def from_dict(cls, data: dict[str, Any]) -> SourceManifest:
         known = {field_name: data[field_name] for field_name in cls.__dataclass_fields__ if field_name in data}
         known["extra"] = dict(known.get("extra") or {})
         return cls(**known)
@@ -81,7 +81,7 @@ def read_source_manifest(path: str | Path) -> SourceManifest:
     with Path(path).open("r", encoding="utf-8") as handle:
         data = json.load(handle)
     if not isinstance(data, dict):
-        raise ValueError(f"Source manifest must be a JSON object: {path}")
+        raise TypeError(f"Source manifest must be a JSON object: {path}")
     return SourceManifest.from_dict(data)
 
 
@@ -122,7 +122,7 @@ def load_catalog(path: str | Path) -> dict[str, Any]:
     with Path(path).open("r", encoding="utf-8") as handle:
         data = json.load(handle)
     if not isinstance(data, dict):
-        raise ValueError(f"Catalog must be a JSON object: {path}")
+        raise TypeError(f"Catalog must be a JSON object: {path}")
     return data
 
 

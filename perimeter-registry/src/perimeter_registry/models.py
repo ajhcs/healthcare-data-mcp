@@ -226,3 +226,4 @@ class Resolution:
     identifiers: tuple[tuple[str, str], ...] = ()
     as_of: str | None = None
     tax_period_year: int | None = None
+    evidence_ids: tuple[str, ...] = ()

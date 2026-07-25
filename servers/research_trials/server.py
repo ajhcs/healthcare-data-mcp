@@ -6,25 +6,25 @@ study search/detail tools. Port 8019 when run over HTTP transports.
 
 from __future__ import annotations
 
-from typing import Any
 import logging
 import os as _os
 import re
+from typing import Any
 
 from mcp.server.fastmcp import FastMCP
-from shared.utils.mcp_observability import observe_tool
-from shared.utils.mcp_resources import register_standard_resources
 
 from shared.utils.healthcare_identity import identity_from_public_record
+from shared.utils.mcp_observability import observe_tool
+from shared.utils.mcp_resources import register_standard_resources
 from shared.utils.mcp_response import error_response, evidence_receipt, to_structured
 
 from . import clinical_trials_client, profiles, reporter_client
 from .models import (
     ClinicalTrialDetailResponse,
     ClinicalTrialSearchResponse,
-    TrialInventoryResponse,
     NIHProjectDetailResponse,
     NIHProjectSearchResponse,
+    TrialInventoryResponse,
 )
 
 logger = logging.getLogger(__name__)

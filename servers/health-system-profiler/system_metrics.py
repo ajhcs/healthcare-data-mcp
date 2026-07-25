@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 from rapidfuzz import fuzz, process
 
+from shared.utils.errors import EXPECTED_OPERATIONAL_EXCEPTIONS
 
 UniverseMode = Literal["compendium_snapshot", "latest_public_overlay"]
 StateScope = Literal["headquarters", "facility_presence"]
@@ -1026,7 +1027,7 @@ def _decode_cursor(cursor: str | None) -> dict[str, Any] | None:
     try:
         padded = cursor + "=" * (-len(cursor) % 4)
         decoded = json.loads(base64.urlsafe_b64decode(padded.encode("ascii")).decode("utf-8"))
-    except Exception:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS:
         return None
     if not isinstance(decoded, dict):
         return None

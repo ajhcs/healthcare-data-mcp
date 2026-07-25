@@ -7,7 +7,6 @@ from typing import Any
 
 import pandas as pd
 
-
 JEFFERSON_SLUG = "jefferson-health"
 JEFFERSON_EFFECTIVE_DATE = date(2024, 8, 1)
 JEFFERSON_EDITION_DATE = date(2026, 4, 28)

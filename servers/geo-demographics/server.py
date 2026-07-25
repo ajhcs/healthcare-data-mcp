@@ -3,18 +3,18 @@
 Provides Census ACS demographics, ZCTA geography/adjacency,
 Medicare enrollment data, and ZIP-to-geography crosswalks.
 """
-
-from typing import Any
 import logging
 import os
+from typing import Any
 
 import httpx
-
-from shared.utils.http_client import resilient_request
 from mcp.server.fastmcp import FastMCP
+
+from shared.utils.errors import EXPECTED_OPERATIONAL_EXCEPTIONS
+from shared.utils.healthcare_identity import identity_from_public_record
+from shared.utils.http_client import resilient_request
 from shared.utils.mcp_observability import observe_tool
 from shared.utils.mcp_resources import register_standard_resources
-from shared.utils.healthcare_identity import identity_from_public_record
 from shared.utils.mcp_response import collection_response, error_response, evidence_receipt, to_structured
 from shared.utils.source_backed_result import source_claim
 
@@ -366,7 +366,7 @@ async def get_zcta_demographics(zcta: str, year: int = 2023) -> dict[str, Any]:
         return payload
     except httpx.HTTPStatusError as e:
         return error_response(f"Census API error: {e.response.status_code}", detail=str(e))
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         return error_response(str(e))
 
 
@@ -468,7 +468,7 @@ async def get_zcta_demographics_batch(zctas: list[str], year: int = 2023) -> dic
         )
     except httpx.HTTPStatusError as e:
         return error_response(f"Census API error: {e.response.status_code}", detail=str(e))
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         return error_response(str(e))
 
 
@@ -583,7 +583,7 @@ async def get_zcta_adjacency(zcta: str) -> dict[str, Any]:
         return payload
     except FileNotFoundError as e:
         return error_response(f"Shapefile not available: {e}")
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         return error_response(str(e))
 
 
@@ -688,7 +688,7 @@ async def get_medicare_enrollment(state: str | None = None, county_fips: str | N
         )
         return payload
 
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         return error_response(str(e))
 
 
@@ -796,7 +796,7 @@ async def get_geographic_variation(geography_type: str = "county", geography_cod
         )
         return payload
 
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         return error_response(str(e))
 
 
@@ -963,7 +963,7 @@ async def crosswalk_zip(zip_code: str, target: str = "county") -> dict[str, Any]
 
     except httpx.HTTPStatusError as e:
         return error_response(f"HUD API error: {e.response.status_code}", detail=str(e))
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         return error_response(str(e))
 
 

@@ -5,18 +5,18 @@ from __future__ import annotations
 import json
 import os
 
+import pytest
 from mcp.server.auth.middleware.auth_context import auth_context_var
 from mcp.server.auth.middleware.bearer_auth import AuthenticatedUser
 from mcp.server.auth.provider import AccessToken
 from mcp.server.fastmcp.exceptions import ToolError
-import pytest
 
 os.environ.setdefault("SEC_USER_AGENT", "healthcare-data-mcp tests@example.com")
 
+from servers.live_gateway import server
 from shared.utils.gateway_auth import GatewayAuthError, load_gateway_security_config, token_sha256
 from shared.utils.mcp_response import evidence_receipt
 from shared.utils.server_registry import SERVER_BY_ID
-from servers.live_gateway import server
 
 
 def _valid_evidence(match_basis: str = "unit_test") -> dict:

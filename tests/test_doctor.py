@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import json
 import os
-from pathlib import Path
 import subprocess
 import sys
+from pathlib import Path
 
+from shared.utils import doctor
 from shared.utils.doctor import PRIORITY_EVIDENCE_CONTRACTS, build_doctor_report, format_doctor_report, print_doctor
-import shared.utils.doctor as doctor
 
 
 def test_doctor_report_includes_operator_readiness_sections(tmp_path, monkeypatch) -> None:
@@ -272,6 +272,7 @@ def test_hc_mcp_doctor_check_exits_nonzero_when_action_needed(tmp_path) -> None:
             "--json",
         ],
         cwd=Path(__file__).resolve().parents[1],
+        check=False,
         env=env,
         text=True,
         capture_output=True,
@@ -294,6 +295,7 @@ def test_hc_mcp_doctor_check_exits_nonzero_when_action_needed(tmp_path) -> None:
             "--json",
         ],
         cwd=Path(__file__).resolve().parents[1],
+        check=False,
         env=env,
         text=True,
         capture_output=True,

@@ -9,7 +9,6 @@ import pytest
 
 from servers.public_records import data_loaders
 
-
 HEADER = [
     "LASTNAME",
     "FIRSTNAME",

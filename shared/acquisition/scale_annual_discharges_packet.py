@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Literal, Mapping, Self, cast
+from typing import Literal, Self, cast
 
 from pydantic import model_validator
 
@@ -300,8 +301,8 @@ def _linkage_row(values: LinkageRowDeclaration) -> LinkageContextRow:
 
 
 __all__ = [
-    "AnnualDischargesAcquisition",
     "EXPECTED_LINKAGE_ROWS",
+    "AnnualDischargesAcquisition",
     "acquisition",
     "build_annual_discharges_acquisition",
     "verify_annual_discharges_source_bytes",

@@ -6,6 +6,7 @@ import argparse
 import asyncio
 from pathlib import Path
 
+from shared.acquisition.scale_roster_bed_packet import acquisition_spec
 from shared.acquisition.scale_roster_beds import (
     acquire,
     build_bundle_input,
@@ -15,7 +16,6 @@ from shared.acquisition.scale_roster_beds import (
     write_bundle_input,
     write_frozen_acquisition,
 )
-from shared.acquisition.scale_roster_bed_packet import acquisition_spec
 from shared.utils.cache import write_atomic_json
 
 

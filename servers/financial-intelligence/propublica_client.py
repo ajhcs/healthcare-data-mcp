@@ -1,8 +1,7 @@
 """ProPublica Nonprofit Explorer API client."""
-
 import logging
 
-
+from shared.utils.errors import EXPECTED_OPERATIONAL_EXCEPTIONS
 from shared.utils.http_client import resilient_request
 
 logger = logging.getLogger(__name__)
@@ -24,7 +23,7 @@ async def search_organizations(query: str, state: str = "", ntee_code: str = "",
     try:
         resp = await resilient_request("GET", f"{PROPUBLICA_BASE}/search.json", params=params, timeout=30.0)
         return resp.json()
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("ProPublica search failed: %s", e)
         return {"organizations": [], "total_results": 0}
 
@@ -37,6 +36,6 @@ async def get_organization(ein: str) -> dict:
     try:
         resp = await resilient_request("GET", f"{PROPUBLICA_BASE}/organizations/{ein}.json", timeout=30.0)
         return resp.json()
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("ProPublica org lookup failed for EIN %s: %s", ein, e)
         return {}

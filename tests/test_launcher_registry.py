@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import os
 
+from servers._launcher import SERVERS
 from shared.utils.env_file import load_env_file
 from shared.utils.server_registry import CURATED_PRESETS, SERVER_BY_ID, SERVER_REGISTRY, WORKFLOW_PRESETS
-from servers._launcher import SERVERS
 
 
 def test_launcher_includes_metadata_servers() -> None:

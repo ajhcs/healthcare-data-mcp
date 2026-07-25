@@ -15,10 +15,10 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from shared.utils.errors import EXPECTED_OPERATIONAL_EXCEPTIONS
 from shared.utils.server_registry import SERVER_BY_ID, SERVER_REGISTRY, WORKFLOW_PRESETS, ServerCapability
 from shared.utils.source_status import normalize_source_status
 from shared.utils.workflows import build_workflow_plan, validate_workflow_contracts, validate_workflow_tool_references
-
 
 PRIORITY_EVIDENCE_CONTRACTS: tuple[dict[str, Any], ...] = (
     {
@@ -663,7 +663,7 @@ def _import_status(module_name: str) -> dict[str, Any]:
             except importlib.metadata.PackageNotFoundError:
                 version = "importable"
         return {"status": "ok", "version": str(version)}
-    except Exception as exc:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as exc:
         return {"status": "error", "error": f"{type(exc).__name__}: {exc}"}
 
 
@@ -672,7 +672,7 @@ def _server_report(spec: ServerCapability) -> dict[str, Any]:
         importlib.import_module(spec.module)
         import_status = "ok"
         import_error = ""
-    except Exception as exc:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as exc:
         import_status = "error"
         import_error = f"{type(exc).__name__}: {exc}"
 
@@ -757,7 +757,7 @@ def _cache_report(cache_root: str | Path | None) -> dict[str, Any]:
             "allowed_states": payload.get("allowed_states", []),
             "not_ready_examples": not_ready,
         }
-    except Exception as exc:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as exc:
         return {
             "status": "error",
             "cache_root": str(cache_root or Path.home() / ".healthcare-data-mcp" / "cache"),
@@ -1110,7 +1110,7 @@ def _module_fastmcp_tools(module_name: str) -> dict[str, Any]:
         return {"status": "error", "tools": [], "error": f"module source not found: {path}"}
     try:
         tree = ast.parse(path.read_text(encoding="utf-8"))
-    except Exception as exc:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as exc:
         return {"status": "error", "tools": [], "error": f"{type(exc).__name__}: {exc}"}
 
     tools: list[str] = []
@@ -1183,7 +1183,7 @@ def _live_gateway_policy_validation() -> dict[str, Any]:
     path = Path(module_spec.origin)
     try:
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
-    except Exception as exc:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as exc:
         return {
             "status": "issues_found",
             "method": "live_gateway_static_policy_ast",
@@ -1222,7 +1222,7 @@ def _live_gateway_policy_validation() -> dict[str, Any]:
                 policy_runner_path.read_text(encoding="utf-8"),
                 filename=str(policy_runner_path),
             )
-        except Exception as exc:
+        except EXPECTED_OPERATIONAL_EXCEPTIONS as exc:
             issues.append(
                 {
                     "status": "policy_runner_module_parse_failed",
@@ -1468,7 +1468,7 @@ def _find_assignment(tree: ast.AST, name: str) -> ast.Assign | ast.AnnAssign | N
 def _literal_node_value(node: ast.AST, *, default: Any) -> Any:
     try:
         return ast.literal_eval(node)
-    except Exception:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS:
         return default
 
 
@@ -1495,7 +1495,7 @@ def _registry_artifact_checks() -> dict[str, Any]:
             expected = spec["renderer"]()
             current_reader = spec.get("current_reader") or (lambda current_path: current_path.read_text(encoding="utf-8"))
             current = current_reader(path)
-        except Exception as exc:
+        except EXPECTED_OPERATIONAL_EXCEPTIONS as exc:
             artifacts.append(
                 {
                     "name": name,
@@ -1583,7 +1583,7 @@ def _metadata_catalog_check(
 ) -> dict[str, Any]:
     try:
         result = validator()
-    except Exception as exc:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as exc:
         return {
             "name": name,
             "status": "issues_found",
@@ -1637,7 +1637,7 @@ def _distribution_report() -> dict[str, Any]:
 
     try:
         pyproject = tomllib.loads(pyproject_path.read_text(encoding="utf-8"))
-    except Exception as exc:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as exc:
         return {
             "status": "action_needed",
             "issue_count": 1,
@@ -1907,6 +1907,7 @@ def _distribution_check(*, name: str, ok: bool, message: str) -> dict[str, Any]:
 
 def _registry_artifact_specs(repo_root: Path) -> list[dict[str, Any]]:
     try:
+        from scripts.build_mcpb import validate_manifest_registry_sync
         from scripts.render_client_configs import (
             render_claude_desktop_config,
             render_claude_desktop_stdio_example,
@@ -1914,11 +1915,10 @@ def _registry_artifact_specs(repo_root: Path) -> list[dict[str, Any]]:
             render_http_clients_config,
             render_project_mcp_config,
         )
-        from scripts.build_mcpb import validate_manifest_registry_sync
         from scripts.render_compose import render_compose
         from scripts.render_env_example import render_env_example
         from scripts.render_registry_docs import checked_in_snippet, render_snippet
-    except Exception as exc:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as exc:
         reason = f"registry renderer imports unavailable: {type(exc).__name__}: {exc}"
         return [
             {
@@ -2008,7 +2008,7 @@ def _registry_artifact_specs(repo_root: Path) -> list[dict[str, Any]]:
                     "regenerate": f"python scripts/render_registry_docs.py {snippet}",
                 }
             )
-        except Exception as exc:
+        except EXPECTED_OPERATIONAL_EXCEPTIONS as exc:
             specs.append(
                 {
                     "name": f"docs:{snippet}",

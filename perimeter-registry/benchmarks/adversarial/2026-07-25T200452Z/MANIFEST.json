@@ -1,0 +1,58 @@
+{
+  "benchmark_id": "2026-07-25T200452Z",
+  "created_at_utc": "2026-07-25T20:04:52Z",
+  "questions_gold_frozen_at_utc": "2026-07-25T20:35:50Z",
+  "status": "complete_with_post_freeze_source_correction",
+  "cases": [
+    "Nebraska Medicine / UNMC",
+    "Kaiser Permanente"
+  ],
+  "question_count": 8,
+  "runs_expected": 4,
+  "answer_count_expected": 32,
+  "input_token_telemetry": "unavailable",
+  "production_changes": false,
+  "irs_990_evidence_service_changed": false,
+  "results_finalized_at_utc": "2026-07-25T21:16:00Z",
+  "runs_completed": 4,
+  "answer_count": 32,
+  "strict_scores": {
+    "registry_correct": {
+      "numerator": 16,
+      "denominator": 16
+    },
+    "baseline_correct": {
+      "numerator": 8,
+      "denominator": 16
+    }
+  },
+  "truth_adjudicated_correctness_sensitivity": {
+    "registry_correct": {
+      "numerator": 14,
+      "denominator": 16
+    },
+    "baseline_correct": {
+      "numerator": 8,
+      "denominator": 16
+    },
+    "reason": "Post-freeze University dental-plan evidence moves EIN 47-0049123 from the UNMC campus record to the University/Board record; no rerun performed."
+  },
+  "wall_latency_seconds": {
+    "registry_assisted": 365.070365551,
+    "manual_style_source_research_baseline": 839.0,
+    "baseline_over_registry_ratio": 2.298187087121407
+  },
+  "deterministic_lookup_artifact": "runs/lookup_timings.json",
+  "validation": {
+    "ruff": "all_checks_passed",
+    "full_pytest": "1015 passed, 4 skipped in 111.96s after post-freeze source correction",
+    "perimeter_pytest_after_source_correction": "49 passed in 0.16s",
+    "run_json": "4 runs / 32 answers validated",
+    "finalized_at_utc": "2026-07-25T21:21:57Z"
+  },
+  "evaluated_input_integrity": {
+    "method": "Byte-for-byte evaluated fixture snapshots committed under inputs/ before the live-fixture source correction",
+    "git_content_tracking": true,
+    "checksum_literals_omitted": "2026-07-25T21:29:47Z detect-secrets false-positive remediation"
+  }
+}

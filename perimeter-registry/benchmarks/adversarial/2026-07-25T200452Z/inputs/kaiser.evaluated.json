@@ -1,0 +1,581 @@
+{
+  "schema_version": 1,
+  "fixture_id": "kaiser_minimal",
+  "systems": [
+    {
+      "id": "kaiser_permanente",
+      "name": "Kaiser Permanente",
+      "aliases": [
+        "KP"
+      ],
+      "concept_type": "integrated_care_brand_and_multi_entity_reporting_umbrella",
+      "legal_entity": false,
+      "evidence_ids": [
+        "kp_legal_structure_current",
+        "permanente_care_model_current",
+        "kfhp_2024_990_xml"
+      ],
+      "confidence": "high"
+    }
+  ],
+  "entities": [
+    {
+      "id": "kfhp_inc",
+      "name": "Kaiser Foundation Health Plan, Inc.",
+      "entity_type": "national_health_plan_legal_entity_and_related_group_filer",
+      "aliases": [
+        "KFHP",
+        "KFHP Inc."
+      ],
+      "identifiers": [
+        {
+          "scheme": "EIN",
+          "value": "94-1340523"
+        }
+      ],
+      "lifecycle_status": "active",
+      "effective_start": null,
+      "effective_end": null,
+      "evidence_ids": [
+        "irs_2025_teos_index",
+        "kfhp_2024_990_xml"
+      ],
+      "notes": [
+        "The 2024 Form 990 program description specifically addresses California and Hawaii Medicaid managed-care programs",
+        "Its EIN is not a universal Kaiser Permanente identifier"
+      ]
+    },
+    {
+      "id": "kfh",
+      "name": "Kaiser Foundation Hospitals",
+      "entity_type": "nonprofit_hospital_and_medical_facility_legal_entity",
+      "aliases": [
+        "KFH"
+      ],
+      "identifiers": [
+        {
+          "scheme": "EIN",
+          "value": "94-1105628"
+        }
+      ],
+      "lifecycle_status": "active",
+      "effective_start": null,
+      "effective_end": null,
+      "evidence_ids": [
+        "irs_2025_teos_index",
+        "kfh_2024_990_xml",
+        "kp_legal_structure_current"
+      ],
+      "notes": [
+        "Separate legal entity from KFHP despite common board governance",
+        "Facility names, CCNs, NPIs, state licenses, and the KFH EIN are not interchangeable identifiers"
+      ]
+    },
+    {
+      "id": "kfhp_colorado",
+      "name": "Kaiser Foundation Health Plan of Colorado",
+      "entity_type": "regional_health_plan_legal_entity",
+      "aliases": [
+        "Kaiser Permanente Colorado health plan"
+      ],
+      "identifiers": [
+        {
+          "scheme": "EIN",
+          "value": "84-0591617"
+        }
+      ],
+      "lifecycle_status": "active",
+      "effective_start": null,
+      "effective_end": null,
+      "evidence_ids": [
+        "kfhp_2024_990_xml"
+      ],
+      "notes": [
+        "Schedule R reports Colorado legal domicile and KFHP Inc. as direct controlling entity",
+        "Do not apply this plan EIN to Colorado Permanente Medical Group"
+      ]
+    },
+    {
+      "id": "kfhp_georgia",
+      "name": "Kaiser Foundation Health Plan of Georgia, Inc.",
+      "entity_type": "regional_health_plan_legal_entity",
+      "aliases": [
+        "Kaiser Permanente Georgia health plan"
+      ],
+      "identifiers": [
+        {
+          "scheme": "EIN",
+          "value": "58-1592076"
+        }
+      ],
+      "lifecycle_status": "active",
+      "effective_start": null,
+      "effective_end": null,
+      "evidence_ids": [
+        "kfhp_2024_990_xml"
+      ],
+      "notes": [
+        "Schedule R reports Georgia legal domicile and KFHP Inc. as direct controlling entity"
+      ]
+    },
+    {
+      "id": "kfhp_mid_atlantic",
+      "name": "Kaiser Foundation Health Plan of the Mid-Atlantic States, Inc.",
+      "entity_type": "regional_health_plan_legal_entity",
+      "aliases": [
+        "Kaiser Permanente Mid-Atlantic health plan",
+        "Kaiser Foundation Health Plan of the MAS"
+      ],
+      "identifiers": [
+        {
+          "scheme": "EIN",
+          "value": "52-0954463"
+        }
+      ],
+      "lifecycle_status": "active",
+      "effective_start": null,
+      "effective_end": null,
+      "evidence_ids": [
+        "kfhp_2024_990_xml"
+      ],
+      "notes": [
+        "Schedule R reports Maryland legal domicile and KFHP Inc. as direct controlling entity",
+        "The regional brand phrase remains ambiguous between plan and medical group without a function qualifier"
+      ]
+    },
+    {
+      "id": "kfhp_northwest",
+      "name": "Kaiser Foundation Health Plan of the Northwest",
+      "entity_type": "regional_health_plan_legal_entity",
+      "aliases": [
+        "Kaiser Permanente Northwest health plan"
+      ],
+      "identifiers": [
+        {
+          "scheme": "EIN",
+          "value": "93-0798039"
+        }
+      ],
+      "lifecycle_status": "active",
+      "effective_start": null,
+      "effective_end": null,
+      "evidence_ids": [
+        "kfhp_2024_990_xml"
+      ],
+      "notes": [
+        "Schedule R reports Oregon legal domicile and KFHP Inc. as direct controlling entity",
+        "Do not apply this plan EIN to Northwest Permanente"
+      ]
+    },
+    {
+      "id": "kfhp_washington",
+      "name": "Kaiser Foundation Health Plan of Washington",
+      "entity_type": "regional_health_plan_and_hospital_enrollment_legal_entity",
+      "aliases": [
+        "KFHPW",
+        "Kaiser Permanente Washington health plan"
+      ],
+      "identifiers": [
+        {
+          "scheme": "EIN",
+          "value": "91-0511770"
+        }
+      ],
+      "lifecycle_status": "active",
+      "effective_start": null,
+      "effective_end": null,
+      "evidence_ids": [
+        "kfhp_2024_990_xml",
+        "cms_hospital_enrollments_2026_05"
+      ],
+      "notes": [
+        "Schedule R reports Washington legal domicile and KFHPW Hldgs as direct controlling entity",
+        "CMS names this entity, not KFH, as the legal business name for Kaiser Permanente Central Hospital enrollment"
+      ]
+    },
+    {
+      "id": "colorado_permanente_medical_group",
+      "name": "Colorado Permanente Medical Group",
+      "entity_type": "independent_regional_physician_medical_group",
+      "aliases": [
+        "CPMG"
+      ],
+      "identifiers": [],
+      "lifecycle_status": "active",
+      "effective_start": null,
+      "effective_end": null,
+      "evidence_ids": [
+        "permanente_medical_groups_current",
+        "kp_legal_structure_current"
+      ],
+      "notes": [
+        "Independent, self-governed, physician-led medical group",
+        "Exact EIN intentionally unresolved; no regional plan EIN is inherited"
+      ]
+    },
+    {
+      "id": "the_permanente_medical_group",
+      "name": "The Permanente Medical Group",
+      "entity_type": "independent_regional_physician_medical_group",
+      "aliases": [
+        "TPMG",
+        "The Permanente Medical Group, Inc."
+      ],
+      "identifiers": [],
+      "lifecycle_status": "active",
+      "effective_start": null,
+      "effective_end": null,
+      "evidence_ids": [
+        "permanente_medical_groups_current",
+        "kp_legal_structure_current",
+        "kfhp_2024_990_xml"
+      ],
+      "notes": [
+        "Northern California Permanente Medical Group",
+        "KFHP's 2024 Form 990 lists the group as an independent contractor for medical services",
+        "Exact EIN intentionally unresolved"
+      ]
+    }
+  ],
+  "facilities": [
+    {
+      "id": "facility_santa_clara_050071",
+      "name": "Kaiser Foundation Hospital - Santa Clara",
+      "ccn": "050071",
+      "operator_entity_id": "kfh",
+      "operator_name": "Kaiser Foundation Hospitals",
+      "operator_ein": "94-1105628",
+      "evidence_ids": [
+        "kfh_2024_990_xml",
+        "cms_hospital_enrollments_2026_05"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "facility_kp_central_500052",
+      "name": "Kaiser Permanente Central Hospital",
+      "ccn": "500052",
+      "operator_entity_id": "kfhp_washington",
+      "operator_name": "Kaiser Foundation Health Plan of Washington",
+      "operator_ein": "91-0511770",
+      "evidence_ids": [
+        "kfhp_2024_990_xml",
+        "cms_hospital_enrollments_2026_05"
+      ],
+      "confidence": "high"
+    }
+  ],
+  "reporting_perimeters": [
+    {
+      "id": "kaiser_three_pillar_current",
+      "label": "Kaiser Permanente three-pillar care model",
+      "perimeter_type": "brand_operating_and_governance_relationship_scope",
+      "includes": [
+        "Kaiser Foundation Health Plans provide coverage",
+        "Kaiser Foundation Hospitals provides medical facilities",
+        "eight independent regional Permanente Medical Groups provide medical care"
+      ],
+      "excludes": [
+        "automatic treatment as one legal entity or one EIN"
+      ],
+      "flags": [
+        "integrated and mutually exclusive relationships do not establish one legal person",
+        "this fixture inventories only selected medical groups and facilities"
+      ],
+      "measurements": [
+        {
+          "id": "structure_only",
+          "label": "Documented operating structure",
+          "amount_usd": null,
+          "period": "current pages accessed 2026-07-25",
+          "basis": "official Kaiser and Permanente structure disclosures",
+          "audited": null
+        }
+      ],
+      "evidence_ids": [
+        "kp_legal_structure_current",
+        "permanente_medical_groups_current",
+        "permanente_care_model_current"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "kfhp_h_risant_2024_financial",
+      "label": "KFHP/H and Risant Health 2024 published financial-results perimeter",
+      "perimeter_type": "published_multi_organization_consolidated_results",
+      "includes": [
+        "Kaiser Foundation Health Plan, Inc.",
+        "Kaiser Foundation Hospitals",
+        "Risant Health",
+        "their respective subsidiaries and affiliates"
+      ],
+      "excludes": [
+        "Permanente Medical Groups unless separately shown by the source",
+        "attribution of the total to any one EIN"
+      ],
+      "flags": [
+        "2024 onward year-end results, membership, and facility counts include Risant Health",
+        "not a universal Kaiser Permanente legal-entity perimeter"
+      ],
+      "measurements": [
+        {
+          "id": "operating_revenues_2024",
+          "label": "Combined operating revenues",
+          "amount_usd": 115750000000,
+          "period": "year ended 2024-12-31",
+          "basis": "official 2024 annual financial summary for KFHP/H and Risant Health",
+          "audited": null
+        }
+      ],
+      "evidence_ids": [
+        "kp_2024_annual_report",
+        "kp_2024_financial_results"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "kfh_2024_hospital_scope",
+      "label": "KFH 2024 hospital facility and operating scope",
+      "perimeter_type": "form_990_schedule_h_hospital_scope",
+      "includes": [
+        "40 licensed hospitals owned and operated by KFH in California, Hawaii, and Oregon",
+        "3 Maui Health System hospitals operated by KFH on behalf of that system"
+      ],
+      "excludes": [
+        "inferred KFH ownership of the three Maui Health System hospitals",
+        "every Kaiser-branded hospital enrollment nationally"
+      ],
+      "flags": [
+        "owner and operator concepts must remain distinct",
+        "facility records can have CCNs and DBAs without separate EINs"
+      ],
+      "measurements": [
+        {
+          "id": "facility_scope_only",
+          "label": "Documented Schedule H facility scope",
+          "amount_usd": null,
+          "period": "tax year ended 2024-12-31",
+          "basis": "KFH 2024 Form 990 Schedule H",
+          "audited": null
+        }
+      ],
+      "evidence_ids": [
+        "kfh_2024_990_xml",
+        "cms_hospital_enrollments_2026_05"
+      ],
+      "confidence": "high"
+    }
+  ],
+  "relationships": [
+    {
+      "id": "kfhp_shares_board_with_kfh",
+      "source_id": "kfhp_inc",
+      "relationship_type": "shares_board_with",
+      "target_id": "kfh",
+      "target_kind": "entity",
+      "effective_start": null,
+      "effective_end": null,
+      "evidence_ids": [
+        "kp_legal_structure_current"
+      ],
+      "confidence": "high",
+      "status": "current_as_of_access_with_unresolved_start",
+      "notes": [
+        "Common board governance does not collapse the separate legal entities or EINs"
+      ]
+    },
+    {
+      "id": "kfhp_controls_colorado_plan",
+      "source_id": "kfhp_inc",
+      "relationship_type": "reported_direct_controlling_entity_of",
+      "target_id": "kfhp_colorado",
+      "target_kind": "entity",
+      "effective_start": null,
+      "effective_end": null,
+      "evidence_ids": [
+        "kfhp_2024_990_xml"
+      ],
+      "confidence": "high",
+      "status": "documented_for_2024_tax_period",
+      "notes": [
+        "Relationship label preserves the Schedule R disclosure and does not generalize tax-form control terminology"
+      ]
+    },
+    {
+      "id": "kfhp_contracts_tpmg_medical_services",
+      "source_id": "kfhp_inc",
+      "relationship_type": "contracts_for_medical_services_with",
+      "target_id": "the_permanente_medical_group",
+      "target_kind": "entity",
+      "effective_start": null,
+      "effective_end": null,
+      "evidence_ids": [
+        "kfhp_2024_990_xml"
+      ],
+      "confidence": "high",
+      "status": "documented_for_2024_tax_period",
+      "notes": [
+        "Form 990 Part VII Section B identifies TPMG as an independent contractor for medical services"
+      ]
+    },
+    {
+      "id": "kfh_operates_santa_clara",
+      "source_id": "kfh",
+      "relationship_type": "operates_facility",
+      "target_id": "facility_santa_clara_050071",
+      "target_kind": "facility",
+      "effective_start": null,
+      "effective_end": null,
+      "evidence_ids": [
+        "kfh_2024_990_xml",
+        "cms_hospital_enrollments_2026_05"
+      ],
+      "confidence": "high",
+      "status": "current_as_of_source_period",
+      "notes": [
+        "The facility CCN and KFH EIN remain distinct identifier types"
+      ]
+    },
+    {
+      "id": "kfhpw_enrollment_for_central_hospital",
+      "source_id": "kfhp_washington",
+      "relationship_type": "listed_as_legal_business_name_for_facility_enrollment",
+      "target_id": "facility_kp_central_500052",
+      "target_kind": "facility",
+      "effective_start": null,
+      "effective_end": null,
+      "evidence_ids": [
+        "cms_hospital_enrollments_2026_05"
+      ],
+      "confidence": "high",
+      "status": "current_as_of_2026_05_pecos_snapshot",
+      "notes": [
+        "PECOS enrollment evidence is not by itself a complete ownership record"
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "kp_legal_structure_current",
+      "title": "Northern California Permanente: Our Structure — Separate Organizations Committed to a Shared Mission",
+      "url": "https://northerncalifornia.permanente.org/our-values",
+      "locator": "Heading 'Our Structure: Separate Organizations Committed to a Shared Mission'",
+      "source_period": "current web disclosure with no visible effective date; accessed 2026-07-25",
+      "confidence": "high",
+      "limitation": "Descriptive governance disclosure, not articles of incorporation or a complete subsidiary register; its seven-region wording is not used for the current eight-group enumeration"
+    },
+    {
+      "id": "permanente_medical_groups_current",
+      "title": "The Permanente Federation: Our medical groups",
+      "url": "https://permanente.org/our-medical-groups/",
+      "locator": "Heading 'What are Permanente Medical Groups?' and the eight-group list",
+      "source_period": "current web disclosure; accessed 2026-07-25",
+      "confidence": "high",
+      "limitation": "Does not provide formation jurisdiction, EIN, ownership details, or contract text for each medical group"
+    },
+    {
+      "id": "permanente_care_model_current",
+      "title": "The Permanente Federation: What is Permanente Medicine?",
+      "url": "https://permanente.org/about-us/our-care-model/",
+      "locator": "Heading 'The Permanente Medicine care model, built for quality' and its three role bullets",
+      "source_period": "current web disclosure; accessed 2026-07-25",
+      "confidence": "high",
+      "limitation": "Operating-model description; it does not identify the precise legal entity for a transaction"
+    },
+    {
+      "id": "kp_2024_annual_report",
+      "title": "Kaiser Permanente 2024 Annual Report",
+      "url": "https://about.kaiserpermanente.org/content/dam/kp/mykp/documents/reports/2024_annual-report_ADA.pdf",
+      "locator": "PDF p20, 'FINANCIALS,' including the reporting-perimeter footnote",
+      "source_period": "year ended 2024-12-31; accessed 2026-07-25",
+      "confidence": "high",
+      "limitation": "Annual-report summary, not an itemized legal-entity or affiliate register"
+    },
+    {
+      "id": "kp_2024_financial_results",
+      "title": "Kaiser Foundation Health Plan & Hospitals, Risant Health report 2024 financial results",
+      "url": "https://about.kaiserpermanente.org/news/press-release-archive/kaiser-foundation-health-plan-hospitals-risant-health-report-2024-financial-results",
+      "locator": "Opening paragraph; 'Membership'; 'Capital spending'; and 'KFHP/H & Risant Health annual financial summary'",
+      "source_period": "year ended 2024-12-31; published 2025-02-07; accessed 2026-07-25",
+      "confidence": "high",
+      "limitation": "Official press release rather than audited footnotes; the consolidated label does not identify every legal affiliate"
+    },
+    {
+      "id": "irs_2025_teos_index",
+      "title": "IRS 2025 TEOS Form 990 XML index",
+      "url": "https://apps.irs.gov/pub/epostcard/990/xml/2025/index_2025.csv",
+      "locator": "Rows for EIN 941340523, object ID 202503219349309715, and EIN 941105628, object ID 202523219349309952",
+      "source_period": "IRS 2025 publication index for tax period 202412; accessed 2026-07-25",
+      "confidence": "high",
+      "limitation": "Filing locator; substantive facts beyond index fields come from the referenced XML returns"
+    },
+    {
+      "id": "kfhp_2024_990_xml",
+      "title": "Kaiser Foundation Health Plan, Inc. 2024 Form 990 XML",
+      "url": "https://apps.irs.gov/pub/epostcard/990/xml/2025/2025_TEOS_XML_11A.zip",
+      "locator": "ZIP member 202503219349309715_public.xml: Return/ReturnHeader/Filer; IRS990/ProgSrvcAccomActy2Grp; IRS990/ContractorCompensationGrp; IRS990ScheduleR/IdRelatedTaxExemptOrgGrp",
+      "source_period": "tax year ended 2024-12-31; IRS release archive 2025; accessed 2026-07-25",
+      "confidence": "high",
+      "limitation": "Filer-supplied tax disclosure; Schedule R terminology is not a complete corporate genealogy and the return does not provide PMG EINs"
+    },
+    {
+      "id": "kfh_2024_990_xml",
+      "title": "Kaiser Foundation Hospitals 2024 Form 990 XML",
+      "url": "https://apps.irs.gov/pub/epostcard/990/xml/2025/2025_TEOS_XML_11C.zip",
+      "locator": "ZIP member 202523219349309952_public.xml: Return/ReturnHeader/Filer; IRS990ScheduleH/HospitalFacilitiesGrp; SupplementalInformationDetail '4 - Community information' and '6 - Affiliated Health Care System'",
+      "source_period": "tax year ended 2024-12-31; IRS release archive 2025; accessed 2026-07-25",
+      "confidence": "high",
+      "limitation": "Schedule H is not a current state-license or deed register; 'operates on behalf of' is not converted to ownership"
+    },
+    {
+      "id": "irs_990_instructions_2025",
+      "title": "IRS Instructions for Form 990",
+      "url": "https://www.irs.gov/instructions/i990",
+      "locator": "Specific Instructions; Heading items; Item D. EIN",
+      "source_period": "2025 instructions; accessed 2026-07-25",
+      "confidence": "high",
+      "limitation": "General EIN rule; it does not identify Kaiser organizations"
+    },
+    {
+      "id": "cms_hospital_enrollments_2026_05",
+      "title": "CMS Hospital Enrollments, May 2026",
+      "url": "https://data.cms.gov/sites/default/files/2026-05/4c668d34-e45a-4b9e-b5f7-dec7f1c333e1/Hospital_Enrollments_2026.05.01.csv",
+      "locator": "CSV header and rows keyed by CCNs 050071 and 500052; field definitions in https://data.cms.gov/sites/default/files/2026-02/Hospital_Data_Guidance.pdf p10",
+      "source_period": "May 2026 PECOS snapshot; accessed 2026-07-25",
+      "confidence": "high",
+      "limitation": "PECOS enrollment data is not a complete ownership registry and does not publicly disclose EINs"
+    }
+  ],
+  "gaps": [
+    {
+      "id": "kaiser_brand_no_universal_ein",
+      "status": "unresolved",
+      "description": "Kaiser Permanente is a brand/system umbrella; no universal standalone EIN is asserted"
+    },
+    {
+      "id": "pmg_ein_inventory",
+      "status": "unresolved",
+      "description": "Exact current EINs for the independent regional Permanente Medical Groups are not established by the gathered primary sources"
+    },
+    {
+      "id": "complete_legal_entity_inventory",
+      "status": "unresolved",
+      "description": "This minimal fixture does not inventory every health-plan subsidiary, PMG, KFH subsidiary, Risant affiliate, or other Kaiser-associated legal entity"
+    },
+    {
+      "id": "region_entity_mapping",
+      "status": "unresolved",
+      "description": "Eight PMG regions do not imply a one-to-one map to eight health-plan corporations, and legal domicile does not define complete service area"
+    },
+    {
+      "id": "facility_owner_operator_inventory",
+      "status": "unresolved",
+      "description": "All facility owner, operator, DBA, CCN, NPI, PAC ID, and state-license relationships are not inventoried; identifier types must remain distinct"
+    },
+    {
+      "id": "financial_perimeter_continuity",
+      "status": "unresolved",
+      "description": "The 2024 reporting perimeter includes Risant Health and must not be back-projected or silently attributed to a single EIN"
+    }
+  ]
+}

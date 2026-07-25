@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal, Mapping, Self
+from collections.abc import Mapping
+from typing import Any, Literal, Self
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator, model_validator
 from pydantic.json_schema import GenerateJsonSchema, JsonSchemaMode
@@ -142,7 +143,7 @@ class SourceEvaluation(StrictModel):
 class ServiceLineMissingCell(StrictModel):
     system_slug: str
     input_family: Literal["service_line_count"] = "service_line_count"
-    candidate_value: Literal[None] = None
+    candidate_value: None = Field(default=None, json_schema_extra={"const": None})
     unit: Literal["service_lines"] = "service_lines"
     desired_definition: Literal[
         "Count of distinct clinical service lines offered by the product system under one preapproved common taxonomy, at the frozen roster boundary and aligned period"
@@ -175,7 +176,7 @@ class ServiceLineCountAcquisition(StrictModel):
     identity_rows: list[ServiceLineIdentityRow] = Field(min_length=6, max_length=6)
     source_evaluations: list[SourceEvaluation] = Field(min_length=2, max_length=2)
     cells: list[ServiceLineMissingCell] = Field(min_length=6, max_length=6)
-    common_taxonomy_receipt: Literal[None] = None
+    common_taxonomy_receipt: None = Field(default=None, json_schema_extra={"const": None})
     hand_counted_marketing_pages: Literal[False] = False
     prohibited_outputs: list[str]
     acquisition_sha256: str = Field(pattern=SHA256_PATTERN)

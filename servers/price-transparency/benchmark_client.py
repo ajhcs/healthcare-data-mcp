@@ -5,11 +5,10 @@ Provides three benchmark sources for comparing hospital negotiated rates:
 2. CMS Medicare Provider Utilization — national average charges/payments by HCPCS
 3. Cross-hospital peer percentiles — computed from a list of observed rates
 """
-
 import logging
 import statistics
 
-
+from shared.utils.errors import EXPECTED_OPERATIONAL_EXCEPTIONS
 from shared.utils.http_client import get_client, resilient_request
 
 logger = logging.getLogger(__name__)
@@ -91,7 +90,7 @@ async def get_pfs_rate(hcpcs_code: str) -> dict | None:
 
         return parsed
 
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("PFS API request failed for HCPCS %s: %s", hcpcs_code, e)
         return None
 
@@ -133,7 +132,7 @@ async def get_locality_gpci(locality: str | None = None) -> dict | None:
             "gpci_mp": _safe_float(row.get("gpci_mp")),
         }
 
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("PFS localities API failed for locality %s: %s", loc, e)
         return None
 
@@ -266,7 +265,7 @@ async def get_utilization_data(hcpcs_code: str) -> dict | None:
             "provider_count": len(all_rows),
         }
 
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("Utilization API request failed for HCPCS %s: %s", hcpcs_code, e)
         return None
 

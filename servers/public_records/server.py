@@ -3,44 +3,47 @@
 Provides tools for federal spending, HIPAA breaches,
 accreditation, and interoperability data. Port 8013.
 """
-
-from typing import Any
 import csv
-from datetime import UTC, datetime
 import json
 import logging
 import os as _os
+from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
-
-from shared.utils.http_client import resilient_request
 from mcp.server.fastmcp import FastMCP
+
+from shared import state_health_data
+from shared.utils.errors import EXPECTED_OPERATIONAL_EXCEPTIONS
+from shared.utils.healthcare_identity import MatchDecision, identity_from_public_record
+from shared.utils.http_client import resilient_request
+from shared.utils.identity import normalize_ccn, normalize_name, normalize_npi, normalize_state
 from shared.utils.mcp_observability import observe_tool
 from shared.utils.mcp_resources import register_standard_resources
 from shared.utils.mcp_response import error_response, evidence_receipt, to_structured
 from shared.utils.tabular_normalization import normalize_tabular_key
-from shared import state_health_data
 
-from . import data_loaders, usaspending_client, sam_client, sam_exclusions_client  # pyright: ignore[reportAttributeAccessIssue]
+from . import (  # pyright: ignore[reportAttributeAccessIssue]
+    data_loaders,
+    sam_client,
+    sam_exclusions_client,
+    usaspending_client,
+)
 from .models import (
     OIG_LEIE_CAVEAT,
     SAM_EXCLUSIONS_CAVEAT,
-    USAspendingAward,
-    USAspendingResponse,
-    SAMOpportunity,
-    SAMResponse,
+    AccreditationRecord,
+    AccreditationResponse,
+    BreachHistoryResponse,
+    BreachRecord,
     CISAKevContext,
     CyberIncidentRecord,
     CyberSourceStatus,
-    BreachRecord,
-    BreachHistoryResponse,
-    AccreditationRecord,
-    AccreditationResponse,
     InteropRecord,
     InteropResponse,
+    LEIEBatchCandidate,
     LEIEBatchResponse,
     LEIEBatchResult,
-    LEIEBatchCandidate,
     LEIEExclusionRecord,
     LEIESearchResponse,
     LEIESourceMetadata,
@@ -50,10 +53,12 @@ from .models import (
     SAMExclusionRecord,
     SAMExclusionSearchResponse,
     SAMExclusionsSourceMetadata,
+    SAMOpportunity,
+    SAMResponse,
+    USAspendingAward,
+    USAspendingResponse,
 )
 from .source_claims import public_source_claim as _public_source_claim
-from shared.utils.healthcare_identity import MatchDecision, identity_from_public_record
-from shared.utils.identity import normalize_ccn, normalize_name, normalize_npi, normalize_state
 
 logger = logging.getLogger(__name__)
 
@@ -113,7 +118,7 @@ async def _lookup_chpl(cehrt_id: str, api_key: str) -> dict:
                 "ehr_developer": product.get("developer", ""),
             }
         return {}
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.debug("CHPL lookup failed for %s: %s", cehrt_id, e)
         return {}
 
@@ -602,7 +607,7 @@ def _public_facility_identity_map(
     ccns = sorted({normalize_ccn(row.get("ccn")) or "" for row in rows if normalize_ccn(row.get("ccn"))})
     query_ccn = normalize_ccn(query.get("ccn"))
     if query_ccn:
-        ccns = sorted(set([*ccns, query_ccn]))
+        ccns = sorted({*ccns, query_ccn})
     names = sorted(
         {
             normalized
@@ -695,7 +700,7 @@ def _public_api_search_metadata(
         try:
             cached_payload = json.loads(cache_path.read_text(encoding="utf-8"))
             metadata["retrieved_at"] = str(cached_payload.get("cached_at") or "")
-        except Exception:
+        except EXPECTED_OPERATIONAL_EXCEPTIONS:
             metadata["retrieved_at"] = datetime.now(UTC).isoformat()
     else:
         metadata["retrieved_at"] = datetime.now(UTC).isoformat()
@@ -1629,8 +1634,7 @@ async def search_usaspending(
         total_obligation = sum(a.total_obligation for a in awards)
         total_awards = raw.get("page_metadata", {}).get("total", len(awards))
 
-        from datetime import datetime as _dt
-        fy = fiscal_year or str(_dt.now().year)
+        fy = fiscal_year or str(datetime.now(UTC).year)
         response = USAspendingResponse(
             recipient_search=recipient_name,
             fiscal_year=fy,

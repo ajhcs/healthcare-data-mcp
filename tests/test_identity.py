@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+from shared.utils.healthcare_identity import (
+    coerce_healthcare_identity,
+    identity_from_public_record,
+    merge_healthcare_identities,
+    record_identity_conflict,
+)
 from shared.utils.identity import (
     conservative_fuzzy_match,
     conservative_fuzzy_score,
@@ -13,12 +19,6 @@ from shared.utils.identity import (
     normalize_state,
     normalize_uei,
     normalize_zip,
-)
-from shared.utils.healthcare_identity import (
-    coerce_healthcare_identity,
-    identity_from_public_record,
-    merge_healthcare_identities,
-    record_identity_conflict,
 )
 
 

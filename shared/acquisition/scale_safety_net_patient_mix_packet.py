@@ -181,6 +181,8 @@ def verify_safety_net_patient_mix_source_bytes(
     # row-receipt verifier inherited unchanged by later cycles.
     from shared.acquisition.scale_physician_count_packet import (
         acquisition as physician_acquisition,
+    )
+    from shared.acquisition.scale_physician_count_packet import (
         verify_physician_count_source_bytes,
     )
 

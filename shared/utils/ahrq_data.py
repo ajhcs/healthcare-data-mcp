@@ -12,9 +12,9 @@ import logging
 from pathlib import Path
 
 import pandas as pd
-from shared.utils.cms_url_resolver import resolve_cms_download_url as _resolve_cms_url
 
 from shared.utils.cache import write_atomic_bytes
+from shared.utils.cms_url_resolver import resolve_cms_download_url as _resolve_cms_url
 from shared.utils.http_client import resilient_request
 
 logger = logging.getLogger(__name__)

@@ -11,11 +11,11 @@ import os as _os
 from typing import Any
 
 from mcp.server.fastmcp import FastMCP
-from shared.utils.mcp_observability import observe_tool
-from shared.utils.mcp_resources import register_standard_resources
 
 from shared.utils.healthcare_identity import identity_from_public_record
 from shared.utils.identity import normalize_ccn, normalize_enrollment_id, normalize_npi, normalize_state
+from shared.utils.mcp_observability import observe_tool
+from shared.utils.mcp_resources import register_standard_resources
 from shared.utils.mcp_response import error_response, evidence_receipt, to_structured
 
 from . import data_loaders, ownership_graph
@@ -1083,7 +1083,7 @@ def _join_keys(*row_groups: list[dict[str, Any]]) -> dict[str, list[str]]:
     keys = {"npi": set(), "ccn": set(), "pac_id": set(), "enrollment_id": set(), "associate_id": set()}
     for rows in row_groups:
         for row in rows:
-            for key in keys:
+            for key, values in keys.items():
                 value = str(row.get(key) or row.get(f"owner_{key}") or "")
                 if key == "npi":
                     value = normalize_npi(value) or ""
@@ -1092,7 +1092,7 @@ def _join_keys(*row_groups: list[dict[str, Any]]) -> dict[str, list[str]]:
                 elif key in {"enrollment_id", "associate_id"}:
                     value = normalize_enrollment_id(value) or ""
                 if value:
-                    keys[key].add(value)
+                    values.add(value)
     return {key: sorted(values) for key, values in keys.items()}
 
 

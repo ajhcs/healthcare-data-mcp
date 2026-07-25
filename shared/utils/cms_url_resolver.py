@@ -23,11 +23,12 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import TypedDict
 
 from shared.utils.cache import write_atomic_json
+from shared.utils.errors import EXPECTED_OPERATIONAL_EXCEPTIONS
 
 logger = logging.getLogger(__name__)
 
@@ -252,9 +253,9 @@ def _registry_entry_valid(entry: dict) -> bool:
     """Return True if a registry entry is within the 7-day TTL."""
     try:
         ts = entry.get("resolved_at", 0.0)
-        age_days = (datetime.now(timezone.utc).timestamp() - float(ts)) / 86_400
+        age_days = (datetime.now(UTC).timestamp() - float(ts)) / 86_400
         return age_days < _REGISTRY_CACHE_TTL_DAYS
-    except Exception:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS:
         return False
 
 
@@ -282,7 +283,7 @@ async def _store_cached_url(dataset_id: str, filename_hint: str, url: str) -> No
         key = _cache_key(dataset_id, filename_hint)
         registry[key] = {
             "url": url,
-            "resolved_at": datetime.now(timezone.utc).timestamp(),
+            "resolved_at": datetime.now(UTC).timestamp(),
             "dataset_id": dataset_id,
             "filename_hint": filename_hint,
         }

@@ -1,17 +1,19 @@
 # Health-System Perimeter Registry
 
-This isolated Python workspace is the first deterministic slice of the **Health-System Perimeter Registry**. It resolves the Jefferson brand to documented legal entities and document-specific reporting perimeters. It does not crawl, call an LLM, run a service, or integrate with **IRS 990 Evidence Service** (“990 Evidence”).
+This isolated Python workspace is the first deterministic slice of the **Health-System Perimeter Registry**. It resolves documented brands, legal entities, facilities, and reporting perimeters for three bounded fixtures: Jefferson, Penn Medicine/UPHS, and UPMC. It does not crawl, call an LLM, run a service, or integrate with **IRS 990 Evidence Service** (“990 Evidence”).
 
-The inspectable source of truth is [`src/perimeter_registry/data/jefferson.json`](src/perimeter_registry/data/jefferson.json), governed by [`schema/registry.schema.json`](schema/registry.schema.json). Source URL, locator, source period, confidence, effective dates, and unresolved status travel with the records.
+The inspectable sources of truth are the JSON records in [`src/perimeter_registry/data`](src/perimeter_registry/data), governed by [`schema/registry.schema.json`](schema/registry.schema.json). Source URL, locator, source period, confidence, effective dates, and unresolved status travel with the records. The Penn and UPMC fixtures are deliberately small benchmark fixtures, not exhaustive entity censuses.
 
 ```python
 from perimeter_registry import Registry
 
-registry = Registry.jefferson()
+jefferson = Registry.jefferson()
+penn = Registry.penn()
+upmc = Registry.upmc()
 
-menu = registry.resolve("Jefferson revenue")
-enterprise = registry.resolve("Jefferson FY25 enterprise revenue")
-historical_lvhn = registry.lookup_entity("LVHN", as_of="2025-07-01")
+enterprise = jefferson.resolve("Jefferson FY25 enterprise revenue")
+penn_scope = penn.resolve("Penn Medicine or the whole University?")
+plan_ein = upmc.resolve("What EIN should I use for UPMC Health Plan?")
 ```
 
 Every resolver result is a labeled `Resolution`; revenue requests never return a scalar by itself. Unknown intent produces one short clarification question.
@@ -24,4 +26,4 @@ ruff check .
 ruff format --check .
 ```
 
-The package uses only the Python standard library at runtime. See [`docs/HANDOFF.md`](docs/HANDOFF.md) for boundaries, the future adapter contract, deferred work, and the next approval gate.
+The package uses only the Python standard library at runtime. The bounded benchmark protocol and artifacts are in [`benchmarks`](benchmarks); its baseline is a fresh AI **manual-style source-research baseline**, not a human analyst. See [`docs/HANDOFF.md`](docs/HANDOFF.md) for boundaries and the future adapter contract.

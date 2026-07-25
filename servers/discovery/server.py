@@ -10,14 +10,16 @@ from __future__ import annotations
 
 import json
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from mcp.server.fastmcp import FastMCP
+
 from shared.utils.mcp_observability import observe_tool
 from shared.utils.mcp_resources import register_standard_resources
-from shared.utils.presets import build_preset_plan, list_presets as list_curated_presets
+from shared.utils.presets import build_preset_plan
+from shared.utils.presets import list_presets as list_curated_presets
 from shared.utils.server_registry import SERVER_BY_ID, SERVER_REGISTRY, ServerCapability
 from shared.utils.workflows import build_workflow_plan, list_workflow_plans
 
@@ -82,8 +84,8 @@ DATASET_CATALOG: dict[str, dict[str, Any]] = {
         "description": "CMS POS facility attributes, bed counts, services, staffing, and provider category codes.",
         "source_system": "CMS quarterly POS public use file",
         "source_urls": [
-            "https://data.cms.gov/sites/default/files/2026-01/"
-            "c500f848-83b3-4f29-a677-562243a2f23b/Hospital_and_other.DATA.Q4_2025.csv",
+            ("https://data.cms.gov/sites/default/files/2026-01/"
+            "c500f848-83b3-4f29-a677-562243a2f23b/Hospital_and_other.DATA.Q4_2025.csv"),
         ],
         "cache_files": [
             "pos_q4_2025.csv",
@@ -240,8 +242,8 @@ DATASET_CATALOG: dict[str, dict[str, Any]] = {
         "description": "Hospital cost report financial, utilization, and staffing worksheet extracts.",
         "source_system": "CMS Cost Reports",
         "source_urls": [
-            "https://data.cms.gov/sites/default/files/2026-01/"
-            "3c39f483-c7e0-4025-8396-4df76942e10f/CostReport_2023_Final.csv",
+            ("https://data.cms.gov/sites/default/files/2026-01/"
+            "3c39f483-c7e0-4025-8396-4df76942e10f/CostReport_2023_Final.csv"),
             "https://data.cms.gov/provider-compliance/cost-reports/hospital-provider-cost-report",
         ],
         "cache_files": [
@@ -263,8 +265,8 @@ DATASET_CATALOG: dict[str, dict[str, Any]] = {
         "description": "Medicare hospital service areas used for ZIP-level market share and patient origin.",
         "source_system": "CMS data.cms.gov",
         "source_urls": [
-            "https://data.cms.gov/sites/default/files/2025-07/"
-            "8fca1932-adaa-411d-a912-78fb0854a286/Hospital_Service_Area_2024.csv",
+            ("https://data.cms.gov/sites/default/files/2025-07/"
+            "8fca1932-adaa-411d-a912-78fb0854a286/Hospital_Service_Area_2024.csv"),
             "https://data.cms.gov/data-api/v1/dataset/8708ca8b-8636-44ed-8303-724cbfaf78ad/data",
         ],
         "cache_files": ["hsaf.csv"],
@@ -305,9 +307,9 @@ DATASET_CATALOG: dict[str, dict[str, Any]] = {
         "description": "Medicare spending and utilization by geography.",
         "source_system": "CMS Geographic Variation PUF",
         "source_urls": [
-            "https://data.cms.gov/sites/default/files/2025-03/"
+            ("https://data.cms.gov/sites/default/files/2025-03/"
             "a40ac71d-9f80-4d99-92d2-fd149433d7d8/"
-            "2014-2023%20Medicare%20Fee-for-Service%20Geographic%20Variation%20Public%20Use%20File.csv",
+            "2014-2023%20Medicare%20Fee-for-Service%20Geographic%20Variation%20Public%20Use%20File.csv"),
         ],
         "cache_files": ["geo-demographics/geographic_variation.parquet"],
         "schema": {
@@ -341,10 +343,10 @@ DATASET_CATALOG: dict[str, dict[str, Any]] = {
         "description": "Inpatient DRG and outpatient APC utilization, charges, and payment public use files.",
         "source_system": "CMS Medicare Provider Utilization and Payment Data",
         "source_urls": [
-            "https://data.cms.gov/sites/default/files/2025-05/"
-            "ca1c9013-8c7c-4560-a4a1-28cf7e43ccc8/MUP_INP_RY25_P03_V10_DY23_PrvSvc.CSV",
-            "https://data.cms.gov/sites/default/files/2025-08/"
-            "bceaa5e1-e58c-4109-9f05-832fc5e6bbc8/MUP_OUT_RY25_P04_V10_DY23_Prov_Svc.csv",
+            ("https://data.cms.gov/sites/default/files/2025-05/"
+            "ca1c9013-8c7c-4560-a4a1-28cf7e43ccc8/MUP_INP_RY25_P03_V10_DY23_PrvSvc.CSV"),
+            ("https://data.cms.gov/sites/default/files/2025-08/"
+            "bceaa5e1-e58c-4109-9f05-832fc5e6bbc8/MUP_OUT_RY25_P04_V10_DY23_Prov_Svc.csv"),
         ],
         "cache_files": [
             "claims-analytics/inpatient_dy23.parquet",
@@ -1405,7 +1407,7 @@ def _cache_entry_status(entry: dict[str, Any], cache_root: Path, now: datetime) 
         return payload
 
     stat = path.stat()
-    modified = datetime.fromtimestamp(stat.st_mtime, timezone.utc)
+    modified = datetime.fromtimestamp(stat.st_mtime, UTC)
     age_days = (now - modified).total_seconds() / 86400
     ttl_days = entry.get("ttl_days")
     payload.update(

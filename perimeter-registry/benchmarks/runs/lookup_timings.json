@@ -1,0 +1,102 @@
+{
+  "version": 1,
+  "clock": "time.perf_counter_ns",
+  "python": "3.12.3",
+  "platform": "Linux-6.8.0-124-generic-x86_64-with-glibc2.39",
+  "warm_iterations_per_question": 10000,
+  "cold_iterations_per_fixture": 300,
+  "warm_in_process_resolution": {
+    "J1": {
+      "mean_ms": 0.0161717953,
+      "median_ms": 0.009796,
+      "p95_ms": 0.029018,
+      "max_ms": 0.395122
+    },
+    "J2": {
+      "mean_ms": 0.1131523834,
+      "median_ms": 0.076914,
+      "p95_ms": 0.192385,
+      "max_ms": 0.687694
+    },
+    "J3": {
+      "mean_ms": 0.0069182582,
+      "median_ms": 0.00668,
+      "p95_ms": 0.012359,
+      "max_ms": 0.041102
+    },
+    "J4": {
+      "mean_ms": 0.0129208303,
+      "median_ms": 0.007864,
+      "p95_ms": 0.023593,
+      "max_ms": 0.50675
+    },
+    "P1": {
+      "mean_ms": 0.0249351267,
+      "median_ms": 0.0166175,
+      "p95_ms": 0.041747,
+      "max_ms": 0.081986
+    },
+    "P2": {
+      "mean_ms": 0.014946590099999999,
+      "median_ms": 0.009551,
+      "p95_ms": 0.027025,
+      "max_ms": 0.04009
+    },
+    "P3": {
+      "mean_ms": 0.07793862330000001,
+      "median_ms": 0.088277,
+      "p95_ms": 0.114167,
+      "max_ms": 0.708884
+    },
+    "P4": {
+      "mean_ms": 0.0139704161,
+      "median_ms": 0.009702,
+      "p95_ms": 0.024503,
+      "max_ms": 0.049827
+    },
+    "U1": {
+      "mean_ms": 0.017452341,
+      "median_ms": 0.01201,
+      "p95_ms": 0.03279,
+      "max_ms": 0.051225
+    },
+    "U2": {
+      "mean_ms": 0.0087498725,
+      "median_ms": 0.00538,
+      "p95_ms": 0.014498,
+      "max_ms": 0.028102
+    },
+    "U3": {
+      "mean_ms": 0.0863782619,
+      "median_ms": 0.05379,
+      "p95_ms": 0.147888,
+      "max_ms": 1.009152
+    },
+    "U4": {
+      "mean_ms": 0.1021878318,
+      "median_ms": 0.105184,
+      "p95_ms": 0.151142,
+      "max_ms": 0.468917
+    }
+  },
+  "cold_fixture_load_validate_and_resolution": {
+    "jefferson": {
+      "mean_ms": 0.46195695000000003,
+      "median_ms": 0.4782485,
+      "p95_ms": 0.583813,
+      "max_ms": 0.95459
+    },
+    "penn": {
+      "mean_ms": 0.30655196333333334,
+      "median_ms": 0.331916,
+      "p95_ms": 0.366899,
+      "max_ms": 1.200313
+    },
+    "upmc": {
+      "mean_ms": 0.34385939,
+      "median_ms": 0.3538775,
+      "p95_ms": 0.368049,
+      "max_ms": 0.392286
+    }
+  }
+}

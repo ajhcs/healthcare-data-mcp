@@ -1,17 +1,17 @@
 """SEC EDGAR API client — EFTS search, XBRL companyfacts, and HTML section extraction."""
-
 import json
 import logging
 import os
 import re
 import time
+
 import httpx
 from bs4 import BeautifulSoup
 
-from shared.utils.http_client import resilient_request
-
 from shared.utils.cache import write_atomic_json, write_atomic_text
 from shared.utils.cms_client import get_cache_path
+from shared.utils.errors import EXPECTED_OPERATIONAL_EXCEPTIONS
+from shared.utils.http_client import resilient_request
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +68,7 @@ async def search_filings(
     try:
         resp = await _sec_rate_limited_get(EFTS_BASE, params=params, timeout=30.0)
         return resp.json()
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("EDGAR EFTS search failed: %s", e)
         return {"hits": {"hits": [], "total": {"value": 0}}}
 
@@ -93,7 +93,7 @@ async def get_company_submissions(cik: str) -> dict:
         data = resp.json()
         write_atomic_json(cached, data, indent=None)
         return data
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("EDGAR submissions lookup failed for CIK %s: %s", cik, e)
         return {}
 
@@ -118,7 +118,7 @@ async def get_company_facts(cik: str) -> dict:
         data = resp.json()
         write_atomic_json(cached, data, indent=None)
         return data
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("EDGAR company facts failed for CIK %s: %s", cik, e)
         return {}
 
@@ -220,7 +220,7 @@ async def download_filing_html(cik: str, accession_number: str) -> str | None:
         html = resp.text
         write_atomic_text(cached, html)
         return html
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("Failed to download filing HTML for %s: %s", accession_number, e)
         return None
 
@@ -310,6 +310,6 @@ async def get_filing_index(cik: str, accession_number: str) -> dict:
             description = re.sub(r"<[^>]+>", "", desc_match.group(1)).strip()
 
         return {"documents": documents, "description": description, "source_url": index_url}
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("Failed to get filing index for %s: %s", accession_number, e)
         return {"documents": [], "description": "", "source_url": index_url}

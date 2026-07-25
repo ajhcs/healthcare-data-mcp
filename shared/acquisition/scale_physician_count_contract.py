@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal, Mapping, Self
+from collections.abc import Mapping
+from typing import Any, Literal, Self
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator, model_validator
 from pydantic.json_schema import GenerateJsonSchema, JsonSchemaMode
@@ -138,10 +139,10 @@ class PhysicianCountAcquisition(StrictModel):
     source_artifacts: list[TabularSourceArtifact] = Field(min_length=1, max_length=1)
     system_rows: list[PhysicianSystemRow] = Field(min_length=6, max_length=6)
     candidates: list[PhysicianCountCandidate] = Field(min_length=6, max_length=6)
-    physician_definition_receipt: Literal[None] = None
+    physician_definition_receipt: None = Field(default=None, json_schema_extra={"const": None})
     physician_definition_custody: Literal["not_locally_receipted"] = "not_locally_receipted"
     raw_http_receipt_custody: Literal["not_locally_receipted"] = "not_locally_receipted"
-    redistribution_license_receipt: Literal[None] = None
+    redistribution_license_receipt: None = Field(default=None, json_schema_extra={"const": None})
     redistribution_rights_custody: Literal["unreviewed"] = "unreviewed"
     prohibited_outputs: list[str] = Field(min_length=1)
     acquisition_sha256: str = Field(pattern=SHA256_PATTERN)

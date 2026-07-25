@@ -1,0 +1,136 @@
+{
+  "generated_at_utc": "2026-07-25T20:46:48Z",
+  "arm": "registry_assisted",
+  "repetition": 1,
+  "order": [
+    "N1",
+    "K1",
+    "N2",
+    "K2",
+    "N3",
+    "K3",
+    "N4",
+    "K4"
+  ],
+  "started_at_utc": "2026-07-25T20:43:29Z",
+  "ended_at_utc": "2026-07-25T20:46:48Z",
+  "wall_latency_seconds": 199,
+  "input_tokens": null,
+  "input_token_note": "Input-token telemetry is unavailable in this execution environment; input_tokens is therefore null.",
+  "research_tool_calls": 0,
+  "local_file_read_calls": 7,
+  "answers": [
+    {
+      "question_id": "N1",
+      "answer": "Selected scope/entity: Nebraska Medicine lean clinical enterprise (scope_id nebraska_medicine_clinical_enterprise_2026), supported as of 2026-07-25. It includes the Nebraska Medicine parent corporation; The Nebraska Medical Center legal/operator entity and its CCN 280013 facility; UNMC Physicians as a distinct faculty medical group; and Bellevue Medical Center, LLC and its CCN 280132 facility beneath TNMC's supported tax-control chain. It excludes the University of Nebraska Medical Center (UNMC) public-university campus from the owned clinical-operator core. UNMC is a close academic and governance-related affiliate, not an owned hospital, owned entity, or alias of Nebraska Medicine. Typed identifiers: Nebraska Medicine parent EIN 81-3158267; The Nebraska Medical Center operator EIN 91-1858433 and facility CCN 280013; UNMC Physicians EIN 47-0785575; Bellevue Medical Center, LLC operator EIN 20-4305186 and facility CCN 280132. Caveats: the brand and parent corporation share a name but are separate registry concepts; this is a lean legal/clinical membership perimeter, not an audited financial consolidation; and Bellevue remains a separately licensed LLC/operator and CCN record despite federal disregarded-entity treatment beneath TNMC for the latest located period. Unresolved/missed data: current Bellevue equity holders and percentages are unresolved; the fixture is not an exhaustive subsidiary, clinic, or licensed-facility inventory; audited consolidated financial scope is deferred; and the two facility NPIs are preserved only in notes because the registry identifier schema currently types EIN and CCN, not NPI.",
+      "primary_source_urls": [
+        "https://nebraska.edu/_files/docs/regents/agendas-and-minutes/2026/june-29-board-meeting/agenda-6-29-26-with-materials.pdf",
+        "https://apps.irs.gov/pub/epostcard/990/xml/2025/2025_TEOS_XML_05A.zip",
+        "https://apps.irs.gov/pub/epostcard/990/xml/2024/2024_TEOS_XML_05A.zip",
+        "https://dhhs.ne.gov/licensure/Documents/Hospital%20Roster.pdf",
+        "https://www.unmc.edu/newsroom/2015/06/11/shared-emblem-underscores-interdependence/"
+      ],
+      "started_at_utc": "2026-07-25T20:44:12Z",
+      "ended_at_utc": "2026-07-25T20:44:20Z",
+      "latency_seconds": 8,
+      "research_tool_calls": 0
+    },
+    {
+      "question_id": "K1",
+      "answer": "Selected scope/entity: the natural-language name Kaiser Permanente denotes a brand/system umbrella and three-pillar operating model, not one legal filer. It therefore has no universal standalone EIN in the registry. Clarification is required about the intended legal filer or reporting perimeter. If the intended entity is Kaiser Foundation Health Plan, Inc., its typed identifier is EIN 94-1340523; if the intended entity is Kaiser Foundation Hospitals, its typed identifier is EIN 94-1105628. Neither EIN belongs to the Kaiser Permanente umbrella as a whole. Caveats: shared mission, integration, and common governance do not collapse the health plans, hospitals entity, and independent Permanente Medical Groups into one legal person. Unresolved/missed data: the minimal fixture does not inventory every Kaiser-associated legal entity, and exact current EINs for the independent regional Permanente Medical Groups are not established.",
+      "primary_source_urls": [
+        "https://northerncalifornia.permanente.org/our-values",
+        "https://permanente.org/about-us/our-care-model/",
+        "https://apps.irs.gov/pub/epostcard/990/xml/2025/2025_TEOS_XML_11A.zip",
+        "https://apps.irs.gov/pub/epostcard/990/xml/2025/2025_TEOS_XML_11C.zip"
+      ],
+      "started_at_utc": "2026-07-25T20:44:27Z",
+      "ended_at_utc": "2026-07-25T20:44:37Z",
+      "latency_seconds": 10,
+      "research_tool_calls": 0
+    },
+    {
+      "question_id": "N2",
+      "answer": "Selected scope/entity: Nebraska Medicine's interim legal-member and board-appointment perimeter for 2026-07-01 through 2026-09-30. As of 2026-07-25, neither Omaha Community Foundation nor Clarkson Regional Health Services is a current corporate member or owner. The University of Nebraska Board of Regents is the sole legal member. Omaha Community Foundation appoints two voting directors, but a director-appointment right is not corporate membership or ownership. Clarkson Regional Health Services is excluded from current membership after 2026-06-30. Typed identifiers: none are assigned for these governance roles; no separately scoped Board/University identifier was established. Caveats: the approved arrangement is expressly interim through 2026-09-30 unless superseded, and the Board of Regents membership fact must not be restated as ownership by the UNMC campus. Unresolved/missed data: governance after 2026-09-30 is unresolved, and prospective Omaha Community Foundation membership was not completed in the reviewed current documents.",
+      "primary_source_urls": [
+        "https://nebraska.edu/_files/docs/regents/agendas-and-minutes/2026/june-29-board-meeting/agenda-6-29-26-with-materials.pdf",
+        "https://nebraska.edu/news-and-events/news/2026/06/regents-approve-interim-structure",
+        "https://nebraska.edu/news-and-events/news/2026/06/nu-regents-to-meet-on-monday-june-29"
+      ],
+      "started_at_utc": "2026-07-25T20:44:45Z",
+      "ended_at_utc": "2026-07-25T20:44:58Z",
+      "latency_seconds": 13,
+      "research_tool_calls": 0
+    },
+    {
+      "question_id": "K2",
+      "answer": "Selected scope/entity for health coverage: Kaiser Foundation Health Plan of Colorado, a regional health-plan legal entity; typed identifier EIN 84-0591617. Selected scope/entity for physician care: Colorado Permanente Medical Group (CPMG), an independent, self-governed regional physician medical group; its exact EIN is unresolved in the authorized records. Do not assign or let CPMG inherit the Colorado health plan's EIN. Caveats: the Kaiser Permanente Colorado regional phrase is ambiguous without a function qualifier, and legal domicile does not by itself define the complete service area or transaction-specific contracting party. Unresolved/missed data: CPMG's EIN is intentionally unresolved, the fixture does not establish a one-to-one map between every medical-group region and health-plan corporation, and the complete Kaiser legal-entity inventory is outside this minimal fixture.",
+      "primary_source_urls": [
+        "https://apps.irs.gov/pub/epostcard/990/xml/2025/2025_TEOS_XML_11A.zip",
+        "https://permanente.org/our-medical-groups/",
+        "https://northerncalifornia.permanente.org/our-values",
+        "https://permanente.org/about-us/our-care-model/"
+      ],
+      "started_at_utc": "2026-07-25T20:45:05Z",
+      "ended_at_utc": "2026-07-25T20:45:15Z",
+      "latency_seconds": 10,
+      "research_tool_calls": 0
+    },
+    {
+      "question_id": "N3",
+      "answer": "Selected entity/facility pair 1: The Nebraska Medical Center is the legal/operator entity, with typed operator EIN 91-1858433; The Nebraska Medical Center facility has typed CCN 280013. Selected entity/facility pair 2: Bellevue Medical Center, LLC is the licensed hospital operator, with typed operator EIN 20-4305186; Bellevue Medical Center facility has typed CCN 280132. Do not cross-assign either EIN or CCN. Bellevue's federal disregarded-entity treatment does not erase its separate LLC, state-licensed operator, facility, or CCN record. Caveats: TNMC direct tax control of Bellevue is supported for the tax period ended 2023-06-30, while the separate operator identity is current as of the 2026-07-15 state roster; those period-specific facts do not establish a current equity percentage. Unresolved/missed data: current Bellevue equity holders and percentages are unresolved. NPI 1356307581 for TNMC and NPI 1609007525 for Bellevue are preserved in notes but deferred from identifier arrays by the current EIN/CCN-only registry schema.",
+      "primary_source_urls": [
+        "https://dhhs.ne.gov/licensure/Documents/Hospital%20Roster.pdf",
+        "https://data.cms.gov/provider-data/api/1/datastore/query/xubh-q36u/0?conditions%5B0%5D%5Bproperty%5D=facility_name&conditions%5B0%5D%5Bvalue%5D=THE%20NEBRASKA%20MEDICAL%20CENTER&conditions%5B0%5D%5Boperator%5D=%3D",
+        "https://data.cms.gov/provider-data/api/1/datastore/query/xubh-q36u/0?conditions%5B0%5D%5Bproperty%5D=facility_name&conditions%5B0%5D%5Bvalue%5D=BELLEVUE%20MEDICAL%20CENTER&conditions%5B0%5D%5Boperator%5D=%3D",
+        "https://apps.irs.gov/pub/epostcard/990/xml/2025/2025_TEOS_XML_05A.zip",
+        "https://apps.irs.gov/pub/epostcard/990/xml/2024/2024_TEOS_XML_05A.zip"
+      ],
+      "started_at_utc": "2026-07-25T20:45:23Z",
+      "ended_at_utc": "2026-07-25T20:45:31Z",
+      "latency_seconds": 8,
+      "research_tool_calls": 0
+    },
+    {
+      "question_id": "K3",
+      "answer": "Selected reporting scope: KFHP/H and Risant Health 2024 published financial-results perimeter (scope_id kfhp_h_risant_2024_financial), for the year ended 2024-12-31. The recorded combined operating revenue is $115.75 billion (about $115.8 billion) and covers Kaiser Foundation Health Plan, Inc., Kaiser Foundation Hospitals, Risant Health, and their respective subsidiaries and affiliates. It must not be assigned solely to Kaiser Foundation Health Plan, Inc. Typed identifier EIN 94-1340523 identifies that one legal filer; it does not type or own the combined revenue measurement. Permanente Medical Groups are excluded unless separately shown by the source. A direct comparison with earlier Kaiser totals is not valid without restating or reconciling perimeters because 2024-onward year-end results include Risant Health. Caveats: this is an official annual-report/financial-results summary, not an itemized affiliate register or audited-footnote reconstruction, and it is not a universal Kaiser Permanente legal-entity perimeter. Unresolved/missed data: complete affiliate composition and financial-perimeter continuity with earlier years are unresolved, so the 2024 scope must not be back-projected.",
+      "primary_source_urls": [
+        "https://about.kaiserpermanente.org/content/dam/kp/mykp/documents/reports/2024_annual-report_ADA.pdf",
+        "https://about.kaiserpermanente.org/news/press-release-archive/kaiser-foundation-health-plan-hospitals-risant-health-report-2024-financial-results",
+        "https://apps.irs.gov/pub/epostcard/990/xml/2025/2025_TEOS_XML_11A.zip"
+      ],
+      "started_at_utc": "2026-07-25T20:45:38Z",
+      "ended_at_utc": "2026-07-25T20:45:50Z",
+      "latency_seconds": 12,
+      "research_tool_calls": 0
+    },
+    {
+      "question_id": "N4",
+      "answer": "Selected entity: Nebraska Medicine, the public-benefit nonprofit parent corporation; typed identifier EIN 81-3158267. Neither UNMC Physicians nor the University of Nebraska Medical Center (UNMC) is the same entity, and neither may inherit the parent's EIN. UNMC Physicians is a distinct faculty medical-group legal entity with its own typed EIN 47-0785575. UNMC is a separate public-university campus and external academic partner. The fixture records 47-0049123 only as the number represented for the named payee The University of Nebraska-Medical Center on a 2025 fundraiser form; it must not be substituted for the Nebraska Medicine parent EIN. Caveats: Nebraska Medicine's brand and parent share a name but remain distinct registry concepts; academic affiliation, shared branding/campus, teaching, research, dual employment, and governance ties do not establish entity identity or EIN inheritance. Unresolved/missed data: whether UNMC's represented 47-0049123 scope is campus-only, University-system-wide, or shared by other University units is unresolved.",
+      "primary_source_urls": [
+        "https://nebraska.edu/_files/docs/regents/agendas-and-minutes/2026/june-29-board-meeting/agenda-6-29-26-with-materials.pdf",
+        "https://apps.irs.gov/pub/epostcard/990/xml/2025/2025_TEOS_XML_05A.zip",
+        "https://www.nebraskamed.com/about-us/nebraska-medicine-history",
+        "https://www.unmc.edu/newsroom/2015/06/11/shared-emblem-underscores-interdependence/",
+        "https://www.unmc.edu/news/nm-governance/index.html",
+        "https://www.unmc.edu/newsroom/wp-content/uploads/2025/09/2025-STG-Registration-Form.pdf"
+      ],
+      "started_at_utc": "2026-07-25T20:45:57Z",
+      "ended_at_utc": "2026-07-25T20:46:06Z",
+      "latency_seconds": 9,
+      "research_tool_calls": 0
+    },
+    {
+      "question_id": "K4",
+      "answer": "Selected legal/operator entity: Kaiser Foundation Hospitals (KFH), with typed EIN 94-1105628. Selected facility: Kaiser Foundation Hospital - Santa Clara, with typed CCN 050071. The EIN identifies the legal hospital entity/operator; the CCN identifies the enrolled facility. They are different identifier types and must not be interchanged or treated as a universal Kaiser Permanente identifier. Caveats: a facility name or DBA and its CCN do not imply a separate facility EIN, and the CMS PECOS enrollment snapshot is not by itself a complete ownership registry. Unresolved/missed data: the minimal fixture does not inventory all facility owner, operator, DBA, CCN, NPI, PAC ID, or state-license relationships across Kaiser; this answer is limited to the Santa Clara entity/facility pair.",
+      "primary_source_urls": [
+        "https://apps.irs.gov/pub/epostcard/990/xml/2025/2025_TEOS_XML_11C.zip",
+        "https://data.cms.gov/sites/default/files/2026-05/4c668d34-e45a-4b9e-b5f7-dec7f1c333e1/Hospital_Enrollments_2026.05.01.csv"
+      ],
+      "started_at_utc": "2026-07-25T20:46:14Z",
+      "ended_at_utc": "2026-07-25T20:46:23Z",
+      "latency_seconds": 9,
+      "research_tool_calls": 0
+    }
+  ]
+}

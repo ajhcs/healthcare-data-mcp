@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 __all__ = ["find_df_column"]
 
 
-def find_df_column(df: "pd.DataFrame", candidates: list[str]) -> str | None:
+def find_df_column(df: pd.DataFrame, candidates: list[str]) -> str | None:
     """Find the first matching column in *df* from *candidates*.
 
     Tries an exact match first, then falls back to a case-insensitive

@@ -5,8 +5,8 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-from pathlib import Path
 import sys
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock
 
@@ -14,6 +14,7 @@ import pytest
 from jsonschema import Draft202012Validator
 from pydantic import ValidationError
 
+import scripts.acquire_scale_input_family as acquisition_cli
 from shared.acquisition.scale_service_line_count_contract import (
     ServiceLineCountAcquisition,
     build_service_line_count_acquisition,
@@ -31,7 +32,6 @@ from shared.acquisition.scale_service_line_count_packet import (
 )
 from shared.acquisition.scale_system_roster import SYSTEM_SLUGS
 from shared.contracts.public_evidence import build_public_evidence_bundle, canonical_sha256
-import scripts.acquire_scale_input_family as acquisition_cli
 
 ROOT = Path(__file__).resolve().parents[1]
 V4 = ROOT / "contracts" / "v4"

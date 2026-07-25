@@ -3,43 +3,49 @@
 Returns complete health system profiles in 1-3 tool calls by combining
 AHRQ Compendium, CMS Provider of Services, NPPES, and HSAF data.
 """
-
-from typing import Any
 import json
 import logging
 import os as _os
 import sys
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 from mcp.server.fastmcp import FastMCP
-from shared.utils.mcp_observability import observe_tool
-from shared.utils.mcp_resources import register_standard_resources
+
+from shared.utils.errors import EXPECTED_OPERATIONAL_EXCEPTIONS
 from shared.utils.healthcare_identity import identity_from_public_record
 from shared.utils.identity import normalize_ccn, normalize_name, normalize_npi
+from shared.utils.mcp_observability import observe_tool
+from shared.utils.mcp_resources import register_standard_resources
 from shared.utils.mcp_response import error_response, evidence_receipt, to_structured
 from shared.utils.source_backed_result import values_at_path
 from shared.utils.tabular_normalization import read_csv_strings
 
 # Support running both as a package and as a standalone script
 try:
+    from .composite_source_input_evidence_pack import (
+        build_composite_source_input_evidence_pack as assemble_composite_source_input_evidence_pack,
+    )
     from .data_loaders import (
         AHRQ_HOSPITAL_LINKAGE_CACHE,
         AHRQ_SYSTEM_CACHE,
+        NPPES_API_URL,
         load_ahrq_hospital_linkage,
         load_ahrq_systems,
         load_pos,
-        NPPES_API_URL,
         search_nppes,
     )
     from .facility_enrichment import aggregate_off_site, enrich_facility
-    from .graph_expansion import expand_related_providers
     from .generic_reconciliation import reconcile_generic_system_facilities
+    from .graph_expansion import expand_related_providers
     from .jefferson_resolver import (
         JEFFERSON_SLUG,
         build_combined_system_profile,
-        reconcile_system_facilities as reconcile_jefferson_facilities,
         resolve_combined_system_slug,
+    )
+    from .jefferson_resolver import (
+        reconcile_system_facilities as reconcile_jefferson_facilities,
     )
     from .models import (
         BedBreakdown,
@@ -48,46 +54,52 @@ try:
         SystemProfileResponse,
     )
     from .outpatient_discovery import build_search_patterns, parse_nppes_results
-    from .profile_evidence_pack import (
-        build_profile_evidence_pack as assemble_profile_evidence_pack,
-        census_geocode_address,
-        osm_geocode_address,
-        reverse_geocode_coordinates,
+    from .patient_volume_evidence_pack import (
+        build_patient_volume_evidence_pack as assemble_patient_volume_evidence_pack,
     )
     from .physician_platform_evidence_pack import (
         build_physician_platform_evidence_pack as assemble_physician_platform_evidence_pack,
     )
-    from .patient_volume_evidence_pack import (
-        build_patient_volume_evidence_pack as assemble_patient_volume_evidence_pack,
+    from .profile_evidence_pack import (
+        build_profile_evidence_pack as assemble_profile_evidence_pack,
     )
-    from .composite_source_input_evidence_pack import (
-        build_composite_source_input_evidence_pack as assemble_composite_source_input_evidence_pack,
+    from .profile_evidence_pack import (
+        census_geocode_address,
+        osm_geocode_address,
+        reverse_geocode_coordinates,
     )
     from .system_discovery import fuzzy_search_systems, resolve_system_ccns
     from .system_metrics import (
         get_health_system_metric as assemble_health_system_metric,
+    )
+    from .system_metrics import (
         invalid_argument_payload,
         list_health_system_metric_rows,
     )
 except ImportError:
     sys.path.insert(0, str(Path(__file__).parent))
+    from composite_source_input_evidence_pack import (
+        build_composite_source_input_evidence_pack as assemble_composite_source_input_evidence_pack,
+    )
     from data_loaders import (
         AHRQ_HOSPITAL_LINKAGE_CACHE,
         AHRQ_SYSTEM_CACHE,
+        NPPES_API_URL,
         load_ahrq_hospital_linkage,
         load_ahrq_systems,
         load_pos,
-        NPPES_API_URL,
         search_nppes,
     )
     from facility_enrichment import aggregate_off_site, enrich_facility
-    from graph_expansion import expand_related_providers
     from generic_reconciliation import reconcile_generic_system_facilities
+    from graph_expansion import expand_related_providers
     from jefferson_resolver import (
         JEFFERSON_SLUG,
         build_combined_system_profile,
-        reconcile_system_facilities as reconcile_jefferson_facilities,
         resolve_combined_system_slug,
+    )
+    from jefferson_resolver import (
+        reconcile_system_facilities as reconcile_jefferson_facilities,
     )
     from models import (
         BedBreakdown,
@@ -96,24 +108,25 @@ except ImportError:
         SystemProfileResponse,
     )
     from outpatient_discovery import build_search_patterns, parse_nppes_results
-    from profile_evidence_pack import (
-        build_profile_evidence_pack as assemble_profile_evidence_pack,
-        census_geocode_address,
-        osm_geocode_address,
-        reverse_geocode_coordinates,
+    from patient_volume_evidence_pack import (
+        build_patient_volume_evidence_pack as assemble_patient_volume_evidence_pack,
     )
     from physician_platform_evidence_pack import (
         build_physician_platform_evidence_pack as assemble_physician_platform_evidence_pack,
     )
-    from patient_volume_evidence_pack import (
-        build_patient_volume_evidence_pack as assemble_patient_volume_evidence_pack,
+    from profile_evidence_pack import (
+        build_profile_evidence_pack as assemble_profile_evidence_pack,
     )
-    from composite_source_input_evidence_pack import (
-        build_composite_source_input_evidence_pack as assemble_composite_source_input_evidence_pack,
+    from profile_evidence_pack import (
+        census_geocode_address,
+        osm_geocode_address,
+        reverse_geocode_coordinates,
     )
     from system_discovery import fuzzy_search_systems, resolve_system_ccns
     from system_metrics import (
         get_health_system_metric as assemble_health_system_metric,
+    )
+    from system_metrics import (
         invalid_argument_payload,
         list_health_system_metric_rows,
     )
@@ -648,7 +661,7 @@ async def _search_nppes(**kwargs) -> list[dict]:
 def _load_provider_enrollment() -> pd.DataFrame:
     try:
         from servers.provider_enrollment.data_loaders import ENROLLMENT_DATASET_KEYS, load_cached_frames
-    except Exception:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS:
         return pd.DataFrame()
     return load_cached_frames(ENROLLMENT_DATASET_KEYS)
 
@@ -658,7 +671,7 @@ def _load_profile_provider_rows(ccns: list[str]) -> list[dict[str, Any]]:
 
     try:
         from servers.provider_enrollment import data_loaders as provider_loaders
-    except Exception:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS:
         return []
 
     rows: list[dict[str, Any]] = []
@@ -677,13 +690,13 @@ def _load_profile_provider_rows(ccns: list[str]) -> list[dict[str, Any]]:
     return rows[:250]
 
 
-async def _load_hcris_bed_rows(state: str, ccns: list[str]) -> list[dict[str, Any]]:  # noqa: ARG001
+async def _load_hcris_bed_rows(state: str, ccns: list[str]) -> list[dict[str, Any]]:
     """Return CMS HCRIS/cost-report rows for exact CCNs from the configured cache."""
 
     try:
         from servers.hospital_quality import data_loaders as hospital_quality_loaders
         from shared.utils.cost_report import load_cost_report_row
-    except Exception:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS:
         return []
 
     rows: list[dict[str, Any]] = []
@@ -711,7 +724,7 @@ def _load_state_bed_rows(state: str, ccns: list[str]) -> list[dict[str, Any]]:
         return []
     try:
         from shared import state_health_data
-    except Exception:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS:
         return []
 
     rows: list[dict[str, Any]] = []
@@ -1276,7 +1289,7 @@ async def get_system_profile(
             try:
                 raw = await _search_nppes(**params)
                 outpatient_sites.extend(parse_nppes_results(raw))
-            except Exception as e:
+            except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
                 logger.warning("NPPES search failed for %s: %s", params, e)
 
         # Deduplicate by NPI

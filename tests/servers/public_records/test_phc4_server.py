@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import pytest
 
+from servers.public_records import server
 from shared import state_health_data
 from shared.utils.mcp_response import validate_evidence_receipt
-from servers.public_records import server
 
 
 def _assert_phc4_identity_map(identity_map: dict, *, expected_name: str = "", expected_procedure: str = "") -> None:

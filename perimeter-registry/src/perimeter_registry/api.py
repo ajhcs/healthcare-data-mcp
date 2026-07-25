@@ -28,6 +28,18 @@ class Registry:
     def jefferson(cls) -> Registry:
         return cls(RegistryStore.jefferson())
 
+    @classmethod
+    def penn(cls) -> Registry:
+        return cls(RegistryStore.from_fixture("penn"))
+
+    @classmethod
+    def upmc(cls) -> Registry:
+        return cls(RegistryStore.from_fixture("upmc"))
+
+    @classmethod
+    def from_fixture(cls, fixture_name: str) -> Registry:
+        return cls(RegistryStore.from_fixture(fixture_name))
+
     @property
     def system(self) -> SystemConcept:
         return self._store.systems[0]

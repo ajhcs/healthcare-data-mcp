@@ -206,7 +206,7 @@ def conservative_fuzzy_score(left: Any, right: Any) -> int:
     if shorter in longer and len(longer) - len(shorter) >= 5:
         score = min(score, 88)
 
-    return int(round(score))
+    return round(score)
 
 
 def conservative_fuzzy_match(left: Any, right: Any, *, threshold: int = 90) -> bool:

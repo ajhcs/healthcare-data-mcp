@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from pathlib import Path
 import sys
+from datetime import UTC, datetime
+from pathlib import Path
 from types import SimpleNamespace
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -13,7 +13,6 @@ import pytest
 from pydantic import ValidationError
 
 from scripts.acquire_scale_roster_beds import main as acquisition_main
-
 from shared.acquisition.scale_roster_bed_models import (
     AcquisitionSpec,
     EntitySpec,
@@ -104,7 +103,7 @@ async def test_acquire_freezes_then_reparses_bytes(monkeypatch: pytest.MonkeyPat
     spec = _spec()
     frozen = await acquire(spec, cache_root=tmp_path, cache_run_id="run-1")
     assert frozen.artifacts[0].portable_uri == "hc-cache://scale-roster-bed-basis.v1/run-1/official.html"
-    assert frozen.artifacts[0].source_modified == datetime(2025, 7, 16, 12, tzinfo=timezone.utc)
+    assert frozen.artifacts[0].source_modified == datetime(2025, 7, 16, 12, tzinfo=UTC)
     assert "/" not in frozen.model_dump(mode="json")["artifacts"][0].get("local_path", "")
     assert verify_frozen_bytes(spec, frozen, cache_root=tmp_path) == frozen
 
@@ -405,7 +404,7 @@ def test_spec_rejects_identity_collisions_and_unknown_edges() -> None:
 
 
 def test_frozen_manifest_rejects_nonportable_locator_and_duplicate_artifacts() -> None:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     artifact = FrozenArtifact(
         source_id="official",
         artifact_id="artifact:official",

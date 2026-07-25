@@ -10,7 +10,7 @@ from __future__ import annotations
 import hashlib
 import re
 import shutil
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from shared.acquisition.scale_roster_bed_builder import build_bundle_input, write_bundle_input
@@ -83,7 +83,7 @@ async def acquire(spec: AcquisitionSpec, *, cache_root: Path, cache_run_id: str)
                     artifact_id=f"artifact:{source.source_id}:{checksum.removeprefix('sha256:')[:16]}",
                     source_url=source.url,
                     final_url=str(response.url),
-                    retrieved_at=datetime.now(timezone.utc),
+                    retrieved_at=datetime.now(UTC),
                     source_modified=modified,
                     media_type=media_type or source.expected_media_type,
                     checksum_sha256=checksum,
@@ -123,7 +123,7 @@ async def acquire(spec: AcquisitionSpec, *, cache_root: Path, cache_run_id: str)
                 )
             )
         frozen = FrozenAcquisition(
-            acquired_at=datetime.now(timezone.utc),
+            acquired_at=datetime.now(UTC),
             cache_run_id=cache_run_id,
             artifacts=artifacts,
             extracted_facts=extracted,
@@ -212,7 +212,7 @@ def _http_datetime(value: str | None) -> datetime | None:
     from email.utils import parsedate_to_datetime
 
     parsed = parsedate_to_datetime(value)
-    return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=timezone.utc)
+    return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=UTC)
 
 
 def load_spec(path: Path) -> AcquisitionSpec:

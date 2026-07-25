@@ -1,0 +1,560 @@
+{
+  "schema_version": 1,
+  "fixture_id": "nebraska_minimal",
+  "systems": [
+    {
+      "id": "nebraska_medicine_system",
+      "name": "Nebraska Medicine",
+      "aliases": [
+        "Nebraska Medicine Health System"
+      ],
+      "concept_type": "integrated_clinical_brand_and_parent_name",
+      "legal_entity": false,
+      "evidence_ids": [
+        "nebraska_medicine_history",
+        "regents_interim_governing_documents_2026",
+        "irs_nebraska_medicine_return_2025"
+      ],
+      "confidence": "high"
+    }
+  ],
+  "entities": [
+    {
+      "id": "nebraska_medicine_parent",
+      "name": "Nebraska Medicine",
+      "entity_type": "public_benefit_nonprofit_parent",
+      "aliases": [
+        "Nebraska Medicine parent",
+        "Nebraska Medicine parent corporation"
+      ],
+      "identifiers": [
+        {
+          "scheme": "EIN",
+          "value": "81-3158267"
+        }
+      ],
+      "lifecycle_status": "active",
+      "effective_start": "2016",
+      "effective_end": null,
+      "evidence_ids": [
+        "regents_interim_governing_documents_2026",
+        "irs_nebraska_medicine_return_2025",
+        "nebraska_medicine_history"
+      ],
+      "notes": [
+        "The legal corporation and the patient-facing integrated brand share the Nebraska Medicine name but remain separate registry concepts",
+        "The interim articles effective 2026-07-01 through 2026-09-30 describe a Nebraska public benefit corporation and 501(c)(3) supporting organization",
+        "EIN 81-3158267 belongs to the parent and must not be inherited by controlled hospitals, UNMC Physicians, or UNMC"
+      ]
+    },
+    {
+      "id": "the_nebraska_medical_center",
+      "name": "The Nebraska Medical Center",
+      "entity_type": "hospital_legal_and_operating_entity",
+      "aliases": [
+        "Nebraska Medical Center",
+        "TNMC",
+        "The Nebraska Medical Center - Nebraska Medicine"
+      ],
+      "identifiers": [
+        {
+          "scheme": "EIN",
+          "value": "91-1858433"
+        },
+        {
+          "scheme": "CCN",
+          "value": "280013"
+        }
+      ],
+      "lifecycle_status": "active",
+      "effective_start": null,
+      "effective_end": null,
+      "evidence_ids": [
+        "regents_interim_governing_documents_2026",
+        "irs_nebraska_medicine_return_2025",
+        "nebraska_dhhs_hospital_roster_2026",
+        "cms_nebraska_medical_center_2026",
+        "nppes_nebraska_medical_center"
+      ],
+      "notes": [
+        "Nebraska Medicine is its sole member under the interim articles",
+        "NPPES separately records active organization NPI 1356307581; NPI is retained in notes because the registry identifier schema currently accepts only EIN and CCN",
+        "Do not assign CCN 280013 or EIN 91-1858433 to Bellevue Medical Center"
+      ]
+    },
+    {
+      "id": "bellevue_medical_center_llc",
+      "name": "Bellevue Medical Center, LLC",
+      "entity_type": "licensed_hospital_operator_and_federal_disregarded_entity",
+      "aliases": [
+        "Bellevue Medical Center",
+        "Bellevue Medical Center - Nebraska Medicine",
+        "BMC"
+      ],
+      "identifiers": [
+        {
+          "scheme": "EIN",
+          "value": "20-4305186"
+        },
+        {
+          "scheme": "CCN",
+          "value": "280132"
+        }
+      ],
+      "lifecycle_status": "active",
+      "effective_start": null,
+      "effective_end": null,
+      "evidence_ids": [
+        "irs_tnmc_return_2024",
+        "nebraska_dhhs_hospital_roster_2026",
+        "cms_bellevue_medical_center_2026",
+        "nppes_bellevue_medical_center"
+      ],
+      "notes": [
+        "The Nebraska DHHS roster names Bellevue Medical Center LLC as the current licensee",
+        "The TNMC return for the tax period ended 2023-06-30 reports Bellevue Medical Center as a disregarded entity directly controlled by TNMC; this federal tax treatment does not erase the separately licensed LLC/operator",
+        "NPPES separately records active organization NPI 1609007525; NPI is retained in notes because the registry identifier schema currently accepts only EIN and CCN",
+        "Current equity percentages are unresolved"
+      ]
+    },
+    {
+      "id": "unmc_physicians",
+      "name": "UNMC Physicians",
+      "entity_type": "faculty_medical_group_legal_entity",
+      "aliases": [
+        "UNMCP"
+      ],
+      "identifiers": [
+        {
+          "scheme": "EIN",
+          "value": "47-0785575"
+        }
+      ],
+      "lifecycle_status": "active",
+      "effective_start": null,
+      "effective_end": null,
+      "evidence_ids": [
+        "regents_interim_governing_documents_2026",
+        "irs_nebraska_medicine_return_2025"
+      ],
+      "notes": [
+        "Nebraska Medicine is its sole member under the interim articles",
+        "UNMC Physicians is a separately named faculty medical group and must not be collapsed into the UNMC public-university campus"
+      ]
+    },
+    {
+      "id": "university_of_nebraska_medical_center",
+      "name": "University of Nebraska Medical Center",
+      "entity_type": "public_university_campus_and_external_academic_partner",
+      "aliases": [
+        "UNMC"
+      ],
+      "identifiers": [
+        {
+          "scheme": "EIN",
+          "value": "47-0049123"
+        }
+      ],
+      "lifecycle_status": "active",
+      "effective_start": "1902",
+      "effective_end": null,
+      "evidence_ids": [
+        "unmc_shared_emblem_2015",
+        "university_interim_structure_release_2026",
+        "unmc_tax_id_form_2025"
+      ],
+      "notes": [
+        "UNMC is a University of Nebraska public-university campus and a separate organization from Nebraska Medicine",
+        "Tax ID 47-0049123 is supported only as the number represented for the named payee The University of Nebraska-Medical Center on a 2025 fundraiser form; campus-versus-system scope is unresolved",
+        "UNMC is excluded from the owned clinical-operator core and retained as an external academic partner",
+        "Do not confuse UNMC with UNMC Physicians"
+      ]
+    }
+  ],
+  "facilities": [
+    {
+      "id": "facility_nebraska_medical_center_280013",
+      "name": "The Nebraska Medical Center",
+      "ccn": "280013",
+      "operator_entity_id": "the_nebraska_medical_center",
+      "operator_name": "The Nebraska Medical Center",
+      "operator_ein": "91-1858433",
+      "evidence_ids": [
+        "nebraska_dhhs_hospital_roster_2026",
+        "cms_nebraska_medical_center_2026",
+        "irs_nebraska_medicine_return_2025"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "facility_bellevue_medical_center_280132",
+      "name": "Bellevue Medical Center",
+      "ccn": "280132",
+      "operator_entity_id": "bellevue_medical_center_llc",
+      "operator_name": "Bellevue Medical Center, LLC",
+      "operator_ein": "20-4305186",
+      "evidence_ids": [
+        "nebraska_dhhs_hospital_roster_2026",
+        "cms_bellevue_medical_center_2026",
+        "nppes_bellevue_medical_center",
+        "irs_tnmc_return_2024"
+      ],
+      "confidence": "high"
+    }
+  ],
+  "reporting_perimeters": [
+    {
+      "id": "nebraska_medicine_clinical_enterprise_2026",
+      "label": "Nebraska Medicine lean clinical enterprise",
+      "perimeter_type": "current_legal_and_clinical_enterprise",
+      "includes": [
+        "Nebraska Medicine parent corporation",
+        "The Nebraska Medical Center legal/operator entity and CCN 280013 facility",
+        "UNMC Physicians as a distinct faculty medical group",
+        "Bellevue Medical Center LLC and CCN 280132 facility beneath TNMC's supported tax-control chain"
+      ],
+      "excludes": [
+        "University of Nebraska Medical Center public-university campus from the owned clinical-operator core",
+        "Clarkson Regional Health Services from current governance after 2026-06-30",
+        "Omaha Community Foundation from current corporate membership under the interim articles"
+      ],
+      "flags": [
+        "The brand and parent corporation share a name but are distinct registry concepts",
+        "UNMC is a close academic and governance-related affiliate, not an owned hospital or alias",
+        "Bellevue remains a separately licensed LLC/operator and CCN even though the latest located federal return treats it as disregarded beneath TNMC",
+        "EINs, CCNs, and NPIs remain attached to their own entities or facilities"
+      ],
+      "measurements": [
+        {
+          "id": "membership_only",
+          "label": "Entity/facility membership only",
+          "amount_usd": null,
+          "period": "current structure supported as of 2026-07-25",
+          "basis": "interim governing documents, direct IRS-hosted filings, current state licensure, CMS, and NPPES; not an audited financial consolidation",
+          "audited": null
+        }
+      ],
+      "evidence_ids": [
+        "regents_interim_governing_documents_2026",
+        "irs_nebraska_medicine_return_2025",
+        "irs_tnmc_return_2024",
+        "nebraska_dhhs_hospital_roster_2026",
+        "unmc_shared_emblem_2015"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "nebraska_medicine_interim_governance_2026_07_01",
+      "label": "Nebraska Medicine interim legal-member and board-appointment perimeter",
+      "perimeter_type": "dated_corporate_membership_and_board_appointment_scope",
+      "includes": [
+        "University of Nebraska Board of Regents as sole legal member",
+        "Two Regents-appointed voting directors",
+        "Two Omaha Community Foundation-appointed voting directors"
+      ],
+      "excludes": [
+        "Omaha Community Foundation from corporate membership during the interim period",
+        "Clarkson Regional Health Services from current membership after 2026-06-30"
+      ],
+      "flags": [
+        "Effective only from 2026-07-01 through 2026-09-30 unless superseded",
+        "A director appointment right is not corporate membership or ownership",
+        "The Board of Regents governance fact must not be restated as ownership by the UNMC campus"
+      ],
+      "measurements": [
+        {
+          "id": "membership_only",
+          "label": "Governance membership only",
+          "amount_usd": null,
+          "period": "2026-07-01 through 2026-09-30",
+          "basis": "approved interim articles and bylaws",
+          "audited": null
+        }
+      ],
+      "evidence_ids": [
+        "regents_interim_governing_documents_2026",
+        "university_interim_structure_release_2026",
+        "university_transition_release_2026"
+      ],
+      "confidence": "high"
+    }
+  ],
+  "relationships": [
+    {
+      "id": "nebraska_medicine_sole_member_tnmc",
+      "source_id": "nebraska_medicine_parent",
+      "relationship_type": "sole_member_of",
+      "target_id": "the_nebraska_medical_center",
+      "target_kind": "entity",
+      "effective_start": "2016",
+      "effective_end": null,
+      "evidence_ids": [
+        "regents_interim_governing_documents_2026",
+        "irs_nebraska_medicine_return_2025"
+      ],
+      "confidence": "high",
+      "status": "current_under_interim_articles_effective_2026-07-01_through_2026-09-30",
+      "notes": [
+        "The exact original effective date within 2016 was not independently resolved"
+      ]
+    },
+    {
+      "id": "nebraska_medicine_sole_member_unmc_physicians",
+      "source_id": "nebraska_medicine_parent",
+      "relationship_type": "sole_member_of",
+      "target_id": "unmc_physicians",
+      "target_kind": "entity",
+      "effective_start": "2016",
+      "effective_end": null,
+      "evidence_ids": [
+        "regents_interim_governing_documents_2026",
+        "irs_nebraska_medicine_return_2025"
+      ],
+      "confidence": "high",
+      "status": "current_under_interim_articles_effective_2026-07-01_through_2026-09-30",
+      "notes": [
+        "UNMC Physicians remains distinct from the UNMC public-university campus",
+        "The exact original effective date within 2016 was not independently resolved"
+      ]
+    },
+    {
+      "id": "tnmc_operates_280013",
+      "source_id": "the_nebraska_medical_center",
+      "relationship_type": "operates_facility",
+      "target_id": "facility_nebraska_medical_center_280013",
+      "target_kind": "facility",
+      "effective_start": null,
+      "effective_end": null,
+      "evidence_ids": [
+        "nebraska_dhhs_hospital_roster_2026",
+        "cms_nebraska_medical_center_2026",
+        "irs_nebraska_medicine_return_2025"
+      ],
+      "confidence": "high",
+      "status": "current_as_of_2026-07-15_state_roster",
+      "notes": [
+        "Facility CCN and operator EIN are separately typed identifiers"
+      ]
+    },
+    {
+      "id": "bellevue_llc_operates_280132",
+      "source_id": "bellevue_medical_center_llc",
+      "relationship_type": "operates_facility",
+      "target_id": "facility_bellevue_medical_center_280132",
+      "target_kind": "facility",
+      "effective_start": null,
+      "effective_end": null,
+      "evidence_ids": [
+        "nebraska_dhhs_hospital_roster_2026",
+        "cms_bellevue_medical_center_2026",
+        "nppes_bellevue_medical_center"
+      ],
+      "confidence": "high",
+      "status": "current_as_of_2026-07-15_state_roster",
+      "notes": [
+        "Federal disregarded-entity treatment does not eliminate the state-licensed operator record"
+      ]
+    },
+    {
+      "id": "tnmc_controls_bellevue_operator",
+      "source_id": "the_nebraska_medical_center",
+      "relationship_type": "controls_operator_of_facility",
+      "target_id": "facility_bellevue_medical_center_280132",
+      "target_kind": "facility",
+      "effective_start": null,
+      "effective_end": null,
+      "evidence_ids": [
+        "irs_tnmc_return_2024",
+        "nebraska_dhhs_hospital_roster_2026"
+      ],
+      "confidence": "high",
+      "status": "tax_control_supported_for_period_ended_2023-06-30_operator_current_as_of_2026-07-15",
+      "notes": [
+        "The relationship combines period-specific federal tax control with current state operator identity and does not assert an unresolved equity percentage"
+      ]
+    },
+    {
+      "id": "nebraska_medicine_academic_affiliation_unmc",
+      "source_id": "nebraska_medicine_parent",
+      "relationship_type": "academic_affiliation_with",
+      "target_id": "university_of_nebraska_medical_center",
+      "target_kind": "entity",
+      "effective_start": null,
+      "effective_end": null,
+      "evidence_ids": [
+        "unmc_shared_emblem_2015",
+        "unmc_governance_faq_2026"
+      ],
+      "confidence": "high",
+      "status": "current_as_of_2026_sources_with_unresolved_start",
+      "notes": [
+        "Shared branding, campus, mission, dual employment, teaching, research, and governance ties do not establish entity identity or owned-core inclusion"
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "nebraska_medicine_history",
+      "title": "Nebraska Medicine, History of Nebraska Medicine",
+      "url": "https://www.nebraskamed.com/about-us/nebraska-medicine-history",
+      "locator": "Timeline of key events; Nebraska Medicine milestones; About Nebraska Medical Center; About Bellevue Medical Center",
+      "source_period": "Live page accessed 2026-07-25; milestones through 2026",
+      "confidence": "high",
+      "limitation": "Official narrative and brand history, not articles of incorporation or a current equity schedule"
+    },
+    {
+      "id": "unmc_shared_emblem_2015",
+      "title": "UNMC, Shared emblem underscores interdependence",
+      "url": "https://www.unmc.edu/newsroom/2015/06/11/shared-emblem-underscores-interdependence/",
+      "locator": "Opening paragraphs through the statement that UNMC remains a separate entity",
+      "source_period": "Published 2015-06-11; describes the 2014 brand launch",
+      "confidence": "high",
+      "limitation": "Dated source, corroborated by 2026 governance materials"
+    },
+    {
+      "id": "university_interim_structure_release_2026",
+      "title": "University of Nebraska System, Regents approve interim structure",
+      "url": "https://nebraska.edu/news-and-events/news/2026/06/regents-approve-interim-structure",
+      "locator": "Release paragraphs under the headline and About the University of Nebraska",
+      "source_period": "Published 2026-06-29; temporary structure effective 2026-07-01 through 2026-09-30",
+      "confidence": "high",
+      "limitation": "Official release summarizes, but does not replace, the approved governing documents"
+    },
+    {
+      "id": "university_transition_release_2026",
+      "title": "University of Nebraska System, NU Regents to meet on Monday, June 29",
+      "url": "https://nebraska.edu/news-and-events/news/2026/06/nu-regents-to-meet-on-monday-june-29",
+      "locator": "Paragraphs beginning The proposed actions and As of June 30",
+      "source_period": "Published 2026-06-24; describes transition effective 2026-07-01",
+      "confidence": "high",
+      "limitation": "Official transition representation; closing instruments were not independently examined"
+    },
+    {
+      "id": "unmc_governance_faq_2026",
+      "title": "UNMC, Nebraska Medicine Governance FAQ",
+      "url": "https://www.unmc.edu/news/nm-governance/index.html",
+      "locator": "Key Points You Should Know and Q&A on separate corporate entity, state status, and employees",
+      "source_period": "January 2026 proposal context",
+      "confidence": "high",
+      "limitation": "Superseded on interim board composition by June 2026 releases; still supports entity separation"
+    },
+    {
+      "id": "regents_interim_governing_documents_2026",
+      "title": "University of Nebraska Board of Regents, June 29, 2026 agenda with interim governing documents",
+      "url": "https://nebraska.edu/_files/docs/regents/agendas-and-minutes/2026/june-29-board-meeting/agenda-6-29-26-with-materials.pdf",
+      "locator": "PDF p. 6 section 3.02; pp. 21-23 Articles I, II, IV and section 5.1; p. 25 section 5.4",
+      "source_period": "Articles and bylaws effective 2026-07-01 through 2026-09-30",
+      "confidence": "high",
+      "limitation": "Expressly interim and due to expire or be superseded after 2026-09-30"
+    },
+    {
+      "id": "irs_nebraska_medicine_return_2025",
+      "title": "IRS direct electronic Form 990 archive, Nebraska Medicine return",
+      "url": "https://apps.irs.gov/pub/epostcard/990/xml/2025/2025_TEOS_XML_05A.zip",
+      "locator": "Internal file 202511339349307596_public.xml; ReturnHeader/Filer; IRS990ScheduleR/IdRelatedTaxExemptOrgGrp",
+      "source_period": "Tax period 2023-07-01 through 2024-06-30; filed 2025-05-13",
+      "confidence": "high",
+      "limitation": "Taxpayer-filed return for the stated period, not an IRS adjudication or current W-9; accessed directly from IRS, not through the repository IRS 990 Evidence Service"
+    },
+    {
+      "id": "irs_tnmc_return_2024",
+      "title": "IRS direct electronic Form 990 archive, The Nebraska Medical Center return",
+      "url": "https://apps.irs.gov/pub/epostcard/990/xml/2024/2024_TEOS_XML_05A.zip",
+      "locator": "Internal file 2024_TEOS_XML_05A/202441349349307864_public.xml; ReturnHeader/Filer; IRS990ScheduleR/IdDisregardedEntitiesGrp",
+      "source_period": "Tax period 2022-07-01 through 2023-06-30; filed 2024-05-13",
+      "confidence": "high",
+      "limitation": "Taxpayer representation for the stated period; disregarded classification does not eliminate the separately licensed LLC or prove current equity percentages; accessed directly from IRS, not through the repository IRS 990 Evidence Service"
+    },
+    {
+      "id": "nebraska_dhhs_hospital_roster_2026",
+      "title": "Nebraska DHHS current Hospital Roster",
+      "url": "https://dhhs.ne.gov/licensure/Documents/Hospital%20Roster.pdf",
+      "locator": "PDF p. 3 Bellevue; PDF p. 20 Omaha/The Nebraska Medical Center",
+      "source_period": "Roster updated 2026-07-15",
+      "confidence": "high",
+      "limitation": "The roster lists 690 licensed beds for The Nebraska Medical Center while Nebraska Medicine consumer fast facts lists 718; use 690 only for current regulatory licensed beds"
+    },
+    {
+      "id": "cms_nebraska_medical_center_2026",
+      "title": "CMS Hospital General Information, The Nebraska Medical Center",
+      "url": "https://data.cms.gov/provider-data/api/1/datastore/query/xubh-q36u/0?conditions%5B0%5D%5Bproperty%5D=facility_name&conditions%5B0%5D%5Bvalue%5D=THE%20NEBRASKA%20MEDICAL%20CENTER&conditions%5B0%5D%5Boperator%5D=%3D",
+      "locator": "JSON results[0] facility_id, facility_name, address, hospital_type, and hospital_ownership",
+      "source_period": "Dataset modified 2026-04-28",
+      "confidence": "high",
+      "limitation": "CMS facility ownership classification is not a complete corporate family tree"
+    },
+    {
+      "id": "cms_bellevue_medical_center_2026",
+      "title": "CMS Hospital General Information, Bellevue Medical Center",
+      "url": "https://data.cms.gov/provider-data/api/1/datastore/query/xubh-q36u/0?conditions%5B0%5D%5Bproperty%5D=facility_name&conditions%5B0%5D%5Bvalue%5D=BELLEVUE%20MEDICAL%20CENTER&conditions%5B0%5D%5Boperator%5D=%3D",
+      "locator": "JSON results[0] facility_id, facility_name, address, hospital_type, and hospital_ownership",
+      "source_period": "Dataset modified 2026-04-28",
+      "confidence": "high",
+      "limitation": "CMS proprietary classification is a facility field, not proof that the Nebraska Medicine parent is for-profit"
+    },
+    {
+      "id": "nppes_nebraska_medical_center",
+      "title": "CMS NPPES Read API, Nebraska Medical Center",
+      "url": "https://npiregistry.cms.hhs.gov/api/?version=2.1&number=1356307581&pretty=on",
+      "locator": "results[0].basic, other_names, number, and practiceLocations",
+      "source_period": "Last updated and certified 2025-05-06; active at 2026-07-25 access",
+      "confidence": "high",
+      "limitation": "A Bellevue secondary practice location does not convert Bellevue Medical Center's separate CCN or NPI into this record"
+    },
+    {
+      "id": "nppes_bellevue_medical_center",
+      "title": "CMS NPPES Read API, Bellevue Medical Center",
+      "url": "https://npiregistry.cms.hhs.gov/api/?version=2.1&number=1609007525&pretty=on",
+      "locator": "results[0].basic.organization_name, other_names, number, addresses, and last_updated",
+      "source_period": "Last updated 2018-05-01; active at 2026-07-25 access",
+      "confidence": "high",
+      "limitation": "Supports the enumerated name, DBA, and separate NPI record but not current equity percentages"
+    },
+    {
+      "id": "unmc_tax_id_form_2025",
+      "title": "UNMC, 2025 SHARING the Green registration form",
+      "url": "https://www.unmc.edu/newsroom/wp-content/uploads/2025/09/2025-STG-Registration-Form.pdf",
+      "locator": "PDF p. 1 payment instructions and Tax ID line",
+      "source_period": "2025 event form posted September 2025",
+      "confidence": "high",
+      "limitation": "Supports the named payee representation only; campus-versus-University-system tax-ID scope remains unresolved"
+    }
+  ],
+  "gaps": [
+    {
+      "id": "interim_governance_after_2026_09_30",
+      "status": "unresolved",
+      "description": "The governing documents expire or may be superseded after 2026-09-30; OCF membership was prospective, not completed, in the reviewed current documents."
+    },
+    {
+      "id": "unmc_tax_id_scope",
+      "status": "unresolved",
+      "description": "Official evidence supports 47-0049123 for a named UNMC fundraiser payee but does not resolve whether the identifier is campus-only, system-wide, or used by other University units."
+    },
+    {
+      "id": "bellevue_current_equity",
+      "status": "unresolved",
+      "description": "The latest located federal filing supports TNMC direct tax control of Bellevue for the period ended 2023-06-30, but current equity holders and percentages were not established."
+    },
+    {
+      "id": "npi_identifier_schema",
+      "status": "deferred",
+      "description": "The current registry schema permits only EIN and CCN identifiers, so NPI 1356307581 and NPI 1609007525 are preserved in entity notes and evidence rather than identifier arrays."
+    },
+    {
+      "id": "nebraska_medical_center_bed_count",
+      "status": "unresolved",
+      "description": "The current Nebraska DHHS roster reports 690 licensed beds for The Nebraska Medical Center while Nebraska Medicine's March 2026 consumer fast facts reports 718; the fixture makes no general bed-count claim."
+    },
+    {
+      "id": "audited_financial_and_exhaustive_subsidiary_scope",
+      "status": "deferred",
+      "description": "This lean fixture does not claim an audited consolidated financial perimeter or an exhaustive subsidiary, clinic, and licensed-facility inventory."
+    },
+    {
+      "id": "board_of_regents_identifier",
+      "status": "unresolved",
+      "description": "The current articles clearly identify the University of Nebraska Board of Regents as sole legal member, but no separately scoped Board/University identifier was established for an entity node; the dated fact is preserved in the governance perimeter instead."
+    }
+  ]
+}

@@ -3,16 +3,16 @@
 Downloads inpatient and outpatient PUF CSV files from data.cms.gov,
 converts to Parquet with zstd compression, and queries with DuckDB.
 """
-
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import duckdb
+import pandas as pd
 
 from shared.utils.cache import write_atomic_bytes, write_atomic_parquet
+from shared.utils.errors import EXPECTED_OPERATIONAL_EXCEPTIONS
 from shared.utils.http_client import resilient_request
-import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +49,7 @@ def _is_cache_valid(path: Path, ttl_days: int = _CACHE_TTL_DAYS) -> bool:
     """Check if a cached file exists and is within TTL."""
     if not path.exists():
         return False
-    age_days = (datetime.now(timezone.utc).timestamp() - path.stat().st_mtime) / 86400
+    age_days = (datetime.now(UTC).timestamp() - path.stat().st_mtime) / 86400
     return age_days < ttl_days
 
 
@@ -70,7 +70,7 @@ async def _download_and_cache_csv(url: str, cache_path: Path, dataset_name: str)
         logger.info("%s cached: %d records -> %s", dataset_name, len(df), cache_path.name)
         return True
 
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("Failed to download %s: %s", dataset_name, e)
         return False
 
@@ -131,7 +131,7 @@ def _get_con_with_view(dataset: str, year: str) -> duckdb.DuckDBPyConnection | N
     try:
         con.execute(f"CREATE VIEW data AS SELECT * FROM {safe_parquet_sql(path)}")
         return con
-    except Exception:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS:
         logger.warning("Corrupt Parquet cache, deleting: %s", path)
         con.close()
         path.unlink(missing_ok=True)
@@ -267,7 +267,7 @@ def query_inpatient(
 
         return results
 
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("Inpatient query failed: %s", e)
         return []
     finally:
@@ -335,7 +335,7 @@ def query_outpatient(
 
         return results
 
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("Outpatient query failed: %s", e)
         return []
     finally:

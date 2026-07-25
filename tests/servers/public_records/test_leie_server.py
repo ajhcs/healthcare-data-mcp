@@ -7,7 +7,6 @@ import pytest
 from servers.public_records import server
 from shared.utils.mcp_response import validate_evidence_receipt
 
-
 METADATA = {
     "source_name": "HHS OIG LEIE",
     "source_url": "https://oig.hhs.gov/exclusions/downloadables/UPDATED.csv",

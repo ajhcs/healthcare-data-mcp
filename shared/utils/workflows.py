@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-import json
-import os
 import ast
 import importlib.util
+import json
+import os
 import shlex
 from collections.abc import Mapping
 from dataclasses import asdict, dataclass, field
@@ -19,7 +19,6 @@ from shared.utils.healthcare_identity import (
 )
 from shared.utils.mcp_response import REPORT_SOURCE_METADATA_FIELDS, evidence_receipt, to_structured
 from shared.utils.server_registry import SERVER_BY_ID, WORKFLOW_PRESETS
-
 
 WORKFLOW_SOURCE_ALIASES: dict[str, dict[str, Any]] = {
     "cms_claims_reference": {
@@ -2580,7 +2579,7 @@ def _step_identity_contract(step: WorkflowToolStep, join_keys: tuple[str, ...]) 
         "output_paths": _step_identity_output_paths(step),
         "match_policy": _step_match_policy(step, join_keys),
         "evidence_required": "evidence" in step.output_contract,
-        "preserve_with_fact_rows": sorted(set((*consumes, *produces))),
+        "preserve_with_fact_rows": sorted({*consumes, *produces}),
     }
 
 
@@ -2848,9 +2847,7 @@ def _step_identity_outputs(step: WorkflowToolStep, join_keys: tuple[str, ...]) -
         candidates = ("ccn", "ahrq_system_id", "canonical_name", "address", "zip_code")
     elif step.server == "hospital-quality":
         candidates = ("ccn", "measure_id", "canonical_name")
-    elif step.server == "financial-intelligence":
-        candidates = ("ccn", "canonical_name")
-    elif step.server == "workforce-analytics":
+    elif step.server == "financial-intelligence" or step.server == "workforce-analytics":
         candidates = ("ccn", "canonical_name")
     elif step.server == "provider-enrollment":
         candidates = ("npi", "ccn", "pecos_enrollment_id", "owner_id", "owner_name", "canonical_name")
@@ -3064,8 +3061,7 @@ def _report_ingest_fact_manifest(fact_manifest: Mapping[str, Any]) -> dict[str, 
 
 def _dataset_id_from_required_evidence(required_evidence: str) -> str:
     value = required_evidence.strip()
-    if value.endswith(" receipt"):
-        value = value[: -len(" receipt")]
+    value = value.removesuffix(" receipt")
     return value.replace(" ", "_") or "tool_evidence"
 
 
@@ -3506,12 +3502,12 @@ def _identity_resolution_plan(workflow: WorkflowDefinition) -> list[dict[str, An
         produces = _step_identity_outputs(step, workflow.identity_join_keys)
         exact_fields = sorted(
             field
-            for field in set((*consumes, *produces))
+            for field in {*consumes, *produces}
             if field in _EXACT_IDENTITY_FIELDS
         )
         candidate_fields = sorted(
             field
-            for field in set((*consumes, *produces))
+            for field in {*consumes, *produces}
             if field not in _EXACT_IDENTITY_FIELDS
         )
         if exact_fields:
