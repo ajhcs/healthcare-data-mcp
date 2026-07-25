@@ -43,16 +43,16 @@
     "baseline_over_registry_ratio": 2.298187087121407
   },
   "deterministic_lookup_artifact": "runs/lookup_timings.json",
-  "evaluated_input_sha256": {
-    "inputs/kaiser.evaluated.json": "78e42b85a28933e0e6a3653b7d461bc4c482c0616827c19a857b0dca84b53205",
-    "inputs/nebraska.evaluated.json": "3222b064acca6fad494df7c39df6393e9674f448950c44f681938de8dd5aa278",
-    "registry_resolver_outputs.json": "dca62bad991fc8f9ba1ef7c96e506d06cd30570662546e272ed6b3b8e4e63e03"
-  },
   "validation": {
     "ruff": "all_checks_passed",
     "full_pytest": "1015 passed, 4 skipped in 111.96s after post-freeze source correction",
     "perimeter_pytest_after_source_correction": "49 passed in 0.16s",
     "run_json": "4 runs / 32 answers validated",
     "finalized_at_utc": "2026-07-25T21:21:57Z"
+  },
+  "evaluated_input_integrity": {
+    "method": "Byte-for-byte evaluated fixture snapshots committed under inputs/ before the live-fixture source correction",
+    "git_content_tracking": true,
+    "checksum_literals_omitted": "2026-07-25T21:29:47Z detect-secrets false-positive remediation"
   }
 }

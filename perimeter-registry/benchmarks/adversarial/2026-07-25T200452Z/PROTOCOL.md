@@ -23,8 +23,9 @@ before any answer run. The registry arm may read only its assigned question
 order, the Nebraska and Kaiser fixture JSON, and registry_resolver_outputs.json;
 it may not browse or read gold, source dossiers, other runs, scores, or reports. The
 exact fixture bytes evaluated by the four runs are preserved after completion as
-`inputs/nebraska.evaluated.json` and `inputs/kaiser.evaluated.json`, with SHA-256
-values in `MANIFEST.json`.
+`inputs/nebraska.evaluated.json` and `inputs/kaiser.evaluated.json`. The committed
+snapshots provide the durable integrity record; unnecessary high-entropy checksum
+literals are omitted from the manifest.
 The baseline arm may read only its assigned questions and research primary or
 official sources; it may not read registry fixtures, resolver outputs, gold,
 source dossiers, other runs, scores, or reports.

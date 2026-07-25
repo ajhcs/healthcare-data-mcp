@@ -82,3 +82,12 @@ permissions in the working filesystem, but Git tracked it as mode `100644`. The 
 change is the tracked mode to `100755`; file content is unchanged. A Git-index audit
 found no other non-executable tracked Python file with a shebang. No Form 990-related
 file changed.
+
+## Manifest checksum-literal removal — 2026-07-25T21:29:47Z
+
+GitHub product-readiness correctly blocked three 64-character SHA-256 literals in the
+benchmark manifest as potential high-entropy secrets. They were hashes of committed
+fixture/resolver snapshots, not credentials. The unnecessary literals were removed;
+the exact evaluated bytes remain committed under `inputs/`. No baseline allowlist,
+inline pragma, scanner exclusion, or security-gate bypass was added. No Form
+990-related file changed.
