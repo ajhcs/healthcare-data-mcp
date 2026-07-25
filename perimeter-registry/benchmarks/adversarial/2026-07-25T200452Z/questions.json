@@ -1,0 +1,110 @@
+{
+  "version": 2,
+  "generated_at_utc": "2026-07-25T20:35:50Z",
+  "frozen_at_utc": "2026-07-25T20:35:50Z",
+  "cases": [
+    "Nebraska Medicine / UNMC",
+    "Kaiser Permanente"
+  ],
+  "questions": [
+    {
+      "id": "N1",
+      "system": "Nebraska Medicine / UNMC",
+      "fixture": "nebraska",
+      "question": "For Nebraska Medicine as a whole, what belongs in the lean clinical enterprise, and should UNMC be included as an owned hospital or entity?",
+      "tags": [
+        "perimeter",
+        "brand-vs-entity",
+        "academic-affiliation",
+        "non-aggregation"
+      ]
+    },
+    {
+      "id": "K1",
+      "system": "Kaiser Permanente",
+      "fixture": "kaiser",
+      "question": "What is Kaiser Permanente's EIN?",
+      "tags": [
+        "natural_brand",
+        "exact_ein",
+        "accepted_clarification",
+        "legal_entity_distinction"
+      ]
+    },
+    {
+      "id": "N2",
+      "system": "Nebraska Medicine / UNMC",
+      "fixture": "nebraska",
+      "question": "As of July 25, 2026, are Omaha Community Foundation and Clarkson Regional Health Services current members or owners of Nebraska Medicine?",
+      "tags": [
+        "dated-governance",
+        "member-vs-director",
+        "historical-relationship"
+      ]
+    },
+    {
+      "id": "K2",
+      "system": "Kaiser Permanente",
+      "fixture": "kaiser",
+      "question": "For Kaiser Permanente in Colorado, which entity and EIN should I use for health coverage and for physician care?",
+      "tags": [
+        "regional_scope",
+        "health_plan",
+        "physician_group",
+        "exact_ein",
+        "accepted_clarification"
+      ]
+    },
+    {
+      "id": "N3",
+      "system": "Nebraska Medicine / UNMC",
+      "fixture": "nebraska",
+      "question": "For The Nebraska Medical Center and Bellevue Medical Center, which operator EIN and facility CCN belong to each, and does Bellevue's disregarded-entity tax treatment erase its separate operator record?",
+      "tags": [
+        "facility",
+        "operator",
+        "ein",
+        "ccn",
+        "disregarded-entity"
+      ]
+    },
+    {
+      "id": "K3",
+      "system": "Kaiser Permanente",
+      "fixture": "kaiser",
+      "question": "Kaiser Permanente reported about $115.8 billion of 2024 operating revenue. Can I assign that amount to Kaiser Foundation Health Plan, Inc. EIN 94-1340523 and compare it directly with earlier Kaiser totals?",
+      "tags": [
+        "reporting_perimeter",
+        "financial_measurement",
+        "period_change",
+        "false_aggregation"
+      ]
+    },
+    {
+      "id": "N4",
+      "system": "Nebraska Medicine / UNMC",
+      "fixture": "nebraska",
+      "question": "Which EIN belongs to the Nebraska Medicine parent, and may UNMC Physicians or UNMC be treated as the same entity or inherit that EIN?",
+      "tags": [
+        "ein",
+        "parent",
+        "faculty-group",
+        "university-separation",
+        "non-aggregation"
+      ]
+    },
+    {
+      "id": "K4",
+      "system": "Kaiser Permanente",
+      "fixture": "kaiser",
+      "question": "For Kaiser Foundation Hospital - Santa Clara, which EIN and CCN identify the legal hospital entity and the facility?",
+      "tags": [
+        "facility",
+        "operator_entity",
+        "exact_ein",
+        "exact_ccn",
+        "typed_identifiers"
+      ]
+    }
+  ]
+}

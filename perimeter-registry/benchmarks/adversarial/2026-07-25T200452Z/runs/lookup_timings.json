@@ -1,0 +1,12 @@
+{
+  "generated_at_utc": "2026-07-25T20:42:48.807874+00:00",
+  "warmup_cycles": 1000,
+  "timed_cycles": 10000,
+  "questions_per_cycle": 8,
+  "lookup_calls": 80000,
+  "total_seconds": 3.930248786,
+  "mean_seconds_per_lookup": 4.9128109825e-05,
+  "median_seconds_per_eight_question_cycle": 0.000294935,
+  "p95_seconds_per_eight_question_cycle": 0.000671271,
+  "note": "Warmed in-process deterministic resolution only; excludes model and file-loading latency."
+}

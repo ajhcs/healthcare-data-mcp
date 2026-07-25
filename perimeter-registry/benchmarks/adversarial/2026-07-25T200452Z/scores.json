@@ -1,0 +1,424 @@
+{
+  "schema_version": 1,
+  "benchmark_timestamp": "2026-07-25T200452Z",
+  "scored_at_utc": "2026-07-25T21:10:31Z",
+  "scoring_basis": {
+    "correctness": "Strict binary all-or-nothing scoring against frozen gold.json: every required point must be present and no failure condition may occur.",
+    "scope_and_caveat": "1 only when the selected perimeter/entity and every material ambiguity, date, source-period, and missed-data caveat in the frozen gold are labeled.",
+    "false_aggregation_encoding": "0 = no false aggregation; 1 = false aggregation occurred.",
+    "provenance_unit": "Each top-level entry in gold.questions[question_id].required is one claim. Coverage requires at least one listed primary-source URL sufficiently specific to the full required entry; partial support for a compound entry does not count.",
+    "missed_data_detection": "1 when every gold-required absent or unresolved identifier, relationship, or period fact applicable to the answer is explicitly refused or marked unresolved; 1 also means no applicable gold-required absence was left undetected. Otherwise 0.",
+    "gold_adjustments": "None. The separate N4 evidence conflict is reported as scoring uncertainty but does not change frozen-gold metrics; the claimed CPMG EIN in K2 is unsupported by the cited primary URLs.",
+    "input_tokens": "Unavailable/null in all four run records; no token total, ratio, or savings estimate is made."
+  },
+  "runs": {
+    "registry_r1": {
+      "arm": "registry_assisted",
+      "repetition": 1,
+      "telemetry": {
+        "wall_latency_seconds": 199,
+        "input_tokens": null,
+        "research_tool_calls": 0,
+        "local_file_read_calls": 7
+      },
+      "answers": {
+        "N1": {
+          "correctness": 1,
+          "scope_and_caveat": 1,
+          "false_aggregation": 0,
+          "provenance_coverage": {"supported": 4, "required": 4},
+          "missed_data_detection": 1,
+          "rationale": "Selects the frozen lean scope; includes the parent, TNMC, UNMC Physicians, and Bellevue under the supported chain; excludes UNMC; distinguishes brand from parent; and labels consolidation, equity, inventory, and identifier-schema limits."
+        },
+        "K1": {
+          "correctness": 1,
+          "scope_and_caveat": 1,
+          "false_aggregation": 0,
+          "provenance_coverage": {"supported": 2, "required": 2},
+          "missed_data_detection": 1,
+          "rationale": "Refuses a universal brand EIN, asks for the intended filer/perimeter, and labels entity examples without identifier inheritance."
+        },
+        "N2": {
+          "correctness": 1,
+          "scope_and_caveat": 1,
+          "false_aggregation": 0,
+          "provenance_coverage": {"supported": 4, "required": 4},
+          "missed_data_detection": 1,
+          "rationale": "Correctly time-boxes the interim period, names the Regents sole member, separates OCF director appointment from membership, and treats Clarkson as historical."
+        },
+        "K2": {
+          "correctness": 1,
+          "scope_and_caveat": 1,
+          "false_aggregation": 0,
+          "provenance_coverage": {"supported": 4, "required": 4},
+          "missed_data_detection": 1,
+          "rationale": "Maps coverage to the Colorado plan and EIN, maps physician care to the distinct CPMG record, and leaves the medical-group EIN unresolved as frozen gold requires."
+        },
+        "N3": {
+          "correctness": 1,
+          "scope_and_caveat": 1,
+          "false_aggregation": 0,
+          "provenance_coverage": {"supported": 4, "required": 4},
+          "missed_data_detection": 1,
+          "rationale": "Gives both operator-EIN/facility-CCN pairs, preserves typed records, and dates TNMC's disregarded-entity disclosure while retaining Bellevue's current licensed-operator record."
+        },
+        "K3": {
+          "correctness": 1,
+          "scope_and_caveat": 1,
+          "false_aggregation": 0,
+          "provenance_coverage": {"supported": 4, "required": 4},
+          "missed_data_detection": 1,
+          "rationale": "Rejects EIN-level attribution, gives the exact combined revenue and full published perimeter, and requires normalization for the Risant perimeter change."
+        },
+        "N4": {
+          "correctness": 1,
+          "scope_and_caveat": 1,
+          "false_aggregation": 0,
+          "provenance_coverage": {"supported": 4, "required": 4},
+          "missed_data_detection": 1,
+          "rationale": "Gives the parent and UNMC Physicians EINs, preserves the sole-member and university separations, and limits 47-0049123 to the named-payee evidence with unresolved campus/system scope."
+        },
+        "K4": {
+          "correctness": 1,
+          "scope_and_caveat": 1,
+          "false_aggregation": 0,
+          "provenance_coverage": {"supported": 4, "required": 4},
+          "missed_data_detection": 1,
+          "rationale": "Correctly maps KFH EIN 94-1105628 and Santa Clara CCN 050071 to different record types and refuses a facility-level or brand-level EIN inference."
+        }
+      },
+      "aggregate": {
+        "correctness": {"numerator": 8, "denominator": 8},
+        "scope_and_caveat": {"numerator": 8, "denominator": 8},
+        "false_aggregation": {"numerator": 0, "denominator": 8},
+        "provenance_coverage": {"supported": 30, "required": 30},
+        "missed_data_detection": {"numerator": 8, "denominator": 8}
+      }
+    },
+    "registry_r2": {
+      "arm": "registry_assisted",
+      "repetition": 2,
+      "telemetry": {
+        "wall_latency_seconds": 166.070365551,
+        "input_tokens": null,
+        "research_tool_calls": 0,
+        "local_file_read_calls": 2
+      },
+      "answers": {
+        "K4": {
+          "correctness": 1,
+          "scope_and_caveat": 1,
+          "false_aggregation": 0,
+          "provenance_coverage": {"supported": 4, "required": 4},
+          "missed_data_detection": 1,
+          "rationale": "Correct KFH operator, EIN, Santa Clara CCN, identifier typing, and refusal to invent a separate facility EIN."
+        },
+        "N4": {
+          "correctness": 1,
+          "scope_and_caveat": 1,
+          "false_aggregation": 0,
+          "provenance_coverage": {"supported": 4, "required": 4},
+          "missed_data_detection": 1,
+          "rationale": "Correct parent and faculty-group records, sole-member relationship, university separation, and explicit campus-versus-system tax-ID uncertainty."
+        },
+        "K3": {
+          "correctness": 1,
+          "scope_and_caveat": 1,
+          "false_aggregation": 0,
+          "provenance_coverage": {"supported": 4, "required": 4},
+          "missed_data_detection": 1,
+          "rationale": "Correct exact revenue, multi-organization perimeter, no EIN attribution, and no unnormalized pre-Risant comparison."
+        },
+        "N3": {
+          "correctness": 1,
+          "scope_and_caveat": 1,
+          "false_aggregation": 0,
+          "provenance_coverage": {"supported": 4, "required": 4},
+          "missed_data_detection": 1,
+          "rationale": "Correctly maps and types both hospitals, gives the 2023-06-30 tax period and current roster period, and preserves Bellevue's operator record."
+        },
+        "K2": {
+          "correctness": 1,
+          "scope_and_caveat": 1,
+          "false_aggregation": 0,
+          "provenance_coverage": {"supported": 4, "required": 4},
+          "missed_data_detection": 1,
+          "rationale": "Correct role-specific entities and Colorado plan EIN; CPMG remains separate and its EIN is explicitly unanswered."
+        },
+        "N2": {
+          "correctness": 1,
+          "scope_and_caveat": 1,
+          "false_aggregation": 0,
+          "provenance_coverage": {"supported": 4, "required": 4},
+          "missed_data_detection": 1,
+          "rationale": "Correct interim dates, sole member, two-director OCF appointment right, and Clarkson end date, with post-interim governance unresolved."
+        },
+        "K1": {
+          "correctness": 1,
+          "scope_and_caveat": 1,
+          "false_aggregation": 0,
+          "provenance_coverage": {"supported": 2, "required": 2},
+          "missed_data_detection": 1,
+          "rationale": "Refuses the brand-level EIN and requires function, region, and filer selection before assignment."
+        },
+        "N1": {
+          "correctness": 1,
+          "scope_and_caveat": 1,
+          "false_aggregation": 0,
+          "provenance_coverage": {"supported": 4, "required": 4},
+          "missed_data_detection": 1,
+          "rationale": "Complete frozen perimeter, chain, exclusions, identifiers, brand/legal distinction, period limits, and unresolved-data caveats."
+        }
+      },
+      "aggregate": {
+        "correctness": {"numerator": 8, "denominator": 8},
+        "scope_and_caveat": {"numerator": 8, "denominator": 8},
+        "false_aggregation": {"numerator": 0, "denominator": 8},
+        "provenance_coverage": {"supported": 30, "required": 30},
+        "missed_data_detection": {"numerator": 8, "denominator": 8}
+      }
+    },
+    "baseline_r1": {
+      "arm": "manual_style_source_research_baseline",
+      "repetition": 1,
+      "telemetry": {
+        "wall_latency_seconds": 485,
+        "input_tokens": null,
+        "research_tool_calls": 34,
+        "local_file_read_calls": 2
+      },
+      "answers": {
+        "K4": {
+          "correctness": 1,
+          "scope_and_caveat": 1,
+          "false_aggregation": 0,
+          "provenance_coverage": {"supported": 3, "required": 4},
+          "missed_data_detection": 1,
+          "rationale": "The entity/facility mapping and typing are correct. The listed Kaiser and CMS URLs support operator and CCN claims, but none is a claim-specific primary record for KFH EIN 94-1105628."
+        },
+        "N4": {
+          "correctness": 0,
+          "scope_and_caveat": 0,
+          "false_aggregation": 0,
+          "provenance_coverage": {"supported": 2, "required": 4},
+          "missed_data_detection": 0,
+          "rationale": "Correct parent and separated entities, but it omits that Nebraska Medicine is UNMC Physicians' sole member under the interim articles and assigns 47-0049123 to Board/UNMC without the frozen gold's named-payee and campus-versus-system caveat."
+        },
+        "K3": {
+          "correctness": 1,
+          "scope_and_caveat": 1,
+          "false_aggregation": 0,
+          "provenance_coverage": {"supported": 4, "required": 4},
+          "missed_data_detection": 1,
+          "rationale": "Exact total, correct published perimeter, no KFHP-only attribution, explicit Risant first-year change, and refusal to allocate an unavailable entity-only amount."
+        },
+        "N3": {
+          "correctness": 0,
+          "scope_and_caveat": 0,
+          "false_aggregation": 0,
+          "provenance_coverage": {"supported": 3, "required": 4},
+          "missed_data_detection": 1,
+          "rationale": "The identifiers, operators, and non-erasure conclusion are correct, but the answer calls the Schedule R merely older and never gives the gold-required tax period ended 2023-06-30. Its cited older mirror cannot cover that period-specific required entry."
+        },
+        "K2": {
+          "correctness": 0,
+          "scope_and_caveat": 0,
+          "false_aggregation": 0,
+          "provenance_coverage": {"supported": 3, "required": 4},
+          "missed_data_detection": 0,
+          "rationale": "Correct plan, plan EIN, and legal separation, but it supplies CPMG EIN 84-0832336 instead of marking the medical-group EIN unresolved. The cited PBGC pagination URL does not display CPMG or that EIN and does not substantiate the pairing."
+        },
+        "N2": {
+          "correctness": 1,
+          "scope_and_caveat": 1,
+          "false_aggregation": 0,
+          "provenance_coverage": {"supported": 4, "required": 4},
+          "missed_data_detection": 1,
+          "rationale": "Correct dated sole-member state, OCF appointment-versus-membership distinction, and Clarkson historical treatment."
+        },
+        "K1": {
+          "correctness": 1,
+          "scope_and_caveat": 1,
+          "false_aggregation": 0,
+          "provenance_coverage": {"supported": 2, "required": 2},
+          "missed_data_detection": 1,
+          "rationale": "Correctly refuses one brand EIN and asks for region, function, transaction, and legal filer."
+        },
+        "N1": {
+          "correctness": 0,
+          "scope_and_caveat": 0,
+          "false_aggregation": 0,
+          "provenance_coverage": {"supported": 2, "required": 4},
+          "missed_data_detection": 0,
+          "rationale": "Includes the four core named organizations and excludes UNMC, but omits Bellevue's placement beneath TNMC's supported tax-control chain and does not clearly distinguish the same-named brand concept from the parent corporation. It also volunteers 47-0049123 without the frozen scope caveat."
+        }
+      },
+      "aggregate": {
+        "correctness": {"numerator": 4, "denominator": 8},
+        "scope_and_caveat": {"numerator": 4, "denominator": 8},
+        "false_aggregation": {"numerator": 0, "denominator": 8},
+        "provenance_coverage": {"supported": 23, "required": 30},
+        "missed_data_detection": {"numerator": 5, "denominator": 8}
+      }
+    },
+    "baseline_r2": {
+      "arm": "manual_style_source_research_baseline",
+      "repetition": 2,
+      "telemetry": {
+        "wall_latency_seconds": 354,
+        "input_tokens": null,
+        "research_tool_calls": 27,
+        "local_file_read_calls": 1
+      },
+      "answers": {
+        "N1": {
+          "correctness": 0,
+          "scope_and_caveat": 0,
+          "false_aggregation": 0,
+          "provenance_coverage": {"supported": 3, "required": 4},
+          "missed_data_detection": 1,
+          "rationale": "Correct composition, UNMC exclusion, and brand/parent distinction, but Bellevue is not placed beneath TNMC's supported tax-control chain and the selected perimeter is not expressly bounded as membership-only rather than audited consolidation."
+        },
+        "K1": {
+          "correctness": 1,
+          "scope_and_caveat": 1,
+          "false_aggregation": 0,
+          "provenance_coverage": {"supported": 2, "required": 2},
+          "missed_data_detection": 1,
+          "rationale": "Correct brand-level refusal and conditional legal-entity clarification."
+        },
+        "N2": {
+          "correctness": 1,
+          "scope_and_caveat": 1,
+          "false_aggregation": 0,
+          "provenance_coverage": {"supported": 4, "required": 4},
+          "missed_data_detection": 1,
+          "rationale": "Correct interim dates, sole University membership, OCF non-member director rights, and CRHS historical status."
+        },
+        "K2": {
+          "correctness": 0,
+          "scope_and_caveat": 0,
+          "false_aggregation": 0,
+          "provenance_coverage": {"supported": 3, "required": 4},
+          "missed_data_detection": 0,
+          "rationale": "Correct plan, plan EIN, and entity separation, but gives CPMG EIN 84-0832336 rather than the frozen-gold unresolved result. The cited PBGC pagination URL does not display CPMG or that EIN and therefore does not support the supplied identifier."
+        },
+        "N3": {
+          "correctness": 0,
+          "scope_and_caveat": 0,
+          "false_aggregation": 0,
+          "provenance_coverage": {"supported": 1, "required": 4},
+          "missed_data_detection": 1,
+          "rationale": "The four identifiers and separate-record conclusion are correct, but the answer omits the required 2023-06-30 TNMC return period and weakens direct control to 'may be included.' The generic IRS search URL and unrelated/older documents do not provide claim-specific EIN or disregarded-entity provenance."
+        },
+        "K3": {
+          "correctness": 1,
+          "scope_and_caveat": 1,
+          "false_aggregation": 0,
+          "provenance_coverage": {"supported": 4, "required": 4},
+          "missed_data_detection": 1,
+          "rationale": "Correct consolidated perimeter, total, no EIN allocation, and explicit normalization warning for Risant/acquisition-driven perimeter change."
+        },
+        "N4": {
+          "correctness": 0,
+          "scope_and_caveat": 0,
+          "false_aggregation": 0,
+          "provenance_coverage": {"supported": 1, "required": 4},
+          "missed_data_detection": 0,
+          "rationale": "Correct entity separation and numeric mappings, but omits Nebraska Medicine's sole membership of UNMC Physicians and assigns 47-0049123 definitively to Board/UNMC without the frozen named-payee/campus-versus-system caveat. A cited University plan document supports a University/Board EIN, so this is a frozen-gold conflict rather than clear false aggregation."
+        },
+        "K4": {
+          "correctness": 1,
+          "scope_and_caveat": 1,
+          "false_aggregation": 0,
+          "provenance_coverage": {"supported": 3, "required": 4},
+          "missed_data_detection": 1,
+          "rationale": "Correct KFH/Santa Clara mapping and identifier typing. CMS supports the facility facts, but the listed IRS PDF is for EIN 41-6011702 rather than KFH and does not cover KFH EIN 94-1105628."
+        }
+      },
+      "aggregate": {
+        "correctness": {"numerator": 4, "denominator": 8},
+        "scope_and_caveat": {"numerator": 4, "denominator": 8},
+        "false_aggregation": {"numerator": 0, "denominator": 8},
+        "provenance_coverage": {"supported": 21, "required": 30},
+        "missed_data_detection": {"numerator": 6, "denominator": 8}
+      }
+    }
+  },
+  "arm_aggregates": {
+    "registry_assisted": {
+      "answers": 16,
+      "correctness": {"numerator": 16, "denominator": 16},
+      "scope_and_caveat": {"numerator": 16, "denominator": 16},
+      "false_aggregation": {"numerator": 0, "denominator": 16},
+      "provenance_coverage": {"supported": 60, "required": 60},
+      "missed_data_detection": {"numerator": 16, "denominator": 16},
+      "wall_latency_seconds": 365.070365551,
+      "research_tool_calls": 0,
+      "local_file_read_calls": 9,
+      "input_tokens": null
+    },
+    "manual_style_source_research_baseline": {
+      "answers": 16,
+      "correctness": {"numerator": 8, "denominator": 16},
+      "scope_and_caveat": {"numerator": 8, "denominator": 16},
+      "false_aggregation": {"numerator": 0, "denominator": 16},
+      "provenance_coverage": {"supported": 44, "required": 60},
+      "missed_data_detection": {"numerator": 11, "denominator": 16},
+      "wall_latency_seconds": 839,
+      "research_tool_calls": 61,
+      "local_file_read_calls": 3,
+      "input_tokens": null
+    }
+  },
+  "question_aggregates": {
+    "N1": {"correctness": {"numerator": 2, "denominator": 4}, "scope_and_caveat": {"numerator": 2, "denominator": 4}, "false_aggregation": {"numerator": 0, "denominator": 4}, "provenance_coverage": {"supported": 13, "required": 16}, "missed_data_detection": {"numerator": 3, "denominator": 4}},
+    "K1": {"correctness": {"numerator": 4, "denominator": 4}, "scope_and_caveat": {"numerator": 4, "denominator": 4}, "false_aggregation": {"numerator": 0, "denominator": 4}, "provenance_coverage": {"supported": 8, "required": 8}, "missed_data_detection": {"numerator": 4, "denominator": 4}},
+    "N2": {"correctness": {"numerator": 4, "denominator": 4}, "scope_and_caveat": {"numerator": 4, "denominator": 4}, "false_aggregation": {"numerator": 0, "denominator": 4}, "provenance_coverage": {"supported": 16, "required": 16}, "missed_data_detection": {"numerator": 4, "denominator": 4}},
+    "K2": {"correctness": {"numerator": 2, "denominator": 4}, "scope_and_caveat": {"numerator": 2, "denominator": 4}, "false_aggregation": {"numerator": 0, "denominator": 4}, "provenance_coverage": {"supported": 14, "required": 16}, "missed_data_detection": {"numerator": 2, "denominator": 4}},
+    "N3": {"correctness": {"numerator": 2, "denominator": 4}, "scope_and_caveat": {"numerator": 2, "denominator": 4}, "false_aggregation": {"numerator": 0, "denominator": 4}, "provenance_coverage": {"supported": 12, "required": 16}, "missed_data_detection": {"numerator": 4, "denominator": 4}},
+    "K3": {"correctness": {"numerator": 4, "denominator": 4}, "scope_and_caveat": {"numerator": 4, "denominator": 4}, "false_aggregation": {"numerator": 0, "denominator": 4}, "provenance_coverage": {"supported": 16, "required": 16}, "missed_data_detection": {"numerator": 4, "denominator": 4}},
+    "N4": {"correctness": {"numerator": 2, "denominator": 4}, "scope_and_caveat": {"numerator": 2, "denominator": 4}, "false_aggregation": {"numerator": 0, "denominator": 4}, "provenance_coverage": {"supported": 11, "required": 16}, "missed_data_detection": {"numerator": 2, "denominator": 4}},
+    "K4": {"correctness": {"numerator": 4, "denominator": 4}, "scope_and_caveat": {"numerator": 4, "denominator": 4}, "false_aggregation": {"numerator": 0, "denominator": 4}, "provenance_coverage": {"supported": 14, "required": 16}, "missed_data_detection": {"numerator": 4, "denominator": 4}}
+  },
+  "overall_aggregate": {
+    "answers": 32,
+    "correctness": {"numerator": 24, "denominator": 32},
+    "scope_and_caveat": {"numerator": 24, "denominator": 32},
+    "false_aggregation": {"numerator": 0, "denominator": 32},
+    "provenance_coverage": {"supported": 104, "required": 120},
+    "missed_data_detection": {"numerator": 27, "denominator": 32}
+  },
+  "timing_aggregate": {
+    "end_to_end_run_wall_time": {
+      "registry_assisted_seconds": 365.070365551,
+      "baseline_seconds": 839,
+      "all_runs_seconds": 1204.070365551,
+      "baseline_to_registry_ratio_exact": "839000000000/365070365551",
+      "baseline_to_registry_ratio_decimal": 2.298187087121407,
+      "matched_order_A_ratio_baseline_r2_over_registry_r1": 1.778894472361809,
+      "matched_order_B_ratio_baseline_r1_over_registry_r2": 2.9204488012706705,
+      "interpretation": "The aggregate end-to-end ratio is below the protocol's 5-10x target. Per-run wall times are summed as work totals even though runs overlap in calendar time."
+    },
+    "deterministic_lookup_separate": {
+      "warmup_cycles": 1000,
+      "timed_cycles": 10000,
+      "questions_per_cycle": 8,
+      "lookup_calls": 80000,
+      "total_seconds": 3.930248786,
+      "mean_seconds_per_lookup": 0.000049128109825,
+      "median_seconds_per_eight_question_cycle": 0.000294935,
+      "p95_seconds_per_eight_question_cycle": 0.000671271,
+      "comparison_rule": "Warmed in-process resolver lookup excludes model, file loading, wrapper, and source-research latency. It is not added to end-to-end wall time and no cross-category speedup ratio is inferred."
+    }
+  },
+  "limitations": [
+    "Only two repetitions per arm, eight repeated questions, and two systems were tested; the 16 answers per arm are clustered rather than independent samples.",
+    "Order is counterbalanced, but order, repetition, run identity, and execution variation cannot be separated with this sample size.",
+    "The run records expose no model identifier/version, sampling settings, context size, or reasoning-effort telemetry.",
+    "The arms use different wrappers and evidence surfaces: curated local registry artifacts versus live source research. Pre-ingestion and fixture-authoring costs are outside registry run wall time.",
+    "Research-tool calls and local-file reads are not equivalent units, and per-answer latency must not replace top-level run wall time.",
+    "All input-token fields are null, so no token-use or token-savings claim is supported.",
+    "A frozen-gold/source-scope conflict exists for University/Board EIN 47-0049123; strict N4 scores intentionally retain the frozen gold. K2 is not treated as a gold conflict because the cited PBGC URLs do not substantiate the claimed CPMG EIN."
+  ]
+}

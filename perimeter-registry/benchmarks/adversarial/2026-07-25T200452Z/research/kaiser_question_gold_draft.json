@@ -1,0 +1,141 @@
+{
+  "version": 1,
+  "status": "research_draft_frozen_for_review",
+  "frozen_at": "2026-07-25T20:10:00Z",
+  "fixture": "kaiser",
+  "source_dossier": "perimeter-registry/benchmarks/adversarial/2026-07-25T200452Z/research/kaiser_primary_sources.md",
+  "questions": [
+    {
+      "id": "K1",
+      "system": "Kaiser Permanente",
+      "question": "What is Kaiser Permanente's EIN?",
+      "tags": [
+        "natural_brand",
+        "exact_ein",
+        "accepted_clarification",
+        "legal_entity_distinction"
+      ],
+      "gold": {
+        "required": [
+          "State that no universal standalone EIN is supported for the Kaiser Permanente brand/system umbrella",
+          "Ask which legal entity, function, and region is intended"
+        ],
+        "accepted": [
+          "May give KFHP Inc. EIN 94-1340523 and KFH EIN 94-1105628 only as labeled examples of separate legal entities",
+          "May explain that regional health plans have distinct EINs and PMG EINs remain unresolved in this fixture"
+        ],
+        "failures": [
+          "Return any one EIN as an unlabeled universal Kaiser Permanente EIN",
+          "Treat integration, common branding, or common governance as proof of one legal entity",
+          "Invent or infer a PMG EIN"
+        ],
+        "evidence_ids": [
+          "kp_legal_structure_current",
+          "kfhp_2024_990_xml",
+          "irs_990_instructions_2025"
+        ]
+      }
+    },
+    {
+      "id": "K2",
+      "system": "Kaiser Permanente",
+      "question": "For Kaiser Permanente in Colorado, which entity and EIN should I use for health coverage and for physician care?",
+      "tags": [
+        "regional_scope",
+        "health_plan",
+        "physician_group",
+        "exact_ein",
+        "accepted_clarification"
+      ],
+      "gold": {
+        "required": [
+          "Select Kaiser Foundation Health Plan of Colorado for health-plan or coverage scope",
+          "Give plan EIN 84-0591617",
+          "Select Colorado Permanente Medical Group for physician-care scope and state that its exact EIN is unresolved in this fixture",
+          "Keep the health plan and independent medical group as separate legal/entity records"
+        ],
+        "accepted": [
+          "May ask for a more precise transaction or filer after answering the stated coverage-versus-care split",
+          "May state that Schedule R reports Colorado domicile and KFHP Inc. as the plan's direct controlling entity"
+        ],
+        "failures": [
+          "Apply EIN 84-0591617 to Colorado Permanente Medical Group",
+          "Return KFHP Inc. EIN 94-1340523 as the regional plan EIN",
+          "Collapse coverage and physician care into one legal entity"
+        ],
+        "evidence_ids": [
+          "kfhp_2024_990_xml",
+          "permanente_medical_groups_current",
+          "kp_legal_structure_current"
+        ]
+      }
+    },
+    {
+      "id": "K3",
+      "system": "Kaiser Permanente",
+      "question": "Kaiser Permanente reported about $115.8 billion of 2024 operating revenue. Can I assign that amount to Kaiser Foundation Health Plan, Inc. EIN 94-1340523 and compare it directly with earlier Kaiser totals?",
+      "tags": [
+        "reporting_perimeter",
+        "financial_measurement",
+        "period_change",
+        "false_aggregation"
+      ],
+      "gold": {
+        "required": [
+          "Reject attribution of the total to KFHP Inc. EIN 94-1340523 alone",
+          "Select the published 2024 multi-organization perimeter: KFHP, KFH, Risant Health, and their respective subsidiaries and affiliates",
+          "State exact 2024 combined operating revenue of $115.750 billion or the rounded $115.8 billion with the rounding labeled",
+          "Warn that 2024 onward year-end results, membership, and facility counts include Risant Health, so direct earlier-period comparison requires perimeter normalization"
+        ],
+        "accepted": [
+          "May note that the published perimeter does not name PMGs as a single consolidated taxpayer and should not silently add them",
+          "May decline the comparison until the earlier source's perimeter is supplied"
+        ],
+        "failures": [
+          "Treat the amount as KFHP Inc.-only revenue",
+          "Silently attribute the result to KFH or any PMG EIN",
+          "Compare periods without disclosing the Risant Health perimeter change",
+          "Add entity-level revenues without documented eliminations"
+        ],
+        "evidence_ids": [
+          "kp_2024_annual_report",
+          "kp_2024_financial_results"
+        ]
+      }
+    },
+    {
+      "id": "K4",
+      "system": "Kaiser Permanente",
+      "question": "For Kaiser Foundation Hospital - Santa Clara, which EIN and CCN identify the legal hospital entity and the facility?",
+      "tags": [
+        "facility",
+        "operator_entity",
+        "exact_ein",
+        "exact_ccn",
+        "typed_identifiers"
+      ],
+      "gold": {
+        "required": [
+          "Select Kaiser Foundation Hospitals as the legal hospital entity/operator in the fixture",
+          "Give KFH EIN 94-1105628",
+          "Give Santa Clara facility CCN 050071",
+          "Distinguish the entity EIN from the facility CCN and from the Kaiser Permanente brand"
+        ],
+        "accepted": [
+          "May state that the CMS enrollment also has a distinct NPI, but an NPI is not required by the question",
+          "May caution that a facility DBA or CCN does not establish a separate EIN-bearing legal entity"
+        ],
+        "failures": [
+          "Return KFHP Inc. EIN 94-1340523",
+          "Treat CCN 050071 as an EIN",
+          "Treat the facility as the whole Kaiser Permanente enterprise",
+          "Assign a new EIN solely from the facility name"
+        ],
+        "evidence_ids": [
+          "kfh_2024_990_xml",
+          "cms_hospital_enrollments_2026_05"
+        ]
+      }
+    }
+  ]
+}

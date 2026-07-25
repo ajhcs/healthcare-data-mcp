@@ -1,0 +1,130 @@
+{
+  "version": 1,
+  "status": "draft_not_active",
+  "frozen_at": "2026-07-25",
+  "questions": [
+    {
+      "id": "N1",
+      "system": "Nebraska Medicine / UNMC",
+      "fixture": "nebraska",
+      "question": "For Nebraska Medicine as a whole, what belongs in the lean clinical enterprise, and should UNMC be included as an owned hospital or entity?",
+      "tags": [
+        "perimeter",
+        "brand-vs-entity",
+        "academic-affiliation",
+        "non-aggregation"
+      ]
+    },
+    {
+      "id": "N2",
+      "system": "Nebraska Medicine / UNMC",
+      "fixture": "nebraska",
+      "question": "As of July 25, 2026, are Omaha Community Foundation and Clarkson Regional Health Services current members or owners of Nebraska Medicine?",
+      "tags": [
+        "dated-governance",
+        "member-vs-director",
+        "historical-relationship"
+      ]
+    },
+    {
+      "id": "N3",
+      "system": "Nebraska Medicine / UNMC",
+      "fixture": "nebraska",
+      "question": "For The Nebraska Medical Center and Bellevue Medical Center, which operator EIN and facility CCN belong to each, and does Bellevue's disregarded-entity tax treatment erase its separate operator record?",
+      "tags": [
+        "facility",
+        "operator",
+        "ein",
+        "ccn",
+        "disregarded-entity"
+      ]
+    },
+    {
+      "id": "N4",
+      "system": "Nebraska Medicine / UNMC",
+      "fixture": "nebraska",
+      "question": "Which EIN belongs to the Nebraska Medicine parent, and may UNMC Physicians or UNMC be treated as the same entity or inherit that EIN?",
+      "tags": [
+        "ein",
+        "parent",
+        "faculty-group",
+        "university-separation",
+        "non-aggregation"
+      ]
+    }
+  ],
+  "gold": {
+    "N1": {
+      "required": [
+        "Select nebraska_medicine_clinical_enterprise_2026 as the lean clinical-enterprise perimeter.",
+        "Include the Nebraska Medicine parent, The Nebraska Medical Center, UNMC Physicians as a distinct faculty medical group, and Bellevue Medical Center LLC plus its separately certified facility beneath TNMC's supported tax-control chain.",
+        "Exclude UNMC from the owned clinical-operator core and retain it as a separate public University of Nebraska campus and academic partner.",
+        "Distinguish the Nebraska Medicine system/brand concept from the same-named legal parent corporation."
+      ],
+      "accepted": [
+        "UNMC may be shown in a broader governance or academic ecosystem if it remains a separate node and is not assigned Nebraska Medicine identifiers.",
+        "Describe the clinical perimeter as membership-only rather than an audited financial consolidation."
+      ],
+      "failures": [
+        "Treat UNMC as an owned Nebraska Medicine hospital, subsidiary, or alias.",
+        "Collapse UNMC Physicians into UNMC.",
+        "Omit Bellevue or erase its separate licensed operator and CCN.",
+        "Present the result as an exhaustive or audited consolidated perimeter."
+      ]
+    },
+    "N2": {
+      "required": [
+        "State that the answer is time-boxed to the interim articles and bylaws effective 2026-07-01 through 2026-09-30.",
+        "Identify the University of Nebraska Board of Regents as the sole legal member during that interim period.",
+        "State that Omaha Community Foundation appoints two of four voting directors but is not proved to be a completed corporate member or owner under the effective interim articles.",
+        "State that Clarkson Regional Health Services is no longer a current governing member after 2026-06-30 and should be preserved only as a historical relationship."
+      ],
+      "accepted": [
+        "Say that possible future OCF membership remained prospective in the reviewed official materials.",
+        "Distinguish director appointment rights, membership, and ownership."
+      ],
+      "failures": [
+        "Call Omaha Community Foundation a current 50 percent owner or member.",
+        "Treat equal voting-director representation as equal corporate ownership.",
+        "Retain Clarkson as a current member.",
+        "Omit the interim period or present the structure as timeless."
+      ]
+    },
+    "N3": {
+      "required": [
+        "Map The Nebraska Medical Center to EIN 91-1858433 and CCN 280013.",
+        "Map Bellevue Medical Center, LLC to EIN 20-4305186 and Bellevue Medical Center facility to CCN 280132.",
+        "Preserve Bellevue Medical Center LLC as the separately licensed operator even though TNMC's return for the period ended 2023-06-30 reports Bellevue as a disregarded entity directly controlled by TNMC.",
+        "Keep operator EINs and facility CCNs separately typed and attached to their own records."
+      ],
+      "accepted": [
+        "Mention NPI 1356307581 for Nebraska Medical Center and NPI 1609007525 for Bellevue only if they remain separate from EIN and CCN fields.",
+        "Note that Bellevue's current equity percentages remain unresolved."
+      ],
+      "failures": [
+        "Assign CCN 280013 or EIN 91-1858433 to Bellevue.",
+        "Assign CCN 280132 or EIN 20-4305186 to The Nebraska Medical Center.",
+        "Erase Bellevue's LLC/operator record because of disregarded-entity tax treatment.",
+        "Use one CCN for both hospitals or infer current equity percentages."
+      ]
+    },
+    "N4": {
+      "required": [
+        "Identify Nebraska Medicine parent EIN 81-3158267.",
+        "Identify UNMC Physicians as a distinct faculty medical group with EIN 47-0785575 and Nebraska Medicine as its sole member under the interim articles.",
+        "Identify UNMC as a separate public-university campus and external academic partner, not the same entity as UNMC Physicians or Nebraska Medicine.",
+        "State that the 2025 UNMC form supports tax ID 47-0049123 only for the named University payee and leaves campus-versus-system scope unresolved."
+      ],
+      "accepted": [
+        "Explain that shared branding, campus, mission, dual employment, teaching, research, or HIPAA arrangements do not authorize identifier inheritance.",
+        "Avoid using the UNMC tax ID if the scope caveat is also stated."
+      ],
+      "failures": [
+        "Use TNMC EIN 91-1858433 as the Nebraska Medicine parent EIN.",
+        "Merge UNMC Physicians into UNMC or assign either entity the parent's EIN.",
+        "Assign tax ID 47-0049123 to Nebraska Medicine or claim it is definitively campus-only or system-wide.",
+        "Treat shared names or affiliations as proof of legal identity."
+      ]
+    }
+  }
+}

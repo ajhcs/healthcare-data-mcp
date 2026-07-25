@@ -102,6 +102,7 @@ class DeterministicResolver:
         query = normalize_text(request)
         resolved_as_of = as_of or self._date_from_query(query)
         effective_date = self._parse_as_of(resolved_as_of)
+        financial_scope_terms = ("operating revenue", "financial result", "consolidated result")
 
         if "form 990" in query and any(word in query for word in ("sum", "total", "add")):
             return Resolution(
@@ -114,6 +115,13 @@ class DeterministicResolver:
         if "form 990" in query:
             result = self._form_990(query, resolved_as_of)
             return self._with_entity_evidence(result)
+
+        if any(term in query for term in financial_scope_terms):
+            perimeter = self._perimeter_matching(
+                ("published_multi_organization_consolidated_results",)
+            )
+            if perimeter is not None:
+                return self._generic_perimeter(perimeter.perimeter_id, resolved_as_of)
 
         if "ein" in query and "health plan" in query:
             plan_evidence = tuple(
@@ -144,7 +152,12 @@ class DeterministicResolver:
             for entity in self._store.entities
             for alias in (entity.name, *entity.aliases)
         )
-        if "ein" in query and self._mentions_system(query) and not specific_entity_mentioned:
+        if (
+            "ein" in query
+            and self._mentions_system(query)
+            and not specific_entity_mentioned
+            and not any(term in query for term in financial_scope_terms)
+        ):
             return Resolution(
                 status="needs_clarification",
                 question=(
@@ -180,8 +193,20 @@ class DeterministicResolver:
                 evidence_ids=facility.evidence_ids,
             )
 
-        if " or " in query and self._mentions_system(query):
-            return self._generic_menu(resolved_as_of)
+        if any(term in query for term in ("clinical enterprise", "owned clinical")):
+            perimeter = self._perimeter_matching(("current_legal_and_clinical_enterprise",))
+            if perimeter is not None:
+                return self._generic_perimeter(perimeter.perimeter_id, resolved_as_of)
+
+        if any(
+            term in query
+            for term in ("current member", "members or owners", "governance structure")
+        ):
+            perimeter = self._perimeter_matching(
+                ("corporate_membership", "governance", "board_appointment")
+            )
+            if perimeter is not None:
+                return self._generic_perimeter(perimeter.perimeter_id, resolved_as_of)
 
         if any(term in query for term in ("enterprise", "consolidated", "as a whole")):
             perimeter = self._perimeter_matching(("audited_gaap_consolidation",))
@@ -207,12 +232,27 @@ class DeterministicResolver:
             return self._membership_resolution(entity, resolved_as_of, effective_date)
 
         if entity is not None:
+            identifiers = entity.identifier_pairs()
+            if "ein" in query and not any(scheme == "EIN" for scheme, _ in identifiers):
+                return Resolution(
+                    status="needs_clarification",
+                    question=(
+                        f"Which EIN-bearing legal entity associated with {entity.name} do you mean?"
+                    ),
+                    options=(),
+                    entity_ids=(entity.entity_id,),
+                    identifiers=identifiers,
+                    flags=("no EIN is supported for this exact record",)
+                    + self._evidence_limit_flags(entity.evidence_ids),
+                    as_of=resolved_as_of,
+                    evidence_ids=entity.evidence_ids,
+                )
             return Resolution(
                 status="resolved",
                 question=None,
                 options=(),
                 entity_ids=(entity.entity_id,),
-                identifiers=entity.identifier_pairs(),
+                identifiers=identifiers,
                 flags=("exact legal/operating record; not an inferred enterprise total",)
                 + self._evidence_limit_flags(entity.evidence_ids),
                 as_of=resolved_as_of,
@@ -503,13 +543,20 @@ class DeterministicResolver:
         )
 
     def _form_990_options(self) -> tuple[ScopeOption, ...]:
-        return tuple(
-            ScopeOption(
-                scope_id=f"form990:{candidate.entity_id}",
-                label=f"{candidate.name} ({candidate.identifier_pairs()[0][1]})",
+        options = []
+        for candidate in self._store.entities:
+            ein = next(
+                (value for scheme, value in candidate.identifier_pairs() if scheme == "EIN"),
+                None,
             )
-            for candidate in self._store.entities
-        )
+            if ein is not None:
+                options.append(
+                    ScopeOption(
+                        scope_id=f"form990:{candidate.entity_id}",
+                        label=f"{candidate.name} ({ein})",
+                    )
+                )
+        return tuple(options)
 
     def _form_990_entity(self, query: str) -> EntityRecord | None:
         ein_match = re.search(r"(?<!\d)(\d{2}-\d{7})(?!\d)", query)
