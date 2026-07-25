@@ -100,5 +100,6 @@
     }
   },
   "generated_at_utc": "2026-07-24T20:44:22Z",
-  "prior_artifact_preserved_sha256": "4a5632c1e0111cad01362afccf4cbf6b23b9e936c3281aa53f5b16ac40340175"
+  "prior_artifact_checksum_verified": "matched pre-run checksum",
+  "metadata_corrected_at_utc": "2026-07-25T14:33:13Z"
 }

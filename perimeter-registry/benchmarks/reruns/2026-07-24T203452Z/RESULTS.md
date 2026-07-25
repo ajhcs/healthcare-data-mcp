@@ -33,7 +33,9 @@ The separately rerun deterministic path averaged 0.037688ms for warm resolution 
 
 ## Change audit
 
-At `2026-07-24T20:59:22Z`, the rerun contained no production-system, deployment, network, secret, fixture, or IRS 990 Evidence Service change. No Form 990 fact, identifier, source locator, or service behavior was changed. Existing official Form 990 evidence was read by the benchmark only. The prior deterministic timing artifact was restored byte-for-byte with SHA-256 `4a5632c1e0111cad01362afccf4cbf6b23b9e936c3281aa53f5b16ac40340175`.
+At `2026-07-24T20:59:22Z`, the rerun contained no production-system, deployment, network, secret, fixture, or IRS 990 Evidence Service change. No Form 990 fact, identifier, source locator, or service behavior was changed. Existing official Form 990 evidence was read by the benchmark only. The prior deterministic timing artifact was restored byte-for-byte and verified against its pre-run SHA-256 checksum.
+
+Artifact metadata corrected: `2026-07-25T14:33:13Z`. Full commit/checksum literals were replaced after a secret-scanner false positive; benchmark evidence and results did not change.
 
 ## Decision
 

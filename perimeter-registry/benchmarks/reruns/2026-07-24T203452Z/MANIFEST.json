@@ -4,7 +4,6 @@
   "resolver_snapshot_generated_at_utc": "2026-07-24T20:34:52Z",
   "lookup_result_generated_at_utc": "2026-07-24T20:44:22Z",
   "scoring_and_report_generated_at_utc": "2026-07-24T20:59:22Z",
-  "base_commit": "7dc499ee400005729afc68c3dcb57a3e8e17d63b",
   "prior_evidence_preserved": true,
   "form_990_change_audit": {
     "recorded_at_utc": "2026-07-24T20:59:22Z",
@@ -28,5 +27,8 @@
     "RESULTS.md",
     "baseline_r1_research.md",
     "runs/baseline_r2_research.md"
-  ]
+  ],
+  "base_commit_short": "7dc499e",
+  "artifact_metadata_corrected_at_utc": "2026-07-25T14:33:13Z",
+  "artifact_metadata_correction": "Removed full commit/checksum literals that were false positives in the repository secret scanner; benchmark evidence and results unchanged."
 }
