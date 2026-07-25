@@ -73,3 +73,12 @@ root in `PYTHONPATH`; seven subprocess-only checks failed to import `shared` whi
 **1,015 tests with 4 skips in 111.96 seconds**. This was an invocation correction, not
 a test suppression or code workaround. Repository-wide Ruff and the 49 perimeter tests
 remain green. No Form 990-related file changed during this validation.
+
+## CI executable-mode follow-up — 2026-07-25T21:26:32Z
+
+GitHub's clean checkout exposed Ruff `EXE001` for
+`scripts/import_acgme_programs.py`: the file has a Python shebang and executable
+permissions in the working filesystem, but Git tracked it as mode `100644`. The only
+change is the tracked mode to `100755`; file content is unchanged. A Git-index audit
+found no other non-executable tracked Python file with a shebang. No Form 990-related
+file changed.
