@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal, Mapping, Self
+from collections.abc import Mapping
+from typing import Any, Literal, Self
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator, model_validator
 from pydantic.json_schema import GenerateJsonSchema, JsonSchemaMode
@@ -224,7 +225,7 @@ class EmergencyDepartmentSourceEvaluation(StrictModel):
 class EmergencyDepartmentMissingCell(StrictModel):
     system_slug: str
     input_family: Literal["emergency_department_count"] = "emergency_department_count"
-    candidate_value: Literal[None] = None
+    candidate_value: None = Field(default=None, json_schema_extra={"const": None})
     unit: Literal["dedicated_emergency_departments"] = "dedicated_emergency_departments"
     desired_definition: Literal[
         "Count of distinct dedicated emergency departments under 42 CFR 489.24(b), including qualifying on-campus and off-campus departments or facilities, within one approved current product-system roster and common period"
@@ -261,8 +262,8 @@ class EmergencyDepartmentCountAcquisition(StrictModel):
     identity_rows: tuple[EmergencyDepartmentIdentityRow, ...] = Field(min_length=6, max_length=6)
     source_evaluations: tuple[EmergencyDepartmentSourceEvaluation, ...] = Field(min_length=6, max_length=6)
     cells: tuple[EmergencyDepartmentMissingCell, ...] = Field(min_length=6, max_length=6)
-    approved_department_inventory_receipt: Literal[None] = None
-    approved_facility_system_crosswalk_receipt: Literal[None] = None
+    approved_department_inventory_receipt: None = Field(default=None, json_schema_extra={"const": None})
+    approved_facility_system_crosswalk_receipt: None = Field(default=None, json_schema_extra={"const": None})
     prohibited_outputs: tuple[str, ...]
     acquisition_sha256: str = Field(pattern=SHA256_PATTERN)
 
@@ -361,11 +362,20 @@ def build_emergency_department_count_acquisition(
 
 
 __all__ = [
-    "ED_DEFINITION", "EVALUATION_IDS", "EXPECTED_ARTIFACTS", "EXPECTED_ARTIFACT_URLS",
-    "EXPECTED_EVALUATIONS", "PROHIBITED_OUTPUTS",
-    "EmergencyDepartmentArtifact", "EmergencyDepartmentCountAcquisition",
-    "EmergencyDepartmentIdentityRow", "EmergencyDepartmentMissingCell",
-    "EmergencyDepartmentSourceEvaluation", "PriorSafetyNetToolkitLineage",
-    "FrozenTabularSourceArtifact", "FrozenValidatedCacheReceipt",
-    "build_emergency_department_count_acquisition", "semantic_hash",
+    "ED_DEFINITION",
+    "EVALUATION_IDS",
+    "EXPECTED_ARTIFACTS",
+    "EXPECTED_ARTIFACT_URLS",
+    "EXPECTED_EVALUATIONS",
+    "PROHIBITED_OUTPUTS",
+    "EmergencyDepartmentArtifact",
+    "EmergencyDepartmentCountAcquisition",
+    "EmergencyDepartmentIdentityRow",
+    "EmergencyDepartmentMissingCell",
+    "EmergencyDepartmentSourceEvaluation",
+    "FrozenTabularSourceArtifact",
+    "FrozenValidatedCacheReceipt",
+    "PriorSafetyNetToolkitLineage",
+    "build_emergency_department_count_acquisition",
+    "semantic_hash",
 ]

@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Any
-import re
 
 import httpx
-
 
 _METRIC_LABELS: dict[str, tuple[str, ...]] = {
     "cash_and_cash_equivalents": ("Cash and cash equivalents",),

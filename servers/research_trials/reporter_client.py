@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
+from shared.utils.errors import EXPECTED_OPERATIONAL_EXCEPTIONS
 from shared.utils.http_client import resilient_request
 
 from .models import (
@@ -137,7 +138,7 @@ async def search_projects(
     try:
         resp = await resilient_request("POST", PROJECT_SEARCH_URL, json=payload, timeout=TIMEOUT)
         return resp.json()
-    except Exception as exc:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as exc:
         logger.warning("NIH RePORTER search failed: %s", exc)
         return {"error": str(exc), "request": payload}
 
@@ -156,7 +157,7 @@ async def get_project(project_num: str = "", appl_id: str = "") -> dict[str, Any
     try:
         resp = await resilient_request("POST", PROJECT_SEARCH_URL, json=payload, timeout=TIMEOUT)
         return resp.json()
-    except Exception as exc:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as exc:
         logger.warning("NIH RePORTER project detail failed: %s", exc)
         return {"error": str(exc), "request": payload}
 
@@ -169,7 +170,7 @@ async def search_publications_by_appl_id(appl_id: str, limit: int = 10) -> dict[
     try:
         resp = await resilient_request("POST", PUBLICATION_SEARCH_URL, json=payload, timeout=TIMEOUT)
         return resp.json()
-    except Exception as exc:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as exc:
         logger.info("NIH RePORTER publication search failed for %s: %s", appl_id, exc)
         return {"results": [], "meta": {"total": 0, "offset": 0, "limit": limit}, "warning": str(exc)}
 
@@ -264,7 +265,7 @@ def metadata_from_response(raw: dict[str, Any]) -> SourceMetadata:
     return SourceMetadata(
         source_name="NIH RePORTER",
         source_url=PROJECT_SEARCH_URL,
-        retrieved_at=datetime.now(timezone.utc).isoformat(),
+        retrieved_at=datetime.now(UTC).isoformat(),
         search_id=_str(meta.get("search_id")),
         source_detail_url=_str(properties.get("URL") or properties.get("url")),
     )

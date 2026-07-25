@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
+import re
+from collections.abc import Iterable
 from dataclasses import dataclass
 from difflib import get_close_matches
-import re
-from typing import Any, Iterable
-
+from typing import Any
 
 PLACEHOLDER_RE = re.compile(
     r"(^<[^>]+>$)|(\{[^}]+\})|(^YOUR_[A-Z0-9_]+$)|(^[A-Z0-9_]*PLACEHOLDER[A-Z0-9_]*$)|(^\$[A-Z0-9_]+$)",

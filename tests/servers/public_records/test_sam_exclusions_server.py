@@ -10,7 +10,6 @@ from servers.public_records import server
 from shared.utils.mcp_response import validate_evidence_receipt
 from shared.utils.source_backed_result import validate_source_claim_paths
 
-
 SAM_METADATA = {
     "source_name": "SAM.gov Exclusions",
     "source_url": "https://api.sam.gov/entity-information/v4/exclusions",

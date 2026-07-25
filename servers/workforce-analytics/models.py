@@ -2,7 +2,6 @@
 
 from pydantic import BaseModel, Field
 
-
 # --- Tool 1: get_bls_employment ---
 
 class BLSEmploymentResponse(BaseModel):

@@ -13,8 +13,8 @@ from shared.acquisition.scale_essential_service_designation_count_contract impor
     EssentialServiceDesignationCountAcquisition,
 )
 from shared.acquisition.scale_physician_count_contract import PhysicianCountAcquisition
-from shared.acquisition.scale_service_line_count_contract import ServiceLineCountAcquisition
 from shared.acquisition.scale_safety_net_patient_mix_contract import SafetyNetPatientMixAcquisition
+from shared.acquisition.scale_service_line_count_contract import ServiceLineCountAcquisition
 from shared.contracts.public_evidence import PublicEvidenceBundle
 
 ROOT = Path(__file__).resolve().parents[1]

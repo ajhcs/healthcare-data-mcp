@@ -3,38 +3,40 @@
 Provides tools for health system competitive intelligence via web search,
 executive profiling, EHR detection, and news monitoring. Port 8014.
 """
-
-from typing import Any, Mapping
-from datetime import datetime, timezone
 import ipaddress
 import logging
 import os as _os
 import re
 import socket
+from collections.abc import Mapping
+from datetime import UTC, datetime
+from typing import Any
 from urllib.parse import ParseResult, urljoin, urlparse
 
-from shared.utils.http_client import resilient_request
 from bs4 import BeautifulSoup
 from mcp.server.fastmcp import FastMCP
+
+from shared.utils.errors import EXPECTED_OPERATIONAL_EXCEPTIONS
+from shared.utils.healthcare_identity import MatchDecision, identity_from_public_record
+from shared.utils.http_client import resilient_request
+from shared.utils.identity import normalize_ccn, normalize_name
 from shared.utils.mcp_observability import observe_tool
 from shared.utils.mcp_resources import register_standard_resources
 from shared.utils.mcp_response import error_response, evidence_receipt, to_structured
-from shared.utils.healthcare_identity import MatchDecision, identity_from_public_record
-from shared.utils.identity import normalize_ccn, normalize_name
 from shared.utils.source_backed_result import values_at_path
 
-from . import data_loaders, search_client, proxycurl_client  # pyright: ignore[reportAttributeAccessIssue]
+from . import data_loaders, proxycurl_client, search_client  # pyright: ignore[reportAttributeAccessIssue]
 from .models import (  # pyright: ignore[reportAttributeAccessIssue]
-    SystemProfileResponse,
-    LocationEntry,
     EhrDetectionResponse,
-    ExecutiveProfilesResponse,
     ExecutiveProfile,
-    LinkedInData,
-    NewsroomResponse,
-    NewsItem,
+    ExecutiveProfilesResponse,
     GpoAffiliationResponse,
     GpoMatch,
+    LinkedInData,
+    LocationEntry,
+    NewsItem,
+    NewsroomResponse,
+    SystemProfileResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -59,7 +61,7 @@ def _web_evidence(
         source_url=source_url,
         dataset_id=dataset_id,
         source_period=source_period,
-        retrieved_at=datetime.now(timezone.utc).isoformat(),
+        retrieved_at=datetime.now(UTC).isoformat(),
         cache_status=cache_status,
         cache_freshness=cache_freshness,
         entity_scope="web_osint",
@@ -295,7 +297,7 @@ def _web_identity_from_query(
         MatchDecision(
             basis=match_basis,
             confidence=confidence,
-            decided_at=datetime.now(timezone.utc).isoformat(),
+            decided_at=datetime.now(UTC).isoformat(),
             notes=(
                 "Web-intelligence identity is query-seed context for public web evidence; "
                 "web snippets or no-hit results do not establish legal affiliation, ownership, or current status."
@@ -748,7 +750,7 @@ async def _fetch_and_parse(url: str) -> tuple[str, BeautifulSoup | None]:
             return html, soup
         logger.warning("Blocked web fetch after excessive redirects: %s", url)
         return "", None
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.debug("Fetch failed for %s: %s", url, e)
         return "", None
 
@@ -1594,7 +1596,7 @@ async def get_executive_profiles(
                 continue
             source_urls.append(url)
 
-            html, soup = await _fetch_and_parse(url)
+            _html, soup = await _fetch_and_parse(url)
             if not soup:
                 continue
 
@@ -1764,7 +1766,7 @@ async def _fetch_google_news_rss(query: str, days_back: int = 90) -> list[dict]:
             })
 
         return items[:50]
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.debug("Google News RSS failed: %s", e)
         return []
 

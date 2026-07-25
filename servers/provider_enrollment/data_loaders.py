@@ -7,7 +7,7 @@ import json
 import logging
 import re
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from io import BytesIO, StringIO
 from pathlib import Path
 from typing import Any
@@ -320,7 +320,7 @@ def parse_cms_payload(content: bytes, *, source_url: str = "") -> pd.DataFrame:
 
     text = content.decode("utf-8-sig", errors="replace")
     stripped = text.lstrip()
-    if stripped.startswith("{") or stripped.startswith("["):
+    if stripped.startswith(("{", "[")):
         raw = json.loads(text)
         if isinstance(raw, dict):
             records = raw.get("results") or raw.get("data") or raw.get("items") or raw.get("rows") or []
@@ -795,4 +795,4 @@ def _file_sha256(path: Path) -> str:
 
 
 def _now_iso() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")

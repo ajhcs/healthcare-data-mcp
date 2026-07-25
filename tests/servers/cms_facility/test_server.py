@@ -3,7 +3,6 @@
 Uses monkeypatching to avoid real HTTP calls or file downloads.
 """
 
-from tests.helpers import parse_tool_result
 from unittest.mock import AsyncMock, patch
 
 import pandas as pd
@@ -12,7 +11,7 @@ import pytest
 from servers.cms_facility import server
 from shared.utils.mcp_response import validate_evidence_receipt
 from shared.utils.source_backed_result import validate_source_claim_paths
-
+from tests.helpers import parse_tool_result
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -212,7 +211,7 @@ async def test_search_npi_exact_lookup_has_boundary_traceability(mock_nppes_resu
 
 @pytest.mark.asyncio
 async def test_search_npi_api_error():
-    with patch.object(server.data_loaders, "search_nppes", new_callable=AsyncMock, side_effect=Exception("Network timeout")):
+    with patch.object(server.data_loaders, "search_nppes", new_callable=AsyncMock, side_effect=RuntimeError("Network timeout")):
         result = parse_tool_result(await server.search_npi(organization_name="Jefferson"))
     assert "error" in result
     assert result["results"] == []

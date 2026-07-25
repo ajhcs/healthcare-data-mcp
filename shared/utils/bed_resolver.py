@@ -7,7 +7,6 @@ from typing import Any, Literal, NotRequired, TypedDict
 
 import pandas as pd
 
-
 RowScope = Literal["ccn", "campus", "license", "system"]
 
 

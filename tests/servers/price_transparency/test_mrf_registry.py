@@ -2,8 +2,8 @@
 
 import pytest
 
-from servers.price_transparency import mrf_registry, server
 from servers.health_system_profiler.jefferson_resolver import JEFFERSON_SLUG, reconcile_system_facilities
+from servers.price_transparency import mrf_registry, server
 from tests.helpers import parse_tool_result
 
 

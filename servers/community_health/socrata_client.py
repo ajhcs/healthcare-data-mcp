@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Any, Iterable
+from typing import Any
 
 from shared.utils.http_client import resilient_request
 from shared.utils.source_catalog import (
@@ -202,7 +203,7 @@ async def fetch_places_rows(
     response = await resilient_request("GET", resource_url(manifest), params=params, timeout=60.0)
     data = response.json()
     if not isinstance(data, list):
-        raise ValueError("Socrata PLACES response was not a JSON array")
+        raise TypeError("Socrata PLACES response was not a JSON array")
     return [row for row in data if isinstance(row, dict)]
 
 

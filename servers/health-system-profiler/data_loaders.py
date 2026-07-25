@@ -1,14 +1,14 @@
 """Data loading and caching for AHRQ Compendium, CMS POS, and NPPES."""
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
+import pandas as pd
 
 from shared.utils.cache import CacheMetadata, write_atomic_bytes, write_cache_metadata
 from shared.utils.http_client import resilient_request
 from shared.utils.tabular_normalization import read_csv_strings
-import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -204,7 +204,7 @@ async def _download_if_missing(url: str, cache_path: Path) -> Path:
         cache_path,
         CacheMetadata(
             source_url=url,
-            fetched_at=datetime.now(timezone.utc).isoformat(),
+            fetched_at=datetime.now(UTC).isoformat(),
             content_length=len(resp.content),
             cache_key=cache_path.name,
         ),

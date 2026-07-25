@@ -3,22 +3,29 @@
 Provides tools for looking up healthcare facility data from public CMS sources
 including Hospital General Info, NPPES NPI Registry, and Cost Report PUF.
 """
-
-from typing import Any
 import logging
 import os
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 from mcp.server.fastmcp import FastMCP
-from shared.utils.mcp_observability import observe_tool
-from shared.utils.mcp_resources import register_standard_resources
+
+from shared.utils.bed_resolver import resolve_hospital_bed_source
+from shared.utils.errors import EXPECTED_OPERATIONAL_EXCEPTIONS
 from shared.utils.healthcare_identity import identity_from_public_record
 from shared.utils.input_normalization import normalize_ccn, normalize_npi
-from shared.utils.mcp_response import error_response, evidence_receipt, invalid_argument_response, not_found_response, to_structured
+from shared.utils.mcp_observability import observe_tool
+from shared.utils.mcp_resources import register_standard_resources
+from shared.utils.mcp_response import (
+    error_response,
+    evidence_receipt,
+    invalid_argument_response,
+    not_found_response,
+    to_structured,
+)
 from shared.utils.source_backed_result import source_claim
-from shared.utils.bed_resolver import resolve_hospital_bed_source
 
 # Support running both as a package and as a standalone script
 try:
@@ -130,8 +137,8 @@ def _cache_metadata(
     path = data_loaders.CACHE_DIR / cache_file
     metadata["cache_key"] = str(path)
     if path.exists():
-        modified = datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc)
-        age_days = (datetime.now(timezone.utc) - modified).total_seconds() / 86400
+        modified = datetime.fromtimestamp(path.stat().st_mtime, tz=UTC)
+        age_days = (datetime.now(UTC) - modified).total_seconds() / 86400
         metadata.update(
             {
                 "cache_status": "ready",
@@ -616,7 +623,7 @@ async def search_npi(
             enumeration_type=enumeration_type,
             limit=limit,
         )
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         return error_response(f"NPPES API error: {e}", results=[])
 
     parsed = []

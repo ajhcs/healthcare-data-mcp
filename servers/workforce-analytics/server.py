@@ -5,23 +5,25 @@ ACGME residency programs, NLRB union activity, staffing benchmarks, and
 HCRIS cost report staffing analysis.
 """
 
-from typing import Any
-from datetime import datetime, timezone
 import logging
 import os as _os
+from datetime import UTC, datetime
+from typing import Any
+
 from mcp.server.fastmcp import FastMCP
-from shared.utils.mcp_observability import observe_tool
-from shared.utils.mcp_resources import register_standard_resources
-from shared.utils.mcp_response import error_response, evidence_receipt, to_structured
-from shared.utils.source_backed_result import values_at_path
+
+from servers.hospital_quality import data_loaders as hospital_quality_data_loaders
 from shared.utils import ahrq_data
 from shared.utils.bed_resolver import resolve_hospital_bed_source
 from shared.utils.cost_report import load_cost_report_row
 from shared.utils.healthcare_identity import MatchDecision, identity_from_public_record
 from shared.utils.identity import normalize_ccn, normalize_name
+from shared.utils.mcp_observability import observe_tool
+from shared.utils.mcp_resources import register_standard_resources
+from shared.utils.mcp_response import error_response, evidence_receipt, to_structured
+from shared.utils.source_backed_result import values_at_path
 
 from . import bls_client, labor_data, operations_data, workforce_data  # pyright: ignore[reportAttributeAccessIssue]
-from servers.hospital_quality import data_loaders as hospital_quality_data_loaders
 from .models import (
     BLSEmploymentResponse,
     CostReportStaffingResponse,
@@ -65,7 +67,7 @@ def _workforce_evidence(
         source_url=source_url,
         dataset_id=dataset_id,
         source_period=source_period,
-        retrieved_at=datetime.now(timezone.utc).isoformat(),
+        retrieved_at=datetime.now(UTC).isoformat(),
         cache_status=cache_status,
         cache_freshness=cache_freshness,
         entity_scope="workforce_operations",
@@ -146,7 +148,7 @@ def _workforce_row_evidence(
         source_url=source_url,
         dataset_id=dataset_id,
         source_period=source_period,
-        retrieved_at=datetime.now(timezone.utc).isoformat(),
+        retrieved_at=datetime.now(UTC).isoformat(),
         cache_status=cache_status,
         cache_freshness=cache_freshness,
         entity_scope="workforce_operations",
@@ -356,7 +358,7 @@ def _workforce_identity(
             MatchDecision(
                 basis=match_basis,
                 confidence=confidence,
-                decided_at=datetime.now(timezone.utc).isoformat(),
+                decided_at=datetime.now(UTC).isoformat(),
                 notes="Workforce identity is anchored by public CCN when present; operational metrics remain source-field dependent.",
             )
         )
@@ -990,7 +992,7 @@ def _rural_urban_value(row: dict[str, Any]) -> str:
 @observe_tool("workforce-analytics")
 async def get_bls_employment(
     occupation: str, area_code: str = "", state: str = "",
-    include_projections: bool = True,  # noqa: ARG001 — exposed in MCP schema
+    include_projections: bool = True,
 ) -> dict[str, Any]:
     """Get occupation-level employment counts, wages, and projections by MSA or state.
 

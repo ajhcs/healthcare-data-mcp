@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from collections import Counter, defaultdict
 import csv
+from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
 
@@ -14,8 +14,7 @@ from .models import (
     NIHProject,
     ResearchActivityProfileResponse,
 )
-from .org_matching import decide_organization_match
-from .org_matching import normalize_org_name
+from .org_matching import decide_organization_match, normalize_org_name
 
 _ALIAS_CSV = Path(__file__).parent / "org_aliases.csv"
 _ACTIVE_STATUSES = {"RECRUITING", "ACTIVE_NOT_RECRUITING", "ENROLLING_BY_INVITATION", "AVAILABLE"}

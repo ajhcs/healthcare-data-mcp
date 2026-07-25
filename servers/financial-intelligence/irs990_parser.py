@@ -7,17 +7,16 @@ Downloads 990 XML from IRS e-file URLs (provided by ProPublica) and extracts:
 - Officer/director compensation (Part VII)
 - Program service descriptions (Part III)
 """
-
 import logging
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-
-from shared.utils.cache import write_atomic_bytes
-from shared.utils.http_client import resilient_request
 import pandas as pd
 
+from shared.utils.cache import write_atomic_bytes
 from shared.utils.cms_client import get_cache_path
+from shared.utils.errors import EXPECTED_OPERATIONAL_EXCEPTIONS
+from shared.utils.http_client import resilient_request
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +69,7 @@ async def download_990_xml(xml_url: str, ein: str, tax_period: str) -> Path | No
         write_atomic_bytes(cached, resp.content)
         logger.info("Cached 990 XML for EIN %s period %s", ein, tax_period)
         return cached
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("Failed to download 990 XML from %s: %s", xml_url, e)
         return None
 
@@ -93,7 +92,7 @@ async def load_efile_index(year: str) -> pd.DataFrame:
             resp = await resilient_request("GET", url, timeout=300.0)
             write_atomic_bytes(cached, resp.content)
             logger.info("Cached IRS e-file index for year %s (%d bytes)", year, len(resp.content))
-        except Exception as e:
+        except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
             logger.warning("Failed to download IRS e-file index for %s: %s", year, e)
             return pd.DataFrame()
 
@@ -102,7 +101,7 @@ async def load_efile_index(year: str) -> pd.DataFrame:
         df.columns = [c.strip().upper() for c in df.columns]
         _index_cache[year] = df
         return df
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("Failed to parse IRS e-file index for %s: %s", year, e)
         return pd.DataFrame()
 

@@ -6,16 +6,10 @@ import argparse
 from pathlib import Path
 from typing import cast
 
-from shared.acquisition.scale_input_family import (
-    build_public_evidence_input,
-    require_clean_repository,
-    require_outputs_outside_repository,
-    require_repository_commit,
-    repository_top_level,
-    verify_source_bytes,
-)
 from shared.acquisition.scale_annual_discharges_packet import (
     acquisition as annual_discharges_acquisition,
+)
+from shared.acquisition.scale_annual_discharges_packet import (
     verify_annual_discharges_source_bytes,
 )
 from shared.acquisition.scale_emergency_department_count_evidence import (
@@ -23,6 +17,8 @@ from shared.acquisition.scale_emergency_department_count_evidence import (
 )
 from shared.acquisition.scale_emergency_department_count_packet import (
     acquisition as emergency_department_count_acquisition,
+)
+from shared.acquisition.scale_emergency_department_count_packet import (
     verify_emergency_department_count_source_bytes,
 )
 from shared.acquisition.scale_essential_service_designation_count_evidence import (
@@ -30,7 +26,17 @@ from shared.acquisition.scale_essential_service_designation_count_evidence impor
 )
 from shared.acquisition.scale_essential_service_designation_count_packet import (
     acquisition as essential_service_designation_count_acquisition,
+)
+from shared.acquisition.scale_essential_service_designation_count_packet import (
     verify_essential_service_designation_count_source_bytes,
+)
+from shared.acquisition.scale_input_family import (
+    build_public_evidence_input,
+    repository_top_level,
+    require_clean_repository,
+    require_outputs_outside_repository,
+    require_repository_commit,
+    verify_source_bytes,
 )
 from shared.acquisition.scale_operating_revenue_packet import acquisition as operating_revenue_acquisition
 from shared.acquisition.scale_physician_count_evidence import (
@@ -38,21 +44,27 @@ from shared.acquisition.scale_physician_count_evidence import (
 )
 from shared.acquisition.scale_physician_count_packet import (
     acquisition as physician_count_acquisition,
+)
+from shared.acquisition.scale_physician_count_packet import (
     verify_physician_count_source_bytes,
-)
-from shared.acquisition.scale_service_line_count_evidence import (
-    build_service_line_count_public_evidence_input,
-)
-from shared.acquisition.scale_service_line_count_packet import (
-    acquisition as service_line_count_acquisition,
-    verify_service_line_count_source_bytes,
 )
 from shared.acquisition.scale_safety_net_patient_mix_evidence import (
     build_safety_net_patient_mix_public_evidence_input,
 )
 from shared.acquisition.scale_safety_net_patient_mix_packet import (
     acquisition as safety_net_patient_mix_acquisition,
+)
+from shared.acquisition.scale_safety_net_patient_mix_packet import (
     verify_safety_net_patient_mix_source_bytes,
+)
+from shared.acquisition.scale_service_line_count_evidence import (
+    build_service_line_count_public_evidence_input,
+)
+from shared.acquisition.scale_service_line_count_packet import (
+    acquisition as service_line_count_acquisition,
+)
+from shared.acquisition.scale_service_line_count_packet import (
+    verify_service_line_count_source_bytes,
 )
 from shared.acquisition.scale_tabular_input_family import (
     build_tabular_public_evidence_input,

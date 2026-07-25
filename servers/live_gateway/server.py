@@ -21,18 +21,7 @@ from mcp.server.auth.middleware.auth_context import get_access_token
 from mcp.server.auth.provider import AccessToken
 from mcp.server.auth.settings import AuthSettings
 from mcp.server.fastmcp import FastMCP
-from shared.utils.mcp_observability import observe_tool
-from shared.utils.mcp_resources import register_standard_resources
 
-from shared.utils.gateway_auth import (
-    GatewayAuthError,
-    StaticBearerTokenVerifier,
-    build_transport_security_settings,
-    load_gateway_security_config,
-    token_fingerprint,
-)
-from shared.utils.mcp_response import raise_tool_error, to_structured
-from shared.utils.server_registry import SERVER_BY_ID
 from servers.live_gateway.policy_runner import (
     SOURCE_CAVEAT_CLASSES,
     LiveToolSpec,
@@ -43,6 +32,17 @@ from servers.live_gateway.policy_runner import (
     evaluate_provenance_status,
     source_caveat,
 )
+from shared.utils.gateway_auth import (
+    GatewayAuthError,
+    StaticBearerTokenVerifier,
+    build_transport_security_settings,
+    load_gateway_security_config,
+    token_fingerprint,
+)
+from shared.utils.mcp_observability import observe_tool
+from shared.utils.mcp_resources import register_standard_resources
+from shared.utils.mcp_response import raise_tool_error, to_structured
+from shared.utils.server_registry import SERVER_BY_ID
 
 logger = logging.getLogger(__name__)
 
@@ -328,9 +328,7 @@ def _container_local_bind_allowed(*, security_config: Any, env: Mapping[str, str
     local_hosts = {"localhost", "127.0.0.1", "localhost:8020", "127.0.0.1:8020"}
     if not all(host in local_hosts for host in security_config.allowed_hosts):
         return False
-    if not all(origin.startswith("http://localhost") or origin.startswith("http://127.0.0.1") for origin in security_config.allowed_origins):
-        return False
-    return True
+    return all(origin.startswith(("http://localhost", "http://127.0.0.1")) for origin in security_config.allowed_origins)
 
 
 _transport = os.environ.get("MCP_TRANSPORT", "stdio")

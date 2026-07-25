@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import re
 
-from shared.acquisition.scale_essential_service_designation_count_contract import EssentialServiceDesignationCountAcquisition
+from shared.acquisition.scale_essential_service_designation_count_contract import (
+    EssentialServiceDesignationCountAcquisition,
+)
 from shared.acquisition.scale_system_roster import SYSTEM_NAMES
 from shared.contracts.public_evidence import PublicEvidenceBundleInput
 

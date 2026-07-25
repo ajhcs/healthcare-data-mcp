@@ -1,12 +1,12 @@
 """Census ACS API wrapper for querying demographic data by ZCTA."""
 
-from collections.abc import Iterable
 import csv
 import io
 import logging
 import os
-from pathlib import Path
 import zipfile
+from collections.abc import Iterable
+from pathlib import Path
 
 from shared.utils.http_client import resilient_request
 

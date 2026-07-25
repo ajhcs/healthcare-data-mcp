@@ -74,16 +74,18 @@ def _wait_for_port(port: int, process: subprocess.Popen[str]) -> None:
 
 async def _list_tools(url: str, *, token: str | None = None) -> list[str]:
     headers = {"Authorization": f"Bearer {token}"} if token else None
-    async with httpx.AsyncClient(headers=headers, timeout=5) as http_client:
-        async with streamable_http_client(url, http_client=http_client) as (
+    async with (
+        httpx.AsyncClient(headers=headers, timeout=5) as http_client,
+        streamable_http_client(url, http_client=http_client) as (
             read_stream,
             write_stream,
             _get_session_id,
-        ):
-            async with ClientSession(read_stream, write_stream) as session:
-                await session.initialize()
-                tools = await session.list_tools()
-                return sorted(tool.name for tool in tools.tools)
+        ),
+        ClientSession(read_stream, write_stream) as session,
+    ):
+        await session.initialize()
+        tools = await session.list_tools()
+        return sorted(tool.name for tool in tools.tools)
 
 
 async def _call_tool(url: str, tool_name: str, arguments: dict | None = None, *, token: str | None = None) -> dict:
@@ -93,15 +95,17 @@ async def _call_tool(url: str, tool_name: str, arguments: dict | None = None, *,
 
 async def _call_tool_result(url: str, tool_name: str, arguments: dict | None = None, *, token: str | None = None):
     headers = {"Authorization": f"Bearer {token}"} if token else None
-    async with httpx.AsyncClient(headers=headers, timeout=5) as http_client:
-        async with streamable_http_client(url, http_client=http_client) as (
+    async with (
+        httpx.AsyncClient(headers=headers, timeout=5) as http_client,
+        streamable_http_client(url, http_client=http_client) as (
             read_stream,
             write_stream,
             _get_session_id,
-        ):
-            async with ClientSession(read_stream, write_stream) as session:
-                await session.initialize()
-                return await session.call_tool(tool_name, arguments or {})
+        ),
+        ClientSession(read_stream, write_stream) as session,
+    ):
+        await session.initialize()
+        return await session.call_tool(tool_name, arguments or {})
 
 
 @pytest.mark.asyncio

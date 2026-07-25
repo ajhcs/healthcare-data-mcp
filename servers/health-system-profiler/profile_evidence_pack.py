@@ -2,16 +2,17 @@
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable, Iterable
-from datetime import datetime, timezone
-from inspect import isawaitable
 import re
+from collections.abc import Awaitable, Callable, Iterable
+from datetime import UTC, datetime
+from inspect import isawaitable
 from typing import Any
 
 import pandas as pd
 
 from shared.cache_manager import core as cache_core
 from shared.utils.bed_resolver import resolve_hospital_bed_source
+from shared.utils.errors import EXPECTED_OPERATIONAL_EXCEPTIONS
 from shared.utils.healthcare_identity import identity_from_public_record
 from shared.utils.http_client import resilient_request
 from shared.utils.identity import normalize_ccn, normalize_name
@@ -1086,7 +1087,7 @@ def _pos_row(pos_df: pd.DataFrame, ccn: str) -> dict[str, Any]:
 def _cache_preflight(cache_root: str | None) -> dict[str, Any]:
     try:
         return cache_core.list_cache_sources(cache_root=cache_root, workflow="profile_evidence_pack")
-    except Exception as exc:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as exc:
         return {
             "summary": {"error": 1},
             "sources": [],
@@ -1459,7 +1460,7 @@ class AwaitableResult:
         async def _run() -> dict[str, Any] | None:
             try:
                 return await self.awaitable
-            except Exception:
+            except EXPECTED_OPERATIONAL_EXCEPTIONS:
                 return None
 
         return _run().__await__()
@@ -1471,11 +1472,11 @@ def _readiness_summary(cache_preflight: dict[str, Any]) -> str:
 
 
 def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def _current_year() -> int:
-    return datetime.now(timezone.utc).year
+    return datetime.now(UTC).year
 
 
 def _float_or_none(value: Any) -> float | None:

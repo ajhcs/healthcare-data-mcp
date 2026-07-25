@@ -4,17 +4,18 @@ Provides tools for discovering hospital machine-readable files (MRFs),
 querying negotiated rates from cached Parquet, computing rate dispersion
 statistics, cross-hospital comparisons, and Medicare benchmark analysis.
 """
-
-from typing import Any
 import logging
 import os as _os
 import statistics as _stats
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from typing import Any
 
 from mcp.server.fastmcp import FastMCP
+
+from shared.utils.errors import EXPECTED_OPERATIONAL_EXCEPTIONS
+from shared.utils.healthcare_identity import identity_from_public_record
 from shared.utils.mcp_observability import observe_tool
 from shared.utils.mcp_resources import register_standard_resources
-from shared.utils.healthcare_identity import identity_from_public_record
 from shared.utils.mcp_response import error_response, evidence_receipt, to_structured
 
 from . import benchmark_client, mrf_processor, mrf_registry
@@ -67,7 +68,7 @@ def _mrf_source_metadata(hospital_id: str, *, mrf_url: str = "", source: str = "
         "landing_page": str(meta.get("landing_page") or "https://www.cms.gov/priorities/key-initiatives/hospital-price-transparency"),
         "dataset_id": "hospital_price_transparency_mrf_cache",
         "source_period": last_updated or cached_at or "MRF cache readiness checked at request time",
-        "retrieved_at": cached_at or datetime.now(timezone.utc).isoformat(),
+        "retrieved_at": cached_at or datetime.now(UTC).isoformat(),
         "cache_status": "ready" if mrf_processor.is_cached(hospital_id) else "missing",
         "cache_freshness": cached_at or source,
         "cache_key": hospital_id,
@@ -627,7 +628,7 @@ async def compare_rates_system(system_name: str, cpt_codes: list[str]) -> dict[s
             try:
                 raw_rates = mrf_processor.get_rates(hid, cpt_codes)
                 rates = [NegotiatedRate(**r) for r in raw_rates]
-            except Exception as exc:
+            except EXPECTED_OPERATIONAL_EXCEPTIONS as exc:
                 logger.warning("Failed to query rates for %s: %s", hid, exc)
                 rates = []
 

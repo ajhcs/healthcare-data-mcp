@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from shared.utils.healthcare_identity import identity_from_public_record
@@ -10,7 +10,13 @@ from shared.utils.mcp_response import evidence_receipt, to_structured
 from shared.utils.source_backed_result import source_claim
 
 try:
-    from .patient_volume_contract import DENOMINATOR_SCOPES, METRIC_KEYS, MISSINGNESS_STATES, ROW_TYPES, SOURCE_HIERARCHY
+    from .patient_volume_contract import (
+        DENOMINATOR_SCOPES,
+        METRIC_KEYS,
+        MISSINGNESS_STATES,
+        ROW_TYPES,
+        SOURCE_HIERARCHY,
+    )
     from .patient_volume_contract import allowed_scopes as _allowed_scopes
     from .patient_volume_contract import denominator_scope as _denominator_scope
     from .patient_volume_contract import source_rank as _source_rank
@@ -35,7 +41,7 @@ def build_patient_volume_evidence_pack(
 ) -> dict[str, Any]:
     """Build read-only patient-volume input rows with receipts."""
 
-    retrieved_at = datetime.now(timezone.utc).isoformat()
+    retrieved_at = datetime.now(UTC).isoformat()
     query = {
         "region_slug": region_slug,
         "denominator_scope": _denominator_scope(denominator_scope),

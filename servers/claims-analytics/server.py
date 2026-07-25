@@ -5,14 +5,16 @@ multi-year service line trends, case mix computation, and market volume analysis
 All data sourced from CMS Medicare Provider Utilization PUFs.
 """
 
-from typing import Any
 import logging
 import os as _os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from typing import Any
+
 from mcp.server.fastmcp import FastMCP
+
+from shared.utils.healthcare_identity import identity_from_public_record
 from shared.utils.mcp_observability import observe_tool
 from shared.utils.mcp_resources import register_standard_resources
-from shared.utils.healthcare_identity import identity_from_public_record
 from shared.utils.mcp_response import error_response, evidence_receipt, to_structured
 
 from . import data_loaders, service_lines  # pyright: ignore[reportAttributeAccessIssue]
@@ -90,8 +92,8 @@ def _claims_source_metadata(dataset: str, year: str) -> dict[str, Any]:
     }
     existing = [path for path in cache_paths if path.exists()]
     if existing:
-        newest = max(datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc) for path in existing)
-        age_days = (datetime.now(timezone.utc) - newest).total_seconds() / 86400
+        newest = max(datetime.fromtimestamp(path.stat().st_mtime, tz=UTC) for path in existing)
+        age_days = (datetime.now(UTC) - newest).total_seconds() / 86400
         metadata.update(
             {
                 "cache_status": "ready" if len(existing) == len(cache_paths) else "partial",

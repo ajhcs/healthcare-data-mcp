@@ -29,9 +29,11 @@ import asyncio
 import logging
 import random
 import time
-from typing import Any
+from typing import Any, Self
 
 import httpx
+
+from shared.utils.errors import EXPECTED_OPERATIONAL_EXCEPTIONS
 
 logger = logging.getLogger(__name__)
 
@@ -239,7 +241,7 @@ def _parse_retry_after(resp: httpx.Response) -> float | None:
         dt = parsedate_to_datetime(value)
         delta = dt.timestamp() - time.time()
         return max(0.0, delta)
-    except Exception:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS:
         return None
 
 
@@ -261,7 +263,7 @@ class _OSRMRateLimiter:
         self._lock = asyncio.Lock()
         self._last_request: float = 0.0
 
-    async def __aenter__(self) -> "_OSRMRateLimiter":
+    async def __aenter__(self) -> Self:
         await self._lock.acquire()
         now = time.monotonic()
         wait = self._min_interval - (now - self._last_request)

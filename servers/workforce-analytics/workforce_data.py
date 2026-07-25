@@ -3,28 +3,28 @@
 Handles bulk dataset downloads, Parquet caching, and DuckDB queries
 for healthcare workforce analysis.
 """
-
+import hashlib
+import json
 import logging
 import os
+import sys as _sys
 import zipfile
-import json
-import hashlib
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import duckdb
 import httpx
-
-from shared.utils.duckdb_safe import safe_parquet_sql
-from shared.utils.http_client import resilient_request, get_client
 import pandas as pd
 
-import sys as _sys
+from shared.utils.duckdb_safe import safe_parquet_sql
+from shared.utils.errors import EXPECTED_OPERATIONAL_EXCEPTIONS
+from shared.utils.http_client import get_client, resilient_request
+
 _project_root = __import__("pathlib").Path(__file__).resolve().parent.parent.parent
 if str(_project_root) not in _sys.path:
     _sys.path.insert(0, str(_project_root))
 
-from shared.utils.cache import is_cache_valid, write_atomic_bytes, write_atomic_json, write_atomic_parquet  # noqa: E402
+from shared.utils.cache import is_cache_valid, write_atomic_bytes, write_atomic_json, write_atomic_parquet
 
 logger = logging.getLogger(__name__)
 
@@ -265,8 +265,8 @@ def write_acgme_import_metadata(
     ]
     meta = {
         "input_filename": str(input_path),
-        "imported_at": datetime.now(timezone.utc).isoformat(),
-        "row_count": int(len(normalized_df)),
+        "imported_at": datetime.now(UTC).isoformat(),
+        "row_count": len(normalized_df),
         "normalized_column_map": acgme_column_map(raw_df),
         "source_url": source_url,
         "source_urls": _ACGME_SOURCE_URLS,
@@ -308,7 +308,7 @@ def get_acgme_source_status() -> dict[str, object]:
     if meta_path.exists():
         try:
             meta = json.loads(meta_path.read_text(encoding="utf-8"))
-        except Exception:
+        except EXPECTED_OPERATIONAL_EXCEPTIONS:
             meta = {}
     if acgme_csv is None:
         status = "import_required"
@@ -318,8 +318,8 @@ def get_acgme_source_status() -> dict[str, object]:
             df = pd.read_csv(acgme_csv, dtype=str, keep_default_na=False)
             normalize_acgme_dataframe(df)
             status = "ready"
-            row_count = int(len(df))
-        except Exception as exc:
+            row_count = len(df)
+        except EXPECTED_OPERATIONAL_EXCEPTIONS as exc:
             status = "invalid_import"
             row_count = 0
             meta["last_error"] = str(exc)
@@ -442,7 +442,7 @@ async def ensure_hpsa_cached() -> bool:
         logger.info("HPSA data cached: %d records", len(df))
         return True
 
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("Failed to cache HPSA data: %s", e)
         return False
 
@@ -506,7 +506,7 @@ def query_hpsas(state: str, discipline: str = "", county_fips: str = "") -> list
 
         return results
 
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("HPSA query failed: %s", e)
         return []
 
@@ -529,7 +529,7 @@ async def ensure_hcris_cached() -> bool:
         # Try the CMS fiscal year download (most recent year)
         # Pattern: https://downloads.cms.gov/files/hcris/HOSP10FY{year}.zip
         import datetime as dt
-        current_year = dt.date.today().year
+        current_year = dt.datetime.now(dt.UTC).year
         zip_path: Path | None = None
 
         for year in range(current_year, current_year - 3, -1):
@@ -545,7 +545,7 @@ async def ensure_hcris_cached() -> bool:
                     write_atomic_bytes(zip_path, resp.content)
                     logger.info("Downloaded HCRIS FY%d (%d bytes)", year, len(resp.content))
                     break
-            except Exception:
+            except EXPECTED_OPERATIONAL_EXCEPTIONS:
                 continue
 
         if zip_path is None:
@@ -608,7 +608,7 @@ async def ensure_hcris_cached() -> bool:
         zip_path.unlink(missing_ok=True)
         return True
 
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("Failed to cache HCRIS data: %s", e)
         return False
 
@@ -655,7 +655,7 @@ def query_hcris_gme(ccn: str, year: int = 0) -> dict | None:
 
         return result
 
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("HCRIS GME query failed for CCN %s: %s", ccn, e)
         return None
 
@@ -729,7 +729,7 @@ def query_hcris_staffing(ccn: str, year: int = 0) -> dict | None:
             "total_ftes": round(total_ftes, 1),
         }
 
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("HCRIS staffing query failed for CCN %s: %s", ccn, e)
         return None
 
@@ -777,7 +777,7 @@ async def query_pbj_staffing(ccn: str = "", state: str = "") -> list[dict]:
 
         return results
 
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("PBJ query failed: %s", e)
         return []
 
@@ -827,7 +827,7 @@ def query_acgme_programs(
 
         return results
 
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("ACGME query failed: %s", e)
         return [{"error": f"ACGME query failed: {e}. {_ACGME_IMPORT_HINT}"}]
 

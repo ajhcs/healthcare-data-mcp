@@ -13,9 +13,9 @@ import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
-from shared.utils.env_file import read_env_file, write_env_file
 from shared.state_health_data import acquire_sources, source_coverage_summary
-
+from shared.utils.env_file import read_env_file, write_env_file
+from shared.utils.errors import EXPECTED_OPERATIONAL_EXCEPTIONS
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_ENV = Path.cwd() / ".env"
@@ -550,9 +550,9 @@ async def _acquire_national_public_backbone(cache_root: Path, *, force: bool = F
 
     results: list[str] = []
 
-    from shared.utils import cms_client
     from servers.geo_demographics import data_loaders as gv_loaders
     from servers.service_area import data_loaders as service_area_loaders
+    from shared.utils import cms_client
 
     hospital_info_path = cache_root / "hospital_general_info.csv"
     hsaf_path = cache_root / "hsaf.csv"
@@ -721,13 +721,13 @@ def _public_cache_path_ready(path: Path) -> bool:
     if path.name == "artifact_index.json":
         try:
             payload = json.loads(path.read_text(encoding="utf-8"))
-        except Exception:
+        except EXPECTED_OPERATIONAL_EXCEPTIONS:
             return False
         return int(payload.get("artifact_count") or len(payload.get("artifacts") or [])) > 0
     if path.name == "artifact_metadata.csv":
         try:
             return len(path.read_text(encoding="utf-8").splitlines()) > 1
-        except Exception:
+        except EXPECTED_OPERATIONAL_EXCEPTIONS:
             return False
     if path.is_dir():
         return any(child.is_file() for child in path.rglob("*"))

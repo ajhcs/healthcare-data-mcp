@@ -6,17 +6,16 @@ as Parquet and provides DuckDB-based graph queries.
 
 Data source: https://careset.com/datasets/
 """
-
 import logging
 from pathlib import Path
 
 import duckdb
-from shared.utils.duckdb_safe import safe_parquet_sql
-
-from shared.utils.cache import write_atomic_bytes, write_atomic_parquet
-from shared.utils.http_client import resilient_request
 import pandas as pd
 
+from shared.utils.cache import write_atomic_bytes, write_atomic_parquet
+from shared.utils.duckdb_safe import safe_parquet_sql
+from shared.utils.errors import EXPECTED_OPERATIONAL_EXCEPTIONS
+from shared.utils.http_client import resilient_request
 
 logger = logging.getLogger(__name__)
 
@@ -155,7 +154,7 @@ async def ensure_hsa_crosswalk_cached() -> bool:
         logger.info("HSA crosswalk cached: %d ZIP codes", len(df))
         return True
 
-    except Exception as e:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as e:
         logger.warning("Failed to download HSA crosswalk: %s", e)
         return False
 
@@ -181,7 +180,7 @@ def get_hsa_for_zip(zip_code: str) -> str | None:
         con.close()
         return result[0] if result else None
 
-    except Exception:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS:
         return None
 
 
@@ -206,7 +205,7 @@ def get_zips_for_hsa(hsa_number: str) -> list[str]:
         con.close()
         return [r[0] for r in results]
 
-    except Exception:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS:
         return []
 
 

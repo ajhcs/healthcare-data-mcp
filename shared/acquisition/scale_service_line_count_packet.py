@@ -10,6 +10,8 @@ from pypdf import PdfReader
 
 from shared.acquisition.scale_physician_count_packet import (
     acquisition as physician_acquisition,
+)
+from shared.acquisition.scale_physician_count_packet import (
     verify_physician_count_source_bytes,
 )
 from shared.acquisition.scale_service_line_count_contract import (

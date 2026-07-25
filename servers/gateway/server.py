@@ -11,14 +11,14 @@ from typing import Any
 
 from mcp.server.auth.settings import AuthSettings
 from mcp.server.fastmcp import FastMCP
-from shared.utils.mcp_observability import observe_tool
-from shared.utils.mcp_resources import register_standard_resources
 
 from shared.utils.gateway_auth import (
     StaticBearerTokenVerifier,
     build_transport_security_settings,
     load_gateway_security_config,
 )
+from shared.utils.mcp_observability import observe_tool
+from shared.utils.mcp_resources import register_standard_resources
 from shared.utils.mcp_response import not_found_response
 from shared.utils.mistake_detection import fuzzy_options
 from shared.utils.server_registry import SERVER_BY_ID, ServerCapability

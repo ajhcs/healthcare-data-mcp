@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import re
 import json
 import os
+import re
 import subprocess
 import sys
 import tarfile
@@ -12,6 +12,7 @@ import tomllib
 import zipfile
 from pathlib import Path
 
+from scripts.mcp_smoke import structured_path_exists, structured_path_exists_for_all
 from scripts.render_registry_docs import (
     render_env_catalog,
     render_http_client_catalog,
@@ -21,7 +22,6 @@ from scripts.render_registry_docs import (
     render_workflow_catalog,
 )
 from scripts.security_gate import validate_detect_secrets_baseline
-from scripts.mcp_smoke import structured_path_exists, structured_path_exists_for_all
 from shared.utils.server_registry import CURATED_PRESETS, SERVER_REGISTRY, WORKFLOW_PRESETS
 from shared.utils.workflows import WORKFLOW_SOURCE_ALIASES
 

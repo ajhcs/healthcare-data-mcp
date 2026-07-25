@@ -3,8 +3,7 @@
 import httpx
 import pytest
 
-from servers.web_intelligence import search_client
-from servers.web_intelligence import server
+from servers.web_intelligence import search_client, server
 from shared.utils.mcp_response import validate_evidence_receipt
 from shared.utils.source_backed_result import validate_source_claim_paths
 
@@ -770,7 +769,7 @@ async def test_monitor_newsroom_cached_items_get_report_receipts(monkeypatch):
 @pytest.mark.asyncio
 async def test_gpo_missing_directory_returns_evidence(monkeypatch):
     monkeypatch.setattr(server.data_loaders, "load_cached_response", lambda *args, **kwargs: None)
-    monkeypatch.setattr(server.data_loaders, "load_gpo_directory", lambda: [])
+    monkeypatch.setattr(server.data_loaders, "load_gpo_directory", list)
 
     result = await server.detect_gpo_affiliation("Example Health")
 

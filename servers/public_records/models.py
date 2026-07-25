@@ -12,7 +12,6 @@ Covers public-records tools:
 
 from pydantic import BaseModel, Field
 
-
 # --- Tool 1: search_usaspending ---
 
 

@@ -3,24 +3,24 @@
 Uses monkeypatching to avoid live ProPublica/EDGAR API calls.
 """
 
-from tests.helpers import parse_tool_result
 import os
-from unittest.mock import AsyncMock, patch
-from pathlib import Path
 import zipfile
+from pathlib import Path
+from unittest.mock import AsyncMock, patch
 
 import pytest
+
+from tests.helpers import parse_tool_result
 
 # SEC_USER_AGENT must be set before the edgar_client module is imported, because
 # it raises RuntimeError at module level when the var is missing.
 os.environ.setdefault("SEC_USER_AGENT", "CI ci@example.com")
 
-from servers.financial_intelligence import audited_financial_pdf, server, propublica_client, edgar_client  # noqa: E402
-from servers.financial_intelligence.financial_health import load_ahrq_hfmd_profile  # noqa: E402
-from servers.financial_intelligence.irs990_parser import parse_990_xml  # noqa: E402
-from shared.utils.mcp_response import validate_evidence_receipt  # noqa: E402
-from shared.utils.source_backed_result import validate_source_claim_paths  # noqa: E402
-
+from servers.financial_intelligence import audited_financial_pdf, edgar_client, propublica_client, server
+from servers.financial_intelligence.financial_health import load_ahrq_hfmd_profile
+from servers.financial_intelligence.irs990_parser import parse_990_xml
+from shared.utils.mcp_response import validate_evidence_receipt
+from shared.utils.source_backed_result import validate_source_claim_paths
 
 # ---------------------------------------------------------------------------
 # Fixtures — realistic ProPublica/EDGAR-shaped payloads

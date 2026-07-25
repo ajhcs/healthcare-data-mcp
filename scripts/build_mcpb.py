@@ -17,7 +17,6 @@ from zipfile import ZIP_DEFLATED, ZipFile
 
 from shared.utils.server_registry import SERVER_REGISTRY, EnvKey, server_ids
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_MANIFEST = REPO_ROOT / "desktop-extension" / "manifest.json"
 DEFAULT_OUTPUT = REPO_ROOT / "dist" / "healthcare-data-mcp.mcpb"

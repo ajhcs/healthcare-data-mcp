@@ -5,16 +5,17 @@ from public CMS Hospital Service Area File data, and provides Dartmouth
 Atlas HSA/HRR crosswalk lookups.
 """
 
-from typing import Any
 import logging
 import os
 import sys
 from pathlib import Path
+from typing import Any
 
 from mcp.server.fastmcp import FastMCP
+
+from shared.utils.healthcare_identity import identity_from_public_record
 from shared.utils.mcp_observability import observe_tool
 from shared.utils.mcp_resources import register_standard_resources
-from shared.utils.healthcare_identity import identity_from_public_record
 from shared.utils.mcp_response import error_response, evidence_receipt, to_structured
 from shared.utils.source_backed_result import source_claim
 

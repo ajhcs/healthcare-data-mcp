@@ -7,22 +7,22 @@ small query helpers that MCP servers can use to self-warm caches.
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
 import json
 import re
+import zipfile
+from dataclasses import asdict, dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin
-import zipfile
 
-from bs4 import BeautifulSoup
 import pandas as pd
+from bs4 import BeautifulSoup
 from pypdf import PdfReader
 
 from shared.utils.cache import write_atomic_bytes, write_atomic_dataframe_csv, write_atomic_json, write_atomic_parquet
+from shared.utils.errors import EXPECTED_OPERATIONAL_EXCEPTIONS
 from shared.utils.http_client import resilient_request
-
 
 DEFAULT_CACHE_ROOT = Path.home() / ".healthcare-data-mcp" / "cache"
 STATE_HEALTH_CACHE = DEFAULT_CACHE_ROOT / "state-health-data"
@@ -128,7 +128,7 @@ class SourceStatus:
 
 
 def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def _cache_root(cache_root: Path | None = None) -> Path:
@@ -306,7 +306,7 @@ async def _scrape_artifact_links(
             follow_redirects=True,
             headers=_PUBLIC_WEB_HEADERS,
         )
-    except Exception as exc:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS as exc:
         index_path = _write_artifact_indexes(
             cache_dir,
             source_id=source_id,
@@ -379,7 +379,7 @@ async def _scrape_artifact_links(
             try:
                 await _download(artifact["artifact_url"], target, force=force)
                 artifact["cached_path"] = str(target)
-            except Exception as exc:
+            except EXPECTED_OPERATIONAL_EXCEPTIONS as exc:
                 artifact["download_error"] = str(exc)
         unique.append(artifact)
 
@@ -402,7 +402,7 @@ async def _scrape_artifact_links(
     )
 
 
-async def acquire_pa_hospital_reports(cache_root: Path | None = None, *, force: bool = False) -> SourceStatus:  # noqa: ARG001
+async def acquire_pa_hospital_reports(cache_root: Path | None = None, *, force: bool = False) -> SourceStatus:
     status = await _scrape_artifact_links(
         "pa_hospital_reports",
         "Pennsylvania DOH Hospital Reports",
@@ -430,7 +430,7 @@ def normalize_pa_doh_hospital_extract(cache_root: Path | None = None) -> int:
         return 0
     try:
         payload = json.loads(index_path.read_text(encoding="utf-8"))
-    except Exception:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS:
         return 0
     artifacts = payload.get("artifacts") if isinstance(payload, dict) else []
     if not isinstance(artifacts, list):
@@ -448,13 +448,13 @@ def normalize_pa_doh_hospital_extract(cache_root: Path | None = None) -> int:
         if suffix == ".csv" and _is_pa_record_level_extract(title_url):
             try:
                 df = pd.read_csv(path, dtype=str, keep_default_na=False, low_memory=False)
-            except Exception:
+            except EXPECTED_OPERATIONAL_EXCEPTIONS:
                 continue
             normalized_rows.extend(_normalize_pa_doh_extract_dataframe(df, artifact))
         elif suffix in {".xlsx", ".xls"} and _is_pa_excel_report_fallback(title_url):
             try:
                 sheets = pd.read_excel(path, sheet_name=None, dtype=str)
-            except Exception:
+            except EXPECTED_OPERATIONAL_EXCEPTIONS:
                 continue
             for sheet_name, df in sheets.items():
                 sheet_artifact = {**artifact, "sheet_name": str(sheet_name)}
@@ -471,7 +471,7 @@ def normalize_pa_doh_hospital_extract(cache_root: Path | None = None) -> int:
         return 0
     try:
         write_atomic_parquet(output_path, normalized, compression="zstd", index=False)
-    except Exception:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS:
         write_atomic_dataframe_csv(csv_path, normalized, index=False)
     write_atomic_json(
         metadata_path,
@@ -483,7 +483,7 @@ def normalize_pa_doh_hospital_extract(cache_root: Path | None = None) -> int:
             "generated_at": _now(),
         },
     )
-    return int(len(normalized))
+    return len(normalized)
 
 
 def _normalize_pa_doh_extract_dataframe(df: pd.DataFrame, artifact: dict[str, Any]) -> list[dict[str, Any]]:
@@ -570,12 +570,12 @@ def load_pa_doh_bed_candidates(
     if parquet.exists():
         try:
             df = pd.read_parquet(parquet)
-        except Exception:
+        except EXPECTED_OPERATIONAL_EXCEPTIONS:
             df = pd.DataFrame()
     elif csv_path.exists():
         try:
             df = pd.read_csv(csv_path, dtype=str, keep_default_na=False)
-        except Exception:
+        except EXPECTED_OPERATIONAL_EXCEPTIONS:
             df = pd.DataFrame()
     else:
         return []
@@ -595,7 +595,7 @@ def load_pa_doh_bed_candidates(
     return df[mask].head(200).to_dict(orient="records")
 
 
-async def acquire_nj_hospital_public_data(cache_root: Path | None = None, *, force: bool = False) -> SourceStatus:  # noqa: ARG001
+async def acquire_nj_hospital_public_data(cache_root: Path | None = None, *, force: bool = False) -> SourceStatus:
     root = _cache_root(cache_root) / "state-health-data" / "nj-hospital-public-data"
     financial = await _scrape_artifact_links(
         "nj_hospital_financial",
@@ -632,7 +632,7 @@ async def acquire_nj_hospital_public_data(cache_root: Path | None = None, *, for
     )
 
 
-async def acquire_de_hospital_discharge(cache_root: Path | None = None, *, force: bool = False) -> SourceStatus:  # noqa: ARG001
+async def acquire_de_hospital_discharge(cache_root: Path | None = None, *, force: bool = False) -> SourceStatus:
     return await _scrape_artifact_links(
         "de_hospital_discharge",
         "Delaware Hospital Discharge Public Data",
@@ -689,7 +689,7 @@ async def acquire_ahrq_hfmd(cache_root: Path | None = None, *, force: bool = Fal
                     write_atomic_bytes(extracted, zf.read(member))
                 try:
                     record_count += len(pd.read_csv(extracted, dtype=str, keep_default_na=False))
-                except Exception:
+                except EXPECTED_OPERATIONAL_EXCEPTIONS:
                     pass
     return SourceStatus(
         "ahrq_hfmd",
@@ -752,7 +752,7 @@ async def acquire_phc4_public_reports(cache_root: Path | None = None, *, force: 
                 await _download(record["artifact_url"], target, force=force)
                 record["cached_path"] = str(target)
                 record["table_references"] = _extract_structured_tables(target, cache)
-            except Exception as exc:
+            except EXPECTED_OPERATIONAL_EXCEPTIONS as exc:
                 record["download_error"] = str(exc)
         deduped.append(record)
 
@@ -805,7 +805,7 @@ def _extract_structured_tables(path: Path, cache_dir: Path) -> list[dict[str, An
             return _extract_pdf_table_like_pages(path, table_dir)
         else:
             return []
-    except Exception:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS:
         return []
 
     for idx, df in enumerate(tables, start=1):
@@ -827,8 +827,8 @@ def _extract_structured_tables(path: Path, cache_dir: Path) -> list[dict[str, An
                 "artifact_path": str(path),
                 "table_index": idx,
                 "table_name": names[idx - 1] if idx - 1 < len(names) else f"table_{idx}",
-                "row_count": int(len(df)),
-                "column_count": int(len(df.columns)),
+                "row_count": len(df),
+                "column_count": len(df.columns),
                 "extracted_path": str(table_path),
                 "provenance": {"source_artifact": str(path), "page": None, "table": idx},
                 "extraction_status": "structured_table_extracted",
@@ -842,13 +842,13 @@ def _extract_pdf_table_like_pages(path: Path, table_dir: Path) -> list[dict[str,
     references: list[dict[str, Any]] = []
     try:
         reader = PdfReader(str(path))
-    except Exception:
+    except EXPECTED_OPERATIONAL_EXCEPTIONS:
         return references
 
     for page_idx, page in enumerate(reader.pages, start=1):
         try:
             text = page.extract_text() or ""
-        except Exception:
+        except EXPECTED_OPERATIONAL_EXCEPTIONS:
             continue
         lines = [line.strip() for line in text.splitlines() if line.strip()]
         table_like = [
@@ -926,7 +926,7 @@ async def acquire_sources(source_ids: list[str], cache_root: Path | None = None,
     for source_id in source_ids:
         try:
             statuses.append((await acquire_source(source_id, cache_root, force=force)).to_dict())
-        except Exception as exc:
+        except EXPECTED_OPERATIONAL_EXCEPTIONS as exc:
             statuses.append(
                 SourceStatus(source_id, source_id, "", "failed", reason=str(exc), acquired_at=_now()).to_dict()
             )
@@ -1032,7 +1032,7 @@ def _normalized_phc4_rows_for_report(report: dict[str, Any]) -> list[dict[str, A
             continue
         try:
             payload = json.loads(extracted_path.read_text(encoding="utf-8"))
-        except Exception:
+        except EXPECTED_OPERATIONAL_EXCEPTIONS:
             continue
         if isinstance(payload.get("rows"), list):
             rows.extend(_normalize_phc4_tabular_rows(report, table_ref, payload))

@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal, Mapping, Self
+from collections.abc import Mapping
+from typing import Any, Literal, Self
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator, model_validator
 from pydantic.json_schema import GenerateJsonSchema, JsonSchemaMode
@@ -154,7 +155,7 @@ class SourceEvaluation(StrictModel):
 class SafetyNetMissingCell(StrictModel):
     system_slug: str
     input_family: Literal["safety_net_patient_mix_pct"] = "safety_net_patient_mix_pct"
-    candidate_value: Literal[None] = None
+    candidate_value: None = Field(default=None, json_schema_extra={"const": None})
     unit: Literal["percent"] = "percent"
     desired_definition: Literal[
         "Percent of patients or encounters meeting one preapproved safety-net definition, using a common numerator, denominator, setting, organizational boundary, and aligned period across all six product systems"
@@ -188,8 +189,8 @@ class SafetyNetPatientMixAcquisition(StrictModel):
     identity_rows: list[SafetyNetIdentityRow] = Field(min_length=6, max_length=6)
     source_evaluations: list[SourceEvaluation] = Field(min_length=2, max_length=2)
     cells: list[SafetyNetMissingCell] = Field(min_length=6, max_length=6)
-    approved_numerator_receipt: Literal[None] = None
-    approved_denominator_receipt: Literal[None] = None
+    approved_numerator_receipt: None = Field(default=None, json_schema_extra={"const": None})
+    approved_denominator_receipt: None = Field(default=None, json_schema_extra={"const": None})
     prohibited_outputs: list[str]
     acquisition_sha256: str = Field(pattern=SHA256_PATTERN)
 

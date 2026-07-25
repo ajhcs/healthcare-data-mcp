@@ -5,7 +5,7 @@ Consolidates the ``_s`` and ``_i`` micro-utilities from public_records.
 
 from __future__ import annotations
 
-__all__ = ["safe_str", "safe_int"]
+__all__ = ["safe_int", "safe_str"]
 
 
 def safe_str(row: dict, col: str | None) -> str:

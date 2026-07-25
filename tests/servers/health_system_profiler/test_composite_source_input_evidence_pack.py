@@ -145,7 +145,7 @@ async def test_composite_source_input_evidence_pack_requires_source_row_receipts
     assert validate_source_claim_paths(result, require_boundary_traceability=True)["valid"] is True
 
 
-def _financial_row(input_field: str, value: int | float) -> dict[str, object]:
+def _financial_row(input_field: str, value: float) -> dict[str, object]:
     return {
         "metric_key": "finance.ushso_financial_strength_index",
         "input_field": input_field,
@@ -163,7 +163,7 @@ def _financial_row(input_field: str, value: int | float) -> dict[str, object]:
     }
 
 
-def _peer_row(input_field: str, value: int | float) -> dict[str, object]:
+def _peer_row(input_field: str, value: float) -> dict[str, object]:
     return {
         "metric_key": "finance.ushso_financial_strength_index",
         "input_field": input_field,
@@ -181,7 +181,7 @@ def _peer_row(input_field: str, value: int | float) -> dict[str, object]:
     }
 
 
-def _scale_row(input_field: str, value: int | float, source_family: str, owner_hint: str) -> dict[str, object]:
+def _scale_row(input_field: str, value: float, source_family: str, owner_hint: str) -> dict[str, object]:
     return {
         "metric_key": "system.health_system_scale_score",
         "input_field": input_field,

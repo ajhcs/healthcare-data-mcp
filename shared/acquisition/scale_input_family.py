@@ -11,10 +11,11 @@ import hashlib
 import io
 import re
 import subprocess
+from collections.abc import Mapping
 from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
-from typing import Literal, Mapping, Self
+from typing import Literal, Self
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
 from pypdf import PdfReader
@@ -464,7 +465,7 @@ def require_outputs_outside_repository(repository_root: Path, outputs: list[Path
 def iso_datetime(value: str) -> datetime:
     """Parse fixture timestamps while retaining timezone awareness."""
 
-    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    parsed = datetime.fromisoformat(value)
     if parsed.tzinfo is None:
         raise ValueError("timestamp must be timezone-aware")
     return parsed
@@ -476,10 +477,10 @@ __all__ = [
     "ScaleInputFamilyAcquisition",
     "build_acquisition",
     "build_public_evidence_input",
-    "semantic_hash",
+    "repository_top_level",
     "require_clean_repository",
     "require_outputs_outside_repository",
     "require_repository_commit",
-    "repository_top_level",
+    "semantic_hash",
     "verify_source_bytes",
 ]
