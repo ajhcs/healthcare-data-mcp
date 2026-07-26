@@ -26,4 +26,9 @@ ruff check .
 ruff format --check .
 ```
 
-The package uses only the Python standard library at runtime. The bounded benchmark protocol and artifacts are in [`benchmarks`](benchmarks); its baseline is a fresh AI **manual-style source-research baseline**, not a human analyst. See [`docs/HANDOFF.md`](docs/HANDOFF.md) for boundaries and the future adapter contract.
+The package uses only the Python standard library at runtime. Completed July
+2026 evaluation artifacts are quarantined under [`benchmarks`](benchmarks) as
+historical studies of **pre-resolved scope assistance**, not fair end-to-end
+financial retrieval comparisons. There is no active agent-input packet. See
+[`benchmarks/BOUNDARY.md`](benchmarks/BOUNDARY.md) for the data boundary and
+[`docs/HANDOFF.md`](docs/HANDOFF.md) for the future adapter contract.

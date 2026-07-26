@@ -1,5 +1,11 @@
 # Health-System Perimeter Registry bounded benchmark
 
+> **Historical clarification (2026-07-26):** Treat these results as a study of
+> pre-resolved scope assistance. The registry arm received curated fixtures and
+> resolver output sufficient to answer the identity/scope questions, while the
+> baseline discovered those facts from sources. This was not a fair end-to-end
+> financial retrieval comparison.
+
 Research date: 2026-07-24
 
 ## Decision

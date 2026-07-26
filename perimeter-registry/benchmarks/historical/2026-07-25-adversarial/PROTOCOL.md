@@ -1,5 +1,11 @@
 # Adversarial generalization benchmark protocol
 
+> **Historical clarification (2026-07-26):** This protocol gave the assisted
+> arm curated fixtures and precomputed resolver output containing answer-ready
+> identity, perimeter, identifier, caveat, and provenance facts. It measured
+> pre-resolved scope assistance, not end-to-end financial retrieval. The frozen
+> protocol remains only as audit evidence.
+
 Frozen at **2026-07-25T20:35:50Z** under run directory **2026-07-25T200452Z**.
 
 ## Objective and limits
