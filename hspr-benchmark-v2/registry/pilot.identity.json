@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "as_of": "2026-07-26",
+  "systems": [
+    {
+      "system_id": "HSI00000813",
+      "canonical_name": "Mass General Brigham",
+      "aliases": ["MGB"],
+      "legal_entities": [{"name":"Mass General Brigham Incorporated","entity_type":"nonprofit parent"}],
+      "relationships": [],
+      "identifiers": [],
+      "effective_from": null,
+      "effective_to": null,
+      "ambiguity_warnings": ["The brand may refer to the parent and affiliates or to a named facility; require the financial source to state its consolidated reporting entity."],
+      "identity_provenance": [{"claim":"current system brand","source_url":"https://www.massgeneralbrigham.org/en/about","accessed":"2026-07-26"}]
+    },
+    {
+      "system_id": "HSI00000631",
+      "canonical_name": "Mayo Clinic",
+      "aliases": [],
+      "legal_entities": [{"name":"Mayo Clinic","entity_type":"nonprofit parent"},{"name":"Mayo Clinic Health System","entity_type":"regional delivery network"}],
+      "relationships": [{"subject":"Mayo Clinic Health System","predicate":"component_of","object":"Mayo Clinic","effective_from":null,"effective_to":null}],
+      "identifiers": [{"type":"EIN","identifier":"41-6011702","entity":"Mayo Clinic"}],
+      "effective_from": null,
+      "effective_to": null,
+      "ambiguity_warnings": ["Mayo Clinic Health System is also a regional delivery-network name; do not substitute a campus or hospital EIN for the parent without clarification."],
+      "identity_provenance": [{"claim":"Mayo Clinic parent EIN","source_url":"https://www.mayoclinic.org/giving-to-mayo-clinic/ways-to-give/international-giving","accessed":"2026-07-26"}]
+    },
+    {
+      "system_id": "HSI00001427",
+      "canonical_name": "CommonSpirit Health",
+      "aliases": ["CommonSpirit"],
+      "legal_entities": [{"name":"CommonSpirit Health","entity_type":"nonprofit Catholic parent"},{"name":"Catholic Health Initiatives","entity_type":"legacy component"},{"name":"Dignity Health","entity_type":"legacy component"}],
+      "relationships": [
+        {"subject":"Catholic Health Initiatives","predicate":"combined_into","object":"CommonSpirit Health","effective_from":"2019","effective_to":null},
+        {"subject":"Dignity Health","predicate":"combined_into","object":"CommonSpirit Health","effective_from":"2019","effective_to":null}
+      ],
+      "identifiers": [],
+      "effective_from": "2019",
+      "effective_to": null,
+      "ambiguity_warnings": ["Legacy market and facility brands remain in use; distinguish the national parent from a legacy subsidiary or local facility."],
+      "identity_provenance": [{"claim":"legacy brands and 2019 combination","source_url":"https://www.commonspirit.org/brandfaq","accessed":"2026-07-26"}]
+    },
+    {
+      "system_id": "HSI00000492",
+      "canonical_name": "HCA Healthcare",
+      "aliases": ["HCA"],
+      "legal_entities": [
+        {"name":"HCA Healthcare, Inc.","entity_type":"public holding company"},
+        {"name":"HCA Inc.","entity_type":"wholly owned financing subsidiary"}
+      ],
+      "relationships": [{"subject":"HCA Inc.","predicate":"wholly_owned_by","object":"HCA Healthcare, Inc.","effective_from":null,"effective_to":null}],
+      "identifiers": [{"type":"SEC_CIK","identifier":"0000860730","entity":"HCA Healthcare, Inc."}],
+      "effective_from": null,
+      "effective_to": null,
+      "ambiguity_warnings": ["HCA Inc. is not the same reporting entity as parent HCA Healthcare, Inc.; verify which entity a filing covers."],
+      "identity_provenance": [{"claim":"SEC registrant identity","source_url":"https://www.sec.gov/edgar/browse/?CIK=860730","accessed":"2026-07-26"}]
+    }
+  ]
+}

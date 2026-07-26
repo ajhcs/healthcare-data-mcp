@@ -1,0 +1,6 @@
+{
+  "schema_version": 1,
+  "records": [],
+  "record_fields": ["system_id", "activity", "actor", "started_monotonic_ns", "ended_monotonic_ns", "source_calls", "records_added", "records_updated", "ambiguities_logged", "notes"]
+}
+

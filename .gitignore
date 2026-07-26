@@ -21,3 +21,4 @@ cookies*.txt
 .dolt/
 *.db
 .beads-credential-key
+.benchmark-sealed/
