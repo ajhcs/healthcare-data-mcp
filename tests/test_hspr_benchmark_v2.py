@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 
+from hspr_benchmark import runner
 from hspr_benchmark.cohort import PILOT_IDS, build_cohort
 from hspr_benchmark.container_launcher import (
     assemble_answer_packet,
@@ -151,6 +152,145 @@ def test_schedule_is_deterministic_and_balanced() -> None:
     assert first == counterbalanced_schedule(["q1", "q2"], ["a", "b", "c", "d"], 3, "seed")
     assert len(first) == 24
     assert {row["arm_id"] for row in first} == {"a", "b", "c", "d"}
+
+
+def test_batch_executor_writes_immutable_separate_trial_outputs(tmp_path: Path, monkeypatch) -> None:
+    sealed = tmp_path / ".benchmark-sealed"
+    sealed.mkdir()
+    gold = sealed / "gold.json"
+    gold.write_text("{}")
+    credential = tmp_path / "auth.json"
+    credential.write_text('{"fake":"credential-material"}')
+    calls = []
+
+    def fake_run_trial(**kwargs):
+        calls.append(kwargs)
+        kwargs["output_dir"].mkdir(mode=0o700)
+        for name in ("native-trace.json", "answer.json", "observable-summary.json"):
+            (kwargs["output_dir"] / name).write_text("{}")
+        return {"trace": {"duration_ns": 5}}
+
+    monkeypatch.setattr(runner, "audit_registry_packet", lambda *_: {"passed": True, "findings": []})
+    monkeypatch.setattr(
+        runner,
+        "_validate_sealed_gold",
+        lambda *_: {"adjudicated_gold_sha256": "a" * 64, "adjudicated_records": 12},
+    )
+    monkeypatch.setattr(runner, "_build_input_manifest", lambda **_: {"git_revision": "frozen"})
+    monkeypatch.setattr(runner, "run_trial", fake_run_trial)
+    arguments = {
+        "questions_path": ROOT / "hspr-benchmark-v2/public/pilot_questions.json",
+        "arms_path": ROOT / "hspr-benchmark-v2/config/arms.json",
+        "registry_path": ROOT / "hspr-benchmark-v2/registry/pilot.identity.json",
+        "sealed_gold": gold,
+        "response_schema": ROOT / "hspr-benchmark-v2/config/response-schema.json",
+        "runtime_source": ROOT / "hspr-benchmark-v2/runtime",
+        "codex_package_dir": tmp_path / "codex",
+        "credential_path": credential,
+        "output_root": tmp_path / "runs",
+    }
+    result = runner.execute_batch(
+        **arguments,
+        start=1,
+        trial_count=2,
+    )
+    assert len(result["completed"]) == len(calls) == 2
+    assert all(call["allow_live_credential"] for call in calls)
+    assert all(call["sealed_gold"] == gold for call in calls)
+    assert len(list((tmp_path / "runs").glob("trial-*/trial-metadata.json"))) == 2
+    resumed = runner.execute_batch(**arguments, start=1, trial_count=2)
+    assert len(resumed["completed"]) == 2
+    assert len(calls) == 2
+    try:
+        runner.execute_batch(**arguments, start=1, trial_count=1, attempt=2)
+    except ValueError as error:
+        assert "already has a completed attempt" in str(error)
+    else:
+        raise AssertionError("a completed schedule position must not allow another attempt")
+
+    trial_dirs = sorted((tmp_path / "runs").glob("trial-*"))
+    (trial_dirs[0] / "answer.json").write_text('{"tampered":true}')
+    try:
+        runner.execute_batch(**arguments, start=1, trial_count=1)
+    except ValueError as error:
+        assert "artifact digest mismatch" in str(error)
+    else:
+        raise AssertionError("tampered completed artifacts must not be accepted")
+    (trial_dirs[0] / "answer.json").write_text("{}")
+
+    metadata_path = trial_dirs[1] / "trial-metadata.json"
+    metadata = json.loads(metadata_path.read_text())
+    metadata["question_id"] = "wrong"
+    metadata_path.write_text(json.dumps(metadata))
+    try:
+        runner.execute_batch(**arguments, start=2, trial_count=1)
+    except ValueError as error:
+        assert "metadata identity mismatch" in str(error)
+    else:
+        raise AssertionError("mismatched completed metadata must not be accepted")
+
+
+def test_batch_executor_preserves_failure_and_requires_new_attempt(tmp_path: Path, monkeypatch) -> None:
+    gold = tmp_path / "gold.json"
+    gold.write_text("{}")
+    credential = tmp_path / "auth.json"
+    credential.write_text('{"fake":"credential-material"}')
+    monkeypatch.setattr(runner, "audit_registry_packet", lambda *_: {"passed": True, "findings": []})
+    monkeypatch.setattr(runner, "_validate_sealed_gold", lambda *_: {"adjudicated_records": 12})
+    manifest = {"git_revision": "frozen"}
+    monkeypatch.setattr(runner, "_build_input_manifest", lambda **_: manifest)
+
+    def fail_trial(**kwargs):
+        kwargs["output_dir"].mkdir(mode=0o700)
+        (kwargs["output_dir"] / "native-trace.json").write_text("{}")
+        raise RuntimeError("controlled failure")
+
+    monkeypatch.setattr(runner, "run_trial", fail_trial)
+    arguments = {
+        "questions_path": ROOT / "hspr-benchmark-v2/public/pilot_questions.json",
+        "arms_path": ROOT / "hspr-benchmark-v2/config/arms.json",
+        "registry_path": ROOT / "hspr-benchmark-v2/registry/pilot.identity.json",
+        "sealed_gold": gold,
+        "response_schema": ROOT / "hspr-benchmark-v2/config/response-schema.json",
+        "runtime_source": ROOT / "hspr-benchmark-v2/runtime",
+        "codex_package_dir": tmp_path / "codex",
+        "credential_path": credential,
+        "output_root": tmp_path / "runs",
+        "start": 1,
+        "trial_count": 1,
+    }
+    try:
+        runner.execute_batch(**arguments)
+    except RuntimeError as error:
+        assert "controlled failure" in str(error)
+    else:
+        raise AssertionError("controlled failure must propagate")
+    assert len(list((tmp_path / "runs").glob("in-progress-*"))) == 1
+    try:
+        runner.execute_batch(**arguments)
+    except FileExistsError as error:
+        assert "higher --attempt" in str(error)
+    else:
+        raise AssertionError("partial attempt must not be overwritten")
+
+    def succeed_trial(**kwargs):
+        kwargs["output_dir"].mkdir(mode=0o700)
+        for name in ("native-trace.json", "answer.json", "observable-summary.json"):
+            (kwargs["output_dir"] / name).write_text("{}")
+        return {"trace": {"duration_ns": 5}}
+
+    monkeypatch.setattr(runner, "run_trial", succeed_trial)
+    result = runner.execute_batch(**arguments, attempt=2)
+    assert len(result["completed"]) == 1
+    assert len(list((tmp_path / "runs").glob("trial-*-a2"))) == 1
+
+    manifest["git_revision"] = "drifted"
+    try:
+        runner.execute_batch(**{**arguments, "start": 2}, attempt=1)
+    except ValueError as error:
+        assert "input-manifest.json" in str(error)
+    else:
+        raise AssertionError("input drift must stop resumed execution")
 
 
 def test_runtime_events_never_invent_timestamps_or_authority() -> None:

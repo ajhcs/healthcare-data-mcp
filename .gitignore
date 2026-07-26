@@ -22,3 +22,4 @@ cookies*.txt
 *.db
 .beads-credential-key
 .benchmark-sealed/
+.benchmark-runs/
