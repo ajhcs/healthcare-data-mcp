@@ -1,5 +1,10 @@
 # Independent benchmark review
 
+> **Historical clarification (2026-07-26):** The assisted input was an
+> answer-ready scope fact sheet for these questions. Any accuracy or latency
+> comparison below characterizes pre-resolved scope assistance, not end-to-end
+> financial retrieval.
+
 ## Decision
 
 The registry result is directionally promising but the benchmark does **not** yet establish a robust accuracy advantage. Under the frozen gold, registry correctness is 22/24 (91.7%) versus baseline 14/24 (58.3%). After correcting three confirmed rubric defects, registry remains 22/24 (91.7%) while the manual-style source-research baseline rises to 20/24 (83.3%). Both arms have zero false aggregations. The defensible conclusion is that the registry materially reduced latency/tool use and made answers more repeatable, while its adjusted correctness advantage is small and provenance is not better.

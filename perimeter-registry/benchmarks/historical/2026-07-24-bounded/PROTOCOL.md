@@ -1,5 +1,11 @@
 # Fixed benchmark protocol
 
+> **Historical clarification (2026-07-26):** This protocol gave the assisted
+> arm curated fixtures and precomputed resolver output containing answer-ready
+> identity and perimeter facts. It measured pre-resolved scope assistance, not
+> end-to-end financial retrieval. This frozen protocol is retained for audit and
+> is not an approved template for a new retrieval comparison.
+
 ## Objective and terminology
 
 This bounded benchmark compares a registry-assisted AI answer workflow with a **manual-style source-research baseline**: a fresh AI agent that researches primary sources without registry records. It is not a human-analyst benchmark, and no claim about manual human labor is permitted.

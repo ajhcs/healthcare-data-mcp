@@ -1,5 +1,11 @@
 # Adversarial perimeter-registry generalization benchmark
 
+> **Historical clarification (2026-07-26):** Treat these results as a study of
+> pre-resolved scope assistance. The registry arm received curated fixtures and
+> resolver output sufficient to answer the frozen questions; the baseline had
+> to discover the same facts from sources. This was not a fair end-to-end
+> financial retrieval comparison.
+
 Benchmark ID: `2026-07-25T200452Z`
 Questions/gold frozen: `2026-07-25T20:35:50Z`
 Results finalized: `2026-07-25T21:16:00Z`
