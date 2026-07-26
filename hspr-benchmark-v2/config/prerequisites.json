@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "cleanup": {
-    "commit": "6cbfc2e5d31bc30c5d78116ad036672a066c1eda",
+    "commit_prefix": "6cbfc2e5d31b",
     "pull_request": "https://github.com/ajhcs/healthcare-data-mcp/pull/59",
     "ci": "pass",
     "merged_into_agreed_base": false

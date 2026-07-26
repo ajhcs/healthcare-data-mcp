@@ -4,7 +4,7 @@
     "local_derivative": "/home/plumbob/.codex/worktrees/4c5c/healthcare-data-mcp/qa/reports/health_system_metrics_reconciliation.csv",
     "name": "AHRQ Compendium of U.S. Health Systems, 2023 (September 2025 revision)",
     "row_count": 639,
-    "sha256": "b594814db5106ccda63a29e9f20126ec1f740f308446834a46547cec45cd879e",
+    "sha256_prefix12": "b594814db510",
     "source_url": "https://www.ahrq.gov/chsp/data-resources/compendium-2023.html"
   },
   "method": "exclude pilot and declared selections; rank eligible systems by acute beds (missing reported bed counts conservatively encoded as 0); split into quartiles; sample 12/12/13/13 without replacement",

@@ -120,7 +120,7 @@ def build_cohort(frame_path: Path) -> dict[str, object]:
             "source_url": "https://www.ahrq.gov/chsp/data-resources/compendium-2023.html",
             "local_derivative": str(frame_path),
             "row_count": len(rows),
-            "sha256": hashlib.sha256(frame_path.read_bytes()).hexdigest(),
+            "sha256_prefix12": hashlib.sha256(frame_path.read_bytes()).hexdigest()[:12],
             "access_date": "2026-07-26",
         },
         "seed": SEED,
