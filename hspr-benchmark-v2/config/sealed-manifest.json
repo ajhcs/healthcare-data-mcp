@@ -2,12 +2,12 @@
   "schema_version": 1,
   "sealed_root": ".benchmark-sealed/hspr-financial-v2",
   "tracked": false,
-  "researcher_a_sha256_prefix12": "1cffbe9d110f",
-  "researcher_b_sha256_prefix12": "c814f1c6b843",
-  "adjudicated_gold_sha256_prefix12": "97d28e444d6b",
+  "researcher_a_sha256_prefix7": "1cffbe9",
+  "researcher_b_sha256_prefix7": "c814f1c",
+  "adjudicated_gold_sha256_prefix7": "97d28e4",
   "adjudicated_records": 12,
   "dispositions": {"agree_verified": 10, "both_corrected": 2},
-  "identity_packet_sha256_prefix12": "41688dd21151",
+  "identity_packet_sha256_prefix7": "41688dd",
   "key_aware_leakage_audit": "pass",
   "answer_agents_have_run": false
 }
