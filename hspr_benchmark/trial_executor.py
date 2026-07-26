@@ -119,7 +119,7 @@ def run_trial(
         raise RuntimeError("answer runtime failed; inspect the redacted native trace")
     answer = trace.get("answer")
     if not isinstance(answer, dict):
-        raise RuntimeError("trusted supervisor answer handoff is missing")
+        raise TypeError("trusted supervisor answer handoff is missing")
     _validate_answer_shape(answer, str(question["question_id"]))
     write_new_text(output_dir / "answer.json", json.dumps(answer, indent=2))
     summary = summarize_codex_trace(trace)

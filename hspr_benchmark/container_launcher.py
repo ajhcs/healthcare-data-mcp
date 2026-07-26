@@ -12,9 +12,10 @@ import tempfile
 import threading
 import time
 import uuid
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 PINNED_NODE_IMAGE = "node@sha256:968df39aedcea65eeb078fb336ed7191baf48f972b4479711397108be0966920"
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
@@ -209,13 +210,14 @@ def docker_command(
     runtime_dir: Path,
     runtime_command: Iterable[str],
     network: str,
-    limits: ContainerLimits = ContainerLimits(),
+    limits: ContainerLimits | None = None,
     environment: dict[str, str] | None = None,
     output_tmpfs: bool = False,
 ) -> list[str]:
     """Return a fail-closed Docker command with no host/repository mount."""
     if network not in {"none", "bridge"}:
         raise ValueError("network must be none or bridge")
+    limits = limits or ContainerLimits()
     source_paths = (packet_dir, runtime_dir) if output_tmpfs else (packet_dir, runtime_dir, output_dir)
     mount_sources = tuple(_canonical_directory(path) for path in source_paths)
     if len(set(mount_sources)) != len(mount_sources):
@@ -360,20 +362,20 @@ def run_codex_and_capture(
     except (json.JSONDecodeError, UnicodeDecodeError) as error:
         raise ValueError("credential input is not valid JSON") from error
     if not isinstance(credential_document, dict):
-        raise ValueError("credential input must be a JSON object")
+        raise TypeError("credential input must be a JSON object")
     started = time.monotonic_ns()
     deadline = time.monotonic() + timeout_seconds
     events: list[dict[str, Any]] = [{"event": "run_start", "monotonic_ns": started}]
     process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     lines: queue.Queue[tuple[int, bytes] | None] = queue.Queue()
     stderr_chunks: list[bytes] = []
-    writer_errors: list[BaseException] = []
+    writer_errors: list[Exception] = []
 
     def write_stdin() -> None:
         assert process.stdin is not None
         try:
             process.stdin.write(credential_json)
-        except BaseException as error:
+        except Exception as error:
             writer_errors.append(error)
         finally:
             process.stdin.close()
