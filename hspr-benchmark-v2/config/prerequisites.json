@@ -6,8 +6,14 @@
     "ci": "pass",
     "merged_into_agreed_base": true
   },
-  "pilot_execution": "awaiting_explicit_live_credential_authorization",
+  "pilot_execution": "launcher_smoke_passed_pending_hardening_integration",
+  "live_smoke": {
+    "date_utc": "2026-07-26",
+    "official": false,
+    "passed": true,
+    "attestation": "../SMOKE_VALIDATION.md"
+  },
   "blockers": [
-    "a reusable Codex credential has not been authorized for the networked answer container"
+    "merge the reviewed live-smoke hardening delta into the agreed benchmark base"
   ]
 }

@@ -30,7 +30,8 @@ forwarding `thread.started`; the controller aborts if `turn.started` arrives
 without the unlink event. Live use requires explicit risk-aware opt-in. This is
 not cryptographic secrecy: the host kernel, Docker daemon, Codex/backend, and
 controller are trusted, and authentication exists in process memory at startup.
-Handled aborts issue a daemon-side `docker kill` by the unique container name;
+Handled aborts issue repeated daemon-side `docker rm --force` calls using the
+unique container name;
 an uncatchable host/controller crash remains outside this guarantee. The Codex
 parent retains bridge access for API and web-search operations, but generated
 shell commands request Codex's `read-only` sandbox rather than bypass mode.

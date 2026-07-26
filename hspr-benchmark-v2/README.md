@@ -1,5 +1,9 @@
 # HSPR financial retrieval benchmark v2
 
+Install the repository with `python -m pip install -e ".[benchmark,dev]"`
+before running the benchmark harness. The benchmark extra is deliberately
+separate from production runtime dependencies.
+
 This is the leakage-resistant successor to the quarantined July 2026 studies.
 Those studies tested curated, answer-bearing identity/financial evidence against
 fresh identity research; they were not valid end-to-end financial retrieval
@@ -27,7 +31,9 @@ web-search, final-answer, usage, and monotonic receipt events are captured.
 This is practical process/filesystem separation, not cryptographic isolation.
 Docker, the host kernel, Codex, and the controller remain trusted. The Codex
 parent uses the Docker bridge for API/web tools, while model-generated shell
-commands request Codex's `read-only` sandbox and the launcher never uses bypass
-mode. Live enforcement of that nested sandbox is not yet credential-validated.
-The official pilot remains fail-closed until reusable Codex authentication is
-explicitly authorized for this networked context; no live answer arm has run.
+commands use Codex's legacy Landlock `read-only` sandbox because nested
+bubblewrap namespaces are unavailable in this hardened container. The launcher
+never uses bypass mode. A bounded, non-official live smoke validated credential
+removal, shell-network denial, native web access, trace capture, and cleanup;
+see `SMOKE_VALIDATION.md`. No scored pilot answer arm had run at that validation
+point.

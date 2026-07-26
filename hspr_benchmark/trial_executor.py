@@ -7,6 +7,8 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+from jsonschema import Draft202012Validator
+
 from .container_launcher import (
     assemble_answer_packet,
     codex_docker_command,
@@ -35,7 +37,7 @@ def trial_prompt(hspr_available: bool) -> str:
     )
 
 
-def _validate_answer_shape(answer: dict[str, Any], question_id: str) -> None:
+def _validate_answer_shape(answer: dict[str, Any], question_id: str, response_schema: Path) -> None:
     required = {
         "question_id",
         "answer_status",
@@ -48,15 +50,19 @@ def _validate_answer_shape(answer: dict[str, Any], question_id: str) -> None:
         "exact_locator",
         "caveats",
         "aggregated_entities",
-    }
-    if set(answer) - {
-        *required,
         "clarification_needed",
         "closest_reported_subtotal",
-    }:
+    }
+    if set(answer) - required:
         raise ValueError("answer contains fields outside the locked schema")
     if not required <= set(answer) or answer.get("question_id") != question_id:
         raise ValueError("answer is missing locked fields or has the wrong question_id")
+    schema = json.loads(response_schema.read_text(encoding="utf-8"))
+    Draft202012Validator.check_schema(schema)
+    errors = sorted(Draft202012Validator(schema).iter_errors(answer), key=lambda item: list(item.path))
+    if errors:
+        paths = [".".join(str(part) for part in error.path) or "$" for error in errors]
+        raise ValueError(f"answer violates the locked response schema at: {', '.join(paths)}")
 
 
 def run_trial(
@@ -120,7 +126,7 @@ def run_trial(
     answer = trace.get("answer")
     if not isinstance(answer, dict):
         raise TypeError("trusted supervisor answer handoff is missing")
-    _validate_answer_shape(answer, str(question["question_id"]))
+    _validate_answer_shape(answer, str(question["question_id"]), response_schema)
     write_new_text(output_dir / "answer.json", json.dumps(answer, indent=2))
     summary = summarize_codex_trace(trace)
     write_new_text(output_dir / "observable-summary.json", json.dumps(summary, indent=2))
