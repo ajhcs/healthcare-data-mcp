@@ -369,16 +369,19 @@ def run_codex_and_capture(
     process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     lines: queue.Queue[tuple[int, bytes] | None] = queue.Queue()
     stderr_chunks: list[bytes] = []
-    writer_errors: list[Exception] = []
+    writer_errors: list[OSError] = []
 
     def write_stdin() -> None:
         assert process.stdin is not None
         try:
             process.stdin.write(credential_json)
-        except Exception as error:
+        except OSError as error:
             writer_errors.append(error)
         finally:
-            process.stdin.close()
+            try:
+                process.stdin.close()
+            except OSError as error:
+                writer_errors.append(error)
 
     def read_stdout() -> None:
         assert process.stdout is not None
