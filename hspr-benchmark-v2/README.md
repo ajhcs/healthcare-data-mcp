@@ -11,10 +11,23 @@ identity/perimeter-only HSPR packet and approved reasoning level differ. Gold
 is stored locally under `.benchmark-sealed/`, ignored by Git, and must be copied
 only into a scorer context that is unavailable to answer agents.
 
-No official run is authorized until cleanup commit `6cbfc2e` is in the chosen
-base, its CI passes, a registry packet passes the automated leakage audit
-against the adjudicated sealed key, and the pilot has been preregistered.
+Cleanup commit `6cbfc2e` is merged into the agreed base and its CI passed. The
+pilot questions and analysis are preregistered, and the identity packet passes
+the automated leakage audit against the adjudicated sealed key.
 
-The current runner freezes schedules and normalizes runtime-emitted traces but
-intentionally cannot execute a trial. An access-controlled answer-context
-launcher with runtime-native event timestamps remains a release blocker.
+The answer launcher creates an allowlisted, non-root, read-only Docker context
+with no repository, sealed-key, Docker-socket, host-root, or writable host-output
+mount. Output is bounded tmpfs and crosses the boundary through a supervisor
+event into a host-owned result directory. A hostile no-network mount probe and
+a separate fake-credential supervisor proof pass. Authentication is never
+mounted: the supervisor accepts it on stdin, stores it briefly in container
+tmpfs, and unlinks it before releasing `turn.started`. Native command,
+web-search, final-answer, usage, and monotonic receipt events are captured.
+
+This is practical process/filesystem separation, not cryptographic isolation.
+Docker, the host kernel, Codex, and the controller remain trusted. The Codex
+parent uses the Docker bridge for API/web tools, while model-generated shell
+commands request Codex's `read-only` sandbox and the launcher never uses bypass
+mode. Live enforcement of that nested sandbox is not yet credential-validated.
+The official pilot remains fail-closed until reusable Codex authentication is
+explicitly authorized for this networked context; no live answer arm has run.
