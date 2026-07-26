@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 
+from hspr_benchmark import runner
 from hspr_benchmark.cohort import PILOT_IDS, build_cohort
 from hspr_benchmark.container_launcher import (
     assemble_answer_packet,
@@ -11,7 +12,6 @@ from hspr_benchmark.container_launcher import (
     write_new_text,
 )
 from hspr_benchmark.leakage import audit_registry_packet
-from hspr_benchmark import runner
 from hspr_benchmark.runner import counterbalanced_schedule, observable_events
 from hspr_benchmark.scoring import paired_cluster_bootstrap, score_answer
 from hspr_benchmark.trial_executor import _validate_answer_shape, run_trial, trial_prompt
