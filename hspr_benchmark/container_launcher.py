@@ -251,6 +251,8 @@ def docker_command(
         limits.cpus,
         "--network",
         network,
+        "--shm-size",
+        "128m",
         "--mount",
         f"type=bind,src={packet_mount},dst=/input,readonly",
         "--mount",
@@ -264,9 +266,9 @@ def docker_command(
     command.extend(
         [
             "--tmpfs",
-            "/tmp:rw,noexec,nosuid,nodev,size=64m",
+            "/tmp:rw,noexec,nosuid,nodev,size=128m",
             "--tmpfs",
-            "/work:rw,nosuid,nodev,size=64m",
+            "/work:rw,nosuid,nodev,size=128m",
             "--workdir",
             "/work",
         ]
@@ -315,7 +317,7 @@ def codex_docker_command(
     )
     image = base.pop()
     base.insert(2, "--interactive")
-    base.extend(["--tmpfs", "/auth:rw,noexec,nosuid,nodev,size=1m,mode=0700,uid=65534,gid=65534"])
+    base.extend(["--tmpfs", "/auth:rw,noexec,nosuid,nodev,size=64m,mode=0700,uid=65534,gid=65534"])
     mounts = [
         "--mount",
         f"type=bind,src={codex_mount},dst=/opt/codex,readonly",
@@ -328,6 +330,8 @@ def codex_docker_command(
         "/opt/codex/bin/codex.js",
         "exec",
         "--json",
+        "--enable",
+        "use_legacy_landlock",
         "--ephemeral",
         "--ignore-user-config",
         "--ignore-rules",
@@ -474,19 +478,21 @@ def run_codex_and_capture(
         "turn.completed",
         "supervisor.answer",
     ]
-    if sequence != expected or answer is None:
-        raise RuntimeError(f"invalid supervisor event sequence: {sequence}")
     stderr = _redact(b"".join(stderr_chunks).decode("utf-8", errors="replace"), secrets)
     ended = time.monotonic_ns()
     events.append({"event": "run_end", "monotonic_ns": ended, "exit_code": return_code})
+    sequence_valid = sequence == expected and answer is not None
     trace = {
         "events": events,
         "stderr": stderr,
         "duration_ns": ended - started,
-        "credential_removed_before_turn": True,
+        "credential_removed_before_turn": sequence_valid,
         "answer": answer,
+        "supervisor_sequence_valid": sequence_valid,
     }
     write_new_text(trace_path, json.dumps(trace, indent=2))
+    if not sequence_valid:
+        raise RuntimeError(f"invalid supervisor event sequence: {sequence}; redacted trace: {trace_path}")
     return trace
 
 
@@ -685,7 +691,7 @@ def prove_credential_supervisor(*, runtime_dir: Path, image: str = PINNED_NODE_I
         )
         container_image = command.pop()
         command.insert(2, "--interactive")
-        command.extend(["--tmpfs", "/auth:rw,noexec,nosuid,nodev,size=1m,mode=0700,uid=65534,gid=65534"])
+        command.extend(["--tmpfs", "/auth:rw,noexec,nosuid,nodev,size=64m,mode=0700,uid=65534,gid=65534"])
         command.extend(
             [
                 container_image,

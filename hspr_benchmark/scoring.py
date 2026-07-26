@@ -34,6 +34,13 @@ def _similarity(left: object, right: object) -> float:
     return max(jaccard, SequenceMatcher(None, normalized_left, normalized_right).ratio())
 
 
+def _period(value: object) -> object:
+    """Ignore schema-required null placeholders while preserving period meaning."""
+    if not isinstance(value, dict):
+        return value
+    return {key: item for key, item in value.items() if item is not None}
+
+
 def _perimeter_correct(observed: object, expected: object) -> bool:
     if not isinstance(expected, dict):
         return _norm(observed) == _norm(expected)
@@ -74,7 +81,7 @@ def score_answer(answer: dict[str, Any], gold: dict[str, Any]) -> dict[str, Any]
         )
         financial = financial and _norm(observed_fallback.get("label")) == _norm(fallback_label)
     entity = _perimeter_correct(answer.get("reporting_perimeter", ""), gold.get("entity_perimeter"))
-    period = answer.get("period") == gold.get("period")
+    period = _period(answer.get("period")) == _period(gold.get("period"))
     expected_units = gold.get("units", {})
     currency = expected_units.get("currency") if isinstance(expected_units, dict) else expected_units
     units = answer.get("units") == currency

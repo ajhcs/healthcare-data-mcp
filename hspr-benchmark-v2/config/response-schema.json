@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
   "additionalProperties": false,
-  "required": ["question_id", "answer_status", "reporting_perimeter", "metric_label", "period", "units", "value", "primary_source_url", "exact_locator", "caveats", "aggregated_entities"],
+  "required": ["question_id", "answer_status", "reporting_perimeter", "metric_label", "period", "units", "value", "primary_source_url", "exact_locator", "caveats", "aggregated_entities", "clarification_needed", "closest_reported_subtotal"],
   "properties": {
     "question_id": {"type": "string"},
     "answer_status": {"enum": ["reported", "unavailable_not_reported"]},
@@ -10,9 +10,8 @@
     "metric_label": {"type": "string"},
     "period": {
       "type": "object",
-      "properties": {"type":{"type":"string"},"start":{"type":"string"},"end":{"type":"string"},"date":{"type":"string"}},
-      "required": ["type"],
-      "oneOf": [{"required":["start","end"]},{"required":["date"]}],
+      "properties": {"type":{"type":"string"},"start":{"type":["string","null"]},"end":{"type":["string","null"]},"date":{"type":["string","null"]}},
+      "required": ["type", "start", "end", "date"],
       "additionalProperties": false
     },
     "units": {"type": "string"},

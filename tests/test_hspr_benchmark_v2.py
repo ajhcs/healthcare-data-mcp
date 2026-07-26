@@ -13,7 +13,7 @@ from hspr_benchmark.container_launcher import (
 from hspr_benchmark.leakage import audit_registry_packet
 from hspr_benchmark.runner import counterbalanced_schedule, observable_events
 from hspr_benchmark.scoring import paired_cluster_bootstrap, score_answer
-from hspr_benchmark.trial_executor import run_trial, trial_prompt
+from hspr_benchmark.trial_executor import _validate_answer_shape, run_trial, trial_prompt
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -118,6 +118,34 @@ def test_scoring_and_clustered_pairing() -> None:
     assert result["system_clusters"] == 2
 
 
+def test_scoring_ignores_schema_required_null_period_placeholders() -> None:
+    gold = {
+        "validated_value": 100,
+        "tolerance": {"absolute_usd": 0},
+        "period": {"type": "fiscal_year", "start": "2024-01-01", "end": "2024-12-31"},
+        "units": {"currency": "USD"},
+        "entity_perimeter": "Example Health",
+        "primary_source": {"url": "https://example.org/report"},
+    }
+    answer = {
+        "answer_status": "reported",
+        "value": 100,
+        "period": {
+            "type": "fiscal_year",
+            "start": "2024-01-01",
+            "end": "2024-12-31",
+            "date": None,
+        },
+        "units": "USD",
+        "reporting_perimeter": "Example Health",
+        "primary_source_url": "https://example.org/report",
+        "exact_locator": "",
+        "caveats": [],
+        "aggregated_entities": [],
+    }
+    assert score_answer(answer, gold)["financial_correct"]
+
+
 def test_schedule_is_deterministic_and_balanced() -> None:
     first = counterbalanced_schedule(["q1", "q2"], ["a", "b", "c", "d"], 3, "seed")
     assert first == counterbalanced_schedule(["q1", "q2"], ["a", "b", "c", "d"], 3, "seed")
@@ -208,6 +236,7 @@ def test_codex_command_has_stdin_supervisor_not_credential_mount(tmp_path: Path)
     assert "OPENAI_API_KEY" not in rendered
     assert "dst=/output" not in rendered
     assert "--dangerously-bypass-approvals-and-sandbox" not in command
+    assert "use_legacy_landlock" in command
     assert "node@sha256:" in rendered
 
 
@@ -313,3 +342,31 @@ def test_trial_executor_requires_explicit_live_credential_opt_in(tmp_path: Path)
         assert "risk-aware" in str(error)
     else:
         raise AssertionError("live credential execution must fail closed")
+
+
+def test_host_answer_validation_enforces_nested_schema() -> None:
+    schema = ROOT / "hspr-benchmark-v2/config/response-schema.json"
+    answer = {
+        "question_id": "q",
+        "answer_status": "reported",
+        "reporting_perimeter": "Example Health",
+        "metric_label": "Revenue",
+        "period": {"type": "fiscal_year", "start": "2024-01-01", "end": "2024-12-31", "date": None},
+        "units": "USD",
+        "value": 100,
+        "primary_source_url": "https://example.org/report",
+        "exact_locator": "page 1",
+        "caveats": [],
+        "aggregated_entities": [],
+        "clarification_needed": False,
+        "closest_reported_subtotal": None,
+    }
+    _validate_answer_shape(answer, "q", schema)
+    for field, invalid in (("answer_status", "maybe"), ("period", {"type": "fiscal_year"})):
+        malformed = {**answer, field: invalid}
+        try:
+            _validate_answer_shape(malformed, "q", schema)
+        except ValueError as error:
+            assert "locked response schema" in str(error)
+        else:
+            raise AssertionError(f"invalid {field} must be rejected by the host")
