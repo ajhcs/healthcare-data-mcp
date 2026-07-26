@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "cleanup": {
+    "commit_prefix": "6cbfc2e",
+    "pull_request": "https://github.com/ajhcs/healthcare-data-mcp/pull/59",
+    "ci": "pass",
+    "merged_into_agreed_base": true
+  },
+  "pilot_execution": "awaiting_explicit_live_credential_authorization",
+  "blockers": [
+    "a reusable Codex credential has not been authorized for the networked answer container"
+  ]
+}

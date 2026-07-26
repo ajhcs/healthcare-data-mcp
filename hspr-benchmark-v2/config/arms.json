@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "locked_model": "gpt-5.6-luna",
+  "arms": [
+    {"arm_id": "hspr-medium", "hspr_available": true, "reasoning": "medium"},
+    {"arm_id": "hspr-xhigh", "hspr_available": true, "reasoning": "xhigh"},
+    {"arm_id": "native-medium", "hspr_available": false, "reasoning": "medium"},
+    {"arm_id": "native-xhigh", "hspr_available": false, "reasoning": "xhigh"}
+  ],
+  "target_repetitions": 3,
+  "live_authoritative_retrieval_required": true
+}
+

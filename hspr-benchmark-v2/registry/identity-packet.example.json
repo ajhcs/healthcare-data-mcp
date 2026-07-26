@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "as_of": "2026-07-26",
+  "systems": [
+    {
+      "system_id": "example-only",
+      "canonical_name": "Example Health System",
+      "aliases": ["Example Health"],
+      "legal_entities": [],
+      "relationships": [],
+      "identifiers": [],
+      "effective_from": null,
+      "effective_to": null,
+      "ambiguity_warnings": [],
+      "identity_provenance": []
+    }
+  ]
+}
+

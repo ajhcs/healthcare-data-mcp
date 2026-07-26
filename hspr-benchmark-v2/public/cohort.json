@@ -1,0 +1,664 @@
+{
+  "frame": {
+    "access_date": "2026-07-26",
+    "local_derivative": "/home/plumbob/.codex/worktrees/4c5c/healthcare-data-mcp/qa/reports/health_system_metrics_reconciliation.csv",
+    "name": "AHRQ Compendium of U.S. Health Systems, 2023 (September 2025 revision)",
+    "row_count": 639,
+    "sha256_prefix12": "b594814db510",
+    "source_url": "https://www.ahrq.gov/chsp/data-resources/compendium-2023.html"
+  },
+  "method": "exclude pilot and declared selections; rank eligible systems by acute beds (missing reported bed counts conservatively encoded as 0); split into quartiles; sample 12/12/13/13 without replacement",
+  "seed": "hspr-financial-v2-confirmatory-2026-07-26",
+  "systems": [
+    {
+      "acute_beds": 298,
+      "selection_group": "standard",
+      "system_id": "HSI00000008",
+      "system_name": "Adena Health System"
+    },
+    {
+      "acute_beds": 890,
+      "selection_group": "standard",
+      "system_id": "HSI00000019",
+      "system_name": "Albany Medical Center"
+    },
+    {
+      "acute_beds": 5258,
+      "selection_group": "standard",
+      "system_id": "HSI00000073",
+      "system_name": "Banner Health"
+    },
+    {
+      "acute_beds": 838,
+      "selection_group": "standard",
+      "system_id": "HSI00000170",
+      "system_name": "Carilion Clinic"
+    },
+    {
+      "acute_beds": 1296,
+      "selection_group": "standard",
+      "system_id": "HSI00000218",
+      "system_name": "ChristianaCare"
+    },
+    {
+      "acute_beds": 936,
+      "selection_group": "standard",
+      "system_id": "HSI00000263",
+      "system_name": "Cone Health"
+    },
+    {
+      "acute_beds": 4623,
+      "selection_group": "standard",
+      "system_id": "HSI00001021",
+      "system_name": "Corewell Health"
+    },
+    {
+      "acute_beds": 1535,
+      "selection_group": "standard",
+      "system_id": "HSI00000323",
+      "system_name": "Duke University Health System"
+    },
+    {
+      "acute_beds": 966,
+      "selection_group": "standard",
+      "system_id": "HSI00000350",
+      "system_name": "Essentia Health"
+    },
+    {
+      "acute_beds": 1292,
+      "selection_group": "standard",
+      "system_id": "HSI00000388",
+      "system_name": "Geisinger"
+    },
+    {
+      "acute_beds": 1787,
+      "selection_group": "standard",
+      "system_id": "HSI00000475",
+      "system_name": "Henry Ford Health"
+    },
+    {
+      "acute_beds": 1406,
+      "selection_group": "standard",
+      "system_id": "HSI00000491",
+      "system_name": "HonorHealth"
+    },
+    {
+      "acute_beds": 3938,
+      "selection_group": "standard",
+      "system_id": "HSI00000516",
+      "system_name": "Intermountain Healthcare"
+    },
+    {
+      "acute_beds": 2402,
+      "selection_group": "standard",
+      "system_id": "HSI00000531",
+      "system_name": "Johns Hopkins Health System"
+    },
+    {
+      "acute_beds": 1536,
+      "selection_group": "standard",
+      "system_id": "HSI00000714",
+      "system_name": "Multicare Health System"
+    },
+    {
+      "acute_beds": 2272,
+      "selection_group": "standard",
+      "system_id": "HSI00000770",
+      "system_name": "Northwestern Medicine"
+    },
+    {
+      "acute_beds": 2976,
+      "selection_group": "standard",
+      "system_id": "HSI00000773",
+      "system_name": "Novant Health"
+    },
+    {
+      "acute_beds": 3280,
+      "selection_group": "standard",
+      "system_id": "HSI00000780",
+      "system_name": "Ochsner Health System"
+    },
+    {
+      "acute_beds": 2280,
+      "selection_group": "standard",
+      "system_id": "HSI00000784",
+      "system_name": "Ohiohealth"
+    },
+    {
+      "acute_beds": 1808,
+      "selection_group": "standard",
+      "system_id": "HSI00000776",
+      "system_name": "OSF Healthcare System"
+    },
+    {
+      "acute_beds": 9256,
+      "selection_group": "standard",
+      "system_id": "HSI00000852",
+      "system_name": "Providence"
+    },
+    {
+      "acute_beds": 1925,
+      "selection_group": "standard",
+      "system_id": "HSI00000958",
+      "system_name": "Sanford Health"
+    },
+    {
+      "acute_beds": 1219,
+      "selection_group": "standard",
+      "system_id": "HSI00000968",
+      "system_name": "Scripps Health"
+    },
+    {
+      "acute_beds": 2314,
+      "selection_group": "standard",
+      "system_id": "HSI00000972",
+      "system_name": "Sentara Healthcare"
+    },
+    {
+      "acute_beds": 1601,
+      "selection_group": "standard",
+      "system_id": "HSI00000977",
+      "system_name": "Sharp Healthcare"
+    },
+    {
+      "acute_beds": 3440,
+      "selection_group": "standard",
+      "system_id": "HSI00001050",
+      "system_name": "Sutter Health"
+    },
+    {
+      "acute_beds": 3165,
+      "selection_group": "standard",
+      "system_id": "HSI00001072",
+      "system_name": "Texas Health Resources"
+    },
+    {
+      "acute_beds": 5048,
+      "selection_group": "standard",
+      "system_id": "HSI00001078",
+      "system_name": "Cleveland Clinic"
+    },
+    {
+      "acute_beds": 1160,
+      "selection_group": "standard",
+      "system_id": "HSI00001243",
+      "system_name": "Wellspan Health"
+    },
+    {
+      "acute_beds": 5412,
+      "selection_group": "standard",
+      "system_id": "HSI00000767",
+      "system_name": "Northwell Health"
+    },
+    {
+      "acute_beds": 1780,
+      "selection_group": "standard",
+      "system_id": "HSI00000717",
+      "system_name": "NYU Langone Health"
+    },
+    {
+      "acute_beds": 4363,
+      "selection_group": "standard",
+      "system_id": "HSI00000660",
+      "system_name": "Mercy"
+    },
+    {
+      "acute_beds": 2282,
+      "selection_group": "standard",
+      "system_id": "HSI00001175",
+      "system_name": "University of Maryland Medical System"
+    },
+    {
+      "acute_beds": 1697,
+      "selection_group": "standard",
+      "system_id": "HSI00001177",
+      "system_name": "University of Michigan Health System"
+    },
+    {
+      "acute_beds": 885,
+      "selection_group": "standard",
+      "system_id": "HSI00001186",
+      "system_name": "University of Virginia Health System"
+    },
+    {
+      "acute_beds": 105,
+      "selection_group": "random",
+      "size_stratum": "acute_bed_q1",
+      "system_id": "HSI00000568",
+      "system_name": "Lake Regional Health System"
+    },
+    {
+      "acute_beds": 155,
+      "selection_group": "random",
+      "size_stratum": "acute_bed_q1",
+      "system_id": "HSI00000518",
+      "system_name": "Iredell Health System"
+    },
+    {
+      "acute_beds": 144,
+      "selection_group": "random",
+      "size_stratum": "acute_bed_q1",
+      "system_id": "HSI00000686",
+      "system_name": "Lecom Health"
+    },
+    {
+      "acute_beds": 66,
+      "selection_group": "random",
+      "size_stratum": "acute_bed_q1",
+      "system_id": "HSI00000264",
+      "system_name": "Conejos County Hospital Corporation"
+    },
+    {
+      "acute_beds": 167,
+      "selection_group": "random",
+      "size_stratum": "acute_bed_q1",
+      "system_id": "HSI00000100",
+      "system_name": "Beaufort Memorial Hospital"
+    },
+    {
+      "acute_beds": 25,
+      "selection_group": "random",
+      "size_stratum": "acute_bed_q1",
+      "system_id": "HSI00000416",
+      "system_name": "Grande Ronde Hospital and Clinics"
+    },
+    {
+      "acute_beds": 95,
+      "selection_group": "random",
+      "size_stratum": "acute_bed_q1",
+      "system_id": "HSI00000051",
+      "system_name": "Armstrong County Memorial Hospital"
+    },
+    {
+      "acute_beds": 132,
+      "selection_group": "random",
+      "size_stratum": "acute_bed_q1",
+      "system_id": "HSI00000798",
+      "system_name": "Oswego Health"
+    },
+    {
+      "acute_beds": 43,
+      "selection_group": "random",
+      "size_stratum": "acute_bed_q1",
+      "system_id": "HSI00001334",
+      "system_name": "Mountain View Hospital"
+    },
+    {
+      "acute_beds": 89,
+      "selection_group": "random",
+      "size_stratum": "acute_bed_q1",
+      "system_id": "HSI00001400",
+      "system_name": "Summit Healthcare"
+    },
+    {
+      "acute_beds": 147,
+      "selection_group": "random",
+      "size_stratum": "acute_bed_q1",
+      "system_id": "HSI00001359",
+      "system_name": "Stillwater Medical Center Authority"
+    },
+    {
+      "acute_beds": 54,
+      "selection_group": "random",
+      "size_stratum": "acute_bed_q1",
+      "system_id": "HSI00001274",
+      "system_name": "York Hospital"
+    },
+    {
+      "acute_beds": 329,
+      "selection_group": "random",
+      "size_stratum": "acute_bed_q2",
+      "system_id": "HSI00000761",
+      "system_name": "Northern Arizona Healthcare"
+    },
+    {
+      "acute_beds": 189,
+      "selection_group": "random",
+      "size_stratum": "acute_bed_q2",
+      "system_id": "HSI00001319",
+      "system_name": "Holland Hospital"
+    },
+    {
+      "acute_beds": 277,
+      "selection_group": "random",
+      "size_stratum": "acute_bed_q2",
+      "system_id": "HSI00000325",
+      "system_name": "East Alabama Medical Center"
+    },
+    {
+      "acute_beds": 240,
+      "selection_group": "random",
+      "size_stratum": "acute_bed_q2",
+      "system_id": "HSI00000194",
+      "system_name": "Centrastate Healthcare System"
+    },
+    {
+      "acute_beds": 253,
+      "selection_group": "random",
+      "size_stratum": "acute_bed_q2",
+      "system_id": "HSI00001341",
+      "system_name": "Parkview Medical Center"
+    },
+    {
+      "acute_beds": 254,
+      "selection_group": "random",
+      "size_stratum": "acute_bed_q2",
+      "system_id": "HSI00000937",
+      "system_name": "Saint Lukes Hospital of Duluth"
+    },
+    {
+      "acute_beds": 204,
+      "selection_group": "random",
+      "size_stratum": "acute_bed_q2",
+      "system_id": "HSI00000755",
+      "system_name": "Northbay Healthcare"
+    },
+    {
+      "acute_beds": 227,
+      "selection_group": "random",
+      "size_stratum": "acute_bed_q2",
+      "system_id": "HSI00001443",
+      "system_name": "Montage Health"
+    },
+    {
+      "acute_beds": 278,
+      "selection_group": "random",
+      "size_stratum": "acute_bed_q2",
+      "system_id": "HSI00001501",
+      "system_name": "Boone Hospital Center"
+    },
+    {
+      "acute_beds": 265,
+      "selection_group": "random",
+      "size_stratum": "acute_bed_q2",
+      "system_id": "HSI00000671",
+      "system_name": "Meritus Health"
+    },
+    {
+      "acute_beds": 210,
+      "selection_group": "random",
+      "size_stratum": "acute_bed_q2",
+      "system_id": "HSI00000103",
+      "system_name": "Beebe Healthcare"
+    },
+    {
+      "acute_beds": 323,
+      "selection_group": "random",
+      "size_stratum": "acute_bed_q2",
+      "system_id": "HSI00000216",
+      "system_name": "Childrens National Health System"
+    },
+    {
+      "acute_beds": 415,
+      "selection_group": "random",
+      "size_stratum": "acute_bed_q3",
+      "system_id": "HSI00000365",
+      "system_name": "FirstHealth of the Carolinas"
+    },
+    {
+      "acute_beds": 559,
+      "selection_group": "random",
+      "size_stratum": "acute_bed_q3",
+      "system_id": "HSI00000947",
+      "system_name": "Salem Health Hospitals and Clinics"
+    },
+    {
+      "acute_beds": 451,
+      "selection_group": "random",
+      "size_stratum": "acute_bed_q3",
+      "system_id": "HSI00000927",
+      "system_name": "Saint Josephs Candler Health System"
+    },
+    {
+      "acute_beds": 681,
+      "selection_group": "random",
+      "size_stratum": "acute_bed_q3",
+      "system_id": "HSI00000929",
+      "system_name": "Saint Josephs Health"
+    },
+    {
+      "acute_beds": 430,
+      "selection_group": "random",
+      "size_stratum": "acute_bed_q3",
+      "system_id": "HSI00000540",
+      "system_name": "Kaweah Delta Health Care District"
+    },
+    {
+      "acute_beds": 498,
+      "selection_group": "random",
+      "size_stratum": "acute_bed_q3",
+      "system_id": "HSI00001288",
+      "system_name": "Brookdale University Hospital And Medical Center"
+    },
+    {
+      "acute_beds": 391,
+      "selection_group": "random",
+      "size_stratum": "acute_bed_q3",
+      "system_id": "HSI00000987",
+      "system_name": "Sinai Health System"
+    },
+    {
+      "acute_beds": 747,
+      "selection_group": "random",
+      "size_stratum": "acute_bed_q3",
+      "system_id": "HSI00000722",
+      "system_name": "Nationwide Childrens Hospital"
+    },
+    {
+      "acute_beds": 507,
+      "selection_group": "random",
+      "size_stratum": "acute_bed_q3",
+      "system_id": "HSI00000026",
+      "system_name": "Allegiance Health Management"
+    },
+    {
+      "acute_beds": 397,
+      "selection_group": "random",
+      "size_stratum": "acute_bed_q3",
+      "system_id": "HSI00000283",
+      "system_name": "Cottage Health System"
+    },
+    {
+      "acute_beds": 699,
+      "selection_group": "random",
+      "size_stratum": "acute_bed_q3",
+      "system_id": "HSI00000057",
+      "system_name": "Aspirus"
+    },
+    {
+      "acute_beds": 501,
+      "selection_group": "random",
+      "size_stratum": "acute_bed_q3",
+      "system_id": "HSI00001083",
+      "system_name": "The Metrohealth System"
+    },
+    {
+      "acute_beds": 707,
+      "selection_group": "random",
+      "size_stratum": "acute_bed_q3",
+      "system_id": "HSI00000412",
+      "system_name": "Grady Health System"
+    },
+    {
+      "acute_beds": 3643,
+      "selection_group": "random",
+      "size_stratum": "acute_bed_q4",
+      "system_id": "HSI00000826",
+      "system_name": "Piedmont Healthcare"
+    },
+    {
+      "acute_beds": 2417,
+      "selection_group": "random",
+      "size_stratum": "acute_bed_q4",
+      "system_id": "HSI00001121",
+      "system_name": "UF Health"
+    },
+    {
+      "acute_beds": 1176,
+      "selection_group": "random",
+      "size_stratum": "acute_bed_q4",
+      "system_id": "HSI00000537",
+      "system_name": "Kaleida Health"
+    },
+    {
+      "acute_beds": 2228,
+      "selection_group": "random",
+      "size_stratum": "acute_bed_q4",
+      "system_id": "HSI00001272",
+      "system_name": "Yale New Haven Health System"
+    },
+    {
+      "acute_beds": 2370,
+      "selection_group": "random",
+      "size_stratum": "acute_bed_q4",
+      "system_id": "HSI00001251",
+      "system_name": "West Virginia University Health System"
+    },
+    {
+      "acute_beds": 1608,
+      "selection_group": "random",
+      "size_stratum": "acute_bed_q4",
+      "system_id": "HSI00000523",
+      "system_name": "Jackson Health System"
+    },
+    {
+      "acute_beds": 914,
+      "selection_group": "random",
+      "size_stratum": "acute_bed_q4",
+      "system_id": "HSI00001112",
+      "system_name": "Wellforce"
+    },
+    {
+      "acute_beds": 1636,
+      "selection_group": "random",
+      "size_stratum": "acute_bed_q4",
+      "system_id": "HSI00000357",
+      "system_name": "Fairview Health Services"
+    },
+    {
+      "acute_beds": 846,
+      "selection_group": "random",
+      "size_stratum": "acute_bed_q4",
+      "system_id": "HSI00000637",
+      "system_name": "McLeod Health"
+    },
+    {
+      "acute_beds": 2036,
+      "selection_group": "random",
+      "size_stratum": "acute_bed_q4",
+      "system_id": "HSI00001169",
+      "system_name": "University of Colorado Health"
+    },
+    {
+      "acute_beds": 1086,
+      "selection_group": "random",
+      "size_stratum": "acute_bed_q4",
+      "system_id": "HSI00001253",
+      "system_name": "Nuvance Health"
+    },
+    {
+      "acute_beds": 1674,
+      "selection_group": "random",
+      "size_stratum": "acute_bed_q4",
+      "system_id": "HSI00000452",
+      "system_name": "Hartford Healthcare"
+    },
+    {
+      "acute_beds": 965,
+      "selection_group": "random",
+      "size_stratum": "acute_bed_q4",
+      "system_id": "HSI00001213",
+      "system_name": "VCU Health System"
+    },
+    {
+      "acute_beds": 9337,
+      "selection_group": "tricky",
+      "system_id": "HSI00000536",
+      "system_name": "Kaiser Permanente"
+    },
+    {
+      "acute_beds": 686,
+      "selection_group": "tricky",
+      "system_id": "HSI00001085",
+      "system_name": "The Nebraska Medical Center"
+    },
+    {
+      "acute_beds": 3181,
+      "selection_group": "tricky",
+      "system_id": "HSI00000048",
+      "system_name": "Jefferson Health"
+    },
+    {
+      "acute_beds": 5972,
+      "selection_group": "tricky",
+      "system_id": "HSI00001126",
+      "system_name": "UPMC"
+    },
+    {
+      "acute_beds": 2929,
+      "selection_group": "tricky",
+      "system_id": "HSI00000820",
+      "system_name": "University of Pennsylvania Health System"
+    },
+    {
+      "acute_beds": 15162,
+      "selection_group": "tricky",
+      "system_id": "HSI00000055",
+      "system_name": "Ascension Health"
+    },
+    {
+      "acute_beds": 14914,
+      "selection_group": "tricky",
+      "system_id": "HSI00001106",
+      "system_name": "Trinity Health"
+    },
+    {
+      "acute_beds": 3497,
+      "selection_group": "tricky",
+      "system_id": "HSI00001168",
+      "system_name": "University of California Health"
+    },
+    {
+      "acute_beds": 1672,
+      "selection_group": "tricky",
+      "system_id": "HSI00001165",
+      "system_name": "The University of Texas System"
+    },
+    {
+      "acute_beds": 2429,
+      "selection_group": "tricky",
+      "system_id": "HSI00000711",
+      "system_name": "Mount Sinai Health System"
+    },
+    {
+      "acute_beds": 12073,
+      "selection_group": "tricky",
+      "system_id": "HSI00001066",
+      "system_name": "Tenet Healthcare"
+    },
+    {
+      "acute_beds": 6023,
+      "selection_group": "tricky",
+      "system_id": "HSI00001148",
+      "system_name": "Universal Health Services"
+    },
+    {
+      "acute_beds": 9046,
+      "selection_group": "tricky",
+      "system_id": "HSI00000249",
+      "system_name": "Community Health Systems"
+    },
+    {
+      "acute_beds": 667,
+      "selection_group": "tricky",
+      "system_id": "HSI00001075",
+      "system_name": "The Childrens Hospital of Philadelphia"
+    },
+    {
+      "acute_beds": 912,
+      "selection_group": "tricky",
+      "system_id": "HSI00000591",
+      "system_name": "Loma Linda University Health"
+    }
+  ]
+}
