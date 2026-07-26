@@ -95,8 +95,8 @@ def _key_findings(packet: dict[str, Any], gold: Any) -> list[str]:
     findings = []
     for record in _gold_records(gold):
         values = [record.get("validated_value")]
-        closest = record.get("closest_reported_subtotal") or {}
-        values.append(closest.get("value_usd"))
+        closest = record.get("reported_fallback") or record.get("closest_reported_subtotal") or {}
+        values.append(closest.get("validated_value", closest.get("value_usd")))
         for value in values:
             if not isinstance(value, (int, float)) or not math.isfinite(value):
                 continue

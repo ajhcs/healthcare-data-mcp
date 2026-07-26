@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "cleanup": {
+    "commit": "6cbfc2e5d31bc30c5d78116ad036672a066c1eda",
+    "pull_request": "https://github.com/ajhcs/healthcare-data-mcp/pull/59",
+    "ci": "pass",
+    "merged_into_agreed_base": false
+  },
+  "pilot_execution": "blocked",
+  "blockers": [
+    "cleanup PR is not merged into the agreed benchmark base",
+    "access-controlled answer-context launcher is not implemented",
+    "runtime-native HSPR/read/web/evidence/final-answer event timestamps are not yet available"
+  ]
+}

@@ -3,8 +3,8 @@ from pathlib import Path
 
 from hspr_benchmark.cohort import PILOT_IDS, build_cohort
 from hspr_benchmark.leakage import audit_registry_packet
+from hspr_benchmark.runner import counterbalanced_schedule, observable_events
 from hspr_benchmark.scoring import paired_cluster_bootstrap, score_answer
-from hspr_benchmark.runner import counterbalanced_schedule
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -72,22 +72,29 @@ def test_scoring_and_clustered_pairing() -> None:
     gold = {
         "validated_value": 100,
         "tolerance": {"absolute_usd": 1},
-        "period": "FY2025",
-        "units": "USD",
-        "entity_perimeter": "p",
-        "primary_source": "https://example.org/u",
+        "requested_metric_available": True,
+        "period": {"type": "fiscal_year", "start": "2024-01-01", "end": "2024-12-31"},
+        "units": {"currency": "USD", "normalized_scale": "ones"},
+        "entity_perimeter": {
+            "description": "Example Health and affiliates, consolidated.",
+            "includes": ["Example Health"],
+            "excludes": ["one hospital alone"],
+            "source_defined_consolidation": True,
+        },
+        "primary_source": {"url": "https://example.org/u"},
         "exact_locator": "line l",
-        "required_caveats": ["c"],
-        "consolidation_expected": True,
+        "required_caveats": [{"code": "system", "text": "Consolidated system result, not one hospital."}],
+        "aggregation_permitted": True,
     }
     answer = {
+        "answer_status": "reported",
         "value": 100.5,
-        "period": "FY2025",
+        "period": {"type": "fiscal_year", "start": "2024-01-01", "end": "2024-12-31"},
         "units": "USD",
-        "reporting_perimeter": "p",
+        "reporting_perimeter": "Example Health and affiliates, consolidated",
         "primary_source_url": "https://example.org/u",
         "exact_locator": "line l",
-        "caveats": ["c"],
+        "caveats": ["This is the consolidated system result, not one hospital."],
         "aggregated_entities": ["affiliate"],
     }
     assert score_answer(answer, gold)["fully_correct"]
@@ -107,3 +114,13 @@ def test_schedule_is_deterministic_and_balanced() -> None:
     assert first == counterbalanced_schedule(["q1", "q2"], ["a", "b", "c", "d"], 3, "seed")
     assert len(first) == 24
     assert {row["arm_id"] for row in first} == {"a", "b", "c", "d"}
+
+
+def test_runtime_events_never_invent_timestamps_or_authority() -> None:
+    events = observable_events(
+        '{"type":"web_search","query":"audited 10-k"}\n{"type":"web_open","timestamp":"2026-07-26T17:00:00Z"}\n'
+    )
+    assert events[0]["runtime_timestamp"] is None
+    assert events[0]["timing_available"] is False
+    assert events[1]["runtime_timestamp"] == "2026-07-26T17:00:00Z"
+    assert not any("authoritative_financial_evidence" in event["event"] for event in events)

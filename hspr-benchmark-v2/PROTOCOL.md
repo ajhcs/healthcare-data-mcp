@@ -16,19 +16,20 @@
 ## Isolation
 
 Questions, registry packets, runtime configs/traces, and sealed gold occupy
-separate roots. Answer worktrees receive an allowlisted packet containing only
-one question, response schema, and (for HSPR arms) the audited identity packet.
-They do not receive the repository checkout or sealed root. The scorer receives
-answers and adjudicated gold but no credentials or answer-agent context. This is
-filesystem/process isolation and allowlisting, not cryptographic secrecy.
+separate roots. The implemented scheduler does not launch answer agents.
+Temporary working-directory minimization is not filesystem isolation and is
+rejected. Before a pilot, an executor must create an OS-sandboxed or equivalently
+access-controlled answer context allowlisted to one question, response schema,
+and (for HSPR arms) the audited identity packet. The scorer receives answers and
+adjudicated gold but no answer-agent context. This is not cryptographic secrecy.
 
 ## Telemetry
 
-Use monotonic timestamps for run start/end, HSPR lookup start/end, local reads,
-each observable web search/open/click/download, first/last authoritative
-financial evidence, and final answer. Record tool-call counts, latency, and
-token/cost fields only when emitted by the runtime. Never infer or fabricate
-hidden reasoning time. Raw event traces are immutable inputs to derived timing.
+Use monotonic timestamps for run start/end. HSPR lookup, local reads, web tool
+calls, first/last authoritative financial evidence, and final answer must use
+timestamps emitted at the event by the runtime/tool layer. File-copy staging is
+not an HSPR lookup. Keyword matches do not establish source authority. Missing
+event timestamps, token counts, and cost stay null. Never infer hidden timing.
 
 ## Outcomes and analysis
 
@@ -37,4 +38,3 @@ quality, caveat quality, false aggregation, tool calls, wall latency, observable
 step timing, available token/cost telemetry, and HSPR construction/maintenance
 burden. Primary comparisons are paired; uncertainty uses system-level clusters.
 The AHRQ frame supports selection, not an unqualified national-prevalence claim.
-

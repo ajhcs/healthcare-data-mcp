@@ -6,6 +6,7 @@ import math
 import random
 import re
 from collections import defaultdict
+from difflib import SequenceMatcher
 from typing import Any
 from urllib.parse import urlsplit, urlunsplit
 
@@ -23,73 +24,76 @@ def _tolerance(gold: dict[str, Any]) -> tuple[float, float]:
     raw = gold.get("tolerance") or {}
     if isinstance(raw, (int, float)):
         return float(raw), float(raw)
-    return float(raw.get("relative_fraction", 0)), float(raw.get("absolute_usd", 0))
+    return float(raw.get("relative", raw.get("relative_fraction", 0))), float(raw.get("absolute_usd", 0))
 
 
-def _concept_coverage(texts: list[str], concepts: list[list[str]]) -> float:
-    if not concepts:
+def _similarity(left: object, right: object) -> float:
+    normalized_left, normalized_right = _norm(left), _norm(right)
+    left_tokens, right_tokens = set(normalized_left.split()), set(normalized_right.split())
+    jaccard = len(left_tokens & right_tokens) / len(left_tokens | right_tokens) if left_tokens and right_tokens else 0
+    return max(jaccard, SequenceMatcher(None, normalized_left, normalized_right).ratio())
+
+
+def _perimeter_correct(observed: object, expected: object) -> bool:
+    if not isinstance(expected, dict):
+        return _norm(observed) == _norm(expected)
+    text = _norm(observed)
+    if expected.get("source_defined_consolidation") and "consolidat" not in text:
+        return False
+    candidates = [expected.get("description", ""), *expected.get("includes", [])]
+    return any(_similarity(text, candidate) >= 0.45 for candidate in candidates)
+
+
+def _caveat_coverage(observed: list[str], required: list[object]) -> float:
+    if not required:
         return 1.0
-    haystack = _norm(" ".join(texts))
-    matched = sum(any(_norm(term) in haystack for term in alternatives) for alternatives in concepts)
-    return matched / len(concepts)
+    text = " ".join(observed)
+    matched = 0
+    for item in required:
+        requirement = item.get("text", "") if isinstance(item, dict) else str(item)
+        matched += _similarity(text, requirement) >= 0.32
+    return matched / len(required)
 
 
 def score_answer(answer: dict[str, Any], gold: dict[str, Any]) -> dict[str, Any]:
-    expected_status = gold.get("answer_status", "reported")
+    expected_status = "reported" if gold.get("requested_metric_available", True) else "unavailable_not_reported"
     status_correct = answer.get("answer_status", "reported") == expected_status
-    expected = gold.get("validated_value")
-    observed = answer.get("value")
+    expected, observed = gold.get("validated_value"), answer.get("value")
     relative, absolute = _tolerance(gold)
     financial = expected is None and observed is None
     if expected is not None and observed is not None:
         financial = math.isclose(float(observed), float(expected), rel_tol=relative, abs_tol=absolute)
-    closest = gold.get("closest_reported_subtotal") or {}
-    if expected_status == "unavailable_not_reported" and closest:
-        observed_closest = answer.get("closest_reported_subtotal") or {}
-        _, closest_abs = _tolerance(closest)
-        financial = (
-            financial
-            and math.isclose(
-                float(observed_closest.get("value", math.nan)),
-                float(closest["value_usd"]),
-                rel_tol=0,
-                abs_tol=closest_abs,
-            )
-            and _norm(observed_closest.get("label")) == _norm(closest["label"])
+    fallback = gold.get("reported_fallback") or gold.get("closest_reported_subtotal") or {}
+    if expected_status == "unavailable_not_reported" and fallback:
+        observed_fallback = answer.get("closest_reported_subtotal") or {}
+        _, fallback_absolute = _tolerance(fallback)
+        fallback_value = fallback.get("validated_value", fallback.get("value_usd"))
+        fallback_label = fallback.get("metric", fallback.get("label"))
+        financial = financial and math.isclose(
+            float(observed_fallback.get("value", math.nan)), float(fallback_value), rel_tol=0, abs_tol=fallback_absolute
         )
-    rules = gold.get("perimeter_rules") or {}
-    perimeter_text = _norm(answer.get("reporting_perimeter", ""))
-    required_all = [_norm(term) for term in rules.get("required_all", [])]
-    required_any = [_norm(term) for term in rules.get("required_any", [])]
-    forbidden = [_norm(term) for term in rules.get("forbidden", [])]
-    entity = all(term in perimeter_text for term in required_all)
-    entity = entity and (not required_any or any(term in perimeter_text for term in required_any))
-    entity = entity and not any(term in perimeter_text for term in forbidden)
-    if not rules:
-        entity = _norm(answer.get("reporting_perimeter")) == _norm(gold.get("entity_perimeter"))
+        financial = financial and _norm(observed_fallback.get("label")) == _norm(fallback_label)
+    entity = _perimeter_correct(answer.get("reporting_perimeter", ""), gold.get("entity_perimeter"))
     period = answer.get("period") == gold.get("period")
-    units = answer.get("units") == gold.get("units")
-    allowed_sources = gold.get("accepted_source_urls") or [
-        gold.get("primary_source", {}).get("url")
-        if isinstance(gold.get("primary_source"), dict)
-        else gold.get("primary_source")
-    ]
-    source = _url(answer.get("primary_source_url")) in {_url(item) for item in allowed_sources if item}
-    locator_quality = _concept_coverage([str(answer.get("exact_locator", ""))], gold.get("locator_concepts", []))
-    caveat_quality = _concept_coverage(answer.get("caveats", []), gold.get("caveat_concepts", []))
-    if not gold.get("caveat_concepts"):
-        caveat_quality = _concept_coverage(
-            answer.get("caveats", []), [[item] for item in gold.get("required_caveats", [])]
-        )
-    expected_consolidation = bool(gold.get("consolidation_expected"))
-    false_aggregation = bool(answer.get("aggregated_entities")) and not expected_consolidation
+    expected_units = gold.get("units", {})
+    currency = expected_units.get("currency") if isinstance(expected_units, dict) else expected_units
+    units = answer.get("units") == currency
+    source = gold.get("primary_source") or {}
+    allowed_sources = (
+        [source.get("url"), *source.get("accepted_equivalent_urls", [])] if isinstance(source, dict) else [source]
+    )
+    source_correct = _url(answer.get("primary_source_url")) in {_url(item) for item in allowed_sources if item}
+    locator_quality = _similarity(answer.get("exact_locator", ""), gold.get("exact_locator", ""))
+    caveat_quality = _caveat_coverage(answer.get("caveats", []), gold.get("required_caveats", []))
+    false_aggregation = bool(answer.get("aggregated_entities")) and not bool(gold.get("aggregation_permitted"))
+    fully_correct = financial and status_correct and entity and period and units and not false_aggregation
     return {
         "financial_correct": financial and status_correct and period and units,
         "entity_perimeter_correct": entity,
-        "provenance_quality": (float(source) + locator_quality) / 2,
+        "provenance_quality": (float(source_correct) + locator_quality) / 2,
         "caveat_quality": caveat_quality,
         "false_aggregation": false_aggregation,
-        "fully_correct": financial and status_correct and entity and period and units and not false_aggregation,
+        "fully_correct": fully_correct,
     }
 
 
@@ -99,10 +103,11 @@ def paired_cluster_bootstrap(
     clusters: dict[str, dict[str, list[float]]] = defaultdict(lambda: defaultdict(list))
     for row in rows:
         clusters[str(row["system_id"])][str(row["arm_id"])].append(float(row[metric]))
-    differences = []
-    for arms in clusters.values():
-        if arms[arm_a] and arms[arm_b]:
-            differences.append(sum(arms[arm_a]) / len(arms[arm_a]) - sum(arms[arm_b]) / len(arms[arm_b]))
+    differences = [
+        sum(arms[arm_a]) / len(arms[arm_a]) - sum(arms[arm_b]) / len(arms[arm_b])
+        for arms in clusters.values()
+        if arms[arm_a] and arms[arm_b]
+    ]
     if not differences:
         raise ValueError("no paired system clusters")
     rng = random.Random(seed)

@@ -15,3 +15,6 @@ No official run is authorized until cleanup commit `6cbfc2e` is in the chosen
 base, its CI passes, a registry packet passes the automated leakage audit
 against the adjudicated sealed key, and the pilot has been preregistered.
 
+The current runner freezes schedules and normalizes runtime-emitted traces but
+intentionally cannot execute a trial. An access-controlled answer-context
+launcher with runtime-native event timestamps remains a release blocker.
