@@ -17,6 +17,7 @@ from hspr_benchmark.github_metadata_audit import (
     _canonical_bytes,
     _snapshot_material,
     audit_github_metadata_capture,
+    collector_implementation_sha256,
     endpoint_spec_sha256,
     validate_audit_document,
 )
@@ -116,6 +117,7 @@ def _capture(
         revalidation.append(
             {
                 "id": f"request-{surface_name}",
+                "repository_id": 1206377365,
                 "surface": surface_name,
                 "method": "GET",
                 "url": f"https://api.github.com/repos/ajhcs/healthcare-data-mcp/{surface_name}",
@@ -157,6 +159,7 @@ def _capture(
     manifest: dict[str, object] = {
         "schema_version": CAPTURE_SCHEMA_VERSION,
         "capture_policy": CAPTURE_POLICY,
+        "collector_implementation_sha256": collector_implementation_sha256(),
         "endpoint_spec_sha256": endpoint_spec_sha256(),
         "api_version": API_VERSION,
         "api_host": API_HOST,
@@ -293,6 +296,18 @@ def test_runner_validator_rejects_tampered_surface_and_future_or_stale_audit(tmp
     result = audit_github_metadata_capture(manifest, questions, identity, now=NOW)
     result["surface_counts"] = {**result["surface_counts"], "issues": -1}
     with pytest.raises(ValueError, match="surface or digest"):
+        validate_audit_document(
+            result,
+            questions_sha256=_digest(questions.read_bytes()),
+            identity_sha256=_digest(identity.read_bytes()),
+            public_ref_shas=PUBLIC_REFS,
+            active_system_count=1,
+            now=NOW,
+        )
+
+    result = audit_github_metadata_capture(manifest, questions, identity, now=NOW)
+    result["collector_implementation_sha256"] = "0" * 64
+    with pytest.raises(ValueError, match="policy or implementation"):
         validate_audit_document(
             result,
             questions_sha256=_digest(questions.read_bytes()),

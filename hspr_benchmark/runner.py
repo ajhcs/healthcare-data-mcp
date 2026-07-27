@@ -26,6 +26,7 @@ from .container_launcher import (
 )
 from .github_metadata_audit import validate_audit_document as validate_github_metadata_audit_document
 from .leakage import audit_registry_packet
+from .manual_artifact_attestation import sha256_bytes, validate_attestation
 from .public_history_audit import AUDIT_POLICY, implementation_sha256
 from .trial_executor import require_official_web_boundary, run_trial
 
@@ -271,7 +272,8 @@ def _validate_active_inputs(active_manifest: Path, questions_path: Path, registr
         "github_metadata_audit",
         "preregistration",
     }
-    if not isinstance(files, dict) or set(files) != required_files:
+    allowed_file_sets = {frozenset(required_files), frozenset({*required_files, "manual_artifact_attestation"})}
+    if not isinstance(files, dict) or frozenset(files) not in allowed_file_sets:
         raise ValueError("active manifest has an invalid file set")
     resolved: dict[str, Path] = {}
     for name, entry in files.items():
@@ -297,12 +299,18 @@ def _validate_active_inputs(active_manifest: Path, questions_path: Path, registr
     if int(preregistration.get("design", {}).get("questions", -1)) != len(questions.get("questions", [])):
         raise ValueError("preregistration question count does not match the active packet")
     history_audit = json.loads(resolved["public_history_audit"].read_text(encoding="utf-8"))
+    raw_uninspectables = history_audit.get("raw_uninspectable_artifacts", history_audit.get("uninspectable_artifacts"))
+    residual_uninspectables = history_audit.get(
+        "residual_uninspectable_artifacts", history_audit.get("uninspectable_artifacts")
+    )
+    attestation_digest = history_audit.get("manual_artifact_attestation_sha256")
     if (
         history_audit.get("schema_version") != 4
         or history_audit.get("policy") != AUDIT_POLICY
         or history_audit.get("passed") is not True
         or history_audit.get("blocking_hits") != []
-        or history_audit.get("uninspectable_artifacts") != []
+        or residual_uninspectables != []
+        or history_audit.get("uninspectable_artifacts") != residual_uninspectables
         or not history_audit.get("public_ref_shas")
         or history_audit.get("audited_identity_packet") is not True
     ):
@@ -313,6 +321,40 @@ def _validate_active_inputs(active_manifest: Path, questions_path: Path, registr
         raise ValueError("public-history audit is not bound to the active questions")
     if history_audit.get("identity_sha256") != _sha256_file(resolved["registry"]):
         raise ValueError("public-history audit is not bound to the active registry")
+    if attestation_digest is None:
+        if "manual_artifact_attestation" in resolved:
+            raise ValueError("active manifest has an unreferenced manual artifact attestation")
+        if raw_uninspectables != residual_uninspectables:
+            raise ValueError("public-history audit suppresses artifacts without an attestation")
+    else:
+        if "manual_artifact_attestation" not in resolved:
+            raise ValueError("public-history audit requires its exact manual artifact attestation")
+        attestation_path = resolved["manual_artifact_attestation"]
+        attestation_bytes = attestation_path.read_bytes()
+        if sha256_bytes(attestation_bytes) != attestation_digest:
+            raise ValueError("manual artifact attestation digest does not match the public-history audit")
+        attestation = json.loads(attestation_bytes)
+
+        def blob_digest(object_id: str) -> str:
+            content = subprocess.run(
+                ["git", "cat-file", "blob", object_id],
+                cwd=REPOSITORY_ROOT,
+                check=True,
+                capture_output=True,
+            ).stdout
+            return sha256_bytes(content)
+
+        calculated_residual = validate_attestation(
+            attestation,
+            raw_uninspectables=raw_uninspectables,
+            audit_implementation_sha256=history_audit["audit_implementation_sha256"],
+            questions_sha256=history_audit["questions_sha256"],
+            identity_sha256=history_audit["identity_sha256"],
+            public_ref_shas=history_audit["public_ref_shas"],
+            blob_sha256=blob_digest,
+        )
+        if calculated_residual != residual_uninspectables:
+            raise ValueError("public-history audit residual artifacts do not match the attestation")
     system_count = len({str(item["system_id"]) for item in questions["questions"]})
     if int(history_audit.get("active_system_count", -1)) != system_count:
         raise ValueError("public-history audit does not cover the active systems")
@@ -337,6 +379,7 @@ def _validate_active_inputs(active_manifest: Path, questions_path: Path, registr
         "active_manifest_sha256": _sha256_file(manifest_path),
         "public_history_audit_sha256": _sha256_file(resolved["public_history_audit"]),
         "github_metadata_audit_sha256": _sha256_file(resolved["github_metadata_audit"]),
+        "manual_artifact_attestation_sha256": attestation_digest,
         "preregistration_sha256": _sha256_file(resolved["preregistration"]),
         "public_ref_shas": history_audit["public_ref_shas"],
         "protected_active_root": str(root),

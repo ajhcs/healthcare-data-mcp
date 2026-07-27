@@ -50,8 +50,12 @@ produce zero blocking hits across every freshly fetched public branch, tag, and
 pull-request-head history. The audit scans resolved commit SHAs, commit and
 annotated-tag messages, paths, extracted PDF/ZIP-based document text, and all
 reachable blobs. Unsupported or incompletely inspectable binary artifacts fail
-closed. Its implementation and the exact question and identity bytes are
-SHA-256-bound to the run gate. This does not make all public material
+closed. A scorer-side manual review can clear only an exact blob/path/reason
+record in a private attestation bound to the audit implementation, questions,
+identity packet, full public-ref map, and blob SHA-1/SHA-256; unresolved,
+missing, extra, stale, or broad allowlist records remain blocking. Its
+implementation and the exact question and identity bytes are SHA-256-bound to
+the run gate. This does not make all public material
 unreachable: GitHub release/PR descriptions and external attachments require a
 separate pre-run attestation, and force-pushed or orphaned history may be
 unrecoverable. Prompts, voluntary

@@ -14,10 +14,10 @@ from urllib.parse import urlsplit
 
 from .public_history_audit import _normalized, _relationship_terms, _searchable_blob, _term_matches
 
-AUDIT_POLICY = "strict-github-metadata-capture-v1"
-CAPTURE_POLICY = "complete-public-github-surface-v1"
-SCHEMA_VERSION = 1
-CAPTURE_SCHEMA_VERSION = 1
+AUDIT_POLICY = "strict-github-network-metadata-capture-v2"
+CAPTURE_POLICY = "complete-public-github-network-surface-v2"
+SCHEMA_VERSION = 2
+CAPTURE_SCHEMA_VERSION = 2
 API_VERSION = "2026-03-10"
 API_HOST = "api.github.com"
 REPOSITORY = {
@@ -81,6 +81,7 @@ NONCOMPLETE_STATES = {
 _CAPTURE_KEYS = {
     "schema_version",
     "capture_policy",
+    "collector_implementation_sha256",
     "endpoint_spec_sha256",
     "api_version",
     "api_host",
@@ -114,6 +115,7 @@ _AUDIT_RESULT_KEYS = {
     "capture_schema_version",
     "capture_policy",
     "audit_implementation_sha256",
+    "collector_implementation_sha256",
     "endpoint_spec_sha256",
     "capture_manifest_sha256",
     "questions_sha256",
@@ -142,6 +144,7 @@ _AUDIT_RESULT_KEYS = {
 }
 _REVALIDATION_KEYS = {
     "id",
+    "repository_id",
     "surface",
     "method",
     "url",
@@ -209,6 +212,12 @@ def endpoint_spec_sha256() -> str:
                 "required_surfaces": sorted(REQUIRED_SURFACES),
                 "parent_surfaces": PARENT_SURFACES,
                 "noncomplete_states": {key: sorted(value) for key, value in NONCOMPLETE_STATES.items()},
+                "network_scope": {
+                    "canonical_repository_id": REPOSITORY["id"],
+                    "fork_identity": "canonical_forks_plus_detailed_parent_or_source_binding",
+                    "record_namespace": "fork:{repository_id}:",
+                    "revalidation_scope": "repository_id_x_required_surface",
+                },
             }
         )
     )
@@ -216,6 +225,10 @@ def endpoint_spec_sha256() -> str:
 
 def implementation_sha256() -> str:
     return _sha256(Path(__file__).read_bytes())
+
+
+def collector_implementation_sha256() -> str:
+    return _sha256(Path(__file__).with_name("github_metadata_collector.py").read_bytes())
 
 
 def _strict_json(path: Path) -> tuple[bytes, dict[str, Any]]:
@@ -392,9 +405,12 @@ def _validate_revalidation(revalidation: object) -> tuple[list[dict[str, Any]], 
         if not isinstance(entry, dict) or set(entry) != _REVALIDATION_KEYS:
             raise ValueError("GitHub capture revalidation entry has an invalid shape")
         request_id = entry["id"]
+        repository_id = entry["repository_id"]
         surface = entry["surface"]
         if not isinstance(request_id, str) or not request_id or request_id in ids:
             raise ValueError("GitHub capture revalidation request ID is invalid or duplicated")
+        if type(repository_id) is not int or repository_id <= 0:
+            raise ValueError("GitHub capture revalidation repository ID is invalid")
         if surface not in REQUIRED_SURFACES:
             raise ValueError("GitHub capture revalidation entry names an unknown surface")
         if entry["method"] not in {"GET", "POST"} or entry["kind"] not in {"json", "download", "probe"}:
@@ -441,9 +457,10 @@ def _validate_revalidation(revalidation: object) -> tuple[list[dict[str, Any]], 
     if covered_surfaces != REQUIRED_SURFACES:
         raise ValueError("GitHub capture revalidation ledger does not cover every required surface")
     normalized.sort(key=lambda item: item["id"])
-    request_targets = {(entry["surface"], entry["url"]) for entry in normalized}
+    request_targets = {(entry["repository_id"], entry["surface"], entry["url"]) for entry in normalized}
     if any(
-        entry["next_url"] is not None and (entry["surface"], entry["next_url"]) not in request_targets
+        entry["next_url"] is not None
+        and (entry["repository_id"], entry["surface"], entry["next_url"]) not in request_targets
         for entry in normalized
     ):
         raise ValueError("GitHub capture revalidation Link chain is incomplete")
@@ -468,6 +485,7 @@ def validate_audit_document(
         or document["capture_schema_version"] != CAPTURE_SCHEMA_VERSION
         or document["capture_policy"] != CAPTURE_POLICY
         or document["audit_implementation_sha256"] != implementation_sha256()
+        or document["collector_implementation_sha256"] != collector_implementation_sha256()
         or document["endpoint_spec_sha256"] != endpoint_spec_sha256()
     ):
         raise ValueError("GitHub metadata leakage audit policy or implementation is unsupported")
@@ -554,6 +572,8 @@ def audit_github_metadata_capture(
         raise ValueError("GitHub capture manifest has an invalid field set")
     if capture["schema_version"] != CAPTURE_SCHEMA_VERSION or capture["capture_policy"] != CAPTURE_POLICY:
         raise ValueError("GitHub capture manifest policy is unsupported")
+    if capture["collector_implementation_sha256"] != collector_implementation_sha256():
+        raise ValueError("GitHub capture collector implementation does not match the auditor")
     if capture["endpoint_spec_sha256"] != endpoint_spec_sha256():
         raise ValueError("GitHub capture endpoint specification does not match the auditor")
     if capture["api_version"] != API_VERSION or capture["api_host"] != API_HOST:
@@ -628,6 +648,45 @@ def audit_github_metadata_capture(
     _revalidation, revalidation_sha256 = _validate_revalidation(capture["revalidation"])
     if capture["revalidation_sha256"] != revalidation_sha256:
         raise ValueError("GitHub capture conditional-revalidation ledger digest mismatch")
+    network_repository_ids = {int(REPOSITORY["id"])}
+    fork_record_ids = {record["id"] for record in surface_records["forks"]}
+    for record in surface_records["fork_metadata"]:
+        content = record["content"]
+        if not isinstance(content, dict):
+            raise TypeError("GitHub fork metadata record is malformed")
+        fork_id = content.get("id")
+        owner = content.get("owner")
+        parent = content.get("parent")
+        source = content.get("source")
+        if (
+            type(fork_id) is not int
+            or fork_id == int(REPOSITORY["id"])
+            or fork_id in network_repository_ids
+            or record["id"] != f"fork:{fork_id}"
+            or content.get("visibility") != "public"
+            or not isinstance(content.get("node_id"), str)
+            or not content["node_id"]
+            or not isinstance(owner, dict)
+            or not isinstance(owner.get("login"), str)
+            or int(REPOSITORY["id"])
+            not in {
+                parent.get("id") if isinstance(parent, dict) else None,
+                source.get("id") if isinstance(source, dict) else None,
+            }
+        ):
+            raise ValueError("GitHub fork metadata is outside the canonical repository network")
+        network_repository_ids.add(fork_id)
+    if {record["id"] for record in surface_records["fork_metadata"]} != fork_record_ids:
+        raise ValueError("GitHub fork metadata does not exactly cover canonical fork enumeration")
+    ledger_repository_ids = {entry["repository_id"] for entry in _revalidation}
+    if ledger_repository_ids != network_repository_ids:
+        raise ValueError("GitHub revalidation ledger does not cover every network repository")
+    ledger_scope = {(entry["repository_id"], entry["surface"]) for entry in _revalidation}
+    expected_scope = {
+        (repository_id, surface) for repository_id in network_repository_ids for surface in REQUIRED_SURFACES
+    }
+    if ledger_scope != expected_scope:
+        raise ValueError("GitHub revalidation ledger does not cover every surface for every network repository")
     hits: list[dict[str, Any]] = []
     uninspectable: list[dict[str, str]] = []
     observed_upload_urls: set[str] = set()
@@ -716,6 +775,7 @@ def audit_github_metadata_capture(
         "capture_schema_version": CAPTURE_SCHEMA_VERSION,
         "capture_policy": CAPTURE_POLICY,
         "audit_implementation_sha256": implementation_sha256(),
+        "collector_implementation_sha256": collector_implementation_sha256(),
         "endpoint_spec_sha256": endpoint_spec_sha256(),
         "capture_manifest_sha256": _sha256(capture_bytes),
         "questions_sha256": questions_sha256,

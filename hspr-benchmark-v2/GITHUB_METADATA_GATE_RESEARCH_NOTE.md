@@ -149,16 +149,17 @@ audit may safely over-include them. The defensible claim is therefore limited
 to a stable, enumerated current GitHub surface, not all historical public
 material.
 
-The current collector additionally fails closed when any public fork exists,
-rather than claiming that fork refs alone equal the full repository-scoped
-metadata audit; the observed two forks therefore prevent a usable capture until
-recursive fork metadata collection is implemented. Initialized wikis and live
-Pages sites likewise require separate content collectors. Expired Actions
-artifacts and `404` run logs are recorded as not publicly retrievable at capture
-time, while unexpired-but-unretrievable artifacts still block. GitHub delivery
-redirects are restricted to a documented allowlist of GitHub object, Actions,
-S3 asset, and Azure results hosts, and all capture/revalidation downloads share
-a bounded total-byte cap.
+The collector now recursively applies all 27 declared surfaces to every public
+fork enumerated in the canonical repository's network. Fork records and request
+ledger entries are repository-ID namespaced and bound to verified parent/source
+relationships; cycles, descendants outside the canonical network, incomplete
+fork surfaces, and repository/request resource-cap exhaustion fail closed.
+Initialized wikis and live Pages sites still require separate content
+collectors. Expired Actions artifacts and `404` run logs are recorded as not
+publicly retrievable at capture time, while unexpired-but-unretrievable
+artifacts still block. GitHub delivery redirects are restricted to a documented
+allowlist of GitHub object, Actions, S3 asset, and Azure results hosts, and all
+capture/revalidation downloads share a bounded total-byte cap.
 
 ## Primary GitHub documentation
 

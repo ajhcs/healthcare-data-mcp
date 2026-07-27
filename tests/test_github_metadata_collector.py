@@ -61,6 +61,9 @@ class FakeGitHub:
         paginated_discussions: bool = False,
         release_asset: bool = False,
         public_fork: bool = False,
+        fork_leak: bool = False,
+        paginated_fork_issues: bool = False,
+        incomplete_fork: bool = False,
         expired_artifact: bool = False,
         drift_issues: bool = False,
         echo_token: bool = False,
@@ -69,10 +72,14 @@ class FakeGitHub:
         self.paginated_discussions = paginated_discussions
         self.release_asset = release_asset
         self.public_fork = public_fork
+        self.fork_leak = fork_leak
+        self.paginated_fork_issues = paginated_fork_issues
+        self.incomplete_fork = incomplete_fork
         self.expired_artifact = expired_artifact
         self.drift_issues = drift_issues
         self.echo_token = echo_token
         self.issue_requests = 0
+        self.fork_issue_requests = 0
         self.requests: list[httpx.Request] = []
         self.force_drift = False
 
@@ -197,6 +204,29 @@ class FakeGitHub:
             if self.echo_token:
                 body["reflected"] = TOKEN
             return self._response(request, 200, body)
+        if path in {
+            "/repos/fork-owner-22/healthcare-data-mcp",
+            "/repos/fork-owner-23/healthcare-data-mcp",
+        }:
+            fork_id = int(path.split("/")[2].removeprefix("fork-owner-"))
+            return self._response(
+                request,
+                200,
+                {
+                    "id": fork_id,
+                    "node_id": f"fork-node-{fork_id}",
+                    "name": "healthcare-data-mcp",
+                    "visibility": "public",
+                    "owner": {"login": f"fork-owner-{fork_id}"},
+                    "parent": {"id": 1206377365},
+                    "source": {"id": 1206377365},
+                    "has_discussions": False,
+                    "updated_at": NOW.isoformat(),
+                    "description": "Hidden Health" if self.fork_leak and fork_id == 22 else "ordinary fork",
+                },
+            )
+        if self.incomplete_fork and path == "/repos/fork-owner-22/healthcare-data-mcp/security-advisories":
+            return self._response(request, 403, {"message": "Forbidden"})
         if path.endswith("/actions/runs"):
             return self._response(request, 200, {"total_count": 0, "workflow_runs": []})
         if path.endswith("/actions/artifacts"):
@@ -215,13 +245,22 @@ class FakeGitHub:
                 else []
             )
             return self._response(request, 200, {"total_count": len(artifacts), "artifacts": artifacts})
-        if path.endswith("/forks"):
+        if path == "/repos/ajhcs/healthcare-data-mcp/forks":
             forks = (
-                [{"id": 22, "name": "healthcare-data-mcp", "owner": {"login": "fork-owner"}}]
+                [
+                    {
+                        "id": fork_id,
+                        "name": "healthcare-data-mcp",
+                        "owner": {"login": f"fork-owner-{fork_id}"},
+                    }
+                    for fork_id in (22, 23)
+                ]
                 if self.public_fork
                 else []
             )
             return self._response(request, 200, forks)
+        if path.endswith("/forks"):
+            return self._response(request, 200, [])
         if path.endswith("/releases"):
             releases = [{"id": 7, "name": "ordinary release", "body": "maintenance", "updated_at": NOW.isoformat()}]
             return self._response(request, 200, releases if self.release_asset else [])
@@ -248,6 +287,27 @@ class FakeGitHub:
                 request=request,
             )
         if path.endswith("/issues") and request.url.params.get("state") == "all":
+            if path.startswith("/repos/fork-owner-"):
+                self.fork_issue_requests += 1
+                fork_id = int(path.split("/")[2].removeprefix("fork-owner-"))
+                issue = {
+                    "id": 1000 + fork_id,
+                    "number": 1,
+                    "title": "ordinary fork maintenance",
+                    "body": "unrelated public fork issue",
+                    "updated_at": NOW.isoformat(),
+                }
+                if self.paginated_fork_issues and request.url.params.get("page") is None:
+                    response = self._response(request, 200, [issue])
+                    response.headers["link"] = (
+                        f'<https://api.github.com{path}?state=all&per_page=100&page=2>; rel="next"'
+                    )
+                    return response
+                return (
+                    self._response(request, 200, [])
+                    if self.paginated_fork_issues
+                    else self._response(request, 200, [issue])
+                )
             self.issue_requests += 1
             issue = {
                 "id": 11,
@@ -343,10 +403,63 @@ def test_collector_fails_closed_at_total_download_byte_cap(tmp_path: Path, monke
         client.close()
 
 
-def test_collector_fails_closed_when_public_fork_would_be_only_partially_audited(tmp_path: Path) -> None:
+def test_collector_fully_captures_two_public_forks(tmp_path: Path) -> None:
+    collector, client, questions, identity = _collector(tmp_path, FakeGitHub(public_fork=True))
+    try:
+        manifest_path = collector.collect()
+    finally:
+        client.close()
+    manifest = json.loads(manifest_path.read_text())
+    assert manifest["surfaces"]["forks"]["expected_count"] == 2
+    assert {record["id"] for record in manifest["surfaces"]["fork_metadata"]["records"]} == {
+        "fork:22",
+        "fork:23",
+    }
+    assert {entry["repository_id"] for entry in manifest["revalidation"]} == {22, 23, 1206377365}
+    assert audit_github_metadata_capture(manifest_path, questions, identity, now=NOW)["passed"]
+
+
+def test_collector_scans_fork_metadata_for_identity_leakage(tmp_path: Path) -> None:
+    collector, client, questions, identity = _collector(tmp_path, FakeGitHub(public_fork=True, fork_leak=True))
+    try:
+        manifest_path = collector.collect()
+    finally:
+        client.close()
+    result = audit_github_metadata_capture(manifest_path, questions, identity, now=NOW)
+    assert not result["passed"]
+    assert any(hit["surface"] == "fork_metadata" for hit in result["blocking_hits"])
+
+
+def test_collector_exhausts_nested_fork_pagination(tmp_path: Path) -> None:
+    fake = FakeGitHub(public_fork=True, paginated_fork_issues=True)
+    collector, client, _, _ = _collector(tmp_path, fake)
+    try:
+        manifest = json.loads(collector.collect().read_text())
+    finally:
+        client.close()
+    assert manifest["surfaces"]["issues"]["expected_count"] == 3
+    assert any(
+        entry["repository_id"] in {22, 23} and entry["surface"] == "issues" and entry["next_url"]
+        for entry in manifest["revalidation"]
+    )
+
+
+def test_collector_blocks_when_any_fork_surface_is_incomplete(tmp_path: Path) -> None:
+    collector, client, _, _ = _collector(tmp_path, FakeGitHub(public_fork=True, incomplete_fork=True))
+    try:
+        with pytest.raises(CollectionError, match="security_advisories returned HTTP 403"):
+            collector.collect()
+    finally:
+        client.close()
+
+
+def test_collector_blocks_when_fork_network_exceeds_resource_cap(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(github_metadata_collector, "MAX_NETWORK_REPOSITORIES", 2)
     collector, client, _, _ = _collector(tmp_path, FakeGitHub(public_fork=True))
     try:
-        with pytest.raises(CollectionError, match="recursive repository-scoped"):
+        with pytest.raises(CollectionError, match="repository cap"):
             collector.collect()
     finally:
         client.close()

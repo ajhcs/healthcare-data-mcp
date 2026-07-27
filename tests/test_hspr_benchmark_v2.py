@@ -31,10 +31,19 @@ from hspr_benchmark.github_metadata_audit import (
     CAPTURE_POLICY as GITHUB_CAPTURE_POLICY,
 )
 from hspr_benchmark.github_metadata_audit import (
+    CAPTURE_SCHEMA_VERSION as GITHUB_CAPTURE_SCHEMA_VERSION,
+)
+from hspr_benchmark.github_metadata_audit import (
     REPOSITORY as GITHUB_REPOSITORY,
 )
 from hspr_benchmark.github_metadata_audit import (
     REQUIRED_SURFACES as GITHUB_REQUIRED_SURFACES,
+)
+from hspr_benchmark.github_metadata_audit import (
+    SCHEMA_VERSION as GITHUB_SCHEMA_VERSION,
+)
+from hspr_benchmark.github_metadata_audit import (
+    collector_implementation_sha256 as github_collector_implementation_sha256,
 )
 from hspr_benchmark.github_metadata_audit import (
     endpoint_spec_sha256 as github_endpoint_spec_sha256,
@@ -72,11 +81,12 @@ def _passing_github_audit(questions: Path, identity: Path, public_ref_shas: dict
     counts = {surface: 0 for surface in GITHUB_REQUIRED_SURFACES}
     counts["repository"] = 1
     return {
-        "schema_version": 1,
+        "schema_version": GITHUB_SCHEMA_VERSION,
         "policy": GITHUB_AUDIT_POLICY,
-        "capture_schema_version": 1,
+        "capture_schema_version": GITHUB_CAPTURE_SCHEMA_VERSION,
         "capture_policy": GITHUB_CAPTURE_POLICY,
         "audit_implementation_sha256": github_implementation_sha256(),
+        "collector_implementation_sha256": github_collector_implementation_sha256(),
         "endpoint_spec_sha256": github_endpoint_spec_sha256(),
         "capture_manifest_sha256": "b" * 64,
         "questions_sha256": hashlib.sha256(questions.read_bytes()).hexdigest(),
