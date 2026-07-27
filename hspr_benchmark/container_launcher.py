@@ -308,8 +308,13 @@ def codex_docker_command(
     reasoning: str,
     prompt: str,
 ) -> list[str]:
-    if model != "gpt-5.6-luna" or reasoning not in {"medium", "xhigh"}:
-        raise ValueError("benchmark runtime is locked to Luna medium/xhigh")
+    allowed_model_reasoning = {
+        ("gpt-5.6-luna", "medium"),
+        ("gpt-5.6-luna", "xhigh"),
+        ("gpt-5.6-sol", "medium"),
+    }
+    if (model, reasoning) not in allowed_model_reasoning:
+        raise ValueError("benchmark runtime model/reasoning pair is not allowlisted")
     codex_mount = _canonical_directory(codex_package_dir)
     if codex_mount.name != "codex" or codex_mount.parent.name != "@openai":
         raise ValueError("Codex mount must be the @openai/codex package directory")
@@ -737,6 +742,8 @@ def prove_live_subscription_boundary(
     codex_package_dir: Path,
     credential_json: bytes,
     output_dir: Path,
+    model: str = "gpt-5.6-luna",
+    reasoning: str = "medium",
 ) -> dict[str, Any]:
     """Run one non-financial real-Codex smoke through the production supervisor."""
     output_dir.mkdir(mode=0o700, parents=True, exist_ok=False)
@@ -776,8 +783,8 @@ def prove_live_subscription_boundary(
             output_dir=output_dir,
             runtime_dir=runtime,
             codex_package_dir=codex_package_dir,
-            model="gpt-5.6-luna",
-            reasoning="medium",
+            model=model,
+            reasoning=reasoning,
             prompt=prompt,
         )
         trace = run_codex_and_capture(command, output_dir / "native-trace.json", credential_json)
@@ -805,6 +812,8 @@ def prove_live_subscription_boundary(
         "schema_version": 1,
         "official": False,
         "financial_question": False,
+        "model": model,
+        "reasoning": reasoning,
         "passed": passed,
         "credential_boundary_ready_before_turn": trace["credential_boundary_ready_before_turn"],
         "fileless_external_auth_before_turn": trace["fileless_external_auth_before_turn"],

@@ -929,6 +929,31 @@ def test_codex_command_has_stdin_supervisor_not_credential_mount(tmp_path: Path)
     assert "codex.js" not in rendered
     assert "node@sha256:" in rendered
 
+    sol_command = codex_docker_command(
+        packet_dir=tmp_path / "packet",
+        output_dir=tmp_path / "output",
+        runtime_dir=tmp_path / "runtime",
+        codex_package_dir=codex,
+        model="gpt-5.6-sol",
+        reasoning="medium",
+        prompt="answer the allowlisted question",
+    )
+    assert "gpt-5.6-sol" in sol_command
+    try:
+        codex_docker_command(
+            packet_dir=tmp_path / "packet",
+            output_dir=tmp_path / "output",
+            runtime_dir=tmp_path / "runtime",
+            codex_package_dir=codex,
+            model="gpt-5.6-sol",
+            reasoning="xhigh",
+            prompt="forbidden pair",
+        )
+    except ValueError as error:
+        assert "not allowlisted" in str(error)
+    else:
+        raise AssertionError("Sol X-High must remain outside the amended benchmark")
+
 
 def test_mount_and_host_output_guards_reject_broad_or_linked_paths(tmp_path: Path) -> None:
     packet = tmp_path / "packet"

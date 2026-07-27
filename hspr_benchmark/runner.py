@@ -100,6 +100,14 @@ def _locked(path: Path, relative: str) -> Path:
     return expected
 
 
+def _locked_one_of(path: Path, relatives: tuple[str, ...]) -> Path:
+    for relative in relatives:
+        expected = (REPOSITORY_ROOT / relative).resolve(strict=True)
+        if path.absolute() == expected and path.resolve(strict=True) == expected and not path.is_symlink():
+            return expected
+    raise ValueError(f"official execution requires one locked input from: {', '.join(relatives)}")
+
+
 def _write_or_verify(path: Path, document: dict[str, Any]) -> None:
     rendered = json.dumps(document, indent=2) + "\n"
     if path.exists():
@@ -419,7 +427,13 @@ def execute_batch(
         registry_path = registry_path.resolve(strict=True)
         registry_approved_root = active_manifest.parent.resolve(strict=True)
         require_core_answer_isolation(active_attestation)
-    arms_path = _locked(arms_path, "hspr-benchmark-v2/config/arms.json")
+    arms_path = _locked_one_of(
+        arms_path,
+        (
+            "hspr-benchmark-v2/config/arms.json",
+            "hspr-benchmark-v2/config/sol-medium-supplement-arms.json",
+        ),
+    )
     response_schema = _locked(response_schema, "hspr-benchmark-v2/config/response-schema.json")
     runtime_source = _locked(runtime_source, "hspr-benchmark-v2/runtime")
     sealed_attestation = _validate_sealed_gold(sealed_gold, sealed_manifest)
