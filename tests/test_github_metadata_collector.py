@@ -502,6 +502,18 @@ def test_collector_does_not_persist_reflected_scorer_credential(tmp_path: Path) 
     )
 
 
+def test_api_download_uses_github_media_type_while_release_assets_use_octet_stream(tmp_path: Path) -> None:
+    collector, client, _, _ = _collector(tmp_path, FakeGitHub())
+    try:
+        api_url = "https://api.github.com/repos/ajhcs/healthcare-data-mcp/actions/runs/1/logs"
+        assert collector._headers(api_url, download=True, api_download=True)["Accept"] == (
+            "application/vnd.github+json"
+        )
+        assert collector._headers(api_url, download=True)["Accept"] == "application/octet-stream"
+    finally:
+        client.close()
+
+
 def test_conditional_pre_and_post_revalidation_and_drift_detection(tmp_path: Path) -> None:
     fake = FakeGitHub()
     collector, client, _, _ = _collector(tmp_path, fake)
