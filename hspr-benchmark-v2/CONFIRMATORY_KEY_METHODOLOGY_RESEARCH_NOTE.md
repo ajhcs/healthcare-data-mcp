@@ -166,10 +166,13 @@ perimeter and period stay coherent:
 Those fields are required by the answer schema and scorer
 ([answer schema](config/response-schema.json#L5-L49),
 [scoring semantics](../hspr_benchmark/scoring.py#L87-L129)). The lead remains the
-only adjudicator. Sol Medium helpers may perform narrowly scoped retrieval or
-verification and return evidence memos; the lead must independently reopen the
-primary source, reconcile the memo, and make every identity, perimeter, metric,
-and value decision. Helper work is logged and cannot become a record directly.
+sole owner of the final evidence decision. Sol Medium helpers may perform
+narrowly scoped retrieval or verification and return evidence memos; the lead
+must independently reopen the primary source, reconcile the memo, and make
+every identity, perimeter, metric, and value decision. Helper work is logged
+and cannot become a record directly. A second decision layer is added only for
+a concrete unresolved disagreement or evidence gap, not as a routine
+adjudication stage.
 
 ### Batch states and evidence-gap escalation
 

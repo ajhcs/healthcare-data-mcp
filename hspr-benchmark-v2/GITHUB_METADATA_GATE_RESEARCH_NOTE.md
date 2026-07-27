@@ -1,9 +1,12 @@
 # GitHub metadata leakage gate research note
 
-> **Status: prospective and unimplemented.** This note records a proposed
-> fail-closed extension to the existing Git-history audit. It is not an
-> execution attestation, does not enable official answer arms, and must not be
-> cited as proof that GitHub metadata is currently leakage-free.
+> **Status: offline validator implemented; live capture and revalidation
+> unimplemented.** `hspr_benchmark.github_metadata_audit` now validates and
+> scans a protected, already-captured snapshot, and the runner requires its
+> attestation. No live collector or pre/post-batch GitHub revalidation exists,
+> this is not an execution attestation, official answer arms remain disabled,
+> and this note must not be cited as proof that GitHub metadata is currently
+> leakage-free.
 
 ## Observed public surface
 
