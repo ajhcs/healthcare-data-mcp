@@ -6,14 +6,27 @@
     "ci": "pass",
     "merged_into_agreed_base": true
   },
-  "pilot_execution": "launcher_smoke_passed_pending_hardening_integration",
+  "pilot_execution": "stopped_pending_subscription_boundary_validation",
   "live_smoke": {
     "date_utc": "2026-07-26",
     "official": false,
     "passed": true,
     "attestation": "../SMOKE_VALIDATION.md"
   },
+  "subscription_restart": {
+    "api_key_forbidden": true,
+    "refresh_token_forwarded": false,
+    "prior_official_trials": "superseded_historical_engineering_evidence",
+    "protocol": "../SUBSCRIPTION_PROTOCOL.md"
+  },
+  "official_web_boundary": {
+    "status": "blocked_fail_closed",
+    "reason": "local native web has no enforceable repository-domain exclusion and the repository is public",
+    "runner_interlock": "trial_executor.OFFICIAL_WEB_BOUNDARY_VALIDATED=false"
+  },
   "blockers": [
-    "merge the reviewed live-smoke hardening delta into the agreed benchmark base"
+    "current subscription identity token is stale and the benchmark does not refresh reusable credentials",
+    "revised minimized-auth boundary is not yet merged or live-smoke validated",
+    "native web cannot currently be prevented outside the answering model from retrieving this public repository"
   ]
 }

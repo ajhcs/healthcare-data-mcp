@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import argparse
+import base64
+import binascii
 import hashlib
 import json
 import os
@@ -16,7 +18,9 @@ from typing import Any
 
 from .container_launcher import PINNED_NODE_IMAGE, REPOSITORY_ROOT, read_untrusted_regular, write_new_text
 from .leakage import audit_registry_packet
-from .trial_executor import run_trial
+from .trial_executor import require_official_web_boundary, run_trial
+
+MINIMUM_SUBSCRIPTION_TOKEN_VALIDITY_SECONDS = 900
 
 
 def monotonic_event(kind: str, **details: Any) -> dict[str, Any]:
@@ -126,6 +130,61 @@ def _sha256_tree(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _jwt_expiry(token: str) -> int:
+    parts = token.split(".")
+    if len(parts) != 3:
+        raise ValueError("subscription credential contains a malformed JWT")
+    payload = parts[1] + "=" * (-len(parts[1]) % 4)
+    try:
+        claims = json.loads(base64.urlsafe_b64decode(payload).decode("utf-8"))
+        expiry = int(claims["exp"])
+    except (binascii.Error, KeyError, TypeError, UnicodeDecodeError, ValueError, json.JSONDecodeError) as error:
+        raise ValueError("subscription credential JWT has no valid expiry") from error
+    return expiry
+
+
+def ephemeral_chatgpt_credential(
+    credential_json: bytes,
+    *,
+    now_epoch_seconds: int | None = None,
+    minimum_validity_seconds: int = MINIMUM_SUBSCRIPTION_TOKEN_VALIDITY_SECONDS,
+) -> bytes:
+    """Strip long-lived refresh authority before an answer container starts."""
+    try:
+        document = json.loads(credential_json)
+    except (json.JSONDecodeError, UnicodeDecodeError) as error:
+        raise ValueError("subscription credential is not valid JSON") from error
+    if not isinstance(document, dict) or document.get("auth_mode") != "chatgpt":
+        raise ValueError("benchmark execution requires subscription-backed ChatGPT authentication")
+    if document.get("OPENAI_API_KEY") not in (None, ""):
+        raise ValueError("OpenAI API keys are forbidden for this benchmark")
+    tokens = document.get("tokens")
+    if not isinstance(tokens, dict):
+        raise ValueError("subscription credential has no token document")
+    required = {name: tokens.get(name) for name in ("access_token", "id_token", "account_id")}
+    if not all(isinstance(value, str) and value for value in required.values()):
+        raise ValueError("subscription credential is missing required short-lived fields")
+    current = int(time.time()) if now_epoch_seconds is None else now_epoch_seconds
+    for name in ("access_token", "id_token"):
+        if _jwt_expiry(str(required[name])) < current + minimum_validity_seconds:
+            raise ValueError(f"subscription {name} expires too soon for an isolated trial")
+    minimized = {
+        "auth_mode": "chatgpt",
+        "OPENAI_API_KEY": None,
+        "tokens": {
+            "access_token": required["access_token"],
+            "id_token": required["id_token"],
+            "account_id": required["account_id"],
+            "refresh_token": "",
+        },
+    }
+    rendered = json.dumps(minimized, separators=(",", ":")).encode("utf-8")
+    refresh = tokens.get("refresh_token")
+    if isinstance(refresh, str) and refresh and refresh.encode("utf-8") in rendered:
+        raise RuntimeError("refresh credential survived minimization")
+    return rendered
+
+
 def _repository_revision() -> str:
     status = subprocess.run(
         ["git", "status", "--porcelain", "--untracked-files=no"],
@@ -189,6 +248,12 @@ def _build_input_manifest(
         "codex_package_name": codex_package.get("name"),
         "codex_package_version": codex_package.get("version"),
         "codex_package_tree_sha256": _sha256_tree(codex_package_dir),
+        "subscription_credential_policy": {
+            "auth_mode": "chatgpt",
+            "api_key_forbidden": True,
+            "refresh_token_forwarded": False,
+            "minimum_token_validity_seconds": MINIMUM_SUBSCRIPTION_TOKEN_VALIDITY_SECONDS,
+        },
         "questions_sha256": _sha256_file(questions_path),
         "arms_sha256": _sha256_file(arms_path),
         "registry_sha256": _sha256_file(registry_path),
@@ -240,6 +305,7 @@ def execute_batch(
     attempt: int = 1,
 ) -> dict[str, Any]:
     """Run one deliberate schedule slice; completed trial directories are immutable."""
+    require_official_web_boundary()
     if start < 1 or trial_count < 1 or attempt < 1:
         raise ValueError("start, trial_count, and attempt must be positive")
     questions_path = _locked(questions_path, "hspr-benchmark-v2/public/pilot_questions.json")
@@ -329,7 +395,12 @@ def execute_batch(
             prior_staging = output_root / f"in-progress-{trial_base}-a{attempt - 1}"
             if not prior_staging.is_dir() or prior_staging.is_symlink():
                 raise ValueError("a higher attempt requires the immediately prior partial attempt")
-        credential = bytearray(read_untrusted_regular(credential_path, max_bytes=1024 * 1024))
+        source_credential = bytearray(read_untrusted_regular(credential_path, max_bytes=1024 * 1024))
+        try:
+            ephemeral_credential = bytearray(ephemeral_chatgpt_credential(bytes(source_credential)))
+        finally:
+            for index in range(len(source_credential)):
+                source_credential[index] = 0
         try:
             result = run_trial(
                 question=question_by_id[str(row["question_id"])],
@@ -340,12 +411,12 @@ def execute_batch(
                 runtime_source=runtime_source,
                 codex_package_dir=codex_package_dir,
                 output_dir=staging_dir,
-                credential_json=bytes(credential),
+                credential_json=bytes(ephemeral_credential),
                 allow_live_credential=True,
             )
         finally:
-            for index in range(len(credential)):
-                credential[index] = 0
+            for index in range(len(ephemeral_credential)):
+                ephemeral_credential[index] = 0
         metadata = {
             **identity,
             "duration_ns": result["trace"]["duration_ns"],

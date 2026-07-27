@@ -492,7 +492,10 @@ def run_codex_and_capture(
     }
     write_new_text(trace_path, json.dumps(trace, indent=2))
     if not sequence_valid:
-        raise RuntimeError(f"invalid supervisor event sequence: {sequence}; redacted trace: {trace_path}")
+        raise RuntimeError(
+            f"invalid supervisor event sequence: {sequence}; "
+            f"redacted stderr: {stderr[-2000:]}; redacted trace: {trace_path}"
+        )
     return trace
 
 
@@ -718,7 +721,7 @@ def prove_credential_supervisor(*, runtime_dir: Path, image: str = PINNED_NODE_I
         passed = (
             trace["events"][-1].get("exit_code") == 0
             and trace["credential_removed_before_turn"]
-            and command_outputs == ["CREDENTIAL_REMOVED"]
+            and command_outputs == ["CREDENTIAL_INACCESSIBLE"]
             and trace["answer"].get("question_id") == "mock"
         )
         if not passed:
@@ -726,6 +729,6 @@ def prove_credential_supervisor(*, runtime_dir: Path, image: str = PINNED_NODE_I
         return {
             "passed": True,
             "credential_removed_before_turn": True,
-            "command_output": "CREDENTIAL_REMOVED",
+            "command_output": "CREDENTIAL_INACCESSIBLE",
             "network": "none",
         }

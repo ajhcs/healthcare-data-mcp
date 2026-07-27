@@ -1,3 +1,4 @@
+import base64
 import json
 from pathlib import Path
 
@@ -14,7 +15,13 @@ from hspr_benchmark.container_launcher import (
 from hspr_benchmark.leakage import audit_registry_packet
 from hspr_benchmark.runner import counterbalanced_schedule, observable_events
 from hspr_benchmark.scoring import paired_cluster_bootstrap, score_answer
-from hspr_benchmark.trial_executor import _validate_answer_shape, run_trial, trial_prompt
+from hspr_benchmark.trial_executor import (
+    OFFICIAL_WEB_BOUNDARY_VALIDATED,
+    _validate_answer_shape,
+    _validate_subscription_credential_boundary,
+    run_trial,
+    trial_prompt,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -154,7 +161,105 @@ def test_schedule_is_deterministic_and_balanced() -> None:
     assert {row["arm_id"] for row in first} == {"a", "b", "c", "d"}
 
 
+def test_subscription_credential_strips_refresh_authority_and_rejects_api_keys() -> None:
+    def token(expiry: int) -> str:
+        claims = base64.urlsafe_b64encode(json.dumps({"exp": expiry}).encode()).decode().rstrip("=")
+        return f"header.{claims}.signature"
+
+    source = {
+        "auth_mode": "chatgpt",
+        "OPENAI_API_KEY": None,
+        "tokens": {
+            "access_token": token(3000),
+            "id_token": token(3000),
+            "account_id": "account",
+            "refresh_token": "long-lived-refresh-secret",
+        },
+    }
+    minimized = json.loads(
+        runner.ephemeral_chatgpt_credential(
+            json.dumps(source).encode(), now_epoch_seconds=1000, minimum_validity_seconds=900
+        )
+    )
+    assert minimized["auth_mode"] == "chatgpt"
+    assert minimized["OPENAI_API_KEY"] is None
+    assert minimized["tokens"]["refresh_token"] == ""
+    assert "long-lived-refresh-secret" not in json.dumps(minimized)
+
+    source["OPENAI_API_KEY"] = "forbidden"
+    try:
+        runner.ephemeral_chatgpt_credential(json.dumps(source).encode(), now_epoch_seconds=1000)
+    except ValueError as error:
+        assert "API keys are forbidden" in str(error)
+    else:
+        raise AssertionError("API-key authentication must be rejected")
+
+
+def test_subscription_credential_rejects_expiring_tokens() -> None:
+    claims = base64.urlsafe_b64encode(json.dumps({"exp": 1500}).encode()).decode().rstrip("=")
+    token = f"header.{claims}.signature"
+    source = {
+        "auth_mode": "chatgpt",
+        "OPENAI_API_KEY": None,
+        "tokens": {"access_token": token, "id_token": token, "account_id": "account", "refresh_token": "secret"},
+    }
+    try:
+        runner.ephemeral_chatgpt_credential(json.dumps(source).encode(), now_epoch_seconds=1000)
+    except ValueError as error:
+        assert "expires too soon" in str(error)
+    else:
+        raise AssertionError("a token expiring inside the trial window must be rejected")
+
+
+def test_trial_boundary_rejects_refresh_credentials_and_extra_fields() -> None:
+    minimized = {
+        "auth_mode": "chatgpt",
+        "OPENAI_API_KEY": None,
+        "tokens": {
+            "access_token": "short-lived-access",
+            "id_token": "short-lived-identity",
+            "account_id": "account",
+            "refresh_token": "",
+        },
+    }
+    _validate_subscription_credential_boundary(json.dumps(minimized).encode())
+    for mutated in (
+        {**minimized, "extra": "forbidden"},
+        {**minimized, "OPENAI_API_KEY": "forbidden"},
+        {**minimized, "tokens": {**minimized["tokens"], "refresh_token": "reusable"}},
+    ):
+        try:
+            _validate_subscription_credential_boundary(json.dumps(mutated).encode())
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("non-minimized answer credentials must be rejected")
+
+
+def test_official_execution_fails_closed_while_public_web_boundary_is_unresolved() -> None:
+    assert OFFICIAL_WEB_BOUNDARY_VALIDATED is False
+    try:
+        runner.execute_batch(
+            questions_path=Path("unused"),
+            arms_path=Path("unused"),
+            registry_path=Path("unused"),
+            sealed_gold=Path("unused"),
+            response_schema=Path("unused"),
+            runtime_source=Path("unused"),
+            codex_package_dir=Path("unused"),
+            credential_path=Path("unused"),
+            output_root=Path("unused"),
+            start=1,
+            trial_count=1,
+        )
+    except RuntimeError as error:
+        assert "public benchmark repository" in str(error)
+    else:
+        raise AssertionError("unresolved native-web repository access must fail closed")
+
+
 def test_batch_executor_writes_immutable_separate_trial_outputs(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(runner, "require_official_web_boundary", lambda: None)
     sealed = tmp_path / ".benchmark-sealed"
     sealed.mkdir()
     gold = sealed / "gold.json"
@@ -171,6 +276,7 @@ def test_batch_executor_writes_immutable_separate_trial_outputs(tmp_path: Path, 
         return {"trace": {"duration_ns": 5}}
 
     monkeypatch.setattr(runner, "audit_registry_packet", lambda *_: {"passed": True, "findings": []})
+    monkeypatch.setattr(runner, "ephemeral_chatgpt_credential", lambda _: b'{"minimal":true}')
     monkeypatch.setattr(
         runner,
         "_validate_sealed_gold",
@@ -197,6 +303,7 @@ def test_batch_executor_writes_immutable_separate_trial_outputs(tmp_path: Path, 
     assert len(result["completed"]) == len(calls) == 2
     assert all(call["allow_live_credential"] for call in calls)
     assert all(call["sealed_gold"] == gold for call in calls)
+    assert all(call["credential_json"] == b'{"minimal":true}' for call in calls)
     assert len(list((tmp_path / "runs").glob("trial-*/trial-metadata.json"))) == 2
     resumed = runner.execute_batch(**arguments, start=1, trial_count=2)
     assert len(resumed["completed"]) == 2
@@ -231,11 +338,13 @@ def test_batch_executor_writes_immutable_separate_trial_outputs(tmp_path: Path, 
 
 
 def test_batch_executor_preserves_failure_and_requires_new_attempt(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(runner, "require_official_web_boundary", lambda: None)
     gold = tmp_path / "gold.json"
     gold.write_text("{}")
     credential = tmp_path / "auth.json"
     credential.write_text('{"fake":"credential-material"}')
     monkeypatch.setattr(runner, "audit_registry_packet", lambda *_: {"passed": True, "findings": []})
+    monkeypatch.setattr(runner, "ephemeral_chatgpt_credential", lambda _: b'{"minimal":true}')
     monkeypatch.setattr(runner, "_validate_sealed_gold", lambda *_: {"adjudicated_records": 12})
     manifest = {"git_revision": "frozen"}
     monkeypatch.setattr(runner, "_build_input_manifest", lambda **_: manifest)
@@ -482,6 +591,26 @@ def test_trial_executor_requires_explicit_live_credential_opt_in(tmp_path: Path)
         assert "risk-aware" in str(error)
     else:
         raise AssertionError("live credential execution must fail closed")
+
+
+def test_trial_executor_blocks_direct_official_run_while_web_boundary_is_unresolved(tmp_path: Path) -> None:
+    try:
+        run_trial(
+            question={"question_id": "q"},
+            arm={"hspr_available": False, "reasoning": "medium"},
+            registry_packet=tmp_path / "registry.json",
+            sealed_gold=tmp_path / "gold.json",
+            response_schema=tmp_path / "schema.json",
+            runtime_source=tmp_path / "runtime",
+            codex_package_dir=tmp_path / "codex",
+            output_dir=tmp_path / "output",
+            credential_json=b"{}",
+            allow_live_credential=True,
+        )
+    except RuntimeError as error:
+        assert "public benchmark repository" in str(error)
+    else:
+        raise AssertionError("direct live trial execution must honor the unresolved web boundary")
 
 
 def test_host_answer_validation_enforces_nested_schema() -> None:

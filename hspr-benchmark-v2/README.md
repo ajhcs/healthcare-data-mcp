@@ -37,3 +37,15 @@ never uses bypass mode. A bounded, non-official live smoke validated credential
 removal, shell-network denial, native web access, trace capture, and cleanup;
 see `SMOKE_VALIDATION.md`. No scored pilot answer arm had run at that validation
 point.
+
+The stricter subscription-native restart is specified in
+`SUBSCRIPTION_PROTOCOL.md`. It rejects API keys and prevents refresh credentials
+from entering answer containers. Earlier pilot trials are preserved but
+superseded; official execution remains stopped until the revised boundary is
+fully validated and merged. An independent security review also identified a
+separate official-design blocker: local native web has no enforceable
+repository-domain exclusion, while this repository is public. The batch runner
+therefore fails closed until that boundary is solved outside the answering
+model; prompts and post-hoc URL logging do not satisfy it.
+`WEB_BOUNDARY_OPTIONS.md` records the narrow cloud-environment candidate and
+the additional proofs it would require before this interlock can change.

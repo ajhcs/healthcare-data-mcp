@@ -24,15 +24,38 @@ repository, sealed root, Docker socket, and host root are absent. HSPR arms get
 the audited identity packet; native arms do not. The scorer receives answers and
 adjudicated gold but no answer-agent context.
 
-Credentials are supplied over stdin to a supervisor, never argv, environment,
-trace, or a host bind mount. The supervisor unlinks the tmpfs credential before
-forwarding `thread.started`; the controller aborts if `turn.started` arrives
-without the unlink event. Live use requires explicit risk-aware opt-in. This is
-not cryptographic secrecy: the host kernel, Docker daemon, Codex/backend, and
-controller are trusted, and authentication exists in process memory at startup.
+Only subscription-backed ChatGPT authentication is accepted; API keys fail
+closed. The host parses the access and identity JWT expiry claims from the
+trusted local auth document and requires them to outlive the bounded trial,
+then strips the long-lived refresh token (the installed Codex schema receives
+an empty placeholder), and separately zeroes the source and minimized byte
+arrays. The minimized document is supplied over stdin, never argv, environment,
+trace, or a host bind mount. The supervisor unlinks the tmpfs credential and
+scans container process descriptors before forwarding `thread.started`; the
+controller aborts if `turn.started` arrives without the unlink event. It never
+refreshes or modifies the user's subscription credentials.
+
+This is not cryptographic secrecy: the host kernel, Docker daemon,
+Codex/backend, and controller are trusted, and short-lived access/identity
+tokens exist in trusted Codex process memory. The fake hostile tool probe shows
+that its answer context cannot access the auth path, retained descriptors,
+credential environment variables, or parent-process memory under the current
+container policy. An equivalent real-Codex tool-context probe is still required
+by the non-official live smoke. Native in-process subagents are not valid answer
+arms in this environment because they share the repository filesystem; prompts
+and logging are not treated as access controls.
+
+Local native web is also outside the shell-network sandbox and does not expose
+an enforceable per-domain exclusion. Because the benchmark repository is
+public, the current launcher cannot prevent an arm from retrieving published
+repository material through that channel. Official web-enabled execution is
+fail-closed in the runner until an external enforcement mechanism is proven;
+fresh prompts, voluntary instructions, and post-hoc trace rejection do not
+resolve this boundary.
+
 Handled aborts issue repeated daemon-side `docker rm --force` calls using the
-unique container name;
-an uncatchable host/controller crash remains outside this guarantee. The Codex
+unique container name; an uncatchable host/controller crash remains outside
+this guarantee. The Codex
 parent retains bridge access for API and web-search operations, but generated
 shell commands request Codex's `read-only` sandbox rather than bypass mode.
 

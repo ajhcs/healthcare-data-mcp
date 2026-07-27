@@ -19,6 +19,18 @@ from .container_launcher import (
 )
 from .leakage import audit_registry_packet
 
+# Operational interlock only. The actual boundary must be enforced outside the
+# answer model and independently proven before this source-reviewed value moves.
+OFFICIAL_WEB_BOUNDARY_VALIDATED = False
+
+
+def require_official_web_boundary() -> None:
+    if not OFFICIAL_WEB_BOUNDARY_VALIDATED:
+        raise RuntimeError(
+            "official execution is disabled: native web cannot yet be prevented "
+            "from retrieving the public benchmark repository"
+        )
+
 
 def trial_prompt(hspr_available: bool) -> str:
     identity_instruction = (
@@ -65,6 +77,25 @@ def _validate_answer_shape(answer: dict[str, Any], question_id: str, response_sc
         raise ValueError(f"answer violates the locked response schema at: {', '.join(paths)}")
 
 
+def _validate_subscription_credential_boundary(credential_json: bytes) -> None:
+    try:
+        document = json.loads(credential_json)
+    except (json.JSONDecodeError, UnicodeDecodeError) as error:
+        raise ValueError("answer credential is not valid JSON") from error
+    if not isinstance(document, dict) or set(document) != {"auth_mode", "OPENAI_API_KEY", "tokens"}:
+        raise ValueError("answer credential has fields outside the minimized subscription schema")
+    if document.get("auth_mode") != "chatgpt" or document.get("OPENAI_API_KEY") not in (None, ""):
+        raise ValueError("answer credential must use ChatGPT subscription auth without an API key")
+    tokens = document.get("tokens")
+    required = {"access_token", "id_token", "account_id", "refresh_token"}
+    if not isinstance(tokens, dict) or set(tokens) != required:
+        raise ValueError("answer credential token fields do not match the minimized schema")
+    if tokens.get("refresh_token") != "":
+        raise ValueError("refresh credentials are forbidden in answer contexts")
+    if not all(isinstance(tokens.get(name), str) and tokens[name] for name in required - {"refresh_token"}):
+        raise ValueError("answer credential is missing a required short-lived field")
+
+
 def run_trial(
     *,
     question: dict[str, Any],
@@ -81,6 +112,8 @@ def run_trial(
     """Execute one answer context; sealed gold is audited but never mounted."""
     if not allow_live_credential:
         raise PermissionError("live credential use requires an explicit, risk-aware caller opt-in")
+    require_official_web_boundary()
+    _validate_subscription_credential_boundary(credential_json)
     hspr_available = bool(arm.get("hspr_available"))
     audit = audit_registry_packet(registry_packet, sealed_gold)
     if not audit["passed"]:
