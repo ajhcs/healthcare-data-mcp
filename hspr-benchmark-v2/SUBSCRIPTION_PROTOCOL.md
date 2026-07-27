@@ -5,9 +5,11 @@ OpenAI API keys. It does not ask for, create, or fall back to an API key.
 
 The trusted host controller reads the local Codex auth document without
 following a symlink, requires `auth_mode=chatgpt`, rejects any nonempty
-`OPENAI_API_KEY`, and requires both the access-token and ID-token expiry claims
-to outlive the full bounded trial window plus a safety margin. It constructs a
-new document containing only the short-lived access token and account ID. The
+`OPENAI_API_KEY`, and requires the access-token expiry claim to outlive the full
+bounded trial window plus a safety margin. A managed-auth ID token must be
+present, but its expiry is not a runtime authorization boundary because it is
+not forwarded or consumed by external auth. The controller constructs a new
+document containing only the access token and account ID. The
 ID token, refresh token, API key, and auth metadata never enter the answer
 container. Source and minimized mutable
 buffers are zeroed independently, including the supervisor's original stdin

@@ -8,8 +8,9 @@ benchmark analysis. No HSPR packet or sealed-gold data was used.
 
 The live run passed the current production-path gates:
 
-- the host required fresh ChatGPT access and identity JWTs, but supplied only
-  the short-lived access token and account ID over stdin;
+- the host required a ChatGPT access JWT fresh for the trial window and a
+  managed-auth ID token to be present, but supplied only the access token and
+  account ID over stdin;
 - Codex app-server accepted those fields through fileless external auth; no ID
   token, refresh token, API key, auth file, argv value, environment value, bind
   mount, or trace field carried authentication;

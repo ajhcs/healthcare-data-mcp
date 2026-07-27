@@ -37,8 +37,10 @@ sealed manifest and match its digest prefix and record count. These controller
 manifests are never mounted into answer contexts.
 
 The host auth document is opened without following a final symlink and capped at
-1 MiB. The controller validates fresh access and identity JWTs, constructs a new
-document containing only the access token and account ID, passes that document
-to the fileless app-server supervisor over stdin, and zeroes its mutable arrays
+1 MiB. The controller requires a managed-auth ID token to be present and
+validates that the access JWT outlives the trial window. It does not
+freshness-gate the unforwarded ID token. The controller constructs a new document
+containing only the access token and account ID, passes that document to the
+fileless app-server supervisor over stdin, and zeroes its mutable arrays
 after the trial. The ID token, refresh token, API key, auth metadata, paths, and
 values are not written to run metadata or forwarded to the answer context.
