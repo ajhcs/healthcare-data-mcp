@@ -25,6 +25,7 @@ from .container_launcher import (
     write_new_text,
 )
 from .leakage import audit_registry_packet
+from .public_history_audit import AUDIT_POLICY, implementation_sha256
 from .trial_executor import require_official_web_boundary, run_trial
 
 MINIMUM_SUBSCRIPTION_TOKEN_VALIDITY_SECONDS = 900
@@ -211,7 +212,14 @@ def _repository_revision() -> str:
 
 def _current_public_ref_shas() -> dict[str, str]:
     listing = subprocess.run(
-        ["git", "for-each-ref", "--format=%(refname)", "refs/remotes/origin"],
+        [
+            "git",
+            "for-each-ref",
+            "--format=%(refname)",
+            "refs/remotes/origin",
+            "refs/remotes/origin-pull",
+            "refs/tags",
+        ],
         cwd=REPOSITORY_ROOT,
         check=True,
         capture_output=True,
@@ -283,12 +291,21 @@ def _validate_active_inputs(active_manifest: Path, questions_path: Path, registr
         raise ValueError("preregistration question count does not match the active packet")
     history_audit = json.loads(resolved["public_history_audit"].read_text(encoding="utf-8"))
     if (
-        history_audit.get("passed") is not True
+        history_audit.get("schema_version") != 4
+        or history_audit.get("policy") != AUDIT_POLICY
+        or history_audit.get("passed") is not True
         or history_audit.get("blocking_hits") != []
+        or history_audit.get("uninspectable_artifacts") != []
         or not history_audit.get("public_ref_shas")
         or history_audit.get("audited_identity_packet") is not True
     ):
         raise ValueError("public-history leakage audit is absent or blocking")
+    if history_audit.get("audit_implementation_sha256") != implementation_sha256():
+        raise ValueError("public-history audit implementation does not match the runner")
+    if history_audit.get("questions_sha256") != _sha256_file(resolved["questions"]):
+        raise ValueError("public-history audit is not bound to the active questions")
+    if history_audit.get("identity_sha256") != _sha256_file(resolved["registry"]):
+        raise ValueError("public-history audit is not bound to the active registry")
     system_count = len({str(item["system_id"]) for item in questions["questions"]})
     if int(history_audit.get("active_system_count", -1)) != system_count:
         raise ValueError("public-history audit does not cover the active systems")

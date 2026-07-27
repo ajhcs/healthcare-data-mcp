@@ -58,10 +58,14 @@ answer-bearing benchmark system. Questions, HSPR identity claims, researcher
 records, and adjudicated gold remain unpublished until all answer trials are
 immutable.
 
-`python -m hspr_benchmark.public_history_audit` scans every commit reachable
-from the explicitly enumerated public branch tips, including removed blobs. It
-fails if an active system name or ID occurs outside the declared national
-sampling-frame derivative. The first disjoint packet (v3) was excluded before
+`python -m hspr_benchmark.public_history_audit` now scans every commit reachable
+from explicitly enumerated fetched branch, tag, and pull-request heads,
+including removed blobs, commit/tag messages, identity-bearing paths, and
+extractable PDF/ZIP document text. Only reviewed digest-pinned frame/selection
+blobs are automatically nonblocking; every other identity hit and every
+uninspectable artifact fails closed. The audit and runner bind the exact
+question bytes, identity bytes, resolved ref SHAs, and audit implementation.
+The first disjoint packet (v3) was excluded before
 adjudication because a key researcher improperly delegated one system to a
 third helper. The next candidate (v4) was excluded before research because a
 generic system name produced public-history collisions. Both attempts and their
@@ -69,11 +73,14 @@ evidence are preserved outside Git, and no answer arm ran. Pilot v5 passed the
 name/ID preflight but failed sealed-gold readiness: only six of twelve records
 were defensible, so it was preserved and excluded without any answer run.
 Replacement pilot v6 is disjoint from the confirmatory 100 and all prior pilots
-and passed the same initial six-branch name/ID audit with zero blocking hits.
-Its audit must be rerun over every adjudicated alias, legal-entity name, and
-identifier; only that identity-aware, versioned result may enter the active
-manifest. The audit records exact public tip SHAs and must be rerun after a
-remote-ref refresh immediately before every official batch.
+and passed its then-current initial six-branch name/ID audit with zero blocking
+hits. It is preserved as pilot methodology evidence, not confirmatory authority,
+and no official arm ran. Any future packet must be rerun under the current
+strict policy over every alias, legal-entity name, relationship name, and
+identifier; only that identity-aware, implementation-bound result may enter the
+active manifest. The audit must follow a full public-ref refresh immediately
+before every official batch. GitHub descriptions, release metadata/attachments,
+and unreachable history remain a separately attested limitation.
 
 This resolves active-answer leakage, not general access to the public project:
 an answer agent could still retrieve old, irrelevant benchmark artifacts. The
