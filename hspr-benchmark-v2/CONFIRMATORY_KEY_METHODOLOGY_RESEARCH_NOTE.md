@@ -218,7 +218,8 @@ both structural and sealed-key-aware leakage audits
 [leakage audit](../hspr_benchmark/leakage.py#L13-L38)). Answer contexts have no
 repository or sealed-key mount, while the scorer alone receives answers and
 gold ([isolation](PROTOCOL.md#L18-L25)). No official arm may run until the exact
-protected cohort/questions have a sealed ready key, identity-aware public-history
-audit, registry/key leakage audit, manifest binding, and the independent runtime
-boundary gates ([subscription gate](SUBSCRIPTION_PROTOCOL.md#L42-L48),
+protected cohort/questions have a sealed ready key, passing registry/key leakage
+audit, manifest binding, and the independent runtime boundary gates. Optional
+public-history and metadata diagnostics do not control execution
+([subscription gate](SUBSCRIPTION_PROTOCOL.md#L42-L48),
 [runner gate](../hspr_benchmark/runner.py#L250-L310)).
