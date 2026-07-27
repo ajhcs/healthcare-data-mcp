@@ -1,5 +1,11 @@
+import base64
+import hashlib
 import json
+import subprocess
+from datetime import UTC, datetime
 from pathlib import Path
+
+import pytest
 
 from hspr_benchmark import runner
 from hspr_benchmark.cohort import PILOT_IDS, build_cohort
@@ -12,11 +18,183 @@ from hspr_benchmark.container_launcher import (
     write_new_text,
 )
 from hspr_benchmark.leakage import audit_registry_packet
-from hspr_benchmark.runner import counterbalanced_schedule, observable_events
+from hspr_benchmark.public_history_audit import audit_public_history
+from hspr_benchmark.runner import (
+    _validate_active_inputs,
+    _validate_sealed_gold,
+    counterbalanced_schedule,
+    observable_events,
+)
 from hspr_benchmark.scoring import paired_cluster_bootstrap, score_answer
-from hspr_benchmark.trial_executor import _validate_answer_shape, run_trial, trial_prompt
+from hspr_benchmark.trial_executor import (
+    OFFICIAL_WEB_BOUNDARY_VALIDATED,
+    _validate_answer_shape,
+    _validate_subscription_credential_boundary,
+    run_trial,
+    trial_prompt,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def _git(repo: Path, *arguments: str) -> None:
+    subprocess.run(["git", *arguments], cwd=repo, check=True, capture_output=True)
+
+
+def test_public_history_audit_detects_removed_answer_bearing_material(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git(repo, "init")
+    _git(repo, "config", "user.email", "benchmark@example.invalid")
+    _git(repo, "config", "user.name", "Benchmark Test")
+    questions = tmp_path / "questions.json"
+    questions.write_text(json.dumps({"questions": [{"system_id": "HSI1", "system": "Hidden Health"}]}))
+    historical = repo / "perimeter-registry/benchmarks/historical/gold.json"
+    historical.parent.mkdir(parents=True)
+    historical.write_text('{"system":"Secret Parent Incorporated"}')
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "answer bearing")
+    historical.unlink()
+    frame = repo / "qa/reports/health_system_metrics_reconciliation.csv"
+    frame.parent.mkdir(parents=True)
+    frame.write_text("HSI1,Hidden Health\n")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-m", "remove and retain frame")
+    identity = tmp_path / "identity.json"
+    identity.write_text(
+        json.dumps(
+            {
+                "systems": [
+                    {
+                        "system_id": "HSI1",
+                        "canonical_name": "Hidden Health",
+                        "aliases": [],
+                        "legal_entities": [{"name": "Secret Parent Incorporated"}],
+                        "identifiers": [],
+                    }
+                ]
+            }
+        )
+    )
+    without_identity = audit_public_history(repo, questions, ["HEAD"])
+    assert without_identity["passed"]
+    result = audit_public_history(repo, questions, ["HEAD"], identity)
+    assert not result["passed"]
+    assert result["audited_identity_packet"]
+    assert result["public_ref_shas"]["HEAD"]
+    assert any(hit["classification"] == "answer_bearing" for hit in result["blocking_hits"])
+    assert any(hit["classification"] == "declared_sampling_frame" for hit in result["hits"])
+
+
+def test_protected_active_and_sealed_manifests_bind_private_inputs(tmp_path: Path, monkeypatch) -> None:
+    active = tmp_path / "active"
+    sealed = tmp_path / "sealed"
+    active.mkdir(mode=0o700)
+    sealed.mkdir(mode=0o700)
+    questions = active / "questions.json"
+    registry = active / "identity.json"
+    history = active / "history.json"
+    preregistration = active / "preregistration.json"
+    questions.write_text(
+        json.dumps(
+            {
+                "publication_status": "protected_unpublished_active_packet",
+                "questions": [{"system_id": "HSI1", "system": "Hidden Health"}],
+            }
+        )
+    )
+    registry.write_text('{"systems":[]}')
+    history.write_text(
+        json.dumps(
+            {
+                "passed": True,
+                "audited_at_utc": datetime.now(UTC).isoformat(),
+                "blocking_hits": [],
+                "active_system_count": 1,
+                "audited_identity_packet": True,
+                "public_ref_shas": {"refs/remotes/origin/main": "a" * 40},
+            }
+        )
+    )
+    preregistration.write_text(json.dumps({"status": "frozen_before_answer_trials", "design": {"questions": 1}}))
+    for path in (questions, registry, history, preregistration):
+        path.chmod(0o600)
+
+    def digest(path: Path) -> str:
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+
+    active_manifest = active / "manifest.json"
+    active_manifest.write_text(
+        json.dumps(
+            {
+                "publication_status": "protected_unpublished_active_packet",
+                "files": {
+                    "questions": {"path": questions.name, "sha256": digest(questions)},
+                    "registry": {"path": registry.name, "sha256": digest(registry)},
+                    "public_history_audit": {"path": history.name, "sha256": digest(history)},
+                    "preregistration": {
+                        "path": preregistration.name,
+                        "sha256": digest(preregistration),
+                    },
+                },
+            }
+        )
+    )
+    active_manifest.chmod(0o600)
+    monkeypatch.setattr(
+        runner,
+        "_current_public_ref_shas",
+        lambda: {"refs/remotes/origin/main": "a" * 40},
+    )
+    attestation = _validate_active_inputs(active_manifest, questions, registry)
+    assert attestation["public_ref_shas"] == {"refs/remotes/origin/main": "a" * 40}
+    packet = assemble_answer_packet(
+        tmp_path / "answer-packet",
+        question={"question_id": "q"},
+        response_schema=ROOT / "hspr-benchmark-v2/config/response-schema.json",
+        registry_packet=registry,
+        registry_approved_root=active,
+    )
+    assert (packet / "hspr-identity.json").read_text() == registry.read_text()
+
+    adjudication = sealed / "adjudication"
+    adjudication.mkdir(mode=0o700)
+    gold = adjudication / "gold.json"
+    gold.write_text('{"records":[{},{}]}')
+    gold.chmod(0o600)
+    sealed_manifest = sealed / "manifest.json"
+    sealed_manifest.write_text(
+        json.dumps(
+            {
+                "adjudicated_gold_path": "adjudication/gold.json",
+                "adjudicated_gold_sha256": digest(gold),
+                "adjudicated_records": 2,
+            }
+        )
+    )
+    sealed_manifest.chmod(0o600)
+    sealed_attestation = _validate_sealed_gold(gold, sealed_manifest)
+    assert sealed_attestation["adjudicated_records"] == 2
+
+    monkeypatch.setattr(
+        runner,
+        "_current_public_ref_shas",
+        lambda: {"refs/remotes/origin/main": "b" * 40},
+    )
+    with pytest.raises(ValueError, match="currently fetched public refs"):
+        _validate_active_inputs(active_manifest, questions, registry)
+    monkeypatch.setattr(
+        runner,
+        "_current_public_ref_shas",
+        lambda: {"refs/remotes/origin/main": "a" * 40},
+    )
+    registry.write_text('{"systems":[{"tampered":true}]}')
+    try:
+        _validate_active_inputs(active_manifest, questions, registry)
+    except ValueError as error:
+        assert "digest mismatch" in str(error)
+    else:
+        raise AssertionError("protected active input drift must fail closed")
 
 
 def test_cohort_is_reproducible_unique_and_disjoint() -> None:
@@ -98,9 +276,9 @@ def test_scoring_and_clustered_pairing() -> None:
     }
     answer = {
         "answer_status": "reported",
-        "value": 100.5,
+        "value": 0.1005,
         "period": {"type": "fiscal_year", "start": "2024-01-01", "end": "2024-12-31"},
-        "units": "USD",
+        "units": {"currency": "USD", "scale": "thousands"},
         "reporting_perimeter": "Example Health and affiliates, consolidated",
         "primary_source_url": "https://example.org/u",
         "exact_locator": "line l",
@@ -108,6 +286,8 @@ def test_scoring_and_clustered_pairing() -> None:
         "aggregated_entities": ["affiliate"],
     }
     assert score_answer(answer, gold)["fully_correct"]
+    wrong_scale = {**answer, "units": {"currency": "USD", "scale": "millions"}}
+    assert not score_answer(wrong_scale, gold)["financial_correct"]
     rows = [
         {"system_id": "a", "arm_id": "x", "m": 1},
         {"system_id": "a", "arm_id": "y", "m": 0},
@@ -124,7 +304,7 @@ def test_scoring_ignores_schema_required_null_period_placeholders() -> None:
         "validated_value": 100,
         "tolerance": {"absolute_usd": 0},
         "period": {"type": "fiscal_year", "start": "2024-01-01", "end": "2024-12-31"},
-        "units": {"currency": "USD"},
+        "units": {"currency": "USD", "scale": "ones"},
         "entity_perimeter": "Example Health",
         "primary_source": {"url": "https://example.org/report"},
     }
@@ -137,7 +317,7 @@ def test_scoring_ignores_schema_required_null_period_placeholders() -> None:
             "end": "2024-12-31",
             "date": None,
         },
-        "units": "USD",
+        "units": {"currency": "USD", "scale": "ones"},
         "reporting_perimeter": "Example Health",
         "primary_source_url": "https://example.org/report",
         "exact_locator": "",
@@ -154,7 +334,128 @@ def test_schedule_is_deterministic_and_balanced() -> None:
     assert {row["arm_id"] for row in first} == {"a", "b", "c", "d"}
 
 
+def test_subscription_credential_strips_refresh_authority_and_rejects_api_keys() -> None:
+    def token(expiry: int) -> str:
+        claims = base64.urlsafe_b64encode(json.dumps({"exp": expiry}).encode()).decode().rstrip("=")
+        return f"header.{claims}.signature"
+
+    source = {
+        "auth_mode": "chatgpt",
+        "OPENAI_API_KEY": None,
+        "tokens": {
+            "access_token": token(3000),
+            "id_token": token(3000),
+            "account_id": "account",
+            "refresh_token": "long-lived-refresh-secret",  # pragma: allowlist secret
+        },
+    }
+    minimized = json.loads(
+        runner.ephemeral_chatgpt_credential(
+            json.dumps(source).encode(), now_epoch_seconds=1000, minimum_validity_seconds=900
+        )
+    )
+    assert minimized["auth_mode"] == "chatgpt"
+    assert minimized["OPENAI_API_KEY"] is None
+    assert set(minimized["tokens"]) == {"access_token", "account_id"}
+    assert "long-lived-refresh-secret" not in json.dumps(minimized)
+
+    source["OPENAI_API_KEY"] = "forbidden"  # pragma: allowlist secret
+    try:
+        runner.ephemeral_chatgpt_credential(json.dumps(source).encode(), now_epoch_seconds=1000)
+    except ValueError as error:
+        assert "API keys are forbidden" in str(error)
+    else:
+        raise AssertionError("API-key authentication must be rejected")
+
+
+def test_subscription_credential_rejects_expiring_tokens() -> None:
+    claims = base64.urlsafe_b64encode(json.dumps({"exp": 1500}).encode()).decode().rstrip("=")
+    token = f"header.{claims}.signature"
+    source = {
+        "auth_mode": "chatgpt",
+        "OPENAI_API_KEY": None,
+        "tokens": {"access_token": token, "id_token": token, "account_id": "account", "refresh_token": "secret"},
+    }
+    try:
+        runner.ephemeral_chatgpt_credential(json.dumps(source).encode(), now_epoch_seconds=1000)
+    except ValueError as error:
+        assert "expires too soon" in str(error)
+    else:
+        raise AssertionError("a token expiring inside the trial window must be rejected")
+
+
+def test_subscription_credential_rejects_expired_identity_claims_when_access_is_fresh() -> None:
+    def token(expiry: int) -> str:
+        claims = base64.urlsafe_b64encode(json.dumps({"exp": expiry}).encode()).decode().rstrip("=")
+        return f"header.{claims}.signature"
+
+    source = {
+        "auth_mode": "chatgpt",
+        "OPENAI_API_KEY": None,
+        "tokens": {
+            "access_token": token(3000),
+            "id_token": token(500),
+            "account_id": "account",
+            "refresh_token": "secret",
+        },
+    }
+    with pytest.raises(ValueError, match="id_token expires too soon"):
+        runner.ephemeral_chatgpt_credential(
+            json.dumps(source).encode(), now_epoch_seconds=1000, minimum_validity_seconds=900
+        )
+
+
+def test_trial_boundary_rejects_refresh_credentials_and_extra_fields() -> None:
+    minimized = {
+        "auth_mode": "chatgpt",
+        "OPENAI_API_KEY": None,
+        "tokens": {
+            "access_token": "short-lived-access",
+            "account_id": "account",
+        },
+    }
+    _validate_subscription_credential_boundary(json.dumps(minimized).encode())
+    for mutated in (
+        {**minimized, "extra": "forbidden"},
+        {**minimized, "OPENAI_API_KEY": "forbidden"},  # pragma: allowlist secret
+        {  # pragma: allowlist secret
+            **minimized,
+            "tokens": {**minimized["tokens"], "refresh_token": "reusable"},
+        },
+        {**minimized, "tokens": {**minimized["tokens"], "id_token": "unneeded-identity"}},
+    ):
+        try:
+            _validate_subscription_credential_boundary(json.dumps(mutated).encode())
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("non-minimized answer credentials must be rejected")
+
+
+def test_official_execution_fails_closed_while_public_web_boundary_is_unresolved() -> None:
+    assert OFFICIAL_WEB_BOUNDARY_VALIDATED is False
+    try:
+        runner.execute_batch(
+            questions_path=Path("unused"),
+            arms_path=Path("unused"),
+            registry_path=Path("unused"),
+            sealed_gold=Path("unused"),
+            response_schema=Path("unused"),
+            runtime_source=Path("unused"),
+            codex_package_dir=Path("unused"),
+            credential_path=Path("unused"),
+            output_root=Path("unused"),
+            start=1,
+            trial_count=1,
+        )
+    except RuntimeError as error:
+        assert "public-history boundary" in str(error)
+    else:
+        raise AssertionError("unresolved native-web repository access must fail closed")
+
+
 def test_batch_executor_writes_immutable_separate_trial_outputs(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(runner, "require_official_web_boundary", lambda *_: None)
     sealed = tmp_path / ".benchmark-sealed"
     sealed.mkdir()
     gold = sealed / "gold.json"
@@ -171,6 +472,7 @@ def test_batch_executor_writes_immutable_separate_trial_outputs(tmp_path: Path, 
         return {"trace": {"duration_ns": 5}}
 
     monkeypatch.setattr(runner, "audit_registry_packet", lambda *_: {"passed": True, "findings": []})
+    monkeypatch.setattr(runner, "ephemeral_chatgpt_credential", lambda _: b'{"minimal":true}')
     monkeypatch.setattr(
         runner,
         "_validate_sealed_gold",
@@ -197,6 +499,7 @@ def test_batch_executor_writes_immutable_separate_trial_outputs(tmp_path: Path, 
     assert len(result["completed"]) == len(calls) == 2
     assert all(call["allow_live_credential"] for call in calls)
     assert all(call["sealed_gold"] == gold for call in calls)
+    assert all(call["credential_json"] == b'{"minimal":true}' for call in calls)
     assert len(list((tmp_path / "runs").glob("trial-*/trial-metadata.json"))) == 2
     resumed = runner.execute_batch(**arguments, start=1, trial_count=2)
     assert len(resumed["completed"]) == 2
@@ -231,11 +534,13 @@ def test_batch_executor_writes_immutable_separate_trial_outputs(tmp_path: Path, 
 
 
 def test_batch_executor_preserves_failure_and_requires_new_attempt(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(runner, "require_official_web_boundary", lambda *_: None)
     gold = tmp_path / "gold.json"
     gold.write_text("{}")
     credential = tmp_path / "auth.json"
     credential.write_text('{"fake":"credential-material"}')
     monkeypatch.setattr(runner, "audit_registry_packet", lambda *_: {"passed": True, "findings": []})
+    monkeypatch.setattr(runner, "ephemeral_chatgpt_credential", lambda _: b'{"minimal":true}')
     monkeypatch.setattr(runner, "_validate_sealed_gold", lambda *_: {"adjudicated_records": 12})
     manifest = {"git_revision": "frozen"}
     monkeypatch.setattr(runner, "_build_input_manifest", lambda **_: manifest)
@@ -319,6 +624,7 @@ def test_packet_allowlist_and_docker_boundary(tmp_path: Path) -> None:
     output = tmp_path / "output"
     output.mkdir()
     runtime = stage_runtime(ROOT / "hspr-benchmark-v2/runtime", tmp_path / "runtime")
+    assert (runtime / "live-boundary-probe.mjs").is_file()
     command = docker_command(
         image="node:22-alpine",
         packet_dir=packet,
@@ -370,13 +676,14 @@ def test_codex_command_has_stdin_supervisor_not_credential_mount(tmp_path: Path)
     )
     rendered = " ".join(command)
     assert "--interactive" in command
-    assert "/runtime/credential-supervisor.mjs" in command
+    assert "/runtime/app-server-supervisor.mjs" in command
     assert "dst=/auth" not in rendered
     assert "/auth:rw,noexec,nosuid,nodev" in rendered
     assert "OPENAI_API_KEY" not in rendered
     assert "dst=/output" not in rendered
     assert "--dangerously-bypass-approvals-and-sandbox" not in command
-    assert "use_legacy_landlock" in command
+    assert "credential-supervisor.mjs" not in rendered
+    assert "codex.js" not in rendered
     assert "node@sha256:" in rendered
 
 
@@ -484,15 +791,39 @@ def test_trial_executor_requires_explicit_live_credential_opt_in(tmp_path: Path)
         raise AssertionError("live credential execution must fail closed")
 
 
+def test_trial_executor_blocks_direct_official_run_while_web_boundary_is_unresolved(tmp_path: Path) -> None:
+    try:
+        run_trial(
+            question={"question_id": "q"},
+            arm={"hspr_available": False, "reasoning": "medium"},
+            registry_packet=tmp_path / "registry.json",
+            sealed_gold=tmp_path / "gold.json",
+            response_schema=tmp_path / "schema.json",
+            runtime_source=tmp_path / "runtime",
+            codex_package_dir=tmp_path / "codex",
+            output_dir=tmp_path / "output",
+            credential_json=b"{}",
+            allow_live_credential=True,
+        )
+    except RuntimeError as error:
+        assert "public-history boundary" in str(error)
+    else:
+        raise AssertionError("direct live trial execution must honor the unresolved web boundary")
+
+
 def test_host_answer_validation_enforces_nested_schema() -> None:
     schema = ROOT / "hspr-benchmark-v2/config/response-schema.json"
+    schema_document = json.loads(schema.read_text())
+    assert schema_document["properties"]["units"]["properties"]["currency"]["type"] == "string"
+    subtotal_units = schema_document["properties"]["closest_reported_subtotal"]["properties"]["units"]
+    assert subtotal_units["properties"]["currency"]["type"] == "string"
     answer = {
         "question_id": "q",
         "answer_status": "reported",
         "reporting_perimeter": "Example Health",
         "metric_label": "Revenue",
         "period": {"type": "fiscal_year", "start": "2024-01-01", "end": "2024-12-31", "date": None},
-        "units": "USD",
+        "units": {"currency": "USD", "scale": "ones"},
         "value": 100,
         "primary_source_url": "https://example.org/report",
         "exact_locator": "page 1",
@@ -502,7 +833,11 @@ def test_host_answer_validation_enforces_nested_schema() -> None:
         "closest_reported_subtotal": None,
     }
     _validate_answer_shape(answer, "q", schema)
-    for field, invalid in (("answer_status", "maybe"), ("period", {"type": "fiscal_year"})):
+    for field, invalid in (
+        ("answer_status", "maybe"),
+        ("period", {"type": "fiscal_year"}),
+        ("units", "USD"),
+    ):
         malformed = {**answer, field: invalid}
         try:
             _validate_answer_shape(malformed, "q", schema)

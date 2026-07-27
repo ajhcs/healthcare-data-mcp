@@ -1,4 +1,4 @@
-import { mkdir, open, unlink, writeFile } from "node:fs/promises";
+import { mkdir, open, readdir, readlink, unlink, writeFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import { constants } from "node:fs";
 import { createInterface } from "node:readline";
@@ -11,6 +11,8 @@ for await (const chunk of process.stdin) {
   chunks.push(chunk);
 }
 let credential = Buffer.concat(chunks);
+for (const chunk of chunks) chunk.fill(0);
+chunks.length = 0;
 await mkdir("/auth", { recursive: true, mode: 0o700 });
 await writeFile("/auth/auth.json", credential, { mode: 0o400 });
 credential.fill(0);
@@ -26,10 +28,26 @@ const child = spawn(program, args, {
 });
 
 let unlinkPromise = null;
+const assertCredentialFileNotRetained = async () => {
+  const processes = await readdir("/proc", { withFileTypes: true });
+  for (const processEntry of processes) {
+    if (!processEntry.isDirectory() || !/^\d+$/.test(processEntry.name)) continue;
+    let descriptors;
+    try { descriptors = await readdir(`/proc/${processEntry.name}/fd`); } catch { continue; }
+    for (const descriptor of descriptors) {
+      let target;
+      try { target = await readlink(`/proc/${processEntry.name}/fd/${descriptor}`); } catch { continue; }
+      if (target.includes("/auth/auth.json")) {
+        throw new Error("credential file descriptor retained after unlink");
+      }
+    }
+  }
+};
 const removeCredential = () => {
   if (!unlinkPromise) {
     unlinkPromise = (async () => {
       await unlink("/auth/auth.json");
+      await assertCredentialFileNotRetained();
       process.stdout.write(JSON.stringify({
         type: "supervisor.credential_unlinked",
         monotonic_ns: process.hrtime.bigint().toString(),

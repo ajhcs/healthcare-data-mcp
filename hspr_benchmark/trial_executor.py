@@ -12,6 +12,7 @@ from jsonschema import Draft202012Validator
 from .container_launcher import (
     assemble_answer_packet,
     codex_docker_command,
+    is_sealed_location,
     run_codex_and_capture,
     stage_runtime,
     summarize_codex_trace,
@@ -19,19 +20,39 @@ from .container_launcher import (
 )
 from .leakage import audit_registry_packet
 
+# Operational interlock only. The actual boundary must be enforced outside the
+# answer model and independently proven before this source-reviewed value moves.
+OFFICIAL_WEB_BOUNDARY_VALIDATED = False
+
+
+def require_official_web_boundary(active_boundary_attestation: dict[str, Any] | None = None) -> None:
+    if (
+        not OFFICIAL_WEB_BOUNDARY_VALIDATED
+        or not active_boundary_attestation
+        or not active_boundary_attestation.get("active_manifest_sha256")
+        or not active_boundary_attestation.get("public_history_audit_sha256")
+        or not active_boundary_attestation.get("public_ref_shas")
+    ):
+        raise RuntimeError(
+            "official execution is disabled: a protected unpublished active packet "
+            "and passing public-history boundary are not enabled"
+        )
+
 
 def trial_prompt(hspr_available: bool) -> str:
     identity_instruction = (
-        "First read /input/hspr-identity.json and use it only for identity/perimeter resolution. "
+        "First read /input/hspr-identity.json with /bin/cat and use it only for identity/perimeter resolution. "
         if hspr_available
         else "No registry is available; research identity/perimeter from live sources. "
     )
     return (
         "You are one blinded financial-research benchmark answer context. "
-        "Read /input/question.json. "
+        "Read /input/question.json with /bin/cat. "
         + identity_instruction
         + "Retrieve the financial result now from a live authoritative primary source using web search/open. "
         "Do not rely on memory alone. Do not estimate or silently aggregate entities. "
+        "Report each numeric value exactly in the source's displayed scale and set units.currency to USD and "
+        "units.scale to ones, thousands, millions, or billions; never rescale without changing units.scale. "
         "Return exactly one JSON object conforming to /input/response-schema.json, including the primary "
         "source URL, exact locator, perimeter, and all material caveats. You cannot ask a human for help."
     )
@@ -65,6 +86,23 @@ def _validate_answer_shape(answer: dict[str, Any], question_id: str, response_sc
         raise ValueError(f"answer violates the locked response schema at: {', '.join(paths)}")
 
 
+def _validate_subscription_credential_boundary(credential_json: bytes) -> None:
+    try:
+        document = json.loads(credential_json)
+    except (json.JSONDecodeError, UnicodeDecodeError) as error:
+        raise ValueError("answer credential is not valid JSON") from error
+    if not isinstance(document, dict) or set(document) != {"auth_mode", "OPENAI_API_KEY", "tokens"}:
+        raise ValueError("answer credential has fields outside the minimized subscription schema")
+    if document.get("auth_mode") != "chatgpt" or document.get("OPENAI_API_KEY") not in (None, ""):
+        raise ValueError("answer credential must use ChatGPT subscription auth without an API key")
+    tokens = document.get("tokens")
+    required = {"access_token", "account_id"}
+    if not isinstance(tokens, dict) or set(tokens) != required:
+        raise ValueError("answer credential token fields do not match the minimized schema")
+    if not all(isinstance(tokens.get(name), str) and tokens[name] for name in required):
+        raise ValueError("answer credential is missing a required short-lived field")
+
+
 def run_trial(
     *,
     question: dict[str, Any],
@@ -77,16 +115,20 @@ def run_trial(
     output_dir: Path,
     credential_json: bytes,
     allow_live_credential: bool = False,
+    registry_approved_root: Path | None = None,
+    active_boundary_attestation: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Execute one answer context; sealed gold is audited but never mounted."""
     if not allow_live_credential:
         raise PermissionError("live credential use requires an explicit, risk-aware caller opt-in")
+    require_official_web_boundary(active_boundary_attestation)
+    _validate_subscription_credential_boundary(credential_json)
     hspr_available = bool(arm.get("hspr_available"))
     audit = audit_registry_packet(registry_packet, sealed_gold)
     if not audit["passed"]:
         raise ValueError(f"registry leakage audit failed: {audit['findings']}")
     selected_registry: Path | None = registry_packet if hspr_available else None
-    if ".benchmark-sealed" in output_dir.absolute().parts:
+    if is_sealed_location(output_dir):
         raise ValueError("answer results may not be written under the sealed root")
     output_parent = output_dir.parent.resolve(strict=True)
     if output_dir.parent.absolute() != output_parent:
@@ -101,6 +143,7 @@ def run_trial(
             question=question,
             response_schema=response_schema,
             registry_packet=selected_registry,
+            registry_approved_root=registry_approved_root,
         )
         runtime = stage_runtime(runtime_source, temporary_root / "runtime")
         command = codex_docker_command(

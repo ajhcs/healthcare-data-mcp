@@ -21,6 +21,13 @@ PINNED_NODE_IMAGE = "node@sha256:968df39aedcea65eeb078fb336ed7191baf48f972b44797
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 
+def is_sealed_location(path: Path) -> bool:
+    parts = path.absolute().parts
+    return ".benchmark-sealed" in parts or any(
+        parts[index : index + 2] == ("hspr-benchmark", "sealed") for index in range(len(parts) - 1)
+    )
+
+
 @dataclass(frozen=True)
 class ContainerLimits:
     memory: str = "512m"
@@ -43,7 +50,7 @@ def _regular_file(path: Path, *, approved_root: Path | None = None) -> Path:
     resolved = path.resolve(strict=True)
     if absolute != resolved or not resolved.is_file():
         raise ValueError(f"not a regular file: {path}")
-    if ".benchmark-sealed" in resolved.parts:
+    if is_sealed_location(resolved):
         raise ValueError(f"sealed files are forbidden in answer inputs: {path}")
     if approved_root is not None:
         root = approved_root.resolve(strict=True)
@@ -148,10 +155,11 @@ def assemble_answer_packet(
     question: dict[str, Any],
     response_schema: Path,
     registry_packet: Path | None,
+    registry_approved_root: Path | None = None,
 ) -> Path:
     """Create the exact allowlisted files visible to one answer context."""
     resolved = destination.resolve()
-    if ".benchmark-sealed" in resolved.parts:
+    if is_sealed_location(resolved):
         raise ValueError("answer packet cannot be created under the sealed root")
     resolved.mkdir(parents=True, exist_ok=False)
     (resolved / "question.json").write_text(json.dumps(question, indent=2), encoding="utf-8")
@@ -162,11 +170,16 @@ def assemble_answer_packet(
         _regular_file(response_schema, approved_root=locked_schema.parent), resolved / "response-schema.json"
     )
     if registry_packet is not None:
+        approved_root = (
+            registry_approved_root
+            if registry_approved_root is not None
+            else REPOSITORY_ROOT / "hspr-benchmark-v2/registry"
+        )
         started = time.monotonic_ns()
         shutil.copyfile(
             _regular_file(
                 registry_packet,
-                approved_root=REPOSITORY_ROOT / "hspr-benchmark-v2/registry",
+                approved_root=approved_root,
             ),
             resolved / "hspr-identity.json",
         )
@@ -189,7 +202,12 @@ def stage_runtime(source: Path, destination: Path, *, include_test_mock: bool = 
     if source.resolve(strict=True) != locked_runtime:
         raise ValueError("runtime source is not the locked benchmark runtime")
     destination.mkdir(parents=True, exist_ok=False)
-    names = ["isolation-probe.mjs", "credential-supervisor.mjs"]
+    names = [
+        "isolation-probe.mjs",
+        "credential-supervisor.mjs",
+        "app-server-supervisor.mjs",
+        "live-boundary-probe.mjs",
+    ]
     if include_test_mock:
         names.append("mock-codex.mjs")
     for name in names:
@@ -322,36 +340,7 @@ def codex_docker_command(
         "--mount",
         f"type=bind,src={codex_mount},dst=/opt/codex,readonly",
     ]
-    command = [
-        "node",
-        "/runtime/credential-supervisor.mjs",
-        "--",
-        "node",
-        "/opt/codex/bin/codex.js",
-        "exec",
-        "--json",
-        "--enable",
-        "use_legacy_landlock",
-        "--ephemeral",
-        "--ignore-user-config",
-        "--ignore-rules",
-        "--skip-git-repo-check",
-        "--sandbox",
-        "read-only",
-        "-C",
-        "/work",
-        "--model",
-        model,
-        "-c",
-        f'model_reasoning_effort="{reasoning}"',
-        "-c",
-        'shell_environment_policy.inherit="none"',
-        "--output-schema",
-        "/input/response-schema.json",
-        "--output-last-message",
-        "/output/answer.json",
-        prompt,
-    ]
+    command = ["node", "/runtime/app-server-supervisor.mjs", "--", model, reasoning, prompt]
     return [*base, *mounts, image, *command]
 
 
@@ -447,6 +436,7 @@ def run_codex_and_capture(
             payload_type = str(payload.get("type", ""))
             if payload_type in {
                 "supervisor.credential_unlinked",
+                "supervisor.external_auth_ready",
                 "thread.started",
                 "turn.started",
                 "turn.completed",
@@ -471,8 +461,11 @@ def run_codex_and_capture(
     except BaseException:
         _kill_container(command, process)
         raise
-    expected = [
+    expected_prefixes = [
         "supervisor.credential_unlinked",
+        "supervisor.external_auth_ready",
+    ]
+    expected_tail = [
         "thread.started",
         "turn.started",
         "turn.completed",
@@ -481,18 +474,25 @@ def run_codex_and_capture(
     stderr = _redact(b"".join(stderr_chunks).decode("utf-8", errors="replace"), secrets)
     ended = time.monotonic_ns()
     events.append({"event": "run_end", "monotonic_ns": ended, "exit_code": return_code})
-    sequence_valid = sequence == expected and answer is not None
+    sequence_valid = (
+        len(sequence) == 5 and sequence[0] in expected_prefixes and sequence[1:] == expected_tail and answer is not None
+    )
     trace = {
         "events": events,
         "stderr": stderr,
         "duration_ns": ended - started,
-        "credential_removed_before_turn": sequence_valid,
+        "credential_boundary_ready_before_turn": sequence_valid,
+        "credential_removed_before_turn": sequence_valid and sequence[0] == "supervisor.credential_unlinked",
+        "fileless_external_auth_before_turn": sequence_valid and sequence[0] == "supervisor.external_auth_ready",
         "answer": answer,
         "supervisor_sequence_valid": sequence_valid,
     }
     write_new_text(trace_path, json.dumps(trace, indent=2))
     if not sequence_valid:
-        raise RuntimeError(f"invalid supervisor event sequence: {sequence}; redacted trace: {trace_path}")
+        raise RuntimeError(
+            f"invalid supervisor event sequence: {sequence}; "
+            f"redacted stderr: {stderr[-2000:]}; redacted trace: {trace_path}"
+        )
     return trace
 
 
@@ -718,7 +718,7 @@ def prove_credential_supervisor(*, runtime_dir: Path, image: str = PINNED_NODE_I
         passed = (
             trace["events"][-1].get("exit_code") == 0
             and trace["credential_removed_before_turn"]
-            and command_outputs == ["CREDENTIAL_REMOVED"]
+            and command_outputs == ["CREDENTIAL_INACCESSIBLE"]
             and trace["answer"].get("question_id") == "mock"
         )
         if not passed:
@@ -726,6 +726,94 @@ def prove_credential_supervisor(*, runtime_dir: Path, image: str = PINNED_NODE_I
         return {
             "passed": True,
             "credential_removed_before_turn": True,
-            "command_output": "CREDENTIAL_REMOVED",
+            "command_output": "CREDENTIAL_INACCESSIBLE",
             "network": "none",
         }
+
+
+def prove_live_subscription_boundary(
+    *,
+    runtime_dir: Path,
+    codex_package_dir: Path,
+    credential_json: bytes,
+    output_dir: Path,
+) -> dict[str, Any]:
+    """Run one non-financial real-Codex smoke through the production supervisor."""
+    output_dir.mkdir(mode=0o700, parents=True, exist_ok=False)
+    with tempfile.TemporaryDirectory(prefix="hspr-live-boundary-") as temp_name:
+        root = Path(temp_name)
+        packet = root / "packet"
+        packet.mkdir()
+        (packet / "question.json").write_text(
+            json.dumps({"smoke_id": "subscription-boundary-v2", "financial_question": False}),
+            encoding="utf-8",
+        )
+        schema = {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["probe_marker", "source_url", "web_fact"],
+            "properties": {
+                "probe_marker": {"type": "string", "const": "REAL_CONTEXT_CREDENTIAL_INACCESSIBLE"},
+                "source_url": {"type": "string", "pattern": "^https://"},
+                "web_fact": {"type": "string", "minLength": 1},
+            },
+        }
+        (packet / "response-schema.json").write_text(json.dumps(schema), encoding="utf-8")
+        for path in packet.iterdir():
+            path.chmod(0o444)
+        packet.chmod(0o555)
+        runtime = stage_runtime(runtime_dir, root / "runtime")
+        prompt = (
+            "This is a non-financial access-boundary smoke. First run exactly "
+            "`/usr/local/bin/node /runtime/live-boundary-probe.mjs` with the shell and require its success marker. "
+            "Then use native web search and open an official OpenAI page to confirm one harmless current "
+            "fact about Codex CLI. Return only the schema object with the probe marker, official HTTPS URL, "
+            "and concise fact. Do not access any repository or benchmark material."
+        )
+        command = codex_docker_command(
+            packet_dir=packet,
+            output_dir=output_dir,
+            runtime_dir=runtime,
+            codex_package_dir=codex_package_dir,
+            model="gpt-5.6-luna",
+            reasoning="medium",
+            prompt=prompt,
+        )
+        trace = run_codex_and_capture(command, output_dir / "native-trace.json", credential_json)
+    command_outputs = [
+        str(event["payload"]["item"].get("aggregated_output", ""))
+        for event in trace["events"]
+        if event.get("event") == "codex_native_event"
+        and event["payload"].get("type") == "item.completed"
+        and event["payload"].get("item", {}).get("type") == "command_execution"
+    ]
+    web_events = [
+        event
+        for event in trace["events"]
+        if event.get("event") == "codex_native_event" and event["payload"].get("item", {}).get("type") == "web_search"
+    ]
+    passed = (
+        trace["credential_boundary_ready_before_turn"]
+        and trace["fileless_external_auth_before_turn"]
+        and any("REAL_CONTEXT_CREDENTIAL_INACCESSIBLE" in output for output in command_outputs)
+        and bool(web_events)
+        and trace["answer"].get("probe_marker") == "REAL_CONTEXT_CREDENTIAL_INACCESSIBLE"
+        and str(trace["answer"].get("source_url", "")).startswith("https://")
+    )
+    result = {
+        "schema_version": 1,
+        "official": False,
+        "financial_question": False,
+        "passed": passed,
+        "credential_boundary_ready_before_turn": trace["credential_boundary_ready_before_turn"],
+        "fileless_external_auth_before_turn": trace["fileless_external_auth_before_turn"],
+        "real_tool_probe_marker_seen": any(
+            "REAL_CONTEXT_CREDENTIAL_INACCESSIBLE" in output for output in command_outputs
+        ),
+        "native_web_events_seen": len(web_events),
+    }
+    write_new_text(output_dir / "result.json", json.dumps(result, indent=2) + "\n")
+    if not passed:
+        raise RuntimeError("real subscription-boundary smoke failed; preserved redacted trace")
+    return result

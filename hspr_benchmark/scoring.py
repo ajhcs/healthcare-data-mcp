@@ -10,6 +10,8 @@ from difflib import SequenceMatcher
 from typing import Any
 from urllib.parse import urlsplit, urlunsplit
 
+SCALE_MULTIPLIERS = {"ones": 1.0, "thousands": 1_000.0, "millions": 1_000_000.0, "billions": 1_000_000_000.0}
+
 
 def _norm(value: object) -> str:
     return re.sub(r"[^a-z0-9]+", " ", str(value).lower()).strip()
@@ -41,6 +43,26 @@ def _period(value: object) -> object:
     return {key: item for key, item in value.items() if item is not None}
 
 
+def _units(value: object) -> tuple[str, str] | None:
+    if not isinstance(value, dict):
+        return None
+    currency = str(value.get("currency", "")).upper()
+    scale = str(value.get("scale", value.get("normalized_scale", "ones"))).lower()
+    if currency != "USD" or scale not in SCALE_MULTIPLIERS:
+        return None
+    return currency, scale
+
+
+def _base_amount(value: object, units: object) -> float | None:
+    parsed = _units(units)
+    if value is None or parsed is None:
+        return None
+    try:
+        return float(value) * SCALE_MULTIPLIERS[parsed[1]]
+    except (TypeError, ValueError):
+        return None
+
+
 def _perimeter_correct(observed: object, expected: object) -> bool:
     if not isinstance(expected, dict):
         return _norm(observed) == _norm(expected)
@@ -66,25 +88,29 @@ def score_answer(answer: dict[str, Any], gold: dict[str, Any]) -> dict[str, Any]
     expected_status = "reported" if gold.get("requested_metric_available", True) else "unavailable_not_reported"
     status_correct = answer.get("answer_status", "reported") == expected_status
     expected, observed = gold.get("validated_value"), answer.get("value")
+    expected_base = _base_amount(expected, gold.get("units"))
+    observed_base = _base_amount(observed, answer.get("units"))
     relative, absolute = _tolerance(gold)
     financial = expected is None and observed is None
-    if expected is not None and observed is not None:
-        financial = math.isclose(float(observed), float(expected), rel_tol=relative, abs_tol=absolute)
+    if expected_base is not None and observed_base is not None:
+        financial = math.isclose(observed_base, expected_base, rel_tol=relative, abs_tol=absolute)
     fallback = gold.get("reported_fallback") or gold.get("closest_reported_subtotal") or {}
     if expected_status == "unavailable_not_reported" and fallback:
         observed_fallback = answer.get("closest_reported_subtotal") or {}
         _, fallback_absolute = _tolerance(fallback)
-        fallback_value = fallback.get("validated_value", fallback.get("value_usd"))
-        fallback_label = fallback.get("metric", fallback.get("label"))
-        financial = financial and math.isclose(
-            float(observed_fallback.get("value", math.nan)), float(fallback_value), rel_tol=0, abs_tol=fallback_absolute
+        fallback_value = _base_amount(
+            fallback.get("validated_value", fallback.get("value_usd")),
+            fallback.get("units", gold.get("units")),
         )
+        observed_fallback_value = _base_amount(observed_fallback.get("value"), observed_fallback.get("units"))
+        fallback_label = fallback.get("metric", fallback.get("label"))
+        financial = financial and fallback_value is not None and observed_fallback_value is not None
+        if financial:
+            financial = math.isclose(observed_fallback_value, fallback_value, rel_tol=0, abs_tol=fallback_absolute)
         financial = financial and _norm(observed_fallback.get("label")) == _norm(fallback_label)
     entity = _perimeter_correct(answer.get("reporting_perimeter", ""), gold.get("entity_perimeter"))
     period = _period(answer.get("period")) == _period(gold.get("period"))
-    expected_units = gold.get("units", {})
-    currency = expected_units.get("currency") if isinstance(expected_units, dict) else expected_units
-    units = answer.get("units") == currency
+    units = _units(answer.get("units")) is not None and _units(gold.get("units")) is not None
     source = gold.get("primary_source") or {}
     allowed_sources = (
         [source.get("url"), *source.get("accepted_equivalent_urls", [])] if isinstance(source, dict) else [source]

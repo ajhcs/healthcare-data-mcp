@@ -5,7 +5,7 @@
   "required": ["question_id", "answer_status", "reporting_perimeter", "metric_label", "period", "units", "value", "primary_source_url", "exact_locator", "caveats", "aggregated_entities", "clarification_needed", "closest_reported_subtotal"],
   "properties": {
     "question_id": {"type": "string"},
-    "answer_status": {"enum": ["reported", "unavailable_not_reported"]},
+    "answer_status": {"type": "string", "enum": ["reported", "unavailable_not_reported"]},
     "reporting_perimeter": {"type": "string"},
     "metric_label": {"type": "string"},
     "period": {
@@ -14,7 +14,15 @@
       "required": ["type", "start", "end", "date"],
       "additionalProperties": false
     },
-    "units": {"type": "string"},
+    "units": {
+      "type": "object",
+      "properties": {
+        "currency": {"type": "string", "const": "USD"},
+        "scale": {"type": "string", "enum": ["ones", "thousands", "millions", "billions"]}
+      },
+      "required": ["currency", "scale"],
+      "additionalProperties": false
+    },
     "value": {"type": ["number", "null"]},
     "primary_source_url": {"type": "string"},
     "exact_locator": {"type": "string"},
@@ -23,8 +31,20 @@
     "clarification_needed": {"type": "boolean"},
     "closest_reported_subtotal": {
       "type": ["object", "null"],
-      "properties": {"label":{"type":"string"},"value":{"type":"number"}},
-      "required": ["label", "value"],
+      "properties": {
+        "label":{"type":"string"},
+        "value":{"type":"number"},
+        "units": {
+          "type":"object",
+          "properties": {
+            "currency":{"type":"string","const":"USD"},
+            "scale":{"type":"string","enum":["ones","thousands","millions","billions"]}
+          },
+          "required":["currency","scale"],
+          "additionalProperties":false
+        }
+      },
+      "required": ["label", "value", "units"],
       "additionalProperties": false
     }
   }
