@@ -413,7 +413,12 @@ def _validate_revalidation(revalidation: object) -> tuple[list[dict[str, Any]], 
             raise ValueError("GitHub capture revalidation repository ID is invalid")
         if surface not in REQUIRED_SURFACES:
             raise ValueError("GitHub capture revalidation entry names an unknown surface")
-        if entry["method"] not in {"GET", "POST"} or entry["kind"] not in {"json", "download", "probe"}:
+        if entry["method"] not in {"GET", "POST"} or entry["kind"] not in {
+            "json",
+            "download",
+            "api_download",
+            "probe",
+        }:
             raise ValueError("GitHub capture revalidation request method or kind is invalid")
         if entry["method"] == "GET" and entry["request_json"] is not None:
             raise ValueError("GitHub GET revalidation request unexpectedly has a JSON body")

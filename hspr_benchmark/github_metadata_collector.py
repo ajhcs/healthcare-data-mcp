@@ -146,10 +146,17 @@ class GitHubMetadataCollector:
     def repo_api(self) -> str:
         return f"https://{API_HOST}/repos/{REPOSITORY['owner']}/{REPOSITORY['name']}"
 
-    def _headers(self, url: str, *, etag: str | None = None, download: bool = False) -> dict[str, str]:
+    def _headers(
+        self,
+        url: str,
+        *,
+        etag: str | None = None,
+        download: bool = False,
+        api_download: bool = False,
+    ) -> dict[str, str]:
         parsed = urlsplit(url)
         headers = {
-            "Accept": "application/octet-stream" if download else "application/vnd.github+json",
+            "Accept": "application/octet-stream" if download and not api_download else "application/vnd.github+json",
             "X-GitHub-Api-Version": API_VERSION,
             "User-Agent": "hspr-benchmark-metadata-audit",
         }
@@ -174,13 +181,14 @@ class GitHubMetadataCollector:
         *,
         request_json: dict[str, Any] | None = None,
         download: bool = False,
+        api_download: bool = False,
         etag: str | None = None,
     ) -> httpx.Response:
         self._validate_url(url, download=download)
         response = self.client.request(
             method,
             url,
-            headers=self._headers(url, etag=etag, download=download),
+            headers=self._headers(url, etag=etag, download=download, api_download=api_download),
             json=request_json,
             follow_redirects=False,
         )
@@ -204,10 +212,17 @@ class GitHubMetadataCollector:
     ) -> httpx.Response:
         accepted = accepted_statuses or {200}
         original_url = url
-        response = self._raw_request(method, url, request_json=request_json, download=kind == "download")
+        is_download = kind in {"download", "api_download"}
+        response = self._raw_request(
+            method,
+            url,
+            request_json=request_json,
+            download=is_download,
+            api_download=kind == "api_download",
+        )
         redirects = 0
         while response.status_code in {301, 302, 303, 307, 308}:
-            if kind != "download" or redirects >= REDIRECT_CAP:
+            if not is_download or redirects >= REDIRECT_CAP:
                 raise CollectionError("unexpected or excessive GitHub redirect")
             location = response.headers.get("location")
             if not location:
@@ -217,7 +232,7 @@ class GitHubMetadataCollector:
             redirects += 1
         if response.status_code not in accepted:
             raise CollectionError(f"GitHub surface {surface} returned HTTP {response.status_code}")
-        if kind == "download" and response.headers.get("content-encoding") is None:
+        if is_download and response.headers.get("content-encoding") is None:
             declared_length = response.headers.get("content-length")
             if declared_length is not None:
                 try:
@@ -226,7 +241,7 @@ class GitHubMetadataCollector:
                     raise CollectionError("GitHub download returned an invalid Content-Length") from error
                 if expected_length != len(response.content):
                     raise CollectionError("GitHub download Content-Length did not match its bytes")
-        if kind == "download" and response.status_code == 200:
+        if is_download and response.status_code == 200:
             self._downloaded_bytes += len(response.content)
             if self._downloaded_bytes > MAX_TOTAL_DOWNLOAD_BYTES:
                 raise CollectionError("GitHub downloads exceeded the total capture byte cap")
@@ -364,6 +379,7 @@ class GitHubMetadataCollector:
         url: str,
         *,
         allow_unavailable: bool = False,
+        api_media_type: bool = False,
         repository_id: int = int(REPOSITORY["id"]),
     ) -> tuple[str | None, int, bytes]:
         accepted = {200, 404} if allow_unavailable else {200}
@@ -372,7 +388,7 @@ class GitHubMetadataCollector:
             pass_number,
             "GET",
             url,
-            kind="download",
+            kind="api_download" if api_media_type else "download",
             accepted_statuses=accepted,
             repository_id=repository_id,
         )
@@ -583,6 +599,7 @@ class GitHubMetadataCollector:
                 pass_number,
                 f"{repo_api}/actions/runs/{run_id}/logs",
                 allow_unavailable=True,
+                api_media_type=True,
                 repository_id=fork_id,
             )
             records["actions_logs"].append(
@@ -632,7 +649,13 @@ class GitHubMetadataCollector:
             url = artifact.get("archive_download_url")
             if not isinstance(url, str):
                 raise CollectionError("GitHub fork Actions artifact is missing its download URL")
-            digest, size, _ = self._download("actions_artifacts", pass_number, url, repository_id=fork_id)
+            digest, size, _ = self._download(
+                "actions_artifacts",
+                pass_number,
+                url,
+                api_media_type=True,
+                repository_id=fork_id,
+            )
             if digest is None or artifact.get("size_in_bytes") != size:
                 raise CollectionError("GitHub fork Actions artifact was not captured completely")
             records["actions_artifacts"] = [
@@ -824,6 +847,7 @@ class GitHubMetadataCollector:
                 pass_number,
                 f"{self.repo_api}/actions/runs/{run_id}/logs",
                 allow_unavailable=True,
+                api_media_type=True,
             )
             records["actions_logs"].append(
                 _record(
@@ -869,7 +893,12 @@ class GitHubMetadataCollector:
             url = artifact.get("archive_download_url")
             if not isinstance(url, str):
                 raise CollectionError("GitHub Actions artifact is missing its download URL")
-            digest, size, _ = self._download("actions_artifacts", pass_number, url)
+            digest, size, _ = self._download(
+                "actions_artifacts",
+                pass_number,
+                url,
+                api_media_type=True,
+            )
             if digest is None:
                 raise CollectionError("unexpired GitHub Actions artifact was not retrievable")
             declared_size = artifact.get("size_in_bytes")
@@ -1051,13 +1080,14 @@ def _revalidation_request(
         entry["method"],
         entry["url"],
         request_json=entry["request_json"],
-        download=entry["kind"] == "download",
+        download=entry["kind"] in {"download", "api_download"},
+        api_download=entry["kind"] == "api_download",
         etag=entry["etag"] if entry["method"] == "GET" else None,
     )
     redirects = 0
     url = entry["url"]
     while response.status_code in {301, 302, 303, 307, 308}:
-        if entry["kind"] != "download" or redirects >= REDIRECT_CAP:
+        if entry["kind"] not in {"download", "api_download"} or redirects >= REDIRECT_CAP:
             raise CollectionError("unexpected redirect during GitHub revalidation")
         location = response.headers.get("location")
         if not location:
