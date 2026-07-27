@@ -28,7 +28,12 @@ if (
 const separator = process.argv.indexOf("--");
 if (separator < 0 || process.argv.length < separator + 4) throw new Error("missing runtime arguments");
 const [model, reasoning, prompt] = process.argv.slice(separator + 1);
-if (model !== "gpt-5.6-luna" || !["medium", "xhigh"].includes(reasoning)) {
+const allowedModelReasoning = new Set([
+  "gpt-5.6-luna:medium",
+  "gpt-5.6-luna:xhigh",
+  "gpt-5.6-sol:medium",
+]);
+if (!allowedModelReasoning.has(`${model}:${reasoning}`)) {
   throw new Error("unlocked model or reasoning configuration");
 }
 const outputSchema = JSON.parse(await readFile("/input/response-schema.json", "utf8"));
