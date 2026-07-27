@@ -954,6 +954,11 @@ def test_codex_command_has_stdin_supervisor_not_credential_mount(tmp_path: Path)
     else:
         raise AssertionError("Sol X-High must remain outside the amended benchmark")
 
+    supervisor = (ROOT / "hspr-benchmark-v2/runtime/app-server-supervisor.mjs").read_text()
+    for allowed in ("gpt-5.6-luna:medium", "gpt-5.6-luna:xhigh", "gpt-5.6-sol:medium"):
+        assert f'"{allowed}"' in supervisor
+    assert "gpt-5.6-sol:xhigh" not in supervisor
+
 
 def test_mount_and_host_output_guards_reject_broad_or_linked_paths(tmp_path: Path) -> None:
     packet = tmp_path / "packet"
