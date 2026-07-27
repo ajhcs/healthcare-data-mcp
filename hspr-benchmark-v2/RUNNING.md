@@ -29,9 +29,9 @@ every slice, the controller verifies SHA-256 digests for questions, arms,
 registry, response schema, runtime, sealed manifest/adjudicated key, and the
 full Codex package tree, together with the clean Git revision and pinned image.
 The protected active manifest also binds the frozen pilot preregistration; its
-question count must match the protected question packet, its public-history
-audit must be less than one hour old, and every fetched public ref must still
-match the audit's exact SHA.
+question count must match the protected question packet. Optional private
+public-history, metadata/fork, and opaque-artifact diagnostics may be included
+and digest-bound, but their absence or declared status does not gate execution.
 The adjudicated key must resolve to the exact location declared by the tracked
 sealed manifest and match its digest prefix and record count. These controller
 manifests are never mounted into answer contexts.

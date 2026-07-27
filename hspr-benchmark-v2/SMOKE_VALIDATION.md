@@ -37,9 +37,12 @@ cryptographic isolation. The host kernel, Docker daemon, Codex/backend,
 controller, and native web implementation remain trusted. Short-lived access
 token strings can remain in immutable runtime objects until their processes
 exit, although the hostile tool context could not read those processes. Native
-web still lacks a per-domain denylist, so official validity additionally depends
-on a fresh unpublished cohort and a zero-hit identity-aware public-history
-audit. Any Codex/runtime/container-policy change requires a fresh smoke.
+web still lacks a per-domain denylist. Answer instructions prohibit seeking
+benchmark/repository material and observable native activity is retained, but
+those are operational mitigations rather than access controls. Public-history
+and metadata audits are optional diagnostics, not proof of unreachability or
+execution gates. Any Codex/runtime/container-policy change requires a fresh
+smoke.
 
 The earlier 2026-07-26 auth-file/unlink smoke is preserved as superseded
 engineering evidence and is not the current production boundary.
