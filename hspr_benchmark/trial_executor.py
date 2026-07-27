@@ -162,7 +162,7 @@ def run_trial(
             output_dir=output_dir,
             runtime_dir=runtime,
             codex_package_dir=codex_package_dir,
-            model="gpt-5.6-luna",
+            model=str(arm.get("model", "gpt-5.6-luna")),
             reasoning=str(arm["reasoning"]),
             prompt=trial_prompt(hspr_available),
         )
