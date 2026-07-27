@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from pypdf import PdfReader
+from pypdf.errors import PdfReadError
 
 ANSWER_BEARING_MARKERS = (
     "gold",
@@ -131,7 +132,7 @@ def _pdf_text(content: bytes) -> tuple[str, str]:
                 return "", "pdf_page_not_fully_text_inspectable"
             extracted.append(page_text)
         return "\n".join(extracted), "pdf_requires_manual_payload_review"
-    except Exception:  # pypdf exposes format-specific exception subclasses inconsistently
+    except (KeyError, OSError, TypeError, ValueError, PdfReadError):
         return "", "pdf_text_extraction_failed"
 
 
