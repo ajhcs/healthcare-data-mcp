@@ -171,9 +171,8 @@ def ephemeral_chatgpt_credential(
     if not all(isinstance(value, str) and value for value in required.values()):
         raise ValueError("subscription credential is missing required short-lived fields")
     current = int(time.time()) if now_epoch_seconds is None else now_epoch_seconds
-    for name in ("access_token", "id_token"):
-        if _jwt_expiry(str(required[name])) < current + minimum_validity_seconds:
-            raise ValueError(f"subscription {name} expires too soon for an isolated trial")
+    if _jwt_expiry(str(required["access_token"])) < current + minimum_validity_seconds:
+        raise ValueError("subscription access_token expires too soon for an isolated trial")
     minimized = {
         "auth_mode": "chatgpt",
         "OPENAI_API_KEY": None,
@@ -347,7 +346,9 @@ def _build_input_manifest(
             "api_key_forbidden": True,
             "refresh_token_forwarded": False,
             "id_token_forwarded": False,
-            "id_token_expiry_enforced": True,
+            "id_token_required_from_host_auth": True,
+            "id_token_expiry_enforced": False,
+            "access_token_expiry_enforced": True,
             "minimum_token_validity_seconds": MINIMUM_SUBSCRIPTION_TOKEN_VALIDITY_SECONDS,
         },
         "questions_sha256": _sha256_file(questions_path),

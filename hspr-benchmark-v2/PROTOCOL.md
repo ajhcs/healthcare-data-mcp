@@ -26,10 +26,11 @@ the Sol High lead-validated final key but no answer-agent context. Confirmatory
 key builders never run or monitor answer arms.
 
 Only subscription-backed ChatGPT authentication is accepted; API keys fail
-closed. The host requires both access and identity JWT expiry claims to outlive
-the bounded trial, but forwards only the short-lived access token and account
-ID. The refresh token, ID token, API key, and auth metadata never enter the
-container. The minimized document is supplied over stdin, never argv,
+closed. The host requires the access-token expiry claim to outlive the bounded
+trial and requires an ID token to be present in the managed host auth document,
+but does not freshness-gate that unforwarded identity token. It forwards only
+the access token and account ID. The refresh token, ID token, API key, and auth
+metadata never enter the container. The minimized document is supplied over stdin, never argv,
 environment, trace, file, or bind mount. Codex app-server's external
 ChatGPT-auth protocol accepts it in memory before the thread starts; the
 controller aborts if `turn.started` arrives without that readiness event.

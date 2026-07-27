@@ -6,8 +6,6 @@ import zipfile
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-import pytest
-
 from hspr_benchmark import runner
 from hspr_benchmark.cohort import PILOT_IDS, build_cohort
 from hspr_benchmark.container_launcher import (
@@ -615,7 +613,7 @@ def test_subscription_credential_rejects_expiring_tokens() -> None:
         raise AssertionError("a token expiring inside the trial window must be rejected")
 
 
-def test_subscription_credential_rejects_expired_identity_claims_when_access_is_fresh() -> None:
+def test_subscription_credential_does_not_freshness_gate_unforwarded_identity_token() -> None:
     def token(expiry: int) -> str:
         claims = base64.urlsafe_b64encode(json.dumps({"exp": expiry}).encode()).decode().rstrip("=")
         return f"header.{claims}.signature"
@@ -630,10 +628,12 @@ def test_subscription_credential_rejects_expired_identity_claims_when_access_is_
             "refresh_token": "secret",
         },
     }
-    with pytest.raises(ValueError, match="id_token expires too soon"):
+    minimized = json.loads(
         runner.ephemeral_chatgpt_credential(
             json.dumps(source).encode(), now_epoch_seconds=1000, minimum_validity_seconds=900
         )
+    )
+    assert set(minimized["tokens"]) == {"access_token", "account_id"}
 
 
 def test_trial_boundary_rejects_refresh_credentials_and_extra_fields() -> None:
