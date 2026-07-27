@@ -167,7 +167,7 @@ def ephemeral_chatgpt_credential(
         raise ValueError("OpenAI API keys are forbidden for this benchmark")
     tokens = document.get("tokens")
     if not isinstance(tokens, dict):
-        raise ValueError("subscription credential has no token document")
+        raise TypeError("subscription credential has no token document")
     required = {name: tokens.get(name) for name in ("access_token", "id_token", "account_id")}
     if not all(isinstance(value, str) and value for value in required.values()):
         raise ValueError("subscription credential is missing required short-lived fields")
@@ -293,7 +293,7 @@ def _validate_active_inputs(active_manifest: Path, questions_path: Path, registr
     if int(history_audit.get("active_system_count", -1)) != system_count:
         raise ValueError("public-history audit does not cover the active systems")
     try:
-        audited_at = datetime.fromisoformat(str(history_audit["audited_at_utc"]).replace("Z", "+00:00"))
+        audited_at = datetime.fromisoformat(str(history_audit["audited_at_utc"]))
         age_seconds = (datetime.now(UTC) - audited_at).total_seconds()
     except (KeyError, TypeError, ValueError) as error:
         raise ValueError("public-history audit has no valid UTC timestamp") from error
