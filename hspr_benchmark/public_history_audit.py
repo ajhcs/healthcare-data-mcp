@@ -33,15 +33,15 @@ ANSWER_BEARING_MARKERS = (
 IDENTITY_DATA_ROOTS = ("src/perimeter_registry/data/", "perimeter-registry/src/perimeter_registry/data/")
 SAFE_DECLARED_BLOBS = {
     "qa/reports/health_system_metrics_reconciliation.csv": {
-        "b594814db5106ccda63a29e9f20126ec1f740f308446834a46547cec45cd879e"
+        "b594814db5106ccda63a29e9f20126ec1f740f308446834a46547cec45cd879e"  # pragma: allowlist secret
     },
     "hspr-benchmark-v2/public/cohort.json": {
-        "c68098d2a9cd15cadff4730c8049e852d7802d051716ee6b50703f608c180d0a",
-        "e738b65c7fc92b947021f142753471fb200fd29a226f722bed8c53bd5068af5f",
+        "c68098d2a9cd15cadff4730c8049e852d7802d051716ee6b50703f608c180d0a",  # pragma: allowlist secret
+        "e738b65c7fc92b947021f142753471fb200fd29a226f722bed8c53bd5068af5f",  # pragma: allowlist secret
     },
     "hspr_benchmark/cohort.py": {
-        "2b2756702eaace17cfccd4764628465eda8378245011bd9ac2955bfae3b00496",
-        "a7d7c28c43b8444a74eaf217e0b7bf0d004e9dea35449936f007b12f67498429",
+        "2b2756702eaace17cfccd4764628465eda8378245011bd9ac2955bfae3b00496",  # pragma: allowlist secret
+        "a7d7c28c43b8444a74eaf217e0b7bf0d004e9dea35449936f007b12f67498429",  # pragma: allowlist secret
     },
 }
 BLOCKING_CLASSIFICATIONS = {"answer_bearing", "identity_hit_review_required"}
