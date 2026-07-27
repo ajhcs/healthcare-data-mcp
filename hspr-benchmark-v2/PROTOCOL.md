@@ -44,22 +44,22 @@ arms in this environment because they share the repository filesystem; prompts
 and logging are not treated as access controls.
 
 Local native web is outside the shell-network sandbox and has no enforceable
-per-domain exclusion. Official local execution is therefore limited to a fresh,
-unpublished cohort whose IDs, names, aliases, legal entities, and identifiers
-produce zero blocking hits across every freshly fetched public branch, tag, and
-pull-request-head history. The audit scans resolved commit SHAs, commit and
-annotated-tag messages, paths, extracted PDF/ZIP-based document text, and all
-reachable blobs. Unsupported or incompletely inspectable binary artifacts fail
-closed. A scorer-side manual review can clear only an exact blob/path/reason
-record in a private attestation bound to the audit implementation, questions,
-identity packet, full public-ref map, and blob SHA-1/SHA-256; unresolved,
-missing, extra, stale, or broad allowlist records remain blocking. Its
-implementation and the exact question and identity bytes are SHA-256-bound to
-the run gate. This does not make all public material
-unreachable: GitHub release/PR descriptions and external attachments require a
-separate pre-run attestation, and force-pushed or orphaned history may be
-unrecoverable. Prompts, voluntary
-instructions, and post-hoc trace rejection are not part of that boundary.
+per-domain exclusion. The technical boundary is therefore deliberately narrow:
+the answer container cannot mount the repository, sealed key, historical files,
+reusable credentials, or host outputs. The prompt also directs the answer agent
+not to seek benchmark or repository material, and the controller records all
+observable native tool/web activity. That instruction and trace review are
+operational mitigations, not access controls, and do not prove that public
+repository material is unreachable.
+
+Public-history, GitHub-metadata, fork, and opaque-artifact audits are preserved
+as scorer-side diagnostic evidence. Their protected, digest-bound outputs may
+be attached to a run manifest, including failed or incomplete captures, but are
+not prerequisites for execution. There is currently no evidence that an answer
+agent accessed those surfaces. This evidence-proportionate policy avoids an
+absolute leakage-prevention claim: unobserved native-web behavior, public
+caches, force-pushed history, external attachments, and repository metadata
+remain residual limitations and must be reported with results.
 
 Handled aborts issue repeated daemon-side `docker rm --force` calls using the
 unique container name; an uncatchable host/controller crash remains outside

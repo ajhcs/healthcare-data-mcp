@@ -25,10 +25,10 @@ reopen supervisor/app-server pipe or socket descriptors under the tested
 container/sandbox policy. Native web remains a trusted Codex
 runtime service and native events are timestamped by the host controller. The
 current local/app native-web interface does not expose an enforceable per-domain
-deny policy. The active-cohort protocol therefore requires an unpublished,
-disjoint packet and an identity-aware scan of all fetched public Git history.
-This supports only the claim that public artifacts do not answer the active
-questions; it does not claim that the public repository is unreachable.
+deny policy. Answer prompts explicitly prohibit seeking benchmark, repository,
+history, or scoring material, and observable tool/web activity is retained for
+review. These are operational mitigations rather than an isolation boundary;
+the protocol does not claim that public repository material is unreachable.
 
 The remaining limitation is explicit: the trusted Codex runtime necessarily
 holds a short-lived access token in process memory while it contacts the
@@ -43,6 +43,7 @@ The earlier 17 completed pilot trials used the prior full-auth startup protocol
 and are superseded for the subscription-native confirmatory design. They remain
 preserved as historical engineering evidence and must not be mixed with new
 results. No new official arm may run until the exact active cohort has a ready
-sealed key, identity-aware public-history and registry/key leakage audits pass,
-and the fileless-auth proof, hostile mount probe, tests, review, and non-official
-live boundary smoke pass on the locked revision.
+sealed key, the registry/key leakage audit passes, and the fileless-auth proof,
+hostile mount probe, tests, review, and non-official live boundary smoke pass on
+the locked revision. Public-history, GitHub-metadata, fork, and opaque-artifact
+audits are optional diagnostic evidence and do not gate execution.

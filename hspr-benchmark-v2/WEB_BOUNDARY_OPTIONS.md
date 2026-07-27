@@ -8,12 +8,14 @@ rather than model-generated shell networking, and Codex 0.145.0 exposes only an
 on/off search control. Docker mount isolation therefore cannot support a claim
 of general repository-domain exclusion.
 
-The narrow local protocol instead uses a fresh, protected, unpublished active
-cohort and blocks unless every active ID, canonical name, alias, legal-entity
-name, and identifier has zero answer-bearing hits across all fetched public Git
-history. Old public artifacts can remain reachable, but they cannot answer the
-active questions. Disabling native web would violate the benchmark design;
-prompt instructions and post-hoc GitHub URL rejection are not boundaries.
+The narrow local protocol uses a fresh, protected, unpublished active cohort and
+a container that cannot mount the repository, sealed key, historical material,
+host outputs, or reusable credentials. Disabling native web would violate the
+benchmark design. The prompt prohibits seeking benchmark/repository material
+and observable tool/web events are retained, but these are operational
+mitigations rather than access controls. Public-history and metadata audits are
+optional diagnostic evidence; the protocol does not claim public repository
+material is technically unreachable.
 
 ## Defensible candidate
 
@@ -43,10 +45,12 @@ by this preparatory change.
 
 ## Current gate
 
-`hspr_benchmark.trial_executor.OFFICIAL_WEB_BOUNDARY_VALIDATED` remains `False`
-while the replacement pilot's sealed key and final identity-aware audit are
-pending. This is an operational interlock, not a substitute for the protected
-active manifest and exact public-ref attestations.
+`hspr_benchmark.trial_executor.CORE_ANSWER_ISOLATION_VALIDATED` records the
+hostile-probe-validated container property. Official execution still requires a
+private active manifest bound to that exact policy, a ready sealed key, and a
+passing registry/key leakage audit. Public-ref, metadata, fork, and opaque-file
+attestations may be manifest-bound as diagnostics but do not open or close the
+gate.
 
 ## Selected active-pilot remediation
 
@@ -58,13 +62,14 @@ answer-bearing benchmark system. Questions, HSPR identity claims, researcher
 records, and adjudicated gold remain unpublished until all answer trials are
 immutable.
 
-`python -m hspr_benchmark.public_history_audit` now scans every commit reachable
+`python -m hspr_benchmark.public_history_audit` can scan every commit reachable
 from explicitly enumerated fetched branch, tag, and pull-request heads,
 including removed blobs, commit/tag messages, identity-bearing paths, and
 extractable PDF/ZIP document text. Only reviewed digest-pinned frame/selection
 blobs are automatically nonblocking; every other identity hit and every
-uninspectable artifact fails closed. The audit and runner bind the exact
-question bytes, identity bytes, resolved ref SHAs, and audit implementation.
+uninspectable artifact is reported. The active manifest binds any supplied
+diagnostic bytes, while the runner does not treat diagnostic status as an
+execution decision.
 The first disjoint packet (v3) was excluded before
 adjudication because a key researcher improperly delegated one system to a
 third helper. The next candidate (v4) was excluded before research because a

@@ -20,24 +20,31 @@ from .container_launcher import (
 )
 from .leakage import audit_registry_packet
 
-# Operational interlock only. The actual boundary must be enforced outside the
-# answer model and independently proven before this source-reviewed value moves.
-OFFICIAL_WEB_BOUNDARY_VALIDATED = False
+# This interlock records the launcher property that was proven by the hostile
+# mount/auth probe: the answer container receives only its packet, staged
+# runtime, output directory, and a minimized short-lived subscription token.
+# It does not claim that native web access can prevent an agent from discovering
+# public benchmark material.
+CORE_ANSWER_ISOLATION_VALIDATED = True
+CORE_ANSWER_ISOLATION_POLICY = "container-no-repository-sealed-history-host-output-v1"
+
+
+def require_core_answer_isolation(active_boundary_attestation: dict[str, Any] | None = None) -> None:
+    if (
+        not CORE_ANSWER_ISOLATION_VALIDATED
+        or not active_boundary_attestation
+        or not active_boundary_attestation.get("active_manifest_sha256")
+        or active_boundary_attestation.get("core_isolation_policy") != CORE_ANSWER_ISOLATION_POLICY
+    ):
+        raise RuntimeError(
+            "official execution is disabled: the protected unpublished active packet "
+            "is not bound to the validated core answer-container isolation policy"
+        )
 
 
 def require_official_web_boundary(active_boundary_attestation: dict[str, Any] | None = None) -> None:
-    if (
-        not OFFICIAL_WEB_BOUNDARY_VALIDATED
-        or not active_boundary_attestation
-        or not active_boundary_attestation.get("active_manifest_sha256")
-        or not active_boundary_attestation.get("public_history_audit_sha256")
-        or not active_boundary_attestation.get("github_metadata_audit_sha256")
-        or not active_boundary_attestation.get("public_ref_shas")
-    ):
-        raise RuntimeError(
-            "official execution is disabled: a protected unpublished active packet "
-            "with a passing public-history boundary and GitHub-metadata boundary is not enabled"
-        )
+    """Backward-compatible name for callers predating the scoped isolation policy."""
+    require_core_answer_isolation(active_boundary_attestation)
 
 
 def trial_prompt(hspr_available: bool) -> str:
@@ -50,6 +57,9 @@ def trial_prompt(hspr_available: bool) -> str:
         "You are one blinded financial-research benchmark answer context. "
         "Read /input/question.json with /bin/cat. "
         + identity_instruction
+        + "Do not search for or use benchmark materials, this project's repository, GitHub history, issues, "
+        "pull requests or forks, prior benchmark answers, or scoring/key artifacts. If you encounter any "
+        "incidentally, ignore them and continue with independent authoritative-source research. "
         + "Retrieve the financial result now from a live authoritative primary source using web search/open. "
         "Do not rely on memory alone. Do not estimate or silently aggregate entities. "
         "Report each numeric value exactly in the source's displayed scale and set units.currency to USD and "
@@ -122,7 +132,7 @@ def run_trial(
     """Execute one answer context; sealed gold is audited but never mounted."""
     if not allow_live_credential:
         raise PermissionError("live credential use requires an explicit, risk-aware caller opt-in")
-    require_official_web_boundary(active_boundary_attestation)
+    require_core_answer_isolation(active_boundary_attestation)
     _validate_subscription_credential_boundary(credential_json)
     hspr_available = bool(arm.get("hspr_available"))
     audit = audit_registry_packet(registry_packet, sealed_gold)

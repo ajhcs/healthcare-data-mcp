@@ -70,6 +70,10 @@ for cross-environment byte reproduction
 
 ## Prospective collision and replacement rules
 
+This collision procedure was used to construct and document the clean
+replacement Batch 1. Under the revised evidence-proportionate execution policy,
+its outputs are diagnostic and do not gate key construction or answer runs.
+
 A **genuinely answer-bearing collision** is a blob reachable from a frozen,
 explicitly enumerated public ref that contains an adjudicated active identity
 term and material that supplies or materially shortcuts a target financial
@@ -81,16 +85,16 @@ keyword heuristics cannot prove nonassociation. The review record stores ref
 SHA, blob ID, path, matched identity term, classification reason, reviewer, and
 any explicitly approved safe-blob digest, but not answer values in Git.
 
-The audit must first cover ID and canonical name, then be rerun over the final
+When the optional audit is run, it should first cover ID and canonical name, then be rerun over the final
 identity packet's aliases, legal-entity names, and identifiers. It must traverse
 every commit/blob reachable from every freshly fetched public branch, tag, and
 pull-request head, record the exact tip SHAs, and be rerun immediately before
 every official batch. Release assets and force-pushed or otherwise unreachable
 material require a separate attestation; this Git audit does not claim to cover
 them. The
-runner requires an identity-aware passing audit bound to the exact question and
-identity files, matching system count, an age under one hour, and exact equality
-with all currently fetched origin refs
+runner records a supplied audit as a private, digest-bound diagnostic attached
+to the exact active manifest; its pass/fail status and public-ref freshness do
+not control execution
 ([audit traversal and identity expansion](../hspr_benchmark/public_history_audit.py#L83-L148),
 [run gate](../hspr_benchmark/runner.py#L284-L303),
 [documented requirement](WEB_BOUNDARY_OPTIONS.md#L61-L82)).

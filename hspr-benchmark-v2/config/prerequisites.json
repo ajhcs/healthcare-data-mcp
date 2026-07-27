@@ -6,7 +6,7 @@
     "ci": "pass",
     "merged_into_agreed_base": true
   },
-  "pilot_execution": "stopped_pending_subscription_boundary_validation",
+  "pilot_execution": "pending_frozen_batch_key_and_green_core_isolation_revision",
   "live_smoke": {
     "date_utc": "2026-07-26",
     "official": false,
@@ -19,14 +19,18 @@
     "prior_official_trials": "superseded_historical_engineering_evidence",
     "protocol": "../SUBSCRIPTION_PROTOCOL.md"
   },
-  "official_web_boundary": {
-    "status": "blocked_fail_closed",
-    "reason": "local native web has no enforceable repository-domain exclusion and the repository is public",
-    "runner_interlock": "trial_executor.OFFICIAL_WEB_BOUNDARY_VALIDATED=false"
+  "core_answer_isolation": {
+    "status": "validated",
+    "policy": "container-no-repository-sealed-history-host-output-v1",
+    "public_web_limitation": "native web has no enforceable repository-domain exclusion; instructions and observable traces are operational mitigations"
   },
   "blockers": [
-    "current subscription identity token is stale and the benchmark does not refresh reusable credentials",
-    "revised minimized-auth boundary is not yet merged or live-smoke validated",
-    "native web cannot currently be prevented outside the answering model from retrieving this public repository"
+    "the frozen Batch 1 sealed financial key is not yet lead-validated",
+    "the evidence-proportionate core-isolation revision must pass CI and merge before an answer run"
+  ],
+  "optional_diagnostics": [
+    "public Git history audit",
+    "GitHub metadata and fork capture",
+    "opaque-artifact attestation"
   ]
 }

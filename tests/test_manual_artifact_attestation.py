@@ -246,11 +246,9 @@ def test_auditor_and_runner_require_exact_protected_attestation(tmp_path: Path, 
         )
     )
     manifest.chmod(0o600)
-    monkeypatch.setattr(runner, "REPOSITORY_ROOT", repo)
-    monkeypatch.setattr(runner, "_current_public_ref_shas", lambda: audited["public_ref_shas"])
-    monkeypatch.setattr(runner, "validate_github_metadata_audit_document", lambda *args, **kwargs: None)
     result = runner._validate_active_inputs(manifest, questions, registry)
-    assert result["manual_artifact_attestation_sha256"] == _digest(attestation)
+    assert result["public_diagnostics"]["manual_artifact_attestation"]["sha256"] == _digest(attestation)
+    assert result["public_diagnostics"]["manual_artifact_attestation"]["diagnostic_only"] is True
 
     attestation.chmod(0o640)
     with pytest.raises(ValueError, match="private regular file"):

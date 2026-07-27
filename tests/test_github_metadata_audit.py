@@ -329,13 +329,13 @@ def test_runner_validator_rejects_tampered_surface_and_future_or_stale_audit(tmp
         )
 
 
-def test_official_boundary_requires_github_metadata_attestation(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(trial_executor, "OFFICIAL_WEB_BOUNDARY_VALIDATED", True)
+def test_official_boundary_requires_core_isolation_attestation(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(trial_executor, "CORE_ANSWER_ISOLATION_VALIDATED", True)
     attestation = {
         "active_manifest_sha256": "a" * 64,
-        "public_history_audit_sha256": "b" * 64,
-        "public_ref_shas": PUBLIC_REFS,
     }
-    with pytest.raises(RuntimeError, match="GitHub-metadata boundary"):
-        trial_executor.require_official_web_boundary(attestation)
-    trial_executor.require_official_web_boundary({**attestation, "github_metadata_audit_sha256": "c" * 64})
+    with pytest.raises(RuntimeError, match="core answer-container isolation policy"):
+        trial_executor.require_core_answer_isolation(attestation)
+    trial_executor.require_core_answer_isolation(
+        {**attestation, "core_isolation_policy": trial_executor.CORE_ANSWER_ISOLATION_POLICY}
+    )
