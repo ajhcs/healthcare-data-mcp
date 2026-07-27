@@ -11,10 +11,15 @@ import subprocess
 import zipfile
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal, overload
 
 from pypdf import PdfReader
 from pypdf.errors import PdfReadError
+
+from .manual_artifact_attestation import (
+    implementation_sha256 as manual_attestation_implementation_sha256,
+)
+from .manual_artifact_attestation import protected_attestation_bytes, sha256_bytes, validate_attestation
 
 ANSWER_BEARING_MARKERS = (
     "gold",
@@ -65,7 +70,16 @@ ZIP_TEXT_EXTENSIONS = {".csv", ".html", ".json", ".md", ".rels", ".txt", ".xml"}
 
 
 def implementation_sha256() -> str:
-    return _sha256(Path(__file__).read_bytes())
+    dependency_digest = bytes.fromhex(manual_attestation_implementation_sha256())
+    return _sha256(Path(__file__).read_bytes() + dependency_digest)
+
+
+@overload
+def _git(repo: Path, *arguments: str, text: Literal[True] = True) -> str: ...
+
+
+@overload
+def _git(repo: Path, *arguments: str, text: Literal[False]) -> bytes: ...
 
 
 def _git(repo: Path, *arguments: str, text: bool = True) -> str | bytes:
@@ -230,6 +244,7 @@ def audit_public_history(
     questions_path: Path,
     public_refs: list[str],
     identity_path: Path | None = None,
+    manual_artifact_attestation_path: Path | None = None,
 ) -> dict[str, Any]:
     questions_bytes = questions_path.read_bytes()
     document = json.loads(questions_bytes)
@@ -326,6 +341,25 @@ def audit_public_history(
                     }
                 )
     blocking = [hit for hit in hits if hit["classification"] in BLOCKING_CLASSIFICATIONS]
+    attestation_sha256: str | None = None
+    residual_uninspectable_artifacts = list(uninspectable_artifacts)
+    if manual_artifact_attestation_path is not None:
+        attestation_bytes = protected_attestation_bytes(manual_artifact_attestation_path)
+        attestation = json.loads(attestation_bytes)
+
+        def blob_digest(object_id: str) -> str:
+            return _sha256(bytes(_git(repo, "cat-file", "blob", object_id, text=False)))
+
+        residual_uninspectable_artifacts = validate_attestation(
+            attestation,
+            raw_uninspectables=uninspectable_artifacts,
+            audit_implementation_sha256=implementation_sha256(),
+            questions_sha256=_sha256(questions_bytes),
+            identity_sha256=_sha256(identity_bytes) if identity_bytes is not None else None,
+            public_ref_shas=ref_shas,
+            blob_sha256=blob_digest,
+        )
+        attestation_sha256 = sha256_bytes(attestation_bytes)
     return {
         "schema_version": 4,
         "policy": AUDIT_POLICY,
@@ -343,8 +377,11 @@ def audit_public_history(
         "term_count": sum(len(values) for values in terms.values()),
         "hits": hits,
         "blocking_hits": blocking,
-        "uninspectable_artifacts": uninspectable_artifacts,
-        "passed": not blocking and not uninspectable_artifacts,
+        "raw_uninspectable_artifacts": uninspectable_artifacts,
+        "residual_uninspectable_artifacts": residual_uninspectable_artifacts,
+        "uninspectable_artifacts": residual_uninspectable_artifacts,
+        "manual_artifact_attestation_sha256": attestation_sha256,
+        "passed": not blocking and not residual_uninspectable_artifacts,
     }
 
 
@@ -354,9 +391,16 @@ def main() -> None:
     parser.add_argument("--questions", type=Path, required=True)
     parser.add_argument("--public-ref", action="append", required=True)
     parser.add_argument("--identity", type=Path)
+    parser.add_argument("--manual-artifact-attestation", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
-    result = audit_public_history(args.repo, args.questions, args.public_ref, args.identity)
+    result = audit_public_history(
+        args.repo,
+        args.questions,
+        args.public_ref,
+        args.identity,
+        args.manual_artifact_attestation,
+    )
     descriptor = args.output.open("x", encoding="utf-8")
     try:
         json.dump(result, descriptor, indent=2)

@@ -1,12 +1,13 @@
 # GitHub metadata leakage gate research note
 
-> **Status: offline validator implemented; live capture and revalidation
-> unimplemented.** `hspr_benchmark.github_metadata_audit` now validates and
-> scans a protected, already-captured snapshot, and the runner requires its
-> attestation. No live collector or pre/post-batch GitHub revalidation exists,
-> this is not an execution attestation, official answer arms remain disabled,
-> and this note must not be cited as proof that GitHub metadata is currently
-> leakage-free.
+> **Status: scorer-side collector, offline validator, and conditional
+> revalidation primitives implemented; no live attestation has been run.**
+> `hspr_benchmark.github_metadata_collector` captures a protected two-pass
+> snapshot and can revalidate it before and after a batch;
+> `hspr_benchmark.github_metadata_audit` validates and scans that capture, and
+> the runner requires its audit attestation. This is not an execution
+> attestation, official answer arms remain disabled, and this note must not be
+> cited as proof that GitHub metadata is currently leakage-free.
 
 ## Observed public surface
 
@@ -147,6 +148,18 @@ moderated objects are not part of the public answer-agent surface; a privileged
 audit may safely over-include them. The defensible claim is therefore limited
 to a stable, enumerated current GitHub surface, not all historical public
 material.
+
+The collector now recursively applies all 27 declared surfaces to every public
+fork enumerated in the canonical repository's network. Fork records and request
+ledger entries are repository-ID namespaced and bound to verified parent/source
+relationships; cycles, descendants outside the canonical network, incomplete
+fork surfaces, and repository/request resource-cap exhaustion fail closed.
+Initialized wikis and live Pages sites still require separate content
+collectors. Expired Actions artifacts and `404` run logs are recorded as not
+publicly retrievable at capture time, while unexpired-but-unretrievable
+artifacts still block. GitHub delivery redirects are restricted to a documented
+allowlist of GitHub object, Actions, S3 asset, and Azure results hosts, and all
+capture/revalidation downloads share a bounded total-byte cap.
 
 ## Primary GitHub documentation
 
