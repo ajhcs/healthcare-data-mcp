@@ -21,7 +21,6 @@ from hspr_benchmark.github_metadata_audit import (
     validate_audit_document,
 )
 
-
 NOW = datetime(2026, 7, 27, 12, 0, tzinfo=UTC)
 PUBLIC_REFS = {"refs/remotes/origin/main": "a" * 40}
 

@@ -20,12 +20,26 @@ from hspr_benchmark.container_launcher import (
 )
 from hspr_benchmark.github_metadata_audit import (
     API_HOST as GITHUB_API_HOST,
+)
+from hspr_benchmark.github_metadata_audit import (
     API_VERSION as GITHUB_API_VERSION,
+)
+from hspr_benchmark.github_metadata_audit import (
     AUDIT_POLICY as GITHUB_AUDIT_POLICY,
+)
+from hspr_benchmark.github_metadata_audit import (
     CAPTURE_POLICY as GITHUB_CAPTURE_POLICY,
+)
+from hspr_benchmark.github_metadata_audit import (
     REPOSITORY as GITHUB_REPOSITORY,
+)
+from hspr_benchmark.github_metadata_audit import (
     REQUIRED_SURFACES as GITHUB_REQUIRED_SURFACES,
+)
+from hspr_benchmark.github_metadata_audit import (
     endpoint_spec_sha256 as github_endpoint_spec_sha256,
+)
+from hspr_benchmark.github_metadata_audit import (
     implementation_sha256 as github_implementation_sha256,
 )
 from hspr_benchmark.leakage import audit_registry_packet
