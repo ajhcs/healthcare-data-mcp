@@ -2,6 +2,7 @@ import base64
 import hashlib
 import json
 import subprocess
+import zipfile
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -18,7 +19,7 @@ from hspr_benchmark.container_launcher import (
     write_new_text,
 )
 from hspr_benchmark.leakage import audit_registry_packet
-from hspr_benchmark.public_history_audit import audit_public_history
+from hspr_benchmark.public_history_audit import AUDIT_POLICY, audit_public_history, implementation_sha256
 from hspr_benchmark.runner import (
     _validate_active_inputs,
     _validate_sealed_gold,
@@ -55,11 +56,8 @@ def test_public_history_audit_detects_removed_answer_bearing_material(tmp_path: 
     _git(repo, "add", ".")
     _git(repo, "commit", "-m", "answer bearing")
     historical.unlink()
-    frame = repo / "qa/reports/health_system_metrics_reconciliation.csv"
-    frame.parent.mkdir(parents=True)
-    frame.write_text("HSI1,Hidden Health\n")
     _git(repo, "add", "-A")
-    _git(repo, "commit", "-m", "remove and retain frame")
+    _git(repo, "commit", "-m", "remove answer bearing file")
     identity = tmp_path / "identity.json"
     identity.write_text(
         json.dumps(
@@ -80,10 +78,139 @@ def test_public_history_audit_detects_removed_answer_bearing_material(tmp_path: 
     assert without_identity["passed"]
     result = audit_public_history(repo, questions, ["HEAD"], identity)
     assert not result["passed"]
+    assert result["schema_version"] == 4
+    assert result["policy"] == AUDIT_POLICY
+    assert result["audit_implementation_sha256"] == implementation_sha256()
+    assert result["questions_sha256"] == hashlib.sha256(questions.read_bytes()).hexdigest()
+    assert result["identity_sha256"] == hashlib.sha256(identity.read_bytes()).hexdigest()
     assert result["audited_identity_packet"]
     assert result["public_ref_shas"]["HEAD"]
     assert any(hit["classification"] == "answer_bearing" for hit in result["blocking_hits"])
-    assert any(hit["classification"] == "declared_sampling_frame" for hit in result["hits"])
+
+
+def test_public_history_audit_only_allows_digest_pinned_selection_metadata(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git(repo, "init")
+    _git(repo, "config", "user.email", "benchmark@example.invalid")
+    _git(repo, "config", "user.name", "Benchmark Test")
+    selection = repo / "hspr-benchmark-v2/public/cohort.json"
+    selection.parent.mkdir(parents=True)
+    cohort = json.loads((ROOT / "hspr-benchmark-v2/public/cohort.json").read_text())
+    selected = cohort["systems"][0]
+    selection.write_bytes((ROOT / "hspr-benchmark-v2/public/cohort.json").read_bytes())
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "selection only")
+    questions = tmp_path / "questions.json"
+    questions.write_text(
+        json.dumps({"questions": [{"system_id": selected["system_id"], "system": selected["system_name"]}]})
+    )
+    allowed = audit_public_history(repo, questions, ["HEAD"])
+    assert allowed["passed"]
+    assert {hit["classification"] for hit in allowed["hits"]} == {"declared_selection_metadata"}
+
+    selection.write_text(selection.read_text() + "\n")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "unreviewed selection mutation")
+    blocked = audit_public_history(repo, questions, ["HEAD"])
+    assert not blocked["passed"]
+    assert any(hit["classification"] == "identity_hit_review_required" for hit in blocked["blocking_hits"])
+
+
+def test_public_history_audit_blocks_identity_hit_without_answer_value_signal(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git(repo, "init")
+    _git(repo, "config", "user.email", "benchmark@example.invalid")
+    _git(repo, "config", "user.name", "Benchmark Test")
+    generic = repo / "src/catalog.txt"
+    generic.parent.mkdir()
+    generic.write_text("Hidden Health is in the catalog; no financial values are stored here.")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "identity catalog")
+    questions = tmp_path / "questions.json"
+    questions.write_text(json.dumps({"questions": [{"system_id": "HSI1", "system": "Hidden Health"}]}))
+    blocked = audit_public_history(repo, questions, ["HEAD"])
+    assert not blocked["passed"]
+    assert any(hit["classification"] == "identity_hit_review_required" for hit in blocked["blocking_hits"])
+
+
+def test_public_history_audit_scans_commit_messages(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git(repo, "init")
+    _git(repo, "config", "user.email", "benchmark@example.invalid")
+    _git(repo, "config", "user.name", "Benchmark Test")
+    _git(repo, "commit", "--allow-empty", "-m", "Hidden Health total assets research")
+    questions = tmp_path / "questions.json"
+    questions.write_text(json.dumps({"questions": [{"system_id": "HSI1", "system": "Hidden Health"}]}))
+    blocked = audit_public_history(repo, questions, ["HEAD"])
+    assert not blocked["passed"]
+    assert any(hit["path"].startswith("git-commit-message/") for hit in blocked["blocking_hits"])
+
+
+def test_public_history_audit_expands_relationships_identifiers_and_binary_paths(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git(repo, "init")
+    _git(repo, "config", "user.email", "benchmark@example.invalid")
+    _git(repo, "config", "user.name", "Benchmark Test")
+    binary = repo / "docs/Secret-Parent-Incorporated/report.pdf"
+    binary.parent.mkdir(parents=True)
+    binary.write_bytes(b"%PDF-1.7\x00\xff")
+    identifier = repo / "docs/identifier.txt"
+    identifier.write_text("Public filer identifier 123456789")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "binary identity artifacts")
+    questions = tmp_path / "questions.json"
+    questions.write_text(json.dumps({"questions": [{"system_id": "HSI1", "system": "Hidden Health"}]}))
+    identity = tmp_path / "identity.json"
+    identity.write_text(
+        json.dumps(
+            {
+                "systems": [
+                    {
+                        "system_id": "HSI1",
+                        "canonical_name": "Hidden Health",
+                        "aliases": [],
+                        "legal_entities": [],
+                        "identifiers": [{"identifier": "12-3456789"}],
+                        "relationships": [{"target_name": "Secret Parent Incorporated"}],
+                    }
+                ]
+            }
+        )
+    )
+    blocked = audit_public_history(repo, questions, ["HEAD"], identity)
+    assert not blocked["passed"]
+    matched = {term for hit in blocked["blocking_hits"] for term in hit["matched_terms"]}
+    assert {"12-3456789", "Secret Parent Incorporated"} <= matched
+
+
+def test_public_history_audit_extracts_archives_and_rejects_opaque_artifacts(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git(repo, "init")
+    _git(repo, "config", "user.email", "benchmark@example.invalid")
+    _git(repo, "config", "user.name", "Benchmark Test")
+    archive = repo / "docs/report.docx"
+    archive.parent.mkdir()
+    with zipfile.ZipFile(archive, "w") as document:
+        document.writestr("word/document.xml", "<w:t>Hidden Health total assets 123</w:t>")
+        document.writestr("word/embeddings/statement.txt", b"\x00\x01 hidden binary statement")
+    opaque = repo / "docs/chart.png"
+    opaque.write_bytes(b"\x89PNG\r\n\x1a\n")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "generic binary artifacts")
+    questions = tmp_path / "questions.json"
+    questions.write_text(json.dumps({"questions": [{"system_id": "HSI1", "system": "Hidden Health"}]}))
+    result = audit_public_history(repo, questions, ["HEAD"])
+    assert not result["passed"]
+    assert any(hit["path"] == "docs/report.docx" for hit in result["blocking_hits"])
+    assert {(item["path"], item["reason"]) for item in result["uninspectable_artifacts"]} == {
+        ("docs/chart.png", "unsupported_opaque_artifact"),
+        ("docs/report.docx", "archive_contains_unsupported_members"),
+    }
 
 
 def test_protected_active_and_sealed_manifests_bind_private_inputs(tmp_path: Path, monkeypatch) -> None:
@@ -107,11 +234,17 @@ def test_protected_active_and_sealed_manifests_bind_private_inputs(tmp_path: Pat
     history.write_text(
         json.dumps(
             {
+                "schema_version": 4,
+                "policy": AUDIT_POLICY,
+                "audit_implementation_sha256": implementation_sha256(),
                 "passed": True,
                 "audited_at_utc": datetime.now(UTC).isoformat(),
                 "blocking_hits": [],
+                "uninspectable_artifacts": [],
                 "active_system_count": 1,
                 "audited_identity_packet": True,
+                "questions_sha256": hashlib.sha256(questions.read_bytes()).hexdigest(),
+                "identity_sha256": hashlib.sha256(registry.read_bytes()).hexdigest(),
                 "public_ref_shas": {"refs/remotes/origin/main": "a" * 40},
             }
         )
@@ -156,6 +289,19 @@ def test_protected_active_and_sealed_manifests_bind_private_inputs(tmp_path: Pat
         registry_approved_root=active,
     )
     assert (packet / "hspr-identity.json").read_text() == registry.read_text()
+
+    original_history = history.read_text()
+    history_document = json.loads(original_history)
+    history_document["identity_sha256"] = "b" * 64
+    history.write_text(json.dumps(history_document))
+    manifest_document = json.loads(active_manifest.read_text())
+    manifest_document["files"]["public_history_audit"]["sha256"] = digest(history)
+    active_manifest.write_text(json.dumps(manifest_document))
+    with pytest.raises(ValueError, match="not bound to the active registry"):
+        _validate_active_inputs(active_manifest, questions, registry)
+    history.write_text(original_history)
+    manifest_document["files"]["public_history_audit"]["sha256"] = digest(history)
+    active_manifest.write_text(json.dumps(manifest_document))
 
     adjudication = sealed / "adjudication"
     adjudication.mkdir(mode=0o700)

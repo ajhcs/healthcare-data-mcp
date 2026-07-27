@@ -45,9 +45,15 @@ and logging are not treated as access controls.
 Local native web is outside the shell-network sandbox and has no enforceable
 per-domain exclusion. Official local execution is therefore limited to a fresh,
 unpublished cohort whose IDs, names, aliases, legal entities, and identifiers
-produce zero blocking hits across every fetched public branch history. This
-does not make the public repository unreachable; it establishes that reachable
-old artifacts do not answer the active questions. Prompts, voluntary
+produce zero blocking hits across every freshly fetched public branch, tag, and
+pull-request-head history. The audit scans resolved commit SHAs, commit and
+annotated-tag messages, paths, extracted PDF/ZIP-based document text, and all
+reachable blobs. Unsupported or incompletely inspectable binary artifacts fail
+closed. Its implementation and the exact question and identity bytes are
+SHA-256-bound to the run gate. This does not make all public material
+unreachable: GitHub release/PR descriptions and external attachments require a
+separate pre-run attestation, and force-pushed or orphaned history may be
+unrecoverable. Prompts, voluntary
 instructions, and post-hoc trace rejection are not part of that boundary.
 
 Handled aborts issue repeated daemon-side `docker rm --force` calls using the
