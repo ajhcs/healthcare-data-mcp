@@ -517,6 +517,18 @@ def test_scoring_and_clustered_pairing() -> None:
     assert score_answer(answer, gold)["fully_correct"]
     wrong_scale = {**answer, "units": {"currency": "USD", "scale": "millions"}}
     assert not score_answer(wrong_scale, gold)["financial_correct"]
+
+    synonymous_period = {
+        **answer,
+        "period": {"type": "annual", "start": "2024-01-01", "end": "2024-12-31", "date": None},
+    }
+    assert score_answer(synonymous_period, gold)["financial_correct"]
+
+    wrong_period = {
+        **synonymous_period,
+        "period": {"type": "annual", "start": "2023-01-01", "end": "2023-12-31", "date": None},
+    }
+    assert not score_answer(wrong_period, gold)["financial_correct"]
     rows = [
         {"system_id": "a", "arm_id": "x", "m": 1},
         {"system_id": "a", "arm_id": "y", "m": 0},

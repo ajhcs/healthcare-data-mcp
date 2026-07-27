@@ -37,10 +37,15 @@ def _similarity(left: object, right: object) -> float:
 
 
 def _period(value: object) -> object:
-    """Ignore schema-required null placeholders while preserving period meaning."""
+    """Compare the reported dates, not synonymous free-text period labels."""
     if not isinstance(value, dict):
         return value
-    return {key: item for key, item in value.items() if item is not None}
+    normalized = {key: item for key, item in value.items() if item is not None}
+    if normalized.get("start") is not None and normalized.get("end") is not None:
+        return {"start": normalized["start"], "end": normalized["end"]}
+    if normalized.get("date") is not None:
+        return {"date": normalized["date"]}
+    return normalized
 
 
 def _units(value: object) -> tuple[str, str] | None:
