@@ -94,6 +94,7 @@ def test_protected_active_and_sealed_manifests_bind_private_inputs(tmp_path: Pat
     questions = active / "questions.json"
     registry = active / "identity.json"
     history = active / "history.json"
+    preregistration = active / "preregistration.json"
     questions.write_text(
         json.dumps(
             {
@@ -115,7 +116,8 @@ def test_protected_active_and_sealed_manifests_bind_private_inputs(tmp_path: Pat
             }
         )
     )
-    for path in (questions, registry, history):
+    preregistration.write_text(json.dumps({"status": "frozen_before_answer_trials", "design": {"questions": 1}}))
+    for path in (questions, registry, history, preregistration):
         path.chmod(0o600)
 
     def digest(path: Path) -> str:
@@ -130,6 +132,10 @@ def test_protected_active_and_sealed_manifests_bind_private_inputs(tmp_path: Pat
                     "questions": {"path": questions.name, "sha256": digest(questions)},
                     "registry": {"path": registry.name, "sha256": digest(registry)},
                     "public_history_audit": {"path": history.name, "sha256": digest(history)},
+                    "preregistration": {
+                        "path": preregistration.name,
+                        "sha256": digest(preregistration),
+                    },
                 },
             }
         )

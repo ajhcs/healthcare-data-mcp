@@ -255,7 +255,8 @@ def _validate_active_inputs(active_manifest: Path, questions_path: Path, registr
     if manifest.get("publication_status") != "protected_unpublished_active_packet":
         raise ValueError("active packet is not attested as protected and unpublished")
     files = manifest.get("files")
-    if not isinstance(files, dict) or set(files) != {"questions", "registry", "public_history_audit"}:
+    required_files = {"questions", "registry", "public_history_audit", "preregistration"}
+    if not isinstance(files, dict) or set(files) != required_files:
         raise ValueError("active manifest has an invalid file set")
     resolved: dict[str, Path] = {}
     for name, entry in files.items():
@@ -275,6 +276,11 @@ def _validate_active_inputs(active_manifest: Path, questions_path: Path, registr
     questions = json.loads(resolved["questions"].read_text(encoding="utf-8"))
     if questions.get("publication_status") != "protected_unpublished_active_packet":
         raise ValueError("questions are not marked protected and unpublished")
+    preregistration = json.loads(resolved["preregistration"].read_text(encoding="utf-8"))
+    if preregistration.get("status") != "frozen_before_answer_trials":
+        raise ValueError("active pilot preregistration is not frozen")
+    if int(preregistration.get("design", {}).get("questions", -1)) != len(questions.get("questions", [])):
+        raise ValueError("preregistration question count does not match the active packet")
     history_audit = json.loads(resolved["public_history_audit"].read_text(encoding="utf-8"))
     if (
         history_audit.get("passed") is not True
@@ -298,6 +304,7 @@ def _validate_active_inputs(active_manifest: Path, questions_path: Path, registr
     return {
         "active_manifest_sha256": _sha256_file(manifest_path),
         "public_history_audit_sha256": _sha256_file(resolved["public_history_audit"]),
+        "preregistration_sha256": _sha256_file(resolved["preregistration"]),
         "public_ref_shas": history_audit["public_ref_shas"],
         "protected_active_root": str(root),
     }
