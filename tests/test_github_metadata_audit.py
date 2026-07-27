@@ -82,6 +82,7 @@ def _capture(
     root.mkdir(mode=0o700)
     surfaces: dict[str, dict[str, object]] = {}
     evidence: dict[str, dict[str, object]] = {}
+    revalidation: list[dict[str, object]] = []
     records_by_surface: dict[str, list[dict[str, object]]] = {}
     evidence_overrides = evidence_overrides or {}
     for surface_name in sorted(REQUIRED_SURFACES):
@@ -112,6 +113,23 @@ def _capture(
             "sha256": _digest(evidence_bytes),
             "size": len(evidence_bytes),
         }
+        revalidation.append(
+            {
+                "id": f"request-{surface_name}",
+                "surface": surface_name,
+                "method": "GET",
+                "url": f"https://api.github.com/repos/ajhcs/healthcare-data-mcp/{surface_name}",
+                "request_json": None,
+                "kind": "probe" if state != "complete" else "json",
+                "status_code": 404 if state != "complete" else 200,
+                "etag": f'"{surface_name}"',
+                "last_modified": None,
+                "link": None,
+                "next_url": None,
+                "response_sha256": _digest(evidence_bytes),
+                "response_size": len(evidence_bytes),
+            }
+        )
         digest = _record_digest(records)
         surfaces[surface_name] = {
             "state": state,
@@ -124,10 +142,15 @@ def _capture(
         }
     for child, parent in PARENT_SURFACES.items():
         surfaces[child]["covered_parent_ids"] = [str(record["id"]) for record in records_by_surface[parent]]
+    revalidation.sort(key=lambda item: str(item["id"]))
+    revalidation_sha256 = _digest(_canonical_bytes(revalidation))
     snapshot_root = _digest(
         _canonical_bytes(
             _snapshot_material(
-                surfaces, {name: _record_digest(records) for name, records in records_by_surface.items()}, evidence
+                surfaces,
+                {name: _record_digest(records) for name, records in records_by_surface.items()},
+                evidence,
+                revalidation_sha256,
             )
         )
     )
@@ -145,6 +168,8 @@ def _capture(
         "capture_completed_at_utc": completed_at.isoformat(),
         "surfaces": surfaces,
         "evidence": evidence,
+        "revalidation": revalidation,
+        "revalidation_sha256": revalidation_sha256,
         "snapshot_root_sha256": snapshot_root,
     }
     manifest_path = root / "manifest.json"

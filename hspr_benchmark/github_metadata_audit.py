@@ -10,6 +10,7 @@ import stat
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 from .public_history_audit import _normalized, _relationship_terms, _searchable_blob, _term_matches
 
@@ -91,6 +92,8 @@ _CAPTURE_KEYS = {
     "capture_completed_at_utc",
     "surfaces",
     "evidence",
+    "revalidation",
+    "revalidation_sha256",
     "snapshot_root_sha256",
 }
 _SURFACE_KEYS = {
@@ -130,12 +133,29 @@ _AUDIT_RESULT_KEYS = {
     "surface_counts",
     "surface_digests",
     "snapshot_root_sha256",
+    "revalidation_sha256",
     "hits",
     "blocking_hits",
     "uninspectable_artifacts",
     "incomplete_surfaces",
     "passed",
 }
+_REVALIDATION_KEYS = {
+    "id",
+    "surface",
+    "method",
+    "url",
+    "request_json",
+    "kind",
+    "status_code",
+    "etag",
+    "last_modified",
+    "response_sha256",
+    "response_size",
+    "link",
+    "next_url",
+}
+_LINK_NEXT = re.compile(r'<([^>]+)>;\s*rel="next"')
 _GITHUB_UPLOAD = re.compile(
     r"https://(?:github\.com/user-attachments/assets/|user-images\.githubusercontent\.com/|"
     r"github\.com/[^/]+/[^/]+/releases/download/)[^\s\]\[()<>'\"]+",
@@ -159,6 +179,27 @@ def _sha256(data: bytes) -> str:
 
 def _valid_sha256(value: object) -> bool:
     return isinstance(value, str) and re.fullmatch(r"[0-9a-f]{64}", value) is not None
+
+
+def allowed_github_download_host(host: str | None) -> bool:
+    if host in {
+        API_HOST,
+        "github.com",
+        "objects.githubusercontent.com",
+        "objects-origin.githubusercontent.com",
+        "private-user-images.githubusercontent.com",
+        "release-assets.githubusercontent.com",
+        "user-images.githubusercontent.com",
+        "pipelines.actions.githubusercontent.com",
+        "results-receiver.actions.githubusercontent.com",
+    }:
+        return True
+    if host is None:
+        return False
+    return bool(
+        re.fullmatch(r"github-production-(?:repository-file|user-asset)-[0-9a-f]+\.s3\.amazonaws\.com", host)
+        or re.fullmatch(r"productionresultssa[0-9]+\.blob\.core\.windows\.net", host)
+    )
 
 
 def endpoint_spec_sha256() -> str:
@@ -314,8 +355,9 @@ def _snapshot_material(
     surfaces: dict[str, Any],
     surface_digests: dict[str, str],
     evidence: dict[str, dict[str, Any]],
+    revalidation_sha256: str | None = None,
 ) -> dict[str, Any]:
-    return {
+    material = {
         "surfaces": {
             name: {
                 "state": surfaces[name]["state"],
@@ -335,6 +377,77 @@ def _snapshot_material(
             for evidence_id, entry in sorted(evidence.items())
         },
     }
+    if revalidation_sha256 is not None:
+        material["revalidation_sha256"] = revalidation_sha256
+    return material
+
+
+def _validate_revalidation(revalidation: object) -> tuple[list[dict[str, Any]], str]:
+    if not isinstance(revalidation, list) or not revalidation:
+        raise ValueError("GitHub capture has no conditional-revalidation ledger")
+    normalized: list[dict[str, Any]] = []
+    ids: set[str] = set()
+    covered_surfaces: set[str] = set()
+    for entry in revalidation:
+        if not isinstance(entry, dict) or set(entry) != _REVALIDATION_KEYS:
+            raise ValueError("GitHub capture revalidation entry has an invalid shape")
+        request_id = entry["id"]
+        surface = entry["surface"]
+        if not isinstance(request_id, str) or not request_id or request_id in ids:
+            raise ValueError("GitHub capture revalidation request ID is invalid or duplicated")
+        if surface not in REQUIRED_SURFACES:
+            raise ValueError("GitHub capture revalidation entry names an unknown surface")
+        if entry["method"] not in {"GET", "POST"} or entry["kind"] not in {"json", "download", "probe"}:
+            raise ValueError("GitHub capture revalidation request method or kind is invalid")
+        if entry["method"] == "GET" and entry["request_json"] is not None:
+            raise ValueError("GitHub GET revalidation request unexpectedly has a JSON body")
+        if entry["method"] == "POST" and not isinstance(entry["request_json"], dict):
+            raise ValueError("GitHub POST revalidation request is missing its JSON body")
+        try:
+            parsed = urlsplit(str(entry["url"]))
+        except ValueError as error:
+            raise ValueError("GitHub capture revalidation URL is invalid") from error
+        if (
+            parsed.scheme != "https"
+            or not allowed_github_download_host(parsed.hostname)
+            or parsed.username
+            or parsed.password
+        ):
+            raise ValueError("GitHub capture revalidation URL escapes the allowed GitHub hosts")
+        if type(entry["status_code"]) is not int or entry["status_code"] not in {200, 404}:
+            raise ValueError("GitHub capture revalidation response status is unsupported")
+        if entry["etag"] is not None and not isinstance(entry["etag"], str):
+            raise ValueError("GitHub capture revalidation ETag is invalid")
+        if entry["last_modified"] is not None and not isinstance(entry["last_modified"], str):
+            raise ValueError("GitHub capture revalidation Last-Modified value is invalid")
+        if entry["link"] is not None and not isinstance(entry["link"], str):
+            raise ValueError("GitHub capture revalidation Link value is invalid")
+        if entry["next_url"] is not None and not isinstance(entry["next_url"], str):
+            raise ValueError("GitHub capture revalidation next URL is invalid")
+        match = _LINK_NEXT.search(entry["link"] or "")
+        linked_next = match.group(1) if match else None
+        if entry["next_url"] != linked_next:
+            raise ValueError("GitHub capture revalidation Link chain is inconsistent")
+        if (
+            not _valid_sha256(entry["response_sha256"])
+            or type(entry["response_size"]) is not int
+            or entry["response_size"] < 0
+        ):
+            raise ValueError("GitHub capture revalidation response digest is invalid")
+        _canonical_bytes(entry["request_json"])
+        ids.add(request_id)
+        covered_surfaces.add(surface)
+        normalized.append(entry)
+    if covered_surfaces != REQUIRED_SURFACES:
+        raise ValueError("GitHub capture revalidation ledger does not cover every required surface")
+    normalized.sort(key=lambda item: item["id"])
+    request_targets = {(entry["surface"], entry["url"]) for entry in normalized}
+    if any(
+        entry["next_url"] is not None and (entry["surface"], entry["next_url"]) not in request_targets
+        for entry in normalized
+    ):
+        raise ValueError("GitHub capture revalidation Link chain is incomplete")
+    return normalized, _sha256(_canonical_bytes(normalized))
 
 
 def validate_audit_document(
@@ -402,6 +515,7 @@ def validate_audit_document(
         or any(not _valid_sha256(value) for value in digests.values())
         or not _valid_sha256(document["snapshot_root_sha256"])
         or not _valid_sha256(document["capture_manifest_sha256"])
+        or not _valid_sha256(document["revalidation_sha256"])
     ):
         raise ValueError("GitHub metadata leakage audit surface or digest attestation is invalid")
     capture_started = _parse_utc(document["capture_started_at_utc"], "capture_started_at_utc")
@@ -511,6 +625,9 @@ def audit_github_metadata_capture(
                     f"GitHub capture evidence is reused across surfaces: {evidence_owners[evidence_id]}, {surface_name}"
                 )
             evidence_owners[evidence_id] = surface_name
+    _revalidation, revalidation_sha256 = _validate_revalidation(capture["revalidation"])
+    if capture["revalidation_sha256"] != revalidation_sha256:
+        raise ValueError("GitHub capture conditional-revalidation ledger digest mismatch")
     hits: list[dict[str, Any]] = []
     uninspectable: list[dict[str, str]] = []
     observed_upload_urls: set[str] = set()
@@ -587,7 +704,7 @@ def audit_github_metadata_capture(
             }
         )
 
-    snapshot_material = _snapshot_material(surfaces, surface_digests, evidence)
+    snapshot_material = _snapshot_material(surfaces, surface_digests, evidence, revalidation_sha256)
     snapshot_root = _sha256(_canonical_bytes(snapshot_material))
     if capture["snapshot_root_sha256"] != snapshot_root:
         raise ValueError("GitHub capture snapshot root digest mismatch")
@@ -618,6 +735,7 @@ def audit_github_metadata_capture(
         "surface_counts": {name: len(records) for name, records in sorted(surface_records.items())},
         "surface_digests": surface_digests,
         "snapshot_root_sha256": snapshot_root,
+        "revalidation_sha256": revalidation_sha256,
         "hits": hits,
         "blocking_hits": blocking_hits,
         "uninspectable_artifacts": uninspectable,

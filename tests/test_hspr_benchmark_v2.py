@@ -96,6 +96,7 @@ def _passing_github_audit(questions: Path, identity: Path, public_ref_shas: dict
         "surface_counts": counts,
         "surface_digests": {surface: empty_digest for surface in GITHUB_REQUIRED_SURFACES},
         "snapshot_root_sha256": "c" * 64,
+        "revalidation_sha256": "d" * 64,
         "hits": [],
         "blocking_hits": [],
         "uninspectable_artifacts": [],
