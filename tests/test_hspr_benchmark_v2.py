@@ -3,7 +3,7 @@ import hashlib
 import json
 import subprocess
 import zipfile
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -19,6 +19,16 @@ from hspr_benchmark.container_launcher import (
     write_new_text,
 )
 from hspr_benchmark.leakage import audit_registry_packet
+from hspr_benchmark.github_metadata_audit import (
+    API_HOST as GITHUB_API_HOST,
+    API_VERSION as GITHUB_API_VERSION,
+    AUDIT_POLICY as GITHUB_AUDIT_POLICY,
+    CAPTURE_POLICY as GITHUB_CAPTURE_POLICY,
+    REQUIRED_SURFACES as GITHUB_REQUIRED_SURFACES,
+    REPOSITORY as GITHUB_REPOSITORY,
+    endpoint_spec_sha256 as github_endpoint_spec_sha256,
+    implementation_sha256 as github_implementation_sha256,
+)
 from hspr_benchmark.public_history_audit import AUDIT_POLICY, audit_public_history, implementation_sha256
 from hspr_benchmark.runner import (
     _validate_active_inputs,
@@ -40,6 +50,44 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def _git(repo: Path, *arguments: str) -> None:
     subprocess.run(["git", *arguments], cwd=repo, check=True, capture_output=True)
+
+
+def _passing_github_audit(questions: Path, identity: Path, public_ref_shas: dict[str, str]) -> dict[str, object]:
+    now = datetime.now(UTC)
+    empty_digest = hashlib.sha256(b"[]").hexdigest()
+    counts = {surface: 0 for surface in GITHUB_REQUIRED_SURFACES}
+    counts["repository"] = 1
+    return {
+        "schema_version": 1,
+        "policy": GITHUB_AUDIT_POLICY,
+        "capture_schema_version": 1,
+        "capture_policy": GITHUB_CAPTURE_POLICY,
+        "audit_implementation_sha256": github_implementation_sha256(),
+        "endpoint_spec_sha256": github_endpoint_spec_sha256(),
+        "capture_manifest_sha256": "b" * 64,
+        "questions_sha256": hashlib.sha256(questions.read_bytes()).hexdigest(),
+        "identity_sha256": hashlib.sha256(identity.read_bytes()).hexdigest(),
+        "audited_identity_packet": True,
+        "active_system_count": 1,
+        "repository": {**GITHUB_REPOSITORY, "node_id": "repository-node-id"},
+        "api_version": GITHUB_API_VERSION,
+        "api_host": GITHUB_API_HOST,
+        "public_ref_shas": public_ref_shas,
+        "capture_started_at_utc": (now - timedelta(minutes=2)).isoformat(),
+        "capture_completed_at_utc": (now - timedelta(minutes=1)).isoformat(),
+        "audited_at_utc": now.isoformat(),
+        "stabilized": True,
+        "surface_complete": True,
+        "required_surfaces": sorted(GITHUB_REQUIRED_SURFACES),
+        "surface_counts": counts,
+        "surface_digests": {surface: empty_digest for surface in GITHUB_REQUIRED_SURFACES},
+        "snapshot_root_sha256": "c" * 64,
+        "hits": [],
+        "blocking_hits": [],
+        "uninspectable_artifacts": [],
+        "incomplete_surfaces": [],
+        "passed": True,
+    }
 
 
 def test_public_history_audit_detects_removed_answer_bearing_material(tmp_path: Path) -> None:
@@ -221,6 +269,7 @@ def test_protected_active_and_sealed_manifests_bind_private_inputs(tmp_path: Pat
     questions = active / "questions.json"
     registry = active / "identity.json"
     history = active / "history.json"
+    github_metadata = active / "github-metadata.json"
     preregistration = active / "preregistration.json"
     questions.write_text(
         json.dumps(
@@ -249,8 +298,17 @@ def test_protected_active_and_sealed_manifests_bind_private_inputs(tmp_path: Pat
             }
         )
     )
+    github_metadata.write_text(
+        json.dumps(
+            _passing_github_audit(
+                questions,
+                registry,
+                {"refs/remotes/origin/main": "a" * 40},
+            )
+        )
+    )
     preregistration.write_text(json.dumps({"status": "frozen_before_answer_trials", "design": {"questions": 1}}))
-    for path in (questions, registry, history, preregistration):
+    for path in (questions, registry, history, github_metadata, preregistration):
         path.chmod(0o600)
 
     def digest(path: Path) -> str:
@@ -265,6 +323,10 @@ def test_protected_active_and_sealed_manifests_bind_private_inputs(tmp_path: Pat
                     "questions": {"path": questions.name, "sha256": digest(questions)},
                     "registry": {"path": registry.name, "sha256": digest(registry)},
                     "public_history_audit": {"path": history.name, "sha256": digest(history)},
+                    "github_metadata_audit": {
+                        "path": github_metadata.name,
+                        "sha256": digest(github_metadata),
+                    },
                     "preregistration": {
                         "path": preregistration.name,
                         "sha256": digest(preregistration),

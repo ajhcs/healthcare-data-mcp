@@ -24,6 +24,7 @@ from .container_launcher import (
     read_untrusted_regular,
     write_new_text,
 )
+from .github_metadata_audit import validate_audit_document as validate_github_metadata_audit_document
 from .leakage import audit_registry_packet
 from .public_history_audit import AUDIT_POLICY, implementation_sha256
 from .trial_executor import require_official_web_boundary, run_trial
@@ -263,7 +264,13 @@ def _validate_active_inputs(active_manifest: Path, questions_path: Path, registr
     if manifest.get("publication_status") != "protected_unpublished_active_packet":
         raise ValueError("active packet is not attested as protected and unpublished")
     files = manifest.get("files")
-    required_files = {"questions", "registry", "public_history_audit", "preregistration"}
+    required_files = {
+        "questions",
+        "registry",
+        "public_history_audit",
+        "github_metadata_audit",
+        "preregistration",
+    }
     if not isinstance(files, dict) or set(files) != required_files:
         raise ValueError("active manifest has an invalid file set")
     resolved: dict[str, Path] = {}
@@ -318,9 +325,18 @@ def _validate_active_inputs(active_manifest: Path, questions_path: Path, registr
         raise ValueError("public-history audit is not recent enough for an official batch")
     if history_audit["public_ref_shas"] != _current_public_ref_shas():
         raise ValueError("public-history audit does not match the currently fetched public refs")
+    github_metadata_audit = json.loads(resolved["github_metadata_audit"].read_text(encoding="utf-8"))
+    validate_github_metadata_audit_document(
+        github_metadata_audit,
+        questions_sha256=_sha256_file(resolved["questions"]),
+        identity_sha256=_sha256_file(resolved["registry"]),
+        public_ref_shas=history_audit["public_ref_shas"],
+        active_system_count=system_count,
+    )
     return {
         "active_manifest_sha256": _sha256_file(manifest_path),
         "public_history_audit_sha256": _sha256_file(resolved["public_history_audit"]),
+        "github_metadata_audit_sha256": _sha256_file(resolved["github_metadata_audit"]),
         "preregistration_sha256": _sha256_file(resolved["preregistration"]),
         "public_ref_shas": history_audit["public_ref_shas"],
         "protected_active_root": str(root),

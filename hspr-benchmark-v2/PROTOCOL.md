@@ -22,7 +22,8 @@ limits, bounded tmpfs work/auth/output directories, read-only packet/runtime and
 Codex-package mounts, and no writable host-output mount. The
 repository, sealed root, Docker socket, and host root are absent. HSPR arms get
 the audited identity packet; native arms do not. The scorer receives answers and
-adjudicated gold but no answer-agent context.
+the Sol High lead-validated final key but no answer-agent context. Confirmatory
+key builders never run or monitor answer arms.
 
 Only subscription-backed ChatGPT authentication is accepted; API keys fail
 closed. The host requires both access and identity JWT expiry claims to outlive
@@ -69,7 +70,7 @@ calls, first/last authoritative financial evidence, and final answer use the
 host monotonic timestamp taken as each native Codex JSONL event is received.
 HSPR lookup is the native command start/end that reads `hspr-identity.json`;
 packet-copy timing is separately labeled materialization. Evidence timing is
-derived only by matching adjudicated authoritative URLs in native events.
+derived only by matching lead-validated authoritative URLs in native events.
 Keyword matches do not establish source authority. Missing
 event timestamps, token counts, and cost stay null. Never infer hidden timing.
 

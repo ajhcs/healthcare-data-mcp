@@ -31,11 +31,12 @@ def require_official_web_boundary(active_boundary_attestation: dict[str, Any] | 
         or not active_boundary_attestation
         or not active_boundary_attestation.get("active_manifest_sha256")
         or not active_boundary_attestation.get("public_history_audit_sha256")
+        or not active_boundary_attestation.get("github_metadata_audit_sha256")
         or not active_boundary_attestation.get("public_ref_shas")
     ):
         raise RuntimeError(
             "official execution is disabled: a protected unpublished active packet "
-            "and passing public-history boundary are not enabled"
+            "with a passing public-history boundary and GitHub-metadata boundary is not enabled"
         )
 
 
