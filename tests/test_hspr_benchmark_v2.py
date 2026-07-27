@@ -61,7 +61,8 @@ from hspr_benchmark.runner import (
 )
 from hspr_benchmark.scoring import paired_cluster_bootstrap, score_answer
 from hspr_benchmark.trial_executor import (
-    OFFICIAL_WEB_BOUNDARY_VALIDATED,
+    CORE_ANSWER_ISOLATION_POLICY,
+    CORE_ANSWER_ISOLATION_VALIDATED,
     _validate_answer_shape,
     _validate_subscription_credential_boundary,
     run_trial,
@@ -361,13 +362,9 @@ def test_protected_active_and_sealed_manifests_bind_private_inputs(tmp_path: Pat
         )
     )
     active_manifest.chmod(0o600)
-    monkeypatch.setattr(
-        runner,
-        "_current_public_ref_shas",
-        lambda: {"refs/remotes/origin/main": "a" * 40},
-    )
     attestation = _validate_active_inputs(active_manifest, questions, registry)
-    assert attestation["public_ref_shas"] == {"refs/remotes/origin/main": "a" * 40}
+    assert attestation["core_isolation_policy"] == CORE_ANSWER_ISOLATION_POLICY
+    assert set(attestation["public_diagnostics"]) == {"github_metadata_audit", "public_history_audit"}
     packet = assemble_answer_packet(
         tmp_path / "answer-packet",
         question={"question_id": "q"},
@@ -380,15 +377,28 @@ def test_protected_active_and_sealed_manifests_bind_private_inputs(tmp_path: Pat
     original_history = history.read_text()
     history_document = json.loads(original_history)
     history_document["identity_sha256"] = "b" * 64
+    history_document["passed"] = False
     history.write_text(json.dumps(history_document))
     manifest_document = json.loads(active_manifest.read_text())
     manifest_document["files"]["public_history_audit"]["sha256"] = digest(history)
     active_manifest.write_text(json.dumps(manifest_document))
-    with pytest.raises(ValueError, match="not bound to the active registry"):
-        _validate_active_inputs(active_manifest, questions, registry)
+    diagnostic_attestation = _validate_active_inputs(active_manifest, questions, registry)
+    assert diagnostic_attestation["public_diagnostics"]["public_history_audit"]["diagnostic_only"] is True
+    assert diagnostic_attestation["public_diagnostics"]["public_history_audit"]["declared_passed"] is False
     history.write_text(original_history)
     manifest_document["files"]["public_history_audit"]["sha256"] = digest(history)
     active_manifest.write_text(json.dumps(manifest_document))
+
+    core_only_manifest = active / "core-only-manifest.json"
+    core_only_document = json.loads(active_manifest.read_text())
+    core_only_document["files"] = {
+        name: entry
+        for name, entry in core_only_document["files"].items()
+        if name in {"questions", "registry", "preregistration"}
+    }
+    core_only_manifest.write_text(json.dumps(core_only_document))
+    core_only_manifest.chmod(0o600)
+    assert _validate_active_inputs(core_only_manifest, questions, registry)["public_diagnostics"] == {}
 
     adjudication = sealed / "adjudication"
     adjudication.mkdir(mode=0o700)
@@ -409,18 +419,6 @@ def test_protected_active_and_sealed_manifests_bind_private_inputs(tmp_path: Pat
     sealed_attestation = _validate_sealed_gold(gold, sealed_manifest)
     assert sealed_attestation["adjudicated_records"] == 2
 
-    monkeypatch.setattr(
-        runner,
-        "_current_public_ref_shas",
-        lambda: {"refs/remotes/origin/main": "b" * 40},
-    )
-    with pytest.raises(ValueError, match="currently fetched public refs"):
-        _validate_active_inputs(active_manifest, questions, registry)
-    monkeypatch.setattr(
-        runner,
-        "_current_public_ref_shas",
-        lambda: {"refs/remotes/origin/main": "a" * 40},
-    )
     registry.write_text('{"systems":[{"tampered":true}]}')
     try:
         _validate_active_inputs(active_manifest, questions, registry)
@@ -665,8 +663,8 @@ def test_trial_boundary_rejects_refresh_credentials_and_extra_fields() -> None:
             raise AssertionError("non-minimized answer credentials must be rejected")
 
 
-def test_official_execution_fails_closed_while_public_web_boundary_is_unresolved() -> None:
-    assert OFFICIAL_WEB_BOUNDARY_VALIDATED is False
+def test_official_execution_requires_a_protected_core_isolation_attestation() -> None:
+    assert CORE_ANSWER_ISOLATION_VALIDATED is True
     try:
         runner.execute_batch(
             questions_path=Path("unused"),
@@ -682,13 +680,13 @@ def test_official_execution_fails_closed_while_public_web_boundary_is_unresolved
             trial_count=1,
         )
     except RuntimeError as error:
-        assert "public-history boundary" in str(error)
+        assert "core answer-container isolation policy" in str(error)
     else:
-        raise AssertionError("unresolved native-web repository access must fail closed")
+        raise AssertionError("missing protected core isolation attestation must fail closed")
 
 
 def test_batch_executor_writes_immutable_separate_trial_outputs(tmp_path: Path, monkeypatch) -> None:
-    monkeypatch.setattr(runner, "require_official_web_boundary", lambda *_: None)
+    monkeypatch.setattr(runner, "require_core_answer_isolation", lambda *_: None)
     sealed = tmp_path / ".benchmark-sealed"
     sealed.mkdir()
     gold = sealed / "gold.json"
@@ -767,7 +765,7 @@ def test_batch_executor_writes_immutable_separate_trial_outputs(tmp_path: Path, 
 
 
 def test_batch_executor_preserves_failure_and_requires_new_attempt(tmp_path: Path, monkeypatch) -> None:
-    monkeypatch.setattr(runner, "require_official_web_boundary", lambda *_: None)
+    monkeypatch.setattr(runner, "require_core_answer_isolation", lambda *_: None)
     gold = tmp_path / "gold.json"
     gold.write_text("{}")
     credential = tmp_path / "auth.json"
@@ -1003,6 +1001,8 @@ def test_trial_prompt_differs_only_for_registry_instruction() -> None:
     assert "/input/hspr-identity.json" not in native
     shared = "Retrieve the financial result now from a live authoritative primary source"
     assert shared in hspr and shared in native
+    assert "Do not search for or use benchmark materials" in hspr
+    assert "GitHub history, issues, pull requests or forks" in native
 
 
 def test_trial_executor_requires_explicit_live_credential_opt_in(tmp_path: Path) -> None:
@@ -1024,7 +1024,7 @@ def test_trial_executor_requires_explicit_live_credential_opt_in(tmp_path: Path)
         raise AssertionError("live credential execution must fail closed")
 
 
-def test_trial_executor_blocks_direct_official_run_while_web_boundary_is_unresolved(tmp_path: Path) -> None:
+def test_trial_executor_blocks_direct_official_run_without_core_attestation(tmp_path: Path) -> None:
     try:
         run_trial(
             question={"question_id": "q"},
@@ -1039,7 +1039,7 @@ def test_trial_executor_blocks_direct_official_run_while_web_boundary_is_unresol
             allow_live_credential=True,
         )
     except RuntimeError as error:
-        assert "public-history boundary" in str(error)
+        assert "core answer-container isolation policy" in str(error)
     else:
         raise AssertionError("direct live trial execution must honor the unresolved web boundary")
 

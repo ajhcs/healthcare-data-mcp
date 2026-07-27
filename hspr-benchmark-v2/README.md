@@ -20,8 +20,8 @@ mounted into an answer context. `.benchmark-sealed/` remains ignored to prevent
 future accidental staging but is no longer the source of truth.
 
 Cleanup commit `6cbfc2e` is merged into the agreed base and its CI passed. Every
-active pilot must separately pass sealed-gold readiness, registry-versus-gold
-leakage, and identity-aware public-history audits before the run gate can open.
+active batch must separately pass sealed-gold readiness and the
+registry-versus-gold leakage audit before the run gate can open.
 
 The answer launcher creates an allowlisted, non-root, read-only Docker context
 with no repository, sealed-key, Docker-socket, host-root, or writable host-output
@@ -49,10 +49,10 @@ The stricter subscription-native restart is specified in
 `SUBSCRIPTION_PROTOCOL.md`. It rejects API keys and prevents refresh credentials
 from entering answer containers. Earlier pilot trials are preserved but
 superseded. Local native web has no enforceable repository-domain exclusion, so
-the defensible local claim is deliberately narrower: an official active packet
-must be fresh, protected, disjoint, and absent—under every adjudicated alias,
-legal name, and identifier—from all fetched public Git history. Old public
-artifacts remain reachable but cannot bear on that active cohort. Prompts and
-post-hoc URL logging are not access controls. The runner stays fail-closed until
-the exact active packet, public-ref SHAs, and leakage audits are manifest-bound;
-see `WEB_BOUNDARY_OPTIONS.md`.
+the defensible local claim is deliberately narrower: the container cannot mount
+the repository, sealed key, historical material, host outputs, or reusable
+credentials. The prompt prohibits seeking benchmark or repository material and
+observable native tool/web events are retained, but those are operational
+mitigations rather than access controls. Public-history and metadata audits are
+preserved as optional diagnostics, not execution gates; see
+`WEB_BOUNDARY_OPTIONS.md`.

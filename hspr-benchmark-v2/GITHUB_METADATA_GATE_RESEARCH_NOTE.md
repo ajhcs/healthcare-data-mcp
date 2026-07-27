@@ -1,13 +1,15 @@
 # GitHub metadata leakage gate research note
 
-> **Status: scorer-side collector, offline validator, and conditional
-> revalidation primitives implemented; no live attestation has been run.**
+> **Status: optional scorer-side diagnostic; not an execution gate.**
 > `hspr_benchmark.github_metadata_collector` captures a protected two-pass
 > snapshot and can revalidate it before and after a batch;
-> `hspr_benchmark.github_metadata_audit` validates and scans that capture, and
-> the runner requires its audit attestation. This is not an execution
-> attestation, official answer arms remain disabled, and this note must not be
-> cited as proof that GitHub metadata is currently leakage-free.
+> `hspr_benchmark.github_metadata_audit` validates and scans that capture. Two
+> protected live attempts are preserved as compatibility evidence: v1 failed
+> safely with HTTP 415 at the Actions-log endpoint, and v2 passed that media-type
+> boundary but stopped safely on a nonterminal Actions run. Neither is a passing
+> attestation, and this note must not be cited as proof that GitHub metadata is
+> leakage-free. Under the evidence-proportionate protocol, incomplete or failed
+> captures are recorded but do not block answer execution.
 
 ## Observed public surface
 

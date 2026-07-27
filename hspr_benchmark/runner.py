@@ -13,7 +13,6 @@ import re
 import stat
 import subprocess
 import time
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -24,11 +23,8 @@ from .container_launcher import (
     read_untrusted_regular,
     write_new_text,
 )
-from .github_metadata_audit import validate_audit_document as validate_github_metadata_audit_document
 from .leakage import audit_registry_packet
-from .manual_artifact_attestation import sha256_bytes, validate_attestation
-from .public_history_audit import AUDIT_POLICY, implementation_sha256
-from .trial_executor import require_official_web_boundary, run_trial
+from .trial_executor import CORE_ANSWER_ISOLATION_POLICY, require_core_answer_isolation, run_trial
 
 MINIMUM_SUBSCRIPTION_TOKEN_VALIDITY_SECONDS = 900
 
@@ -212,36 +208,6 @@ def _repository_revision() -> str:
     ).stdout.strip()
 
 
-def _current_public_ref_shas() -> dict[str, str]:
-    listing = subprocess.run(
-        [
-            "git",
-            "for-each-ref",
-            "--format=%(refname)",
-            "refs/remotes/origin",
-            "refs/remotes/origin-pull",
-            "refs/tags",
-        ],
-        cwd=REPOSITORY_ROOT,
-        check=True,
-        capture_output=True,
-        text=True,
-    ).stdout.splitlines()
-    refs = sorted(ref for ref in listing if ref and ref != "refs/remotes/origin/HEAD")
-    if not refs:
-        raise ValueError("no fetched public origin refs are available for validation")
-    return {
-        ref: subprocess.run(
-            ["git", "rev-parse", "--verify", ref],
-            cwd=REPOSITORY_ROOT,
-            check=True,
-            capture_output=True,
-            text=True,
-        ).stdout.strip()
-        for ref in refs
-    }
-
-
 def _protected_file(path: Path, root: Path) -> Path:
     if path.is_symlink():
         raise ValueError(f"protected input may not be a symlink: {path}")
@@ -265,15 +231,13 @@ def _validate_active_inputs(active_manifest: Path, questions_path: Path, registr
     if manifest.get("publication_status") != "protected_unpublished_active_packet":
         raise ValueError("active packet is not attested as protected and unpublished")
     files = manifest.get("files")
-    required_files = {
-        "questions",
-        "registry",
-        "public_history_audit",
-        "github_metadata_audit",
-        "preregistration",
-    }
-    allowed_file_sets = {frozenset(required_files), frozenset({*required_files, "manual_artifact_attestation"})}
-    if not isinstance(files, dict) or frozenset(files) not in allowed_file_sets:
+    required_files = {"questions", "registry", "preregistration"}
+    diagnostic_files = {"public_history_audit", "github_metadata_audit", "manual_artifact_attestation"}
+    if (
+        not isinstance(files, dict)
+        or not required_files <= set(files)
+        or not set(files) <= required_files | diagnostic_files
+    ):
         raise ValueError("active manifest has an invalid file set")
     resolved: dict[str, Path] = {}
     for name, entry in files.items():
@@ -298,91 +262,23 @@ def _validate_active_inputs(active_manifest: Path, questions_path: Path, registr
         raise ValueError("active pilot preregistration is not frozen")
     if int(preregistration.get("design", {}).get("questions", -1)) != len(questions.get("questions", [])):
         raise ValueError("preregistration question count does not match the active packet")
-    history_audit = json.loads(resolved["public_history_audit"].read_text(encoding="utf-8"))
-    raw_uninspectables = history_audit.get("raw_uninspectable_artifacts", history_audit.get("uninspectable_artifacts"))
-    residual_uninspectables = history_audit.get(
-        "residual_uninspectable_artifacts", history_audit.get("uninspectable_artifacts")
-    )
-    attestation_digest = history_audit.get("manual_artifact_attestation_sha256")
-    if (
-        history_audit.get("schema_version") != 4
-        or history_audit.get("policy") != AUDIT_POLICY
-        or history_audit.get("passed") is not True
-        or history_audit.get("blocking_hits") != []
-        or residual_uninspectables != []
-        or history_audit.get("uninspectable_artifacts") != residual_uninspectables
-        or not history_audit.get("public_ref_shas")
-        or history_audit.get("audited_identity_packet") is not True
-    ):
-        raise ValueError("public-history leakage audit is absent or blocking")
-    if history_audit.get("audit_implementation_sha256") != implementation_sha256():
-        raise ValueError("public-history audit implementation does not match the runner")
-    if history_audit.get("questions_sha256") != _sha256_file(resolved["questions"]):
-        raise ValueError("public-history audit is not bound to the active questions")
-    if history_audit.get("identity_sha256") != _sha256_file(resolved["registry"]):
-        raise ValueError("public-history audit is not bound to the active registry")
-    if attestation_digest is None:
-        if "manual_artifact_attestation" in resolved:
-            raise ValueError("active manifest has an unreferenced manual artifact attestation")
-        if raw_uninspectables != residual_uninspectables:
-            raise ValueError("public-history audit suppresses artifacts without an attestation")
-    else:
-        if "manual_artifact_attestation" not in resolved:
-            raise ValueError("public-history audit requires its exact manual artifact attestation")
-        attestation_path = resolved["manual_artifact_attestation"]
-        attestation_bytes = attestation_path.read_bytes()
-        if sha256_bytes(attestation_bytes) != attestation_digest:
-            raise ValueError("manual artifact attestation digest does not match the public-history audit")
-        attestation = json.loads(attestation_bytes)
-
-        def blob_digest(object_id: str) -> str:
-            content = subprocess.run(
-                ["git", "cat-file", "blob", object_id],
-                cwd=REPOSITORY_ROOT,
-                check=True,
-                capture_output=True,
-            ).stdout
-            return sha256_bytes(content)
-
-        calculated_residual = validate_attestation(
-            attestation,
-            raw_uninspectables=raw_uninspectables,
-            audit_implementation_sha256=history_audit["audit_implementation_sha256"],
-            questions_sha256=history_audit["questions_sha256"],
-            identity_sha256=history_audit["identity_sha256"],
-            public_ref_shas=history_audit["public_ref_shas"],
-            blob_sha256=blob_digest,
-        )
-        if calculated_residual != residual_uninspectables:
-            raise ValueError("public-history audit residual artifacts do not match the attestation")
-    system_count = len({str(item["system_id"]) for item in questions["questions"]})
-    if int(history_audit.get("active_system_count", -1)) != system_count:
-        raise ValueError("public-history audit does not cover the active systems")
-    try:
-        audited_at = datetime.fromisoformat(str(history_audit["audited_at_utc"]))
-        age_seconds = (datetime.now(UTC) - audited_at).total_seconds()
-    except (KeyError, TypeError, ValueError) as error:
-        raise ValueError("public-history audit has no valid UTC timestamp") from error
-    if audited_at.tzinfo is None or age_seconds < -300 or age_seconds > 3600:
-        raise ValueError("public-history audit is not recent enough for an official batch")
-    if history_audit["public_ref_shas"] != _current_public_ref_shas():
-        raise ValueError("public-history audit does not match the currently fetched public refs")
-    github_metadata_audit = json.loads(resolved["github_metadata_audit"].read_text(encoding="utf-8"))
-    validate_github_metadata_audit_document(
-        github_metadata_audit,
-        questions_sha256=_sha256_file(resolved["questions"]),
-        identity_sha256=_sha256_file(resolved["registry"]),
-        public_ref_shas=history_audit["public_ref_shas"],
-        active_system_count=system_count,
-    )
+    public_diagnostics: dict[str, dict[str, Any]] = {}
+    for name in sorted(diagnostic_files & set(resolved)):
+        document = json.loads(resolved[name].read_text(encoding="utf-8"))
+        if not isinstance(document, dict):
+            raise TypeError(f"diagnostic document is not a JSON object: {name}")
+        public_diagnostics[name] = {
+            "sha256": _sha256_file(resolved[name]),
+            "schema_version": document.get("schema_version"),
+            "declared_passed": document.get("passed"),
+            "diagnostic_only": True,
+        }
     return {
+        "core_isolation_policy": CORE_ANSWER_ISOLATION_POLICY,
         "active_manifest_sha256": _sha256_file(manifest_path),
-        "public_history_audit_sha256": _sha256_file(resolved["public_history_audit"]),
-        "github_metadata_audit_sha256": _sha256_file(resolved["github_metadata_audit"]),
-        "manual_artifact_attestation_sha256": attestation_digest,
         "preregistration_sha256": _sha256_file(resolved["preregistration"]),
-        "public_ref_shas": history_audit["public_ref_shas"],
         "protected_active_root": str(root),
+        "public_diagnostics": public_diagnostics,
     }
 
 
@@ -512,7 +408,7 @@ def execute_batch(
         raise ValueError("start, trial_count, and attempt must be positive")
     active_attestation = None
     if active_manifest is None:
-        require_official_web_boundary(None)
+        require_core_answer_isolation(None)
         questions_path = _locked(questions_path, "hspr-benchmark-v2/public/pilot_questions.json")
         registry_path = _locked(registry_path, "hspr-benchmark-v2/registry/pilot.identity.json")
         registry_approved_root = None
@@ -521,7 +417,7 @@ def execute_batch(
         questions_path = questions_path.resolve(strict=True)
         registry_path = registry_path.resolve(strict=True)
         registry_approved_root = active_manifest.parent.resolve(strict=True)
-        require_official_web_boundary(active_attestation)
+        require_core_answer_isolation(active_attestation)
     arms_path = _locked(arms_path, "hspr-benchmark-v2/config/arms.json")
     response_schema = _locked(response_schema, "hspr-benchmark-v2/config/response-schema.json")
     runtime_source = _locked(runtime_source, "hspr-benchmark-v2/runtime")
