@@ -18,17 +18,17 @@ from hspr_benchmark.container_launcher import (
     summarize_codex_trace,
     write_new_text,
 )
-from hspr_benchmark.leakage import audit_registry_packet
 from hspr_benchmark.github_metadata_audit import (
     API_HOST as GITHUB_API_HOST,
     API_VERSION as GITHUB_API_VERSION,
     AUDIT_POLICY as GITHUB_AUDIT_POLICY,
     CAPTURE_POLICY as GITHUB_CAPTURE_POLICY,
-    REQUIRED_SURFACES as GITHUB_REQUIRED_SURFACES,
     REPOSITORY as GITHUB_REPOSITORY,
+    REQUIRED_SURFACES as GITHUB_REQUIRED_SURFACES,
     endpoint_spec_sha256 as github_endpoint_spec_sha256,
     implementation_sha256 as github_implementation_sha256,
 )
+from hspr_benchmark.leakage import audit_registry_packet
 from hspr_benchmark.public_history_audit import AUDIT_POLICY, audit_public_history, implementation_sha256
 from hspr_benchmark.runner import (
     _validate_active_inputs,

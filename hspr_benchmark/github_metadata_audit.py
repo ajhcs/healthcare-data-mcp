@@ -185,7 +185,7 @@ def _strict_json(path: Path) -> tuple[bytes, dict[str, Any]]:
 
     document = json.loads(raw, parse_constant=reject_constant)
     if not isinstance(document, dict):
-        raise ValueError("GitHub capture manifest must be a JSON object")
+        raise TypeError("GitHub capture manifest must be a JSON object")
     return raw, document
 
 
@@ -219,7 +219,7 @@ def _identity_terms(questions: dict[str, Any], identity: dict[str, Any]) -> tupl
     question_terms: dict[str, set[str]] = {}
     for question in question_rows:
         if not isinstance(question, dict):
-            raise ValueError("active question rows must be objects")
+            raise TypeError("active question rows must be objects")
         system_id = str(question.get("system_id", ""))
         system_name = str(question.get("system", ""))
         if not system_id or not system_name:
@@ -235,11 +235,11 @@ def _identity_terms(questions: dict[str, Any], identity: dict[str, Any]) -> tupl
     terms = {system_id: {system_id, name, *question_terms.get(system_id, set())} for system_id, name in systems.items()}
     identity_rows = identity.get("systems")
     if not isinstance(identity_rows, list):
-        raise ValueError("identity packet systems must be a list")
+        raise TypeError("identity packet systems must be a list")
     seen: set[str] = set()
     for system in identity_rows:
         if not isinstance(system, dict):
-            raise ValueError("identity packet system rows must be objects")
+            raise TypeError("identity packet system rows must be objects")
         system_id = str(system.get("system_id", ""))
         if system_id not in terms:
             raise ValueError("identity packet contains a system outside the active questions")

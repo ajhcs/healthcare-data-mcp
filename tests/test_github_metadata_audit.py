@@ -5,21 +5,21 @@ from pathlib import Path
 
 import pytest
 
+from hspr_benchmark import trial_executor
 from hspr_benchmark.github_metadata_audit import (
     API_HOST,
     API_VERSION,
     CAPTURE_POLICY,
     CAPTURE_SCHEMA_VERSION,
     PARENT_SURFACES,
-    REQUIRED_SURFACES,
     REPOSITORY,
+    REQUIRED_SURFACES,
     _canonical_bytes,
     _snapshot_material,
     audit_github_metadata_capture,
     endpoint_spec_sha256,
     validate_audit_document,
 )
-from hspr_benchmark import trial_executor
 
 
 NOW = datetime(2026, 7, 27, 12, 0, tzinfo=UTC)
