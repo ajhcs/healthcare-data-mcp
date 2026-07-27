@@ -346,7 +346,7 @@ def test_subscription_credential_strips_refresh_authority_and_rejects_api_keys()
             "access_token": token(3000),
             "id_token": token(3000),
             "account_id": "account",
-            "refresh_token": "long-lived-refresh-secret",
+            "refresh_token": "long-lived-refresh-secret",  # pragma: allowlist secret
         },
     }
     minimized = json.loads(
@@ -359,7 +359,7 @@ def test_subscription_credential_strips_refresh_authority_and_rejects_api_keys()
     assert set(minimized["tokens"]) == {"access_token", "account_id"}
     assert "long-lived-refresh-secret" not in json.dumps(minimized)
 
-    source["OPENAI_API_KEY"] = "forbidden"
+    source["OPENAI_API_KEY"] = "forbidden"  # pragma: allowlist secret
     try:
         runner.ephemeral_chatgpt_credential(json.dumps(source).encode(), now_epoch_seconds=1000)
     except ValueError as error:
@@ -417,8 +417,11 @@ def test_trial_boundary_rejects_refresh_credentials_and_extra_fields() -> None:
     _validate_subscription_credential_boundary(json.dumps(minimized).encode())
     for mutated in (
         {**minimized, "extra": "forbidden"},
-        {**minimized, "OPENAI_API_KEY": "forbidden"},
-        {**minimized, "tokens": {**minimized["tokens"], "refresh_token": "reusable"}},
+        {**minimized, "OPENAI_API_KEY": "forbidden"},  # pragma: allowlist secret
+        {  # pragma: allowlist secret
+            **minimized,
+            "tokens": {**minimized["tokens"], "refresh_token": "reusable"},
+        },
         {**minimized, "tokens": {**minimized["tokens"], "id_token": "unneeded-identity"}},
     ):
         try:
