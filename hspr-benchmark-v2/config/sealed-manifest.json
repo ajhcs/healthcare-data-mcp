@@ -1,7 +1,8 @@
 {
   "schema_version": 1,
-  "sealed_root": ".benchmark-sealed/hspr-financial-v2",
+  "sealed_root": "/home/plumbob/.local/share/hspr-benchmark/sealed/2026-07-26-pilot-v2/hspr-financial-v2",
   "tracked": false,
+  "source_of_truth": "protected_plumbob_scorer_only",
   "researcher_a_sha256_prefix7": "1cffbe9",
   "researcher_b_sha256_prefix7": "c814f1c",
   "adjudicated_gold_sha256_prefix7": "97d28e4",

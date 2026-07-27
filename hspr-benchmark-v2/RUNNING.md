@@ -2,8 +2,10 @@
 
 The official controller is `python -m hspr_benchmark.runner`. It accepts only
 the frozen pilot questions, arms, registry, response schema, and runtime roots.
-The sealed key is read by the host solely for the mandatory registry leakage
-audit and is never copied or mounted into an answer context.
+The sealed key is read from the protected, manifest-declared Plumbob scorer root
+solely for the mandatory registry leakage audit and scoring. It is never copied
+or mounted into an answer context. The old `.benchmark-sealed/` worktree path is
+not a valid source of truth.
 
 Use an ignored `.benchmark-runs/` host directory for traces and answers. Pass
 the local Codex package and authentication files by their explicit absolute
@@ -30,7 +32,9 @@ The adjudicated key must resolve to the exact location declared by the tracked
 sealed manifest and match its digest prefix and record count. These controller
 manifests are never mounted into answer contexts.
 
-The credential is opened without following a final symlink, capped at 1 MiB,
-copied into a fresh byte array for one trial, passed to the container supervisor
-over stdin, and zeroed by the host controller after that trial. Credential paths
-and values are not written to run metadata.
+The host auth document is opened without following a final symlink and capped at
+1 MiB. The controller validates fresh access and identity JWTs, constructs a new
+document containing only the access token and account ID, passes that document
+to the fileless app-server supervisor over stdin, and zeroes its mutable arrays
+after the trial. The ID token, refresh token, API key, auth metadata, paths, and
+values are not written to run metadata or forwarded to the answer context.

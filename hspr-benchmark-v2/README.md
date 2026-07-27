@@ -12,40 +12,47 @@ comparisons.
 The v2 benchmark compares four matched Luna arms. Every arm must retrieve the
 financial result from a live authoritative source; only access to an
 identity/perimeter-only HSPR packet and approved reasoning level differ. Gold
-is stored locally under `.benchmark-sealed/`, ignored by Git, and must be copied
-only into a scorer context that is unavailable to answer agents.
+is stored outside every repository under the protected Plumbob scorer root
+declared by `config/sealed-manifest.json`. The legacy ignored worktree copy was
+relocated intact on 2026-07-27 and its adjudicated-key hash was unchanged. Only
+the host leakage auditor and scorer may read that root; it is never copied or
+mounted into an answer context. `.benchmark-sealed/` remains ignored to prevent
+future accidental staging but is no longer the source of truth.
 
-Cleanup commit `6cbfc2e` is merged into the agreed base and its CI passed. The
-pilot questions and analysis are preregistered, and the identity packet passes
-the automated leakage audit against the adjudicated sealed key.
+Cleanup commit `6cbfc2e` is merged into the agreed base and its CI passed. Every
+active pilot must separately pass sealed-gold readiness, registry-versus-gold
+leakage, and identity-aware public-history audits before the run gate can open.
 
 The answer launcher creates an allowlisted, non-root, read-only Docker context
 with no repository, sealed-key, Docker-socket, host-root, or writable host-output
 mount. Output is bounded tmpfs and crosses the boundary through a supervisor
 event into a host-owned result directory. A hostile no-network mount probe and
-a separate fake-credential supervisor proof pass. Authentication is never
-mounted: the supervisor accepts it on stdin, stores it briefly in container
-tmpfs, and unlinks it before releasing `turn.started`. Native command,
-web-search, final-answer, usage, and monotonic receipt events are captured.
+a separate fake-credential regression proof pass. Authentication is never
+mounted or written to a file. The supervisor accepts only a short-lived access
+token and account ID on stdin, uses Codex app-server's fileless external
+ChatGPT-auth mode, clears its mutable fields, and starts the turn only after
+external auth succeeds. Native command, web-search, final-answer, usage, and
+monotonic receipt events are captured.
 
 This is practical process/filesystem separation, not cryptographic isolation.
 Docker, the host kernel, Codex, and the controller remain trusted. The Codex
 parent uses the Docker bridge for API/web tools, while model-generated shell
 commands use Codex's legacy Landlock `read-only` sandbox because nested
 bubblewrap namespaces are unavailable in this hardened container. The launcher
-never uses bypass mode. A bounded, non-official live smoke validated credential
-removal, shell-network denial, native web access, trace capture, and cleanup;
-see `SMOKE_VALIDATION.md`. No scored pilot answer arm had run at that validation
+never uses bypass mode. A bounded, non-official live smoke validated fileless
+external auth, denial of other-process memory and IPC descriptors,
+shell-network denial, native web access, trace capture, and cleanup; see
+`SMOKE_VALIDATION.md`. No scored pilot answer arm had run at that validation
 point.
 
 The stricter subscription-native restart is specified in
 `SUBSCRIPTION_PROTOCOL.md`. It rejects API keys and prevents refresh credentials
 from entering answer containers. Earlier pilot trials are preserved but
-superseded; official execution remains stopped until the revised boundary is
-fully validated and merged. An independent security review also identified a
-separate official-design blocker: local native web has no enforceable
-repository-domain exclusion, while this repository is public. The batch runner
-therefore fails closed until that boundary is solved outside the answering
-model; prompts and post-hoc URL logging do not satisfy it.
-`WEB_BOUNDARY_OPTIONS.md` records the narrow cloud-environment candidate and
-the additional proofs it would require before this interlock can change.
+superseded. Local native web has no enforceable repository-domain exclusion, so
+the defensible local claim is deliberately narrower: an official active packet
+must be fresh, protected, disjoint, and absent—under every adjudicated alias,
+legal name, and identifier—from all fetched public Git history. Old public
+artifacts remain reachable but cannot bear on that active cohort. Prompts and
+post-hoc URL logging are not access controls. The runner stays fail-closed until
+the exact active packet, public-ref SHAs, and leakage audits are manifest-bound;
+see `WEB_BOUNDARY_OPTIONS.md`.
