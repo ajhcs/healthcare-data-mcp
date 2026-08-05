@@ -6,7 +6,79 @@ from pathlib import Path
 
 import pytest
 
-from scripts.download_ahrq import _replace_validated_files
+from scripts.download_ahrq import (
+    _replace_validated_files,
+    _verify_matching_retrievals,
+    acquire,
+)
+
+
+@pytest.mark.asyncio
+async def test_acquire_defaults_to_revised_2023(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    expected = tmp_path / "receipt.json"
+
+    async def fake_acquire(
+        output_dir: Path,
+        *,
+        force: bool,
+        receipt_path: Path | None,
+    ) -> Path:
+        assert output_dir == tmp_path
+        assert force is False
+        assert receipt_path is None
+        return expected
+
+    monkeypatch.setattr("scripts.download_ahrq._acquire_revised_2023", fake_acquire)
+
+    assert await acquire(tmp_path, force=False) == expected
+
+
+def test_verify_matching_retrievals_accepts_complete_identical_pair() -> None:
+    verified = _verify_matching_retrievals(
+        {
+            "system_universe": [b"system", b"system"],
+            "hospital_linkage": [b"hospital", b"hospital"],
+        }
+    )
+
+    assert verified == {
+        "system_universe": b"system",
+        "hospital_linkage": b"hospital",
+    }
+
+
+@pytest.mark.parametrize(
+    ("retrievals", "message"),
+    [
+        (
+            {
+                "system_universe": [b"first", b"second"],
+                "hospital_linkage": [b"hospital", b"hospital"],
+            },
+            "byte drift",
+        ),
+        (
+            {"system_universe": [b"system", b"system"]},
+            "both artifact roles",
+        ),
+        (
+            {
+                "system_universe": [b"system"],
+                "hospital_linkage": [b"hospital", b"hospital"],
+            },
+            "exactly two retrievals",
+        ),
+    ],
+)
+def test_verify_matching_retrievals_fails_closed(
+    retrievals: dict[str, list[bytes]],
+    message: str,
+) -> None:
+    with pytest.raises(RuntimeError, match=message):
+        _verify_matching_retrievals(retrievals)
 
 
 def test_replace_validated_files_promotes_release_together(tmp_path: Path) -> None:
