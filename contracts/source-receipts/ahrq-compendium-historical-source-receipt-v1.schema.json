@@ -1,0 +1,348 @@
+{
+  "$defs": {
+    "AhrqHistoricalArtifactReceipt": {
+      "additionalProperties": false,
+      "properties": {
+        "checksum_sha256": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Checksum Sha256",
+          "type": "string"
+        },
+        "content_length": {
+          "exclusiveMinimum": 0,
+          "title": "Content Length",
+          "type": "integer"
+        },
+        "content_type": {
+          "title": "Content Type",
+          "type": "string"
+        },
+        "etag": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Etag"
+        },
+        "final_url": {
+          "pattern": "^https://",
+          "title": "Final Url",
+          "type": "string"
+        },
+        "last_modified": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Last Modified"
+        },
+        "relative_path": {
+          "pattern": "^ahrq_(system|hospital_linkage)_20(16|18|20|21|22)\\.csv$",
+          "title": "Relative Path",
+          "type": "string"
+        },
+        "response_status": {
+          "const": 200,
+          "title": "Response Status",
+          "type": "integer"
+        },
+        "retrieved_at": {
+          "format": "date-time",
+          "title": "Retrieved At",
+          "type": "string"
+        },
+        "role": {
+          "enum": [
+            "system_universe",
+            "hospital_linkage"
+          ],
+          "title": "Role",
+          "type": "string"
+        },
+        "row_count": {
+          "exclusiveMinimum": 0,
+          "title": "Row Count",
+          "type": "integer"
+        },
+        "schema_fingerprint": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Schema Fingerprint",
+          "type": "string"
+        },
+        "source_url": {
+          "pattern": "^https://",
+          "title": "Source Url",
+          "type": "string"
+        },
+        "validation_status": {
+          "const": "pass",
+          "default": "pass",
+          "title": "Validation Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "role",
+        "relative_path",
+        "source_url",
+        "final_url",
+        "response_status",
+        "content_type",
+        "retrieved_at",
+        "checksum_sha256",
+        "content_length",
+        "row_count",
+        "schema_fingerprint"
+      ],
+      "title": "AhrqHistoricalArtifactReceipt",
+      "type": "object"
+    },
+    "AhrqHistoricalAssertions": {
+      "additionalProperties": false,
+      "properties": {
+        "duplicate_hospital_ids": {
+          "minimum": 0,
+          "title": "Duplicate Hospital Ids",
+          "type": "integer"
+        },
+        "duplicate_nonblank_ccns": {
+          "minimum": 0,
+          "title": "Duplicate Nonblank Ccns",
+          "type": "integer"
+        },
+        "duplicate_system_ids": {
+          "minimum": 0,
+          "title": "Duplicate System Ids",
+          "type": "integer"
+        },
+        "hospital_jurisdictions": {
+          "exclusiveMinimum": 0,
+          "title": "Hospital Jurisdictions",
+          "type": "integer"
+        },
+        "hospital_rows": {
+          "exclusiveMinimum": 0,
+          "title": "Hospital Rows",
+          "type": "integer"
+        },
+        "linked_hospital_rows": {
+          "minimum": 0,
+          "title": "Linked Hospital Rows",
+          "type": "integer"
+        },
+        "linked_system_ids": {
+          "minimum": 0,
+          "title": "Linked System Ids",
+          "type": "integer"
+        },
+        "missing_ccns": {
+          "minimum": 0,
+          "title": "Missing Ccns",
+          "type": "integer"
+        },
+        "nonblank_ccns": {
+          "minimum": 0,
+          "title": "Nonblank Ccns",
+          "type": "integer"
+        },
+        "orphan_linked_system_ids": {
+          "minimum": 0,
+          "title": "Orphan Linked System Ids",
+          "type": "integer"
+        },
+        "system_jurisdictions": {
+          "exclusiveMinimum": 0,
+          "title": "System Jurisdictions",
+          "type": "integer"
+        },
+        "system_rows": {
+          "exclusiveMinimum": 0,
+          "title": "System Rows",
+          "type": "integer"
+        },
+        "unique_hospital_ids": {
+          "exclusiveMinimum": 0,
+          "title": "Unique Hospital Ids",
+          "type": "integer"
+        },
+        "unique_system_ids": {
+          "exclusiveMinimum": 0,
+          "title": "Unique System Ids",
+          "type": "integer"
+        },
+        "unlinked_hospital_rows": {
+          "minimum": 0,
+          "title": "Unlinked Hospital Rows",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "system_rows",
+        "unique_system_ids",
+        "duplicate_system_ids",
+        "system_jurisdictions",
+        "hospital_rows",
+        "unique_hospital_ids",
+        "duplicate_hospital_ids",
+        "linked_hospital_rows",
+        "unlinked_hospital_rows",
+        "nonblank_ccns",
+        "missing_ccns",
+        "duplicate_nonblank_ccns",
+        "hospital_jurisdictions",
+        "linked_system_ids",
+        "orphan_linked_system_ids"
+      ],
+      "title": "AhrqHistoricalAssertions",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Public-safe receipt bound to one reviewed historical AHRQ release.",
+  "properties": {
+    "artifacts": {
+      "maxItems": 2,
+      "minItems": 2,
+      "prefixItems": [
+        {
+          "$ref": "#/$defs/AhrqHistoricalArtifactReceipt"
+        },
+        {
+          "$ref": "#/$defs/AhrqHistoricalArtifactReceipt"
+        }
+      ],
+      "title": "Artifacts",
+      "type": "array"
+    },
+    "assertions": {
+      "$ref": "#/$defs/AhrqHistoricalAssertions"
+    },
+    "byte_equality_verified": {
+      "const": true,
+      "title": "Byte Equality Verified",
+      "type": "boolean"
+    },
+    "caveats": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Caveats",
+      "type": "array"
+    },
+    "dataset_id": {
+      "const": "ahrq_health_system_compendium",
+      "title": "Dataset Id",
+      "type": "string"
+    },
+    "landing_page": {
+      "pattern": "^https://",
+      "title": "Landing Page",
+      "type": "string"
+    },
+    "matching_retrievals": {
+      "const": 2,
+      "title": "Matching Retrievals",
+      "type": "integer"
+    },
+    "parser_version": {
+      "const": "ahrq-compendium-historical-receipt-v1",
+      "title": "Parser Version",
+      "type": "string"
+    },
+    "receipt_status": {
+      "const": "admitted",
+      "title": "Receipt Status",
+      "type": "string"
+    },
+    "release_checksum_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Release Checksum Sha256",
+      "type": "string"
+    },
+    "release_id": {
+      "title": "Release Id",
+      "type": "string"
+    },
+    "retrieved_at": {
+      "format": "date-time",
+      "title": "Retrieved At",
+      "type": "string"
+    },
+    "revision": {
+      "title": "Revision",
+      "type": "string"
+    },
+    "rights_basis_url": {
+      "pattern": "^https://",
+      "title": "Rights Basis Url",
+      "type": "string"
+    },
+    "rights_classification": {
+      "const": "public_free",
+      "title": "Rights Classification",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "ushso.ahrq-compendium-historical-source-receipt.v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source_period": {
+      "enum": [
+        "2016",
+        "2018",
+        "2020",
+        "2021",
+        "2022"
+      ],
+      "title": "Source Period",
+      "type": "string"
+    },
+    "technical_documentation_urls": {
+      "maxItems": 2,
+      "minItems": 2,
+      "prefixItems": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "string"
+        }
+      ],
+      "title": "Technical Documentation Urls",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_version",
+    "dataset_id",
+    "release_id",
+    "source_period",
+    "revision",
+    "landing_page",
+    "parser_version",
+    "retrieved_at",
+    "matching_retrievals",
+    "byte_equality_verified",
+    "release_checksum_sha256",
+    "receipt_status",
+    "rights_classification",
+    "rights_basis_url",
+    "technical_documentation_urls",
+    "artifacts",
+    "assertions",
+    "caveats"
+  ],
+  "title": "AhrqHistoricalSourceReceipt",
+  "type": "object"
+}

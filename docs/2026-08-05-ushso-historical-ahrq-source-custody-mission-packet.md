@@ -110,10 +110,32 @@ unrelated internal paths, credentials, or account identifiers.
   an injected mid-promotion failure that restores the prior complete release.
 - Receipt JSON contains no raw rows, absolute/local paths, secrets, browser
   state, account identifiers, or internal operational URLs.
-- Focused tests, Ruff, mypy, the full Data MCP test suite, and repository CI
+- Focused tests, Ruff, the repository-configured Pyright check, the full Data MCP test suite, and repository CI
   pass on the exact pushed SHA.
 - Toolkit and all running services, databases, DNS, and Cloudflare resources
   remain unchanged.
+
+## Admission Evidence
+
+Two independent browser processes retrieved all ten official CSVs on
+2026-08-05 and produced byte-identical files. The strict producer then fetched
+each artifact twice again before admitting the release pair. The generated
+receipts retain the exact artifact hashes, byte lengths, header fingerprints,
+response metadata, jurisdictions, ID uniqueness, CCN completeness, linked
+system coverage, and orphan-link result.
+
+| Source year | Systems | Hospitals | Linked | Unlinked | Missing CCNs | Duplicate nonblank CCNs |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 2016 | 626 | 6,762 | 3,949 | 2,813 | 548 | 0 |
+| 2018 | 637 | 6,742 | 3,887 | 2,855 | 151 | 1 |
+| 2020 | 629 | 6,701 | 4,037 | 2,664 | 127 | 0 |
+| 2021 | 635 | 6,725 | 4,073 | 2,652 | 126 | 0 |
+| 2022 | 640 | 6,764 | 4,173 | 2,591 | 132 | 0 |
+
+Every release has zero duplicate system IDs, zero duplicate hospital IDs,
+complete linked-system coverage, and zero orphan linked system IDs. The one
+duplicate nonblank CCN in the 2018 source is explicitly preserved as a source
+condition; it is not used to infer or merge affiliations.
 
 ## Traceability
 
@@ -146,7 +168,7 @@ Affected DTR IDs:
 - independent checksum, byte-length, header, row-count, ID, jurisdiction,
   linkage, CCN, and orphan-link reconciliation
 - `ruff check` on changed Python modules and tests
-- strict type checking with the repository's configured command
+- Pyright type checking with the repository's configured command
 - full `pytest` suite
 - Git diff review proving the revised-2023 committed receipt and checksum are
   unchanged
