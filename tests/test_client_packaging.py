@@ -488,9 +488,12 @@ def test_ci_runs_mcp_inspector_smoke() -> None:
     assert "--expect-structured-path-all tools[].source_caveat_class" in ci
     assert "--expect-structured-path-all tools[].requires_provenance" in ci
     assert os.access(script, os.X_OK)
-    assert "@modelcontextprotocol/inspector" in script_text
+    assert "@modelcontextprotocol/inspector@2.0.0" in script_text
+    assert '-e "PYTHONPATH=$PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}"' in script_text
+    assert 'inspector_env+=(-e "SEC_USER_AGENT=$SEC_USER_AGENT")' in script_text
+    assert '"$HC_MCP_BIN" "$server_id" "${inspector_env[@]}" --format json --transport stdio' in script_text
     assert "--method tools/call" in script_text
-    assert "servers._launcher live-gateway" in script_text
+    assert '"live-gateway"' in script_text
     assert "--tool-name list_live_tools" in script_text
 
 
