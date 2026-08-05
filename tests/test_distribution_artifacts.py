@@ -610,6 +610,7 @@ def test_project_metadata_and_docs_support_versioned_tool_installs() -> None:
     assert "Development Status :: 3 - Alpha" in project["classifiers"]
     assert "Intended Audience :: Healthcare Industry" in project["classifiers"]
     assert "Topic :: Scientific/Engineering :: Medical Science Apps." in project["classifiers"]
+    assert "mcp[cli]>=1.0.0,<2.0.0" in project["dependencies"]
     assert scripts["hc-mcp"] == "servers._launcher:main"
     assert scripts["hc-mcp-setup"] == "shared.setup_wizard:main"
     assert "build>=1.2.0" in optional_deps["dev"]
