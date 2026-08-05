@@ -140,12 +140,12 @@ HISTORICAL_AHRQ_RELEASES: Mapping[str, AhrqHistoricalReleaseSpec] = {
             "compendium_system_hospital_linkage_file.csv",
         ),
         expectations=AhrqHistoricalExpectations(
-            system_checksum_sha256="7c91da1047fd64ed3bd507c0dbb3f6deecd2eed8e8b3be46cd98902127e86dc6",
-            hospital_checksum_sha256="e3aa46683e622a585cf481e0ebd797493793d5be73792a73f1defc4b377d3831",
+            system_checksum_sha256="7c91da1047fd64ed3bd507c0dbb3f6deecd2eed8e8b3be46cd98902127e86dc6",  # pragma: allowlist secret
+            hospital_checksum_sha256="e3aa46683e622a585cf481e0ebd797493793d5be73792a73f1defc4b377d3831",  # pragma: allowlist secret
             system_content_length=85_740,
             hospital_content_length=839_847,
-            system_schema_fingerprint="8c1e366c46d7e5aacd38a2d25c9e66a77b88dfc06864b79f433a82b6d8d84b0c",
-            hospital_schema_fingerprint="c68873ba7c9d96e5f1e10e6be5747027dd8b25531d6d92d910035869733b5287",
+            system_schema_fingerprint="8c1e366c46d7e5aacd38a2d25c9e66a77b88dfc06864b79f433a82b6d8d84b0c",  # pragma: allowlist secret
+            hospital_schema_fingerprint="c68873ba7c9d96e5f1e10e6be5747027dd8b25531d6d92d910035869733b5287",  # pragma: allowlist secret
             system_rows=626,
             unique_system_ids=626,
             duplicate_system_ids=0,
@@ -179,12 +179,12 @@ HISTORICAL_AHRQ_RELEASES: Mapping[str, AhrqHistoricalReleaseSpec] = {
             "chsp-hospital-linkage-2018.csv",
         ),
         expectations=AhrqHistoricalExpectations(
-            system_checksum_sha256="dd0431af44ba1ef4ebfbaa5efd07b672b8ee54b670d796b07b1b9a4a341a4b68",
-            hospital_checksum_sha256="ee0b1befa2284d3a5904b2794585fd0f0f00409b919acb8eceabd4ede424e37d",
+            system_checksum_sha256="dd0431af44ba1ef4ebfbaa5efd07b672b8ee54b670d796b07b1b9a4a341a4b68",  # pragma: allowlist secret
+            hospital_checksum_sha256="ee0b1befa2284d3a5904b2794585fd0f0f00409b919acb8eceabd4ede424e37d",  # pragma: allowlist secret
             system_content_length=91_842,
             hospital_content_length=808_537,
-            system_schema_fingerprint="cc91b2cc8eca382fa425cce9d38c167678cc442f2def5b88e8070461cf1331b0",
-            hospital_schema_fingerprint="c68873ba7c9d96e5f1e10e6be5747027dd8b25531d6d92d910035869733b5287",
+            system_schema_fingerprint="cc91b2cc8eca382fa425cce9d38c167678cc442f2def5b88e8070461cf1331b0",  # pragma: allowlist secret
+            hospital_schema_fingerprint="c68873ba7c9d96e5f1e10e6be5747027dd8b25531d6d92d910035869733b5287",  # pragma: allowlist secret
             system_rows=637,
             unique_system_ids=637,
             duplicate_system_ids=0,
@@ -218,12 +218,12 @@ HISTORICAL_AHRQ_RELEASES: Mapping[str, AhrqHistoricalReleaseSpec] = {
             "chsp-hospital-linkage-2020-rev.csv",
         ),
         expectations=AhrqHistoricalExpectations(
-            system_checksum_sha256="b2fc3ec3a52afe9219050fa20cb40694b89d13e9595ea9681636884d1e0db900",
-            hospital_checksum_sha256="e4942069d3e0257948fc3a0b1fe0a9995e931b364ccdc5b17883b4a34094eae8",
+            system_checksum_sha256="b2fc3ec3a52afe9219050fa20cb40694b89d13e9595ea9681636884d1e0db900",  # pragma: allowlist secret
+            hospital_checksum_sha256="e4942069d3e0257948fc3a0b1fe0a9995e931b364ccdc5b17883b4a34094eae8",  # pragma: allowlist secret
             system_content_length=98_824,
             hospital_content_length=1_149_905,
-            system_schema_fingerprint="aae898bc94ee4d530f8367b5f69c33b7bb2420e11cdd6646c6e06ae37f8d07c2",
-            hospital_schema_fingerprint="b6e9e7b741a72ab89a41705b96beabb196621bda9172b6212ca47730e41ab682",
+            system_schema_fingerprint="aae898bc94ee4d530f8367b5f69c33b7bb2420e11cdd6646c6e06ae37f8d07c2",  # pragma: allowlist secret
+            hospital_schema_fingerprint="b6e9e7b741a72ab89a41705b96beabb196621bda9172b6212ca47730e41ab682",  # pragma: allowlist secret
             system_rows=629,
             unique_system_ids=629,
             duplicate_system_ids=0,
@@ -257,12 +257,12 @@ HISTORICAL_AHRQ_RELEASES: Mapping[str, AhrqHistoricalReleaseSpec] = {
             "chsp-hospital-linkage-2021-rev.csv",
         ),
         expectations=AhrqHistoricalExpectations(
-            system_checksum_sha256="a10aeec32e004f3a97b88f249c920a89815f5ef7713967335311e92f62ac25f7",
-            hospital_checksum_sha256="a8e3ce1a89b040cb528df4f705542968613ce34e6745cffb67307cd777e6c15d",
+            system_checksum_sha256="a10aeec32e004f3a97b88f249c920a89815f5ef7713967335311e92f62ac25f7",  # pragma: allowlist secret
+            hospital_checksum_sha256="a8e3ce1a89b040cb528df4f705542968613ce34e6745cffb67307cd777e6c15d",  # pragma: allowlist secret
             system_content_length=99_816,
             hospital_content_length=1_155_382,
-            system_schema_fingerprint="aae898bc94ee4d530f8367b5f69c33b7bb2420e11cdd6646c6e06ae37f8d07c2",
-            hospital_schema_fingerprint="b6e9e7b741a72ab89a41705b96beabb196621bda9172b6212ca47730e41ab682",
+            system_schema_fingerprint="aae898bc94ee4d530f8367b5f69c33b7bb2420e11cdd6646c6e06ae37f8d07c2",  # pragma: allowlist secret
+            hospital_schema_fingerprint="b6e9e7b741a72ab89a41705b96beabb196621bda9172b6212ca47730e41ab682",  # pragma: allowlist secret
             system_rows=635,
             unique_system_ids=635,
             duplicate_system_ids=0,
@@ -296,12 +296,12 @@ HISTORICAL_AHRQ_RELEASES: Mapping[str, AhrqHistoricalReleaseSpec] = {
             "chsp-hospital-linkage-2022-rev.csv",
         ),
         expectations=AhrqHistoricalExpectations(
-            system_checksum_sha256="9829b24d7773500762bcfd7189e8ef636c53c6338358b8132ccd0a9e61f5cb53",
-            hospital_checksum_sha256="9809b2972f0db28983eb80b2d384bc75f21e66ff726dc818127ca4d99ad7bc62",
+            system_checksum_sha256="9829b24d7773500762bcfd7189e8ef636c53c6338358b8132ccd0a9e61f5cb53",  # pragma: allowlist secret
+            hospital_checksum_sha256="9809b2972f0db28983eb80b2d384bc75f21e66ff726dc818127ca4d99ad7bc62",  # pragma: allowlist secret
             system_content_length=100_642,
             hospital_content_length=1_162_828,
-            system_schema_fingerprint="aae898bc94ee4d530f8367b5f69c33b7bb2420e11cdd6646c6e06ae37f8d07c2",
-            hospital_schema_fingerprint="b6e9e7b741a72ab89a41705b96beabb196621bda9172b6212ca47730e41ab682",
+            system_schema_fingerprint="aae898bc94ee4d530f8367b5f69c33b7bb2420e11cdd6646c6e06ae37f8d07c2",  # pragma: allowlist secret
+            hospital_schema_fingerprint="b6e9e7b741a72ab89a41705b96beabb196621bda9172b6212ca47730e41ab682",  # pragma: allowlist secret
             system_rows=640,
             unique_system_ids=640,
             duplicate_system_ids=0,
