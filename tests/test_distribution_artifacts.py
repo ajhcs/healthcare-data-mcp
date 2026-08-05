@@ -170,6 +170,16 @@ def test_ci_checks_live_gateway_registry_docs_renderer() -> None:
     assert "python scripts/render_registry_docs.py source-ledger-registry --check" in ci
 
 
+def test_ci_uses_the_pinned_development_ruff_release() -> None:
+    pyproject = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    dev_dependencies = pyproject["project"]["optional-dependencies"]["dev"]
+    ruff_dependencies = [dependency for dependency in dev_dependencies if dependency.startswith("ruff")]
+    ci = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+
+    assert ruff_dependencies == ["ruff==0.15.4"]
+    assert 'python -m pip install "ruff==0.15.4"' in ci
+
+
 def test_ci_product_readiness_gates_cover_security_distribution_and_runtime_smoke() -> None:
     ci = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
 
@@ -610,6 +620,7 @@ def test_project_metadata_and_docs_support_versioned_tool_installs() -> None:
     assert "Development Status :: 3 - Alpha" in project["classifiers"]
     assert "Intended Audience :: Healthcare Industry" in project["classifiers"]
     assert "Topic :: Scientific/Engineering :: Medical Science Apps." in project["classifiers"]
+    assert "mcp[cli]>=1.0.0,<2.0.0" in project["dependencies"]
     assert scripts["hc-mcp"] == "servers._launcher:main"
     assert scripts["hc-mcp-setup"] == "shared.setup_wizard:main"
     assert "build>=1.2.0" in optional_deps["dev"]

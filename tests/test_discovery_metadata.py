@@ -8,6 +8,11 @@ from dataclasses import replace
 import pytest
 
 from servers.discovery import server
+from shared.acquisition.ahrq_compendium_receipt import (
+    AHRQ_HOSPITAL_LINKAGE_URL,
+    AHRQ_LANDING_PAGE,
+    AHRQ_SYSTEM_URL,
+)
 from shared.utils.server_registry import CURATED_PRESETS, SERVER_BY_ID, SERVER_REGISTRY, WORKFLOW_PRESETS
 
 
@@ -56,6 +61,22 @@ def test_dataset_schema_and_source_are_json_serializable() -> None:
 
     json.dumps(schema)
     json.dumps(source)
+
+
+def test_ahrq_catalog_uses_revised_two_artifact_source_contract() -> None:
+    schema = server.dataset_schema_payload("ahrq_health_system_compendium")
+    source = server.dataset_source_payload("ahrq_health_system_compendium")
+
+    assert source["landing_page"] == AHRQ_LANDING_PAGE
+    assert source["source_urls"] == [AHRQ_SYSTEM_URL, AHRQ_HOSPITAL_LINKAGE_URL]
+    assert schema["schema"]["artifact_identity_fields"] == {
+        "ahrq_system_2023.csv": ["health_sys_id"],
+        "ahrq_hospital_linkage_2023.csv": [
+            "compendium_hospital_id",
+            "health_sys_id",
+            "ccn",
+        ],
+    }
 
 
 def test_dataset_catalog_server_capabilities_are_registry_backed() -> None:

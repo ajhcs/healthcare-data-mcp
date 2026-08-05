@@ -167,7 +167,12 @@ def dataset_specs() -> dict[str, CacheDatasetSpec]:
             optional_env.extend(server_optional)
         schema = dataset.get("schema") if isinstance(dataset.get("schema"), dict) else {}
         source_urls = tuple(str(url) for url in dataset.get("source_urls", ()) if str(url).strip())
-        landing_page = next((url for url in source_urls if "/resource/" not in url and "download" not in url), "")
+        landing_page = str(dataset.get("landing_page") or "")
+        if not landing_page:
+            landing_page = next(
+                (url for url in source_urls if "/resource/" not in url and "download" not in url),
+                "",
+            )
         specs[dataset_id] = CacheDatasetSpec(
             dataset_id=dataset_id,
             title=str(dataset.get("title") or dataset_id),

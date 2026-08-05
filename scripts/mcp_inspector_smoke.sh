@@ -3,8 +3,9 @@
 
 set -euo pipefail
 
-INSPECTOR_PACKAGE="${INSPECTOR_PACKAGE:-@modelcontextprotocol/inspector}"
+INSPECTOR_PACKAGE="${INSPECTOR_PACKAGE:-@modelcontextprotocol/inspector@2.0.0}"
 TIMEOUT_SECONDS="${TIMEOUT_SECONDS:-30}"
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 if [ -z "${PYTHON_BIN:-}" ]; then
   if [ -x ".venv/bin/python" ]; then
@@ -16,11 +17,21 @@ if [ -z "${PYTHON_BIN:-}" ]; then
   fi
 fi
 
+if [ -z "${HC_MCP_BIN:-}" ]; then
+  HC_MCP_BIN="$(command -v hc-mcp)"
+fi
+
 run_inspector() {
   local output_path="$1"
-  shift
+  local server_id="$2"
+  shift 2
+  local inspector_env=(-e "PYTHONPATH=$PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}")
+  if [ -n "${SEC_USER_AGENT:-}" ]; then
+    inspector_env+=(-e "SEC_USER_AGENT=$SEC_USER_AGENT")
+  fi
 
-  timeout "$TIMEOUT_SECONDS" npx --yes "$INSPECTOR_PACKAGE" --cli "$@" >"$output_path"
+  timeout "$TIMEOUT_SECONDS" npx --yes "$INSPECTOR_PACKAGE" --cli \
+    "$HC_MCP_BIN" "$server_id" "${inspector_env[@]}" --format json --transport stdio "$@" >"$output_path"
   "$PYTHON_BIN" -m json.tool "$output_path" >/dev/null
 }
 
@@ -33,7 +44,8 @@ import json
 import sys
 from pathlib import Path
 
-payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+envelope = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+payload = envelope.get("result", envelope)
 expression = sys.argv[2]
 allowed = {"any": any, "len": len, "set": set}
 if not eval(expression, {"__builtins__": {}}, {"payload": payload, **allowed}):
@@ -44,40 +56,30 @@ PY
 tmpdir="$(mktemp -d)"
 trap 'rm -rf "$tmpdir"' EXIT
 
-run_inspector "$tmpdir/discovery-tools.json" \
-  --method tools/list \
-  --transport stdio \
-  -- "$PYTHON_BIN" -m servers._launcher discovery
+run_inspector "$tmpdir/discovery-tools.json" "discovery" \
+  --method tools/list
 assert_json_field "$tmpdir/discovery-tools.json" \
   "any(tool.get('name') == 'list_workflows' for tool in payload.get('tools', []))"
 
-run_inspector "$tmpdir/discovery-workflows.json" \
+run_inspector "$tmpdir/discovery-workflows.json" "discovery" \
   --method tools/call \
-  --tool-name list_workflows \
-  --transport stdio \
-  -- "$PYTHON_BIN" -m servers._launcher discovery
+  --tool-name list_workflows
 assert_json_field "$tmpdir/discovery-workflows.json" \
   "payload.get('structuredContent', {}).get('workflow_count', 0) >= 7"
 
-run_inspector "$tmpdir/gateway-tools.json" \
-  --method tools/list \
-  --transport stdio \
-  -- "$PYTHON_BIN" -m servers._launcher gateway
+run_inspector "$tmpdir/gateway-tools.json" "gateway" \
+  --method tools/list
 assert_json_field "$tmpdir/gateway-tools.json" \
   "{tool.get('name') for tool in payload.get('tools', [])} >= {'search', 'fetch'}"
 
-run_inspector "$tmpdir/live-gateway-tools.json" \
-  --method tools/list \
-  --transport stdio \
-  -- "$PYTHON_BIN" -m servers._launcher live-gateway
+run_inspector "$tmpdir/live-gateway-tools.json" "live-gateway" \
+  --method tools/list
 assert_json_field "$tmpdir/live-gateway-tools.json" \
   "any(tool.get('name') == 'list_live_tools' for tool in payload.get('tools', []))"
 
-run_inspector "$tmpdir/live-gateway-inventory.json" \
+run_inspector "$tmpdir/live-gateway-inventory.json" "live-gateway" \
   --method tools/call \
-  --tool-name list_live_tools \
-  --transport stdio \
-  -- "$PYTHON_BIN" -m servers._launcher live-gateway
+  --tool-name list_live_tools
 assert_json_field "$tmpdir/live-gateway-inventory.json" \
   "payload.get('structuredContent', {}).get('gateway') == 'live-gateway' and payload.get('structuredContent', {}).get('tool_count', 0) >= 1"
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from shared.acquisition.ahrq_compendium_receipt import AhrqCompendiumSourceReceipt
 from shared.acquisition.scale_annual_discharges_packet import AnnualDischargesAcquisition
 from shared.acquisition.scale_emergency_department_count_contract import (
     EmergencyDepartmentCountAcquisition,
@@ -22,6 +23,10 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def main() -> None:
     schemas = {
+        ROOT
+        / "contracts"
+        / "source-receipts"
+        / "ahrq-compendium-source-receipt-v1.schema.json": AhrqCompendiumSourceReceipt.model_json_schema(),
         ROOT / "contracts" / "v1" / "public-evidence-bundle.schema.json": PublicEvidenceBundle.model_json_schema(),
         ROOT
         / "contracts"

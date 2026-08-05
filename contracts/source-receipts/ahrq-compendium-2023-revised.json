@@ -1,0 +1,72 @@
+{
+  "artifacts": [
+    {
+      "checksum_sha256": "sha256:7bd62db33d2241236c662afdbd0ff9b30032da817f5ec0a2326311f77c5371b6",
+      "content_length": 106647,
+      "content_type": "text/csv",
+      "etag": "W/\"1a097-63f9309989180\"",
+      "final_url": "https://www.ahrq.gov/sites/default/files/wysiwyg/chsp/compendium/chsp-compendium-2023-rev.csv",
+      "last_modified": "Wed, 24 Sep 2025 21:50:14 GMT",
+      "relative_path": "ahrq_system_2023.csv",
+      "response_status": 200,
+      "retrieved_at": "2026-08-05T04:24:47.540421Z",
+      "role": "system_universe",
+      "row_count": 639,
+      "schema_fingerprint": "sha256:65e32ad895ad8f21964650352978e59c23b3ee739268ab631a9ad487600f487f",
+      "source_url": "https://www.ahrq.gov/sites/default/files/wysiwyg/chsp/compendium/chsp-compendium-2023-rev.csv",
+      "validation_status": "pass"
+    },
+    {
+      "checksum_sha256": "sha256:a86146f10c8de626fea1da3a24b756e6a68165e449ae3687f1e90d6bdf129727",
+      "content_length": 1528734,
+      "content_type": "text/csv",
+      "etag": "W/\"17539e-6369cc6d65fc0\"",
+      "final_url": "https://www.ahrq.gov/sites/default/files/wysiwyg/chsp/compendium/chsp-hospital-linkage-2023.csv",
+      "last_modified": "Mon, 02 Jun 2025 20:40:39 GMT",
+      "relative_path": "ahrq_hospital_linkage_2023.csv",
+      "response_status": 200,
+      "retrieved_at": "2026-08-05T04:24:47.540421Z",
+      "role": "hospital_linkage",
+      "row_count": 6800,
+      "schema_fingerprint": "sha256:fec5c12e352c26259b8691b4fa9568f9c6e3f433b272c58e063b0dab97a4d634",
+      "source_url": "https://www.ahrq.gov/sites/default/files/wysiwyg/chsp/compendium/chsp-hospital-linkage-2023.csv",
+      "validation_status": "pass"
+    }
+  ],
+  "assertions": {
+    "duplicate_nonblank_ccns": 0,
+    "hospital_jurisdictions": 51,
+    "hospital_rows": 6800,
+    "linked_hospital_rows": 4193,
+    "linked_system_ids": 639,
+    "missing_ccns": 124,
+    "nonblank_ccns": 6676,
+    "orphan_linked_system_ids": 0,
+    "system_jurisdictions": 51,
+    "system_rows": 639,
+    "unique_hospital_ids": 6800,
+    "unique_system_ids": 639,
+    "unlinked_hospital_rows": 2607
+  },
+  "caveats": [
+    "AHRQ aggregates systems to the highest level of ownership; subsidiary systems may not appear separately.",
+    "This receipt proves the revised 2023 source snapshot, not current ownership or cross-year entity continuity.",
+    "Unlinked hospital rows and missing CCNs are preserved as source-declared missingness, not inferred affiliations."
+  ],
+  "dataset_id": "ahrq_health_system_compendium",
+  "landing_page": "https://www.ahrq.gov/chsp/data-resources/compendium-2023.html",
+  "parser_version": "ahrq-compendium-receipt-v1",
+  "receipt_status": "admitted",
+  "release_checksum_sha256": "sha256:dd2198b868fe990e3d93ae36a88f541f5b3a5c0f01703f63ef7a5e8d8519393b",
+  "release_id": "ahrq-compendium-2023-revised-2025-09",
+  "retrieved_at": "2026-08-05T04:24:47.540421Z",
+  "revision": "2025-09",
+  "rights_basis_url": "https://www.ahrq.gov/chsp/data-resources/compendium-2023.html",
+  "rights_classification": "public_free",
+  "schema_version": "ushso.ahrq-compendium-source-receipt.v1",
+  "source_period": "2023",
+  "technical_documentation_urls": [
+    "https://www.ahrq.gov/sites/default/files/wysiwyg/chsp/compendium/2023-compendium-techdoc-rev.pdf",
+    "https://www.ahrq.gov/sites/default/files/wysiwyg/chsp/compendium/2023-hospital-linkage-techdoc.pdf"
+  ]
+}
