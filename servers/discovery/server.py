@@ -15,6 +15,11 @@ from pathlib import Path
 from typing import Any
 
 from mcp.server.fastmcp import FastMCP
+from shared.acquisition.ahrq_compendium_receipt import (
+    AHRQ_HOSPITAL_LINKAGE_URL,
+    AHRQ_LANDING_PAGE,
+    AHRQ_SYSTEM_URL,
+)
 from shared.utils.mcp_observability import observe_tool
 from shared.utils.mcp_resources import register_standard_resources
 from shared.utils.presets import build_preset_plan, list_presets as list_curated_presets
@@ -113,9 +118,10 @@ DATASET_CATALOG: dict[str, dict[str, Any]] = {
         "grain": "system and hospital-linkage files",
         "description": "AHRQ Compendium 2023 health-system universe, headquarters, physician counts, hospital counts, bed counts, and hospital-to-system linkage.",
         "source_system": "AHRQ Comparative Health System Performance Initiative",
+        "landing_page": AHRQ_LANDING_PAGE,
         "source_urls": [
-            "https://www.ahrq.gov/sites/default/files/wysiwyg/chsp/compendium/chsp-system-2023.csv",
-            "https://www.ahrq.gov/sites/default/files/wysiwyg/chsp/compendium/chsp-hospital-linkage-2023.csv",
+            AHRQ_SYSTEM_URL,
+            AHRQ_HOSPITAL_LINKAGE_URL,
         ],
         "cache_files": [
             "ahrq_system_2023.csv",
@@ -125,8 +131,9 @@ DATASET_CATALOG: dict[str, dict[str, Any]] = {
             "identity_fields": ["health_sys_id", "health_sys_name", "ccn"],
             "artifact_identity_fields": {
                 "ahrq_system_2023.csv": ["health_sys_id"],
-                "ahrq_hospital_linkage_2023.csv": ["health_sys_id", "ccn"],
+                "ahrq_hospital_linkage_2023.csv": ["compendium_hospital_id", "health_sys_id", "ccn"],
             },
+            "required_fields": ["health_sys_id", "health_sys_name"],
             "common_fields": [
                 "health_sys_city",
                 "health_sys_state",
@@ -1372,6 +1379,7 @@ def dataset_source_payload(dataset_id: str) -> dict[str, Any]:
         "server": dataset["server"],
         "server_capabilities": dataset["server_capabilities"],
         "source_system": dataset["source_system"],
+        "landing_page": dataset.get("landing_page", ""),
         "source_urls": dataset["source_urls"],
         "cache_files": dataset["cache_files"],
         "requires_import": dataset.get("requires_import", []),

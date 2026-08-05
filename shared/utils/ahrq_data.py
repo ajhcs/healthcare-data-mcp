@@ -12,6 +12,10 @@ import logging
 from pathlib import Path
 
 import pandas as pd
+from shared.acquisition.ahrq_compendium_receipt import (
+    AHRQ_HOSPITAL_LINKAGE_URL,
+    AHRQ_SYSTEM_URL,
+)
 from shared.utils.cms_url_resolver import resolve_cms_download_url as _resolve_cms_url
 
 from shared.utils.cache import write_atomic_bytes
@@ -21,14 +25,6 @@ logger = logging.getLogger(__name__)
 
 CACHE_DIR = Path.home() / ".healthcare-data-mcp" / "cache"
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
-
-# --- AHRQ Compendium URLs (2023 release) ---
-AHRQ_SYSTEM_URL = (
-    "https://www.ahrq.gov/sites/default/files/wysiwyg/chsp/compendium/chsp-system-2023.csv"
-)
-AHRQ_HOSPITAL_LINKAGE_URL = (
-    "https://www.ahrq.gov/sites/default/files/wysiwyg/chsp/compendium/chsp-hospital-linkage-2023.csv"
-)
 
 AHRQ_SYSTEM_CACHE = CACHE_DIR / "ahrq_system_2023.csv"
 AHRQ_HOSPITAL_LINKAGE_CACHE = CACHE_DIR / "ahrq_hospital_linkage_2023.csv"
@@ -212,7 +208,7 @@ async def _download_if_missing(url: str, cache_path: Path) -> Path:
     ):
         raise RuntimeError(
             f"Download blocked by WAF for {url}. "
-            f"Run 'python scripts/download_ahrq.py' to download via browser, "
+            f"Run 'python -m scripts.download_ahrq' to download via browser, "
             f"or manually download and place at {cache_path}"
         )
 
