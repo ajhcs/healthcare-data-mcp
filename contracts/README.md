@@ -13,6 +13,11 @@ database writes.
 .venv/bin/python scripts/export_contract_schemas.py
 ```
 
+`source-receipts/ahrq-compendium-source-receipt-v1.schema.json` is the
+producer-published handoff contract for the revised 2023 AHRQ system-universe
+and hospital-linkage receipt. The adjacent admitted receipt contains only
+public provenance and integrity metadata; raw CSV rows remain outside Git.
+
 Build a bundle from an acquired/normalized input packet without hand-editing an
 intermediate artifact:
 

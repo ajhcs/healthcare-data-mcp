@@ -57,6 +57,8 @@ official file until the existing browser acquisition path proves it.
   metadata, official landing and technical-document URLs, source period,
   revision, parser version, rights classification, caveats, and a combined
   release checksum.
+- A producer-published JSON Schema exactly matches the typed runtime model and
+  validates the admitted receipt for cross-repository consumers.
 - The receipt JSON contains no local path, raw row, credential, account
   identifier, or private URL.
 - Focused receipt, cache-manager, discovery, and health-system-profiler tests
@@ -131,3 +133,5 @@ Verification evidence:
 - The complete repository suite passed: 1,023 tests, with 4 intentional skips.
 - Python bytecode compilation passed for servers, shared modules, scripts,
   tests, and the live-data smoke module.
+- The checked-in receipt JSON Schema matches the runtime model and validates
+  the admitted live receipt.

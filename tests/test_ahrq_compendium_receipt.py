@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
+from jsonschema import Draft202012Validator
 
 from shared.acquisition.ahrq_compendium_receipt import (
     AHRQ_HOSPITAL_LINKAGE_URL,
@@ -29,6 +30,12 @@ HOSPITAL_COLUMNS = (
     "hospital_zip,acutehosp_flag,health_sys_id,health_sys_name,health_sys_city,health_sys_state,hos_beds"
 )
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+RECEIPT_SCHEMA = (
+    REPOSITORY_ROOT
+    / "contracts"
+    / "source-receipts"
+    / "ahrq-compendium-source-receipt-v1.schema.json"
+)
 
 
 def _write_fixture(tmp_path: Path) -> tuple[Path, Path, AhrqCompendiumExpectations]:
@@ -192,3 +199,21 @@ def test_committed_live_receipt_matches_typed_contract() -> None:
     assert receipt.artifacts[1].checksum_sha256 == (
         f"sha256:{DEFAULT_AHRQ_EXPECTATIONS.hospital_checksum_sha256}"
     )
+
+
+def test_checked_in_receipt_schema_matches_runtime_model() -> None:
+    expected = json.dumps(
+        AhrqCompendiumSourceReceipt.model_json_schema(),
+        indent=2,
+        sort_keys=True,
+    ) + "\n"
+    assert RECEIPT_SCHEMA.read_text(encoding="utf-8") == expected
+
+    receipt_path = (
+        REPOSITORY_ROOT
+        / "contracts"
+        / "source-receipts"
+        / "ahrq-compendium-2023-revised.json"
+    )
+    payload = json.loads(receipt_path.read_text(encoding="utf-8"))
+    assert list(Draft202012Validator(json.loads(expected)).iter_errors(payload)) == []
