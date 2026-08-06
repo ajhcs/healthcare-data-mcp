@@ -1,0 +1,1102 @@
+{
+  "artifacts": [
+    {
+      "artifact_id": "irs-form-990-index-2024",
+      "checksum_sha256": "sha256:c00051a33f65d408ea7f6d5fa008c7f82f9bc6223751f4a6e29d59f5e17f826d",
+      "content_length": 91056866,
+      "content_type": "text/csv",
+      "etag": "\"56d6ae2-62facf9fe2618\"",
+      "filing_year": 2024,
+      "final_url": "https://apps.irs.gov/pub/epostcard/990/xml/2024/index_2024.csv",
+      "last_modified": "Thu, 06 Mar 2025 14:03:55 GMT",
+      "relative_path": "irs_form_990_index_2024.csv",
+      "response_status": 200,
+      "retrieved_at": "2026-08-06T13:01:19.211865Z",
+      "row_count": 728719,
+      "schema_fingerprint": "sha256:936d1d97c8f4192a4ae21fbccfc8bb2723ec8e24350c9839c7b2a68f2fb613db",
+      "source_url": "https://apps.irs.gov/pub/epostcard/990/xml/2024/index_2024.csv",
+      "validation_status": "pass"
+    },
+    {
+      "artifact_id": "irs-form-990-index-2025",
+      "checksum_sha256": "sha256:e54ba6938d98b1746f2fd464a0f77e520efd956dc3da737d73843dc0013c6770",
+      "content_length": 93053080,
+      "content_type": "text/csv",
+      "etag": "\"58be098-648e67f5988a0\"",
+      "filing_year": 2025,
+      "final_url": "https://apps.irs.gov/pub/epostcard/990/xml/2025/index_2025.csv",
+      "last_modified": "Wed, 21 Jan 2026 14:11:16 GMT",
+      "relative_path": "irs_form_990_index_2025.csv",
+      "response_status": 200,
+      "retrieved_at": "2026-08-06T13:01:19.882919Z",
+      "row_count": 748906,
+      "schema_fingerprint": "sha256:936d1d97c8f4192a4ae21fbccfc8bb2723ec8e24350c9839c7b2a68f2fb613db",
+      "source_url": "https://apps.irs.gov/pub/epostcard/990/xml/2025/index_2025.csv",
+      "validation_status": "pass"
+    },
+    {
+      "artifact_id": "irs-form-990-index-2026",
+      "checksum_sha256": "sha256:00c1d156ef89fc676c2a3f59c81100dc0d9f7601d251fdfcd02ba58c0877110f",
+      "content_length": 42987660,
+      "content_type": "text/csv",
+      "etag": "\"28ff08c-656a86e9601b8\"",
+      "filing_year": 2026,
+      "final_url": "https://apps.irs.gov/pub/epostcard/990/xml/2026/index_2026.csv",
+      "last_modified": "Wed, 15 Jul 2026 16:01:10 GMT",
+      "relative_path": "irs_form_990_index_2026.csv",
+      "response_status": 200,
+      "retrieved_at": "2026-08-06T13:01:20.362368Z",
+      "row_count": 353650,
+      "schema_fingerprint": "sha256:936d1d97c8f4192a4ae21fbccfc8bb2723ec8e24350c9839c7b2a68f2fb613db",
+      "source_url": "https://apps.irs.gov/pub/epostcard/990/xml/2026/index_2026.csv",
+      "validation_status": "pass"
+    }
+  ],
+  "assertions": {
+    "amended_return_count": 0,
+    "artifact_count": 3,
+    "matched_query_count": 36,
+    "multi_filing_query_count": 0,
+    "original_return_count": 36,
+    "query_count": 36,
+    "selected_filing_count": 36,
+    "unique_ein_count": 16,
+    "unmatched_query_count": 0
+  },
+  "caveats": [
+    "Each row describes one exact legal filer and IRS return index entry, not a health system.",
+    "An EIN or taxpayer name does not establish ownership, operation, affiliation, or enterprise continuity.",
+    "Multiple same-period and amended returns are preserved without selecting an authoritative return.",
+    "A not-found query means only that no supported row matched in the selected annual indexes.",
+    "This receipt grants no financial comparability, Toolkit import, public projection, or release authority."
+  ],
+  "dataset_id": "irs_form_990_e_file_index",
+  "filings": [
+    {
+      "amendment_status": "original",
+      "artifact_id": "irs-form-990-index-2024",
+      "canonical_row_sha256": "sha256:01f5409ab0301fad769f7ffa1858661e63a9eb4d96f04600533739a2700657ba",
+      "dln": "93493226008554",
+      "ein": "900656139",
+      "filing_type": "EFILE",
+      "filing_year": 2024,
+      "object_id": "202402269349300855",
+      "query_ids": [
+        "ein-900656139-2023-2024"
+      ],
+      "return_id": "22939121",
+      "return_type": "990",
+      "submission_date_raw": "2024",
+      "tax_period": "202309",
+      "taxpayer_name": "MASS GENERAL BRIGHAM INCORPORATED & AFFILIATES GROUP RETURN",
+      "xml_batch_id": "2024_TEOS_XML_08A"
+    },
+    {
+      "amendment_status": "original",
+      "artifact_id": "irs-form-990-index-2024",
+      "canonical_row_sha256": "sha256:f7c16a731ccd982dbcc3205180a5c8480563455e000f9162452d8d44997920ef",
+      "dln": "93493317001254",
+      "ein": "752702388",
+      "filing_type": "EFILE",
+      "filing_year": 2024,
+      "object_id": "202403179349300125",
+      "query_ids": [
+        "ein-752702388-2023-2024"
+      ],
+      "return_id": null,
+      "return_type": "990",
+      "submission_date_raw": "2024",
+      "tax_period": "202312",
+      "taxpayer_name": "Texas Health Resources",
+      "xml_batch_id": "2024_TEOS_XML_11A"
+    },
+    {
+      "amendment_status": "original",
+      "artifact_id": "irs-form-990-index-2024",
+      "canonical_row_sha256": "sha256:b52c14dc7d4554bdeef3a027f1ca050a33d82ac28629e5a647b9777725533f80",
+      "dln": "93493136095714",
+      "ein": "232829095",
+      "filing_type": "EFILE",
+      "filing_year": 2024,
+      "object_id": "202411369349309571",
+      "query_ids": [
+        "ein-232829095-2023-2024"
+      ],
+      "return_id": "22588066",
+      "return_type": "990",
+      "submission_date_raw": "2024",
+      "tax_period": "202306",
+      "taxpayer_name": "THOMAS JEFFERSON UNIVERSITY HOSPITALS INC",
+      "xml_batch_id": "2024_TEOS_XML_05a"
+    },
+    {
+      "amendment_status": "original",
+      "artifact_id": "irs-form-990-index-2024",
+      "canonical_row_sha256": "sha256:78cc3f1f44a26db0e653e419f83e0216834516f856aa836518d7808053f1ac90",
+      "dln": "93493226008614",
+      "ein": "010238552",
+      "filing_type": "EFILE",
+      "filing_year": 2024,
+      "object_id": "202412269349300861",
+      "query_ids": [
+        "ein-010238552-2023-2024"
+      ],
+      "return_id": "22940610",
+      "return_type": "990",
+      "submission_date_raw": "2024",
+      "tax_period": "202309",
+      "taxpayer_name": "MaineHealth",
+      "xml_batch_id": "2024_TEOS_XML_08A"
+    },
+    {
+      "amendment_status": "original",
+      "artifact_id": "irs-form-990-index-2024",
+      "canonical_row_sha256": "sha256:8c7d089193a7aaa3623ee3ffe16d6a2099c907af00e9899cf4c5eb3614b2ca21",
+      "dln": "93493316020564",
+      "ein": "421707837",
+      "filing_type": "EFILE",
+      "filing_year": 2024,
+      "object_id": "202413169349302056",
+      "query_ids": [
+        "ein-421707837-2023-2024"
+      ],
+      "return_id": null,
+      "return_type": "990",
+      "submission_date_raw": "2024",
+      "tax_period": "202312",
+      "taxpayer_name": "HENNEPIN HEALTHCARE SYSTEM INC",
+      "xml_batch_id": "2024_TEOS_XML_11A"
+    },
+    {
+      "amendment_status": "original",
+      "artifact_id": "irs-form-990-index-2024",
+      "canonical_row_sha256": "sha256:84c15c9f65586617443dd01839bbe4f9f09aaf19c869fd4396d1430531714dc5",
+      "dln": "93493313030674",
+      "ein": "383952644",
+      "filing_type": "EFILE",
+      "filing_year": 2024,
+      "object_id": "202423139349303067",
+      "query_ids": [
+        "ein-383952644-2023-2024"
+      ],
+      "return_id": null,
+      "return_type": "990",
+      "submission_date_raw": "2024",
+      "tax_period": "202312",
+      "taxpayer_name": "MAYO CLINIC GROUP RETURN",
+      "xml_batch_id": "2024_TEOS_XML_11A"
+    },
+    {
+      "amendment_status": "original",
+      "artifact_id": "irs-form-990-index-2024",
+      "canonical_row_sha256": "sha256:cdd3974e13f00bebb5e6aafcc6b500a5e9db85c13bfe2350b9cf5b7dd32b08a8",
+      "dln": "93493318100024",
+      "ein": "741180155",
+      "filing_type": "EFILE",
+      "filing_year": 2024,
+      "object_id": "202423189349310002",
+      "query_ids": [
+        "ein-741180155-2023-2024"
+      ],
+      "return_id": null,
+      "return_type": "990",
+      "submission_date_raw": "2024",
+      "tax_period": "202312",
+      "taxpayer_name": "THE METHODIST HOSPITAL",
+      "xml_batch_id": "2024_TEOS_XML_11A"
+    },
+    {
+      "amendment_status": "original",
+      "artifact_id": "irs-form-990-index-2024",
+      "canonical_row_sha256": "sha256:b92ed891281276e34ecd1a39d4beae34771675ca341862e01b3330bec5c43424",
+      "dln": "93493319033324",
+      "ein": "340714585",
+      "filing_type": "EFILE",
+      "filing_year": 2024,
+      "object_id": "202423199349303332",
+      "query_ids": [
+        "ein-340714585-2023-2024"
+      ],
+      "return_id": null,
+      "return_type": "990",
+      "submission_date_raw": "2024",
+      "tax_period": "202312",
+      "taxpayer_name": "THE CLEVELAND CLINIC FOUNDATION",
+      "xml_batch_id": "2024_TEOS_XML_11A"
+    },
+    {
+      "amendment_status": "original",
+      "artifact_id": "irs-form-990-index-2024",
+      "canonical_row_sha256": "sha256:927b7706c583624814c31476247c2f45ab137a82a51dcb8fa70490714eab1c4f",
+      "dln": "93493320027784",
+      "ein": "941105628",
+      "filing_type": "EFILE",
+      "filing_year": 2024,
+      "object_id": "202433209349302778",
+      "query_ids": [
+        "ein-941105628-2023-2024"
+      ],
+      "return_id": null,
+      "return_type": "990",
+      "submission_date_raw": "2024",
+      "tax_period": "202312",
+      "taxpayer_name": "KAISER FOUNDATION HOSPITALS",
+      "xml_batch_id": "2024_TEOS_XML_11A"
+    },
+    {
+      "amendment_status": "original",
+      "artifact_id": "irs-form-990-index-2024",
+      "canonical_row_sha256": "sha256:1705481f416c9abc5ea62d68bdfa11b834865b78b4da1b3b32cd1289fd4c1783",
+      "dln": "93493130036444",
+      "ein": "521622253",
+      "filing_type": "EFILE",
+      "filing_year": 2024,
+      "object_id": "202441309349303644",
+      "query_ids": [
+        "ein-521622253-2023-2024"
+      ],
+      "return_id": "22391916",
+      "return_type": "990",
+      "submission_date_raw": "2024",
+      "tax_period": "202306",
+      "taxpayer_name": "LUMINIS HEALTH INC",
+      "xml_batch_id": "2024_TEOS_XML_05a"
+    },
+    {
+      "amendment_status": "original",
+      "artifact_id": "irs-form-990-index-2024",
+      "canonical_row_sha256": "sha256:55acc66958adf4d68d2c5b4d16829cda812be9b9bfd29cf0af91807c28a6b3ad",
+      "dln": "93493132012544",
+      "ein": "470617373",
+      "filing_type": "EFILE",
+      "filing_year": 2024,
+      "object_id": "202441329349301254",
+      "query_ids": [
+        "ein-470617373-2023-2024"
+      ],
+      "return_id": "22586544",
+      "return_type": "990",
+      "submission_date_raw": "2024",
+      "tax_period": "202306",
+      "taxpayer_name": "COMMONSPIRIT HEALTH",
+      "xml_batch_id": "2024_TEOS_XML_05a"
+    },
+    {
+      "amendment_status": "original",
+      "artifact_id": "irs-form-990-index-2024",
+      "canonical_row_sha256": "sha256:5e1fbbb6aa7bd1b70504ad7dc1650117dd1a78ee314cc0519a71423226a72ba2",
+      "dln": "93493134056844",
+      "ein": "362174823",
+      "filing_type": "EFILE",
+      "filing_year": 2024,
+      "object_id": "202441349349305684",
+      "query_ids": [
+        "ein-362174823-2023-2024"
+      ],
+      "return_id": "22591459",
+      "return_type": "990",
+      "submission_date_raw": "2024",
+      "tax_period": "202306",
+      "taxpayer_name": "RUSH University Medical Center",
+      "xml_batch_id": "2024_TEOS_XML_05a"
+    },
+    {
+      "amendment_status": "original",
+      "artifact_id": "irs-form-990-index-2024",
+      "canonical_row_sha256": "sha256:c5e8f4220dc762e008b649ad7d5f80f5b3a4882b70048a946c84864798370e19",
+      "dln": "93493310033744",
+      "ein": "870269232",
+      "filing_type": "EFILE",
+      "filing_year": 2024,
+      "object_id": "202443109349303374",
+      "query_ids": [
+        "ein-870269232-2023-2024"
+      ],
+      "return_id": null,
+      "return_type": "990",
+      "submission_date_raw": "2024",
+      "tax_period": "202312",
+      "taxpayer_name": "INTERMOUNTAIN HEALTH CARE INC",
+      "xml_batch_id": "2024_TEOS_XML_11A"
+    },
+    {
+      "amendment_status": "original",
+      "artifact_id": "irs-form-990-index-2024",
+      "canonical_row_sha256": "sha256:9410ec84c7db04a0a307fd3f13ea0263ca60d9038c59eb3c4b6555fb59a9653e",
+      "dln": "93493318035694",
+      "ein": "811244422",
+      "filing_type": "EFILE",
+      "filing_year": 2024,
+      "object_id": "202443189349303569",
+      "query_ids": [
+        "ein-811244422-2023-2024"
+      ],
+      "return_id": null,
+      "return_type": "990",
+      "submission_date_raw": "2024",
+      "tax_period": "202312",
+      "taxpayer_name": "PROVIDENCE ST JOSEPH HEALTH",
+      "xml_batch_id": "2024_TEOS_XML_11A"
+    },
+    {
+      "amendment_status": "original",
+      "artifact_id": "irs-form-990-index-2024",
+      "canonical_row_sha256": "sha256:6e0111a8a2dd4e3be6d37bc74f35dec900b95ce12dcd96476dca4b000289fe15",
+      "dln": "93493321002244",
+      "ein": "824184596",
+      "filing_type": "EFILE",
+      "filing_year": 2024,
+      "object_id": "202443219349300224",
+      "query_ids": [
+        "ein-824184596-2023-2024"
+      ],
+      "return_id": null,
+      "return_type": "990",
+      "submission_date_raw": "2024",
+      "tax_period": "202312",
+      "taxpayer_name": "ADVOCATE AURORA HEALTH INC",
+      "xml_batch_id": "2024_TEOS_XML_11A"
+    },
+    {
+      "amendment_status": "original",
+      "artifact_id": "irs-form-990-index-2025",
+      "canonical_row_sha256": "sha256:6cfc16937c5e8e3c22a863b8b12efe42704bdde8b71924bd0283e1fbc6761fea",
+      "dln": "93493134090155",
+      "ein": "362174823",
+      "filing_type": "EFILE",
+      "filing_year": 2025,
+      "object_id": "202501349349309015",
+      "query_ids": [
+        "ein-362174823-2024-2025"
+      ],
+      "return_id": "23452153",
+      "return_type": "990",
+      "submission_date_raw": "2025",
+      "tax_period": "202406",
+      "taxpayer_name": "Rush University Medical Center",
+      "xml_batch_id": "2025_TEOS_XML_05A"
+    },
+    {
+      "amendment_status": "original",
+      "artifact_id": "irs-form-990-index-2025",
+      "canonical_row_sha256": "sha256:f7fd6d049746e426430229c8ff8338a411ca601b8a62dfef68f0970527a3348e",
+      "dln": "93493308020505",
+      "ein": "421707837",
+      "filing_type": "EFILE",
+      "filing_year": 2025,
+      "object_id": "202503089349302050",
+      "query_ids": [
+        "ein-421707837-2024-2025"
+      ],
+      "return_id": null,
+      "return_type": "990",
+      "submission_date_raw": "2025",
+      "tax_period": "202412",
+      "taxpayer_name": "HENNEPIN HEALTHCARE SYSTEM INC",
+      "xml_batch_id": "2025_TEOS_XML_11A"
+    },
+    {
+      "amendment_status": "original",
+      "artifact_id": "irs-form-990-index-2025",
+      "canonical_row_sha256": "sha256:555bd814d113d0d80c04ee8cc0cc0e29687286c49d46e6119373208c0018dcab",
+      "dln": "93493321283405",
+      "ein": "824184596",
+      "filing_type": "EFILE",
+      "filing_year": 2025,
+      "object_id": "202503219349328340",
+      "query_ids": [
+        "ein-824184596-2024-2025"
+      ],
+      "return_id": null,
+      "return_type": "990",
+      "submission_date_raw": "2025",
+      "tax_period": "202412",
+      "taxpayer_name": "ADVOCATE AURORA HEALTH INC",
+      "xml_batch_id": "2025_TEOS_XML_11A"
+    },
+    {
+      "amendment_status": "original",
+      "artifact_id": "irs-form-990-index-2025",
+      "canonical_row_sha256": "sha256:11cc37ceb508197f4e7611230d67e540e4d21040de823df42812655b724c6e8a",
+      "dln": "93493121008415",
+      "ein": "521622253",
+      "filing_type": "EFILE",
+      "filing_year": 2025,
+      "object_id": "202511219349300841",
+      "query_ids": [
+        "ein-521622253-2024-2025"
+      ],
+      "return_id": "23429439",
+      "return_type": "990",
+      "submission_date_raw": "2025",
+      "tax_period": "202406",
+      "taxpayer_name": "LUMINIS HEALTH INC",
+      "xml_batch_id": "2025_TEOS_XML_05A"
+    },
+    {
+      "amendment_status": "original",
+      "artifact_id": "irs-form-990-index-2025",
+      "canonical_row_sha256": "sha256:4f418142b6f7ea3745e83573522f74edf46a3202ff49c728dbc49b4e6b1a07f1",
+      "dln": "93493226024465",
+      "ein": "900656139",
+      "filing_type": "EFILE",
+      "filing_year": 2025,
+      "object_id": "202512269349302446",
+      "query_ids": [
+        "ein-900656139-2024-2025"
+      ],
+      "return_id": "23844036",
+      "return_type": "990",
+      "submission_date_raw": "2025",
+      "tax_period": "202409",
+      "taxpayer_name": "MASS GENERAL BRIGHAM INCORPORATED & AFFILIATES GROUP RETURN",
+      "xml_batch_id": "2025_TEOS_XML_08A"
+    },
+    {
+      "amendment_status": "original",
+      "artifact_id": "irs-form-990-index-2025",
+      "canonical_row_sha256": "sha256:917dd75a2c5369fc03ef98301be6bb308a132ad9dc019bcd6a89ac1cf417a01f",
+      "dln": "93493318021365",
+      "ein": "340714585",
+      "filing_type": "EFILE",
+      "filing_year": 2025,
+      "object_id": "202513189349302136",
+      "query_ids": [
+        "ein-340714585-2024-2025"
+      ],
+      "return_id": null,
+      "return_type": "990",
+      "submission_date_raw": "2025",
+      "tax_period": "202412",
+      "taxpayer_name": "THE CLEVELAND CLINIC FOUNDATION",
+      "xml_batch_id": "2025_TEOS_XML_11D"
+    },
+    {
+      "amendment_status": "original",
+      "artifact_id": "irs-form-990-index-2025",
+      "canonical_row_sha256": "sha256:1daf8d2a4d60acd49af34fa502a5b50b8278cfe29522e187e4f36349333e994c",
+      "dln": "93493311026625",
+      "ein": "870269232",
+      "filing_type": "EFILE",
+      "filing_year": 2025,
+      "object_id": "202523119349302662",
+      "query_ids": [
+        "ein-870269232-2024-2025"
+      ],
+      "return_id": null,
+      "return_type": "990",
+      "submission_date_raw": "2025",
+      "tax_period": "202412",
+      "taxpayer_name": "INTERMOUNTAIN HEALTH CARE INC",
+      "xml_batch_id": "2025_TEOS_XML_11C"
+    },
+    {
+      "amendment_status": "original",
+      "artifact_id": "irs-form-990-index-2025",
+      "canonical_row_sha256": "sha256:658296b3a3cbf93d605785136fbc76f52c597d503444324db7bc2d3ef36c176f",
+      "dln": "93493316063075",
+      "ein": "811244422",
+      "filing_type": "EFILE",
+      "filing_year": 2025,
+      "object_id": "202523169349306307",
+      "query_ids": [
+        "ein-811244422-2024-2025"
+      ],
+      "return_id": null,
+      "return_type": "990",
+      "submission_date_raw": "2025",
+      "tax_period": "202412",
+      "taxpayer_name": "PROVIDENCE ST JOSEPH HEALTH",
+      "xml_batch_id": "2025_TEOS_XML_11C"
+    },
+    {
+      "amendment_status": "original",
+      "artifact_id": "irs-form-990-index-2025",
+      "canonical_row_sha256": "sha256:e205696e3d3038eaf537f938b1e44343144a148c148d8a5b60d2d96b7e96b69b",
+      "dln": "93493318038875",
+      "ein": "383952644",
+      "filing_type": "EFILE",
+      "filing_year": 2025,
+      "object_id": "202523189349303887",
+      "query_ids": [
+        "ein-383952644-2024-2025"
+      ],
+      "return_id": null,
+      "return_type": "990",
+      "submission_date_raw": "2025",
+      "tax_period": "202412",
+      "taxpayer_name": "MAYO CLINIC GROUP RETURN",
+      "xml_batch_id": "2025_TEOS_XML_11C"
+    },
+    {
+      "amendment_status": "original",
+      "artifact_id": "irs-form-990-index-2025",
+      "canonical_row_sha256": "sha256:90fb637dd1c851088ba5251212b8767bcafbbe1658b96b578b0de2655a2258cc",
+      "dln": "93493321099525",
+      "ein": "941105628",
+      "filing_type": "EFILE",
+      "filing_year": 2025,
+      "object_id": "202523219349309952",
+      "query_ids": [
+        "ein-941105628-2024-2025"
+      ],
+      "return_id": null,
+      "return_type": "990",
+      "submission_date_raw": "2025",
+      "tax_period": "202412",
+      "taxpayer_name": "KAISER FOUNDATION HOSPITALS",
+      "xml_batch_id": "2025_TEOS_XML_11C"
+    },
+    {
+      "amendment_status": "original",
+      "artifact_id": "irs-form-990-index-2025",
+      "canonical_row_sha256": "sha256:d0a768bcfd001fdef00ed054caa8bbf9281c41c7423d834d00788d2dd5b954cb",
+      "dln": "93493134054885",
+      "ein": "470617373",
+      "filing_type": "EFILE",
+      "filing_year": 2025,
+      "object_id": "202531349349305488",
+      "query_ids": [
+        "ein-470617373-2024-2025"
+      ],
+      "return_id": "23809922",
+      "return_type": "990",
+      "submission_date_raw": "2025",
+      "tax_period": "202406",
+      "taxpayer_name": "COMMONSPIRIT HEALTH",
+      "xml_batch_id": "2025_TEOS_XML_05A"
+    },
+    {
+      "amendment_status": "original",
+      "artifact_id": "irs-form-990-index-2025",
+      "canonical_row_sha256": "sha256:a74eb4227aa3ee7e2a382c96954716f7642a9c3b77bf35b0f656f2bbe71f0d1c",
+      "dln": "93493311019485",
+      "ein": "741180155",
+      "filing_type": "EFILE",
+      "filing_year": 2025,
+      "object_id": "202533119349301948",
+      "query_ids": [
+        "ein-741180155-2024-2025"
+      ],
+      "return_id": null,
+      "return_type": "990",
+      "submission_date_raw": "2025",
+      "tax_period": "202412",
+      "taxpayer_name": "THE METHODIST HOSPITAL",
+      "xml_batch_id": "2025_TEOS_XML_11B"
+    },
+    {
+      "amendment_status": "original",
+      "artifact_id": "irs-form-990-index-2025",
+      "canonical_row_sha256": "sha256:334e4fa7e0efa22425f3881dd19ad1a81c8c0c5778a1faf6590a6619c0c0862e",
+      "dln": "93493134087295",
+      "ein": "232829095",
+      "filing_type": "EFILE",
+      "filing_year": 2025,
+      "object_id": "202541349349308729",
+      "query_ids": [
+        "ein-232829095-2024-2025"
+      ],
+      "return_id": "23826779",
+      "return_type": "990",
+      "submission_date_raw": "2025",
+      "tax_period": "202406",
+      "taxpayer_name": "THOMAS JEFFERSON UNIVERSITY HOSPITALS INC",
+      "xml_batch_id": "2025_TEOS_XML_05A"
+    },
+    {
+      "amendment_status": "original",
+      "artifact_id": "irs-form-990-index-2025",
+      "canonical_row_sha256": "sha256:5fddb6a0f301567d614bf455c9e1bd915a857d73445a9d91e59ba0ee8d2e9e58",
+      "dln": "93493226015095",
+      "ein": "010238552",
+      "filing_type": "EFILE",
+      "filing_year": 2025,
+      "object_id": "202542269349301509",
+      "query_ids": [
+        "ein-010238552-2024-2025"
+      ],
+      "return_id": null,
+      "return_type": "990",
+      "submission_date_raw": "2025",
+      "tax_period": "202409",
+      "taxpayer_name": "MaineHealth",
+      "xml_batch_id": "2025_TEOS_XML_08A"
+    },
+    {
+      "amendment_status": "original",
+      "artifact_id": "irs-form-990-index-2025",
+      "canonical_row_sha256": "sha256:49f76761ec1f5cb1790765feb02574fa667616cef40c16bdd881c09205f64948",
+      "dln": "93493314060695",
+      "ein": "752702388",
+      "filing_type": "EFILE",
+      "filing_year": 2025,
+      "object_id": "202543149349306069",
+      "query_ids": [
+        "ein-752702388-2024-2025"
+      ],
+      "return_id": null,
+      "return_type": "990",
+      "submission_date_raw": "2025",
+      "tax_period": "202412",
+      "taxpayer_name": "Texas Health Resources",
+      "xml_batch_id": "2025_TEOS_XML_11B"
+    },
+    {
+      "amendment_status": "original",
+      "artifact_id": "irs-form-990-index-2026",
+      "canonical_row_sha256": "sha256:dfc69c04bb455ae94de0e4820acf89a940d38b1a62fe26b9a162ead41d3473eb",
+      "dln": "93493133015316",
+      "ein": "452106295",
+      "filing_type": "EFILE",
+      "filing_year": 2026,
+      "object_id": "202611339349301531",
+      "query_ids": [
+        "ein-452106295-2024-2026"
+      ],
+      "return_id": null,
+      "return_type": "990",
+      "submission_date_raw": "2026",
+      "tax_period": "202406",
+      "taxpayer_name": "Christus Health Plan",
+      "xml_batch_id": "2026_TEOS_XML_05A"
+    },
+    {
+      "amendment_status": "original",
+      "artifact_id": "irs-form-990-index-2026",
+      "canonical_row_sha256": "sha256:c16895c0854953e53b8ec6b73ff59ca1080050f4cc8ac2138725fcf888a15d9d",
+      "dln": "93493134122386",
+      "ein": "521622253",
+      "filing_type": "EFILE",
+      "filing_year": 2026,
+      "object_id": "202631349349312238",
+      "query_ids": [
+        "ein-521622253-2025-2026"
+      ],
+      "return_id": null,
+      "return_type": "990",
+      "submission_date_raw": "2026",
+      "tax_period": "202506",
+      "taxpayer_name": "LUMINIS HEALTH INC",
+      "xml_batch_id": "2026_TEOS_XML_05A"
+    },
+    {
+      "amendment_status": "original",
+      "artifact_id": "irs-form-990-index-2026",
+      "canonical_row_sha256": "sha256:cc36ca88263f847aa521ce872f7b9084aa1dc9e91b9f4699bec9f8085265013b",
+      "dln": "93493134128086",
+      "ein": "362174823",
+      "filing_type": "EFILE",
+      "filing_year": 2026,
+      "object_id": "202631349349312808",
+      "query_ids": [
+        "ein-362174823-2025-2026"
+      ],
+      "return_id": null,
+      "return_type": "990",
+      "submission_date_raw": "2026",
+      "tax_period": "202506",
+      "taxpayer_name": "Rush University Medical Center",
+      "xml_batch_id": "2026_TEOS_XML_05A"
+    },
+    {
+      "amendment_status": "original",
+      "artifact_id": "irs-form-990-index-2026",
+      "canonical_row_sha256": "sha256:43cc9248a88bed218782c04c8eadd86ebd525c271f32232dcfee491c86be40e8",
+      "dln": "93493133015296",
+      "ein": "452106295",
+      "filing_type": "EFILE",
+      "filing_year": 2026,
+      "object_id": "202641339349301529",
+      "query_ids": [
+        "ein-452106295-2025-2026"
+      ],
+      "return_id": null,
+      "return_type": "990",
+      "submission_date_raw": "2026",
+      "tax_period": "202506",
+      "taxpayer_name": "Christus Health Plan",
+      "xml_batch_id": "2026_TEOS_XML_05A"
+    },
+    {
+      "amendment_status": "original",
+      "artifact_id": "irs-form-990-index-2026",
+      "canonical_row_sha256": "sha256:a3f0ef2ca8d7a036d2f63e49a0655359e637438703dc45598369d16e9493ea6d",
+      "dln": "93493133074396",
+      "ein": "470617373",
+      "filing_type": "EFILE",
+      "filing_year": 2026,
+      "object_id": "202641339349307439",
+      "query_ids": [
+        "ein-470617373-2025-2026"
+      ],
+      "return_id": null,
+      "return_type": "990",
+      "submission_date_raw": "2026",
+      "tax_period": "202506",
+      "taxpayer_name": "COMMONSPIRIT HEALTH",
+      "xml_batch_id": "2026_TEOS_XML_05A"
+    },
+    {
+      "amendment_status": "original",
+      "artifact_id": "irs-form-990-index-2026",
+      "canonical_row_sha256": "sha256:4e8ca387a40f259783c08799b9450779c37e45dd31749b196520c46b4c6b62f1",
+      "dln": "93493134014396",
+      "ein": "232829095",
+      "filing_type": "EFILE",
+      "filing_year": 2026,
+      "object_id": "202641349349301439",
+      "query_ids": [
+        "ein-232829095-2025-2026"
+      ],
+      "return_id": null,
+      "return_type": "990",
+      "submission_date_raw": "2026",
+      "tax_period": "202506",
+      "taxpayer_name": "THOMAS JEFFERSON UNIVERSITY HOSPITALS INC",
+      "xml_batch_id": "2026_TEOS_XML_05A"
+    }
+  ],
+  "landing_page": "https://www.irs.gov/charities-non-profits/form-990-series-downloads",
+  "parser_version": "irs-form-990-filing-index-receipt-v1",
+  "query_results": [
+    {
+      "expected_object_id": "202412269349300861",
+      "expected_object_id_present": true,
+      "matched_object_ids": [
+        "202412269349300861"
+      ],
+      "query_id": "ein-010238552-2023-2024",
+      "status": "matched"
+    },
+    {
+      "expected_object_id": "202542269349301509",
+      "expected_object_id_present": true,
+      "matched_object_ids": [
+        "202542269349301509"
+      ],
+      "query_id": "ein-010238552-2024-2025",
+      "status": "matched"
+    },
+    {
+      "expected_object_id": "202411369349309571",
+      "expected_object_id_present": true,
+      "matched_object_ids": [
+        "202411369349309571"
+      ],
+      "query_id": "ein-232829095-2023-2024",
+      "status": "matched"
+    },
+    {
+      "expected_object_id": "202541349349308729",
+      "expected_object_id_present": true,
+      "matched_object_ids": [
+        "202541349349308729"
+      ],
+      "query_id": "ein-232829095-2024-2025",
+      "status": "matched"
+    },
+    {
+      "expected_object_id": "202641349349301439",
+      "expected_object_id_present": true,
+      "matched_object_ids": [
+        "202641349349301439"
+      ],
+      "query_id": "ein-232829095-2025-2026",
+      "status": "matched"
+    },
+    {
+      "expected_object_id": "202423199349303332",
+      "expected_object_id_present": true,
+      "matched_object_ids": [
+        "202423199349303332"
+      ],
+      "query_id": "ein-340714585-2023-2024",
+      "status": "matched"
+    },
+    {
+      "expected_object_id": "202513189349302136",
+      "expected_object_id_present": true,
+      "matched_object_ids": [
+        "202513189349302136"
+      ],
+      "query_id": "ein-340714585-2024-2025",
+      "status": "matched"
+    },
+    {
+      "expected_object_id": "202441349349305684",
+      "expected_object_id_present": true,
+      "matched_object_ids": [
+        "202441349349305684"
+      ],
+      "query_id": "ein-362174823-2023-2024",
+      "status": "matched"
+    },
+    {
+      "expected_object_id": "202501349349309015",
+      "expected_object_id_present": true,
+      "matched_object_ids": [
+        "202501349349309015"
+      ],
+      "query_id": "ein-362174823-2024-2025",
+      "status": "matched"
+    },
+    {
+      "expected_object_id": "202631349349312808",
+      "expected_object_id_present": true,
+      "matched_object_ids": [
+        "202631349349312808"
+      ],
+      "query_id": "ein-362174823-2025-2026",
+      "status": "matched"
+    },
+    {
+      "expected_object_id": "202423139349303067",
+      "expected_object_id_present": true,
+      "matched_object_ids": [
+        "202423139349303067"
+      ],
+      "query_id": "ein-383952644-2023-2024",
+      "status": "matched"
+    },
+    {
+      "expected_object_id": "202523189349303887",
+      "expected_object_id_present": true,
+      "matched_object_ids": [
+        "202523189349303887"
+      ],
+      "query_id": "ein-383952644-2024-2025",
+      "status": "matched"
+    },
+    {
+      "expected_object_id": "202413169349302056",
+      "expected_object_id_present": true,
+      "matched_object_ids": [
+        "202413169349302056"
+      ],
+      "query_id": "ein-421707837-2023-2024",
+      "status": "matched"
+    },
+    {
+      "expected_object_id": "202503089349302050",
+      "expected_object_id_present": true,
+      "matched_object_ids": [
+        "202503089349302050"
+      ],
+      "query_id": "ein-421707837-2024-2025",
+      "status": "matched"
+    },
+    {
+      "expected_object_id": "202611339349301531",
+      "expected_object_id_present": true,
+      "matched_object_ids": [
+        "202611339349301531"
+      ],
+      "query_id": "ein-452106295-2024-2026",
+      "status": "matched"
+    },
+    {
+      "expected_object_id": "202641339349301529",
+      "expected_object_id_present": true,
+      "matched_object_ids": [
+        "202641339349301529"
+      ],
+      "query_id": "ein-452106295-2025-2026",
+      "status": "matched"
+    },
+    {
+      "expected_object_id": "202441329349301254",
+      "expected_object_id_present": true,
+      "matched_object_ids": [
+        "202441329349301254"
+      ],
+      "query_id": "ein-470617373-2023-2024",
+      "status": "matched"
+    },
+    {
+      "expected_object_id": "202531349349305488",
+      "expected_object_id_present": true,
+      "matched_object_ids": [
+        "202531349349305488"
+      ],
+      "query_id": "ein-470617373-2024-2025",
+      "status": "matched"
+    },
+    {
+      "expected_object_id": "202641339349307439",
+      "expected_object_id_present": true,
+      "matched_object_ids": [
+        "202641339349307439"
+      ],
+      "query_id": "ein-470617373-2025-2026",
+      "status": "matched"
+    },
+    {
+      "expected_object_id": "202441309349303644",
+      "expected_object_id_present": true,
+      "matched_object_ids": [
+        "202441309349303644"
+      ],
+      "query_id": "ein-521622253-2023-2024",
+      "status": "matched"
+    },
+    {
+      "expected_object_id": "202511219349300841",
+      "expected_object_id_present": true,
+      "matched_object_ids": [
+        "202511219349300841"
+      ],
+      "query_id": "ein-521622253-2024-2025",
+      "status": "matched"
+    },
+    {
+      "expected_object_id": "202631349349312238",
+      "expected_object_id_present": true,
+      "matched_object_ids": [
+        "202631349349312238"
+      ],
+      "query_id": "ein-521622253-2025-2026",
+      "status": "matched"
+    },
+    {
+      "expected_object_id": "202423189349310002",
+      "expected_object_id_present": true,
+      "matched_object_ids": [
+        "202423189349310002"
+      ],
+      "query_id": "ein-741180155-2023-2024",
+      "status": "matched"
+    },
+    {
+      "expected_object_id": "202533119349301948",
+      "expected_object_id_present": true,
+      "matched_object_ids": [
+        "202533119349301948"
+      ],
+      "query_id": "ein-741180155-2024-2025",
+      "status": "matched"
+    },
+    {
+      "expected_object_id": "202403179349300125",
+      "expected_object_id_present": true,
+      "matched_object_ids": [
+        "202403179349300125"
+      ],
+      "query_id": "ein-752702388-2023-2024",
+      "status": "matched"
+    },
+    {
+      "expected_object_id": "202543149349306069",
+      "expected_object_id_present": true,
+      "matched_object_ids": [
+        "202543149349306069"
+      ],
+      "query_id": "ein-752702388-2024-2025",
+      "status": "matched"
+    },
+    {
+      "expected_object_id": "202443189349303569",
+      "expected_object_id_present": true,
+      "matched_object_ids": [
+        "202443189349303569"
+      ],
+      "query_id": "ein-811244422-2023-2024",
+      "status": "matched"
+    },
+    {
+      "expected_object_id": "202523169349306307",
+      "expected_object_id_present": true,
+      "matched_object_ids": [
+        "202523169349306307"
+      ],
+      "query_id": "ein-811244422-2024-2025",
+      "status": "matched"
+    },
+    {
+      "expected_object_id": "202443219349300224",
+      "expected_object_id_present": true,
+      "matched_object_ids": [
+        "202443219349300224"
+      ],
+      "query_id": "ein-824184596-2023-2024",
+      "status": "matched"
+    },
+    {
+      "expected_object_id": "202503219349328340",
+      "expected_object_id_present": true,
+      "matched_object_ids": [
+        "202503219349328340"
+      ],
+      "query_id": "ein-824184596-2024-2025",
+      "status": "matched"
+    },
+    {
+      "expected_object_id": "202443109349303374",
+      "expected_object_id_present": true,
+      "matched_object_ids": [
+        "202443109349303374"
+      ],
+      "query_id": "ein-870269232-2023-2024",
+      "status": "matched"
+    },
+    {
+      "expected_object_id": "202523119349302662",
+      "expected_object_id_present": true,
+      "matched_object_ids": [
+        "202523119349302662"
+      ],
+      "query_id": "ein-870269232-2024-2025",
+      "status": "matched"
+    },
+    {
+      "expected_object_id": "202402269349300855",
+      "expected_object_id_present": true,
+      "matched_object_ids": [
+        "202402269349300855"
+      ],
+      "query_id": "ein-900656139-2023-2024",
+      "status": "matched"
+    },
+    {
+      "expected_object_id": "202512269349302446",
+      "expected_object_id_present": true,
+      "matched_object_ids": [
+        "202512269349302446"
+      ],
+      "query_id": "ein-900656139-2024-2025",
+      "status": "matched"
+    },
+    {
+      "expected_object_id": "202433209349302778",
+      "expected_object_id_present": true,
+      "matched_object_ids": [
+        "202433209349302778"
+      ],
+      "query_id": "ein-941105628-2023-2024",
+      "status": "matched"
+    },
+    {
+      "expected_object_id": "202523219349309952",
+      "expected_object_id_present": true,
+      "matched_object_ids": [
+        "202523219349309952"
+      ],
+      "query_id": "ein-941105628-2024-2025",
+      "status": "matched"
+    }
+  ],
+  "receipt_status": "admitted",
+  "release_checksum_sha256": "sha256:0a8e5c3ec965b98cbb6d6a51b6ffea9dffa212a11d2394418e09d2dc693d2797",
+  "release_id": "irs-form-990-pilot-index-20260806",
+  "retrieved_at": "2026-08-06T13:01:20.362368Z",
+  "rights_basis_url": "https://www.irs.gov/privacy-disclosure/tax-code-regulations-and-official-guidance",
+  "rights_classification": "public_free",
+  "schema_version": "ushso.irs-form-990-filing-index-receipt.v1",
+  "scope_checksum_sha256": "sha256:9fd7cf841a82c75acd0908b3aff4052cb1195d3cdad1b6100458b3fe1ede06c8",
+  "scope_id": "ushso-form-990-exact-filer-pilot-v1",
+  "source_period": "annual-index-years:2024,2025,2026",
+  "technical_documentation_urls": [
+    "https://www.irs.gov/charities-non-profits/tax-exempt-organization-search-teos-faqs",
+    "https://www.irs.gov/pub/irs-tege/teos-data-dictionary-v2.csv"
+  ]
+}

@@ -1,0 +1,494 @@
+{
+  "$defs": {
+    "IrsForm990IndexArtifactReceipt": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_id": {
+          "pattern": "^irs-form-990-index-[0-9]{4}$",
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "checksum_sha256": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Checksum Sha256",
+          "type": "string"
+        },
+        "content_length": {
+          "exclusiveMinimum": 0,
+          "title": "Content Length",
+          "type": "integer"
+        },
+        "content_type": {
+          "title": "Content Type",
+          "type": "string"
+        },
+        "etag": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Etag"
+        },
+        "filing_year": {
+          "maximum": 2100,
+          "minimum": 2000,
+          "title": "Filing Year",
+          "type": "integer"
+        },
+        "final_url": {
+          "pattern": "^https://apps\\.irs\\.gov/pub/epostcard/990/xml/[0-9]{4}/index_[0-9]{4}\\.csv$",
+          "title": "Final Url",
+          "type": "string"
+        },
+        "last_modified": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Last Modified"
+        },
+        "relative_path": {
+          "pattern": "^irs_form_990_index_[0-9]{4}\\.csv$",
+          "title": "Relative Path",
+          "type": "string"
+        },
+        "response_status": {
+          "const": 200,
+          "title": "Response Status",
+          "type": "integer"
+        },
+        "retrieved_at": {
+          "format": "date-time",
+          "title": "Retrieved At",
+          "type": "string"
+        },
+        "row_count": {
+          "exclusiveMinimum": 0,
+          "title": "Row Count",
+          "type": "integer"
+        },
+        "schema_fingerprint": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Schema Fingerprint",
+          "type": "string"
+        },
+        "source_url": {
+          "pattern": "^https://apps\\.irs\\.gov/pub/epostcard/990/xml/[0-9]{4}/index_[0-9]{4}\\.csv$",
+          "title": "Source Url",
+          "type": "string"
+        },
+        "validation_status": {
+          "const": "pass",
+          "default": "pass",
+          "title": "Validation Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "filing_year",
+        "relative_path",
+        "source_url",
+        "final_url",
+        "response_status",
+        "content_type",
+        "retrieved_at",
+        "checksum_sha256",
+        "content_length",
+        "row_count",
+        "schema_fingerprint"
+      ],
+      "title": "IrsForm990IndexArtifactReceipt",
+      "type": "object"
+    },
+    "IrsForm990IndexAssertions": {
+      "additionalProperties": false,
+      "properties": {
+        "amended_return_count": {
+          "minimum": 0,
+          "title": "Amended Return Count",
+          "type": "integer"
+        },
+        "artifact_count": {
+          "exclusiveMinimum": 0,
+          "title": "Artifact Count",
+          "type": "integer"
+        },
+        "matched_query_count": {
+          "minimum": 0,
+          "title": "Matched Query Count",
+          "type": "integer"
+        },
+        "multi_filing_query_count": {
+          "minimum": 0,
+          "title": "Multi Filing Query Count",
+          "type": "integer"
+        },
+        "original_return_count": {
+          "minimum": 0,
+          "title": "Original Return Count",
+          "type": "integer"
+        },
+        "query_count": {
+          "exclusiveMinimum": 0,
+          "title": "Query Count",
+          "type": "integer"
+        },
+        "selected_filing_count": {
+          "minimum": 0,
+          "title": "Selected Filing Count",
+          "type": "integer"
+        },
+        "unique_ein_count": {
+          "minimum": 0,
+          "title": "Unique Ein Count",
+          "type": "integer"
+        },
+        "unmatched_query_count": {
+          "minimum": 0,
+          "title": "Unmatched Query Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "artifact_count",
+        "query_count",
+        "matched_query_count",
+        "unmatched_query_count",
+        "selected_filing_count",
+        "unique_ein_count",
+        "original_return_count",
+        "amended_return_count",
+        "multi_filing_query_count"
+      ],
+      "title": "IrsForm990IndexAssertions",
+      "type": "object"
+    },
+    "IrsForm990IndexedFiling": {
+      "additionalProperties": false,
+      "description": "One source-native IRS index row selected by reviewed legal-filer queries.",
+      "properties": {
+        "amendment_status": {
+          "enum": [
+            "original",
+            "amended"
+          ],
+          "title": "Amendment Status",
+          "type": "string"
+        },
+        "artifact_id": {
+          "pattern": "^irs-form-990-index-[0-9]{4}$",
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "canonical_row_sha256": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Canonical Row Sha256",
+          "type": "string"
+        },
+        "dln": {
+          "pattern": "^[0-9]{14}$",
+          "title": "Dln",
+          "type": "string"
+        },
+        "ein": {
+          "pattern": "^[0-9]{9}$",
+          "title": "Ein",
+          "type": "string"
+        },
+        "filing_type": {
+          "const": "EFILE",
+          "title": "Filing Type",
+          "type": "string"
+        },
+        "filing_year": {
+          "maximum": 2100,
+          "minimum": 2000,
+          "title": "Filing Year",
+          "type": "integer"
+        },
+        "object_id": {
+          "pattern": "^[0-9]{18}$",
+          "title": "Object Id",
+          "type": "string"
+        },
+        "query_ids": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Query Ids",
+          "type": "array"
+        },
+        "return_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Return Id"
+        },
+        "return_type": {
+          "enum": [
+            "990",
+            "990A"
+          ],
+          "title": "Return Type",
+          "type": "string"
+        },
+        "submission_date_raw": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Submission Date Raw"
+        },
+        "tax_period": {
+          "pattern": "^[0-9]{6}$",
+          "title": "Tax Period",
+          "type": "string"
+        },
+        "taxpayer_name": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Taxpayer Name",
+          "type": "string"
+        },
+        "xml_batch_id": {
+          "pattern": "^[0-9]{4}_TEOS_XML_[0-9]{2}[A-Za-z]$",
+          "title": "Xml Batch Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "filing_year",
+        "filing_type",
+        "ein",
+        "tax_period",
+        "taxpayer_name",
+        "return_type",
+        "amendment_status",
+        "dln",
+        "object_id",
+        "xml_batch_id",
+        "canonical_row_sha256",
+        "query_ids"
+      ],
+      "title": "IrsForm990IndexedFiling",
+      "type": "object"
+    },
+    "IrsForm990QueryResult": {
+      "additionalProperties": false,
+      "properties": {
+        "expected_object_id": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9]{18}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Expected Object Id"
+        },
+        "expected_object_id_present": {
+          "title": "Expected Object Id Present",
+          "type": "boolean"
+        },
+        "matched_object_ids": {
+          "items": {
+            "pattern": "^[0-9]{18}$",
+            "type": "string"
+          },
+          "title": "Matched Object Ids",
+          "type": "array"
+        },
+        "query_id": {
+          "title": "Query Id",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "matched",
+            "not_found_in_selected_annual_indexes"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "query_id",
+        "status",
+        "matched_object_ids",
+        "expected_object_id_present"
+      ],
+      "title": "IrsForm990QueryResult",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Public-safe receipt for bounded legal-filer index opportunities.",
+  "properties": {
+    "artifacts": {
+      "items": {
+        "$ref": "#/$defs/IrsForm990IndexArtifactReceipt"
+      },
+      "minItems": 1,
+      "title": "Artifacts",
+      "type": "array"
+    },
+    "assertions": {
+      "$ref": "#/$defs/IrsForm990IndexAssertions"
+    },
+    "caveats": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 5,
+      "minItems": 5,
+      "title": "Caveats",
+      "type": "array"
+    },
+    "dataset_id": {
+      "const": "irs_form_990_e_file_index",
+      "title": "Dataset Id",
+      "type": "string"
+    },
+    "filings": {
+      "items": {
+        "$ref": "#/$defs/IrsForm990IndexedFiling"
+      },
+      "title": "Filings",
+      "type": "array"
+    },
+    "landing_page": {
+      "pattern": "^https://www\\.irs\\.gov/[^\\s]+$",
+      "title": "Landing Page",
+      "type": "string"
+    },
+    "parser_version": {
+      "const": "irs-form-990-filing-index-receipt-v1",
+      "title": "Parser Version",
+      "type": "string"
+    },
+    "query_results": {
+      "items": {
+        "$ref": "#/$defs/IrsForm990QueryResult"
+      },
+      "minItems": 1,
+      "title": "Query Results",
+      "type": "array"
+    },
+    "receipt_status": {
+      "const": "admitted",
+      "title": "Receipt Status",
+      "type": "string"
+    },
+    "release_checksum_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Release Checksum Sha256",
+      "type": "string"
+    },
+    "release_id": {
+      "pattern": "^irs-form-990-pilot-index-[0-9]{8}$",
+      "title": "Release Id",
+      "type": "string"
+    },
+    "retrieved_at": {
+      "format": "date-time",
+      "title": "Retrieved At",
+      "type": "string"
+    },
+    "rights_basis_url": {
+      "pattern": "^https://www\\.irs\\.gov/[^\\s]+$",
+      "title": "Rights Basis Url",
+      "type": "string"
+    },
+    "rights_classification": {
+      "const": "public_free",
+      "title": "Rights Classification",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "ushso.irs-form-990-filing-index-receipt.v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "scope_checksum_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Scope Checksum Sha256",
+      "type": "string"
+    },
+    "scope_id": {
+      "pattern": "^[a-z0-9][a-z0-9-]{7,127}$",
+      "title": "Scope Id",
+      "type": "string"
+    },
+    "source_period": {
+      "pattern": "^annual-index-years:[0-9]{4}(,[0-9]{4})*$",
+      "title": "Source Period",
+      "type": "string"
+    },
+    "technical_documentation_urls": {
+      "maxItems": 2,
+      "minItems": 2,
+      "prefixItems": [
+        {
+          "pattern": "^https://www\\.irs\\.gov/[^\\s]+$",
+          "type": "string"
+        },
+        {
+          "pattern": "^https://www\\.irs\\.gov/[^\\s]+$",
+          "type": "string"
+        }
+      ],
+      "title": "Technical Documentation Urls",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_version",
+    "dataset_id",
+    "release_id",
+    "source_period",
+    "parser_version",
+    "retrieved_at",
+    "receipt_status",
+    "rights_classification",
+    "landing_page",
+    "rights_basis_url",
+    "technical_documentation_urls",
+    "scope_id",
+    "scope_checksum_sha256",
+    "release_checksum_sha256",
+    "artifacts",
+    "filings",
+    "query_results",
+    "assertions",
+    "caveats"
+  ],
+  "title": "IrsForm990FilingIndexReceipt",
+  "type": "object"
+}

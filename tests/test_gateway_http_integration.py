@@ -6,10 +6,12 @@ import os
 import socket
 import subprocess
 import sys
+import tempfile
 import time
 from collections.abc import Iterator
 from contextlib import closing, contextmanager
 from pathlib import Path
+from typing import TextIO
 
 import httpx
 import pytest
@@ -35,35 +37,53 @@ def _running_gateway(module: str, env_updates: dict[str, str]) -> Iterator[int]:
             "MCP_HOST": "127.0.0.1",
             "MCP_PORT": str(port),
             "SEC_USER_AGENT": "healthcare-data-mcp tests@example.com",
+            # Keep child diagnostics bounded while temporary files prevent pipe deadlocks.
+            "FASTMCP_LOG_LEVEL": "WARNING",
             **env_updates,
         }
     )
-    process = subprocess.Popen(
-        [sys.executable, "-m", module],
-        cwd=REPO_ROOT,
-        env=env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-    )
-    try:
-        _wait_for_port(port, process)
-        yield port
-    finally:
-        process.terminate()
+    with (
+        tempfile.TemporaryFile(mode="w+t", encoding="utf-8") as stdout,
+        tempfile.TemporaryFile(mode="w+t", encoding="utf-8") as stderr,
+    ):
+        process = subprocess.Popen(
+            [sys.executable, "-m", module],
+            cwd=REPO_ROOT,
+            env=env,
+            stdout=stdout,
+            stderr=stderr,
+            text=True,
+        )
         try:
-            process.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            process.kill()
-            process.wait(timeout=5)
+            _wait_for_port(port, process, stdout, stderr)
+            yield port
+        finally:
+            process.terminate()
+            try:
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait(timeout=5)
 
 
-def _wait_for_port(port: int, process: subprocess.Popen[str]) -> None:
+def _wait_for_port(
+    port: int,
+    process: subprocess.Popen[str],
+    stdout: TextIO,
+    stderr: TextIO,
+) -> None:
     deadline = time.time() + 15
     while time.time() < deadline:
         if process.poll() is not None:
-            stdout, stderr = process.communicate(timeout=1)
-            raise AssertionError(f"gateway process exited early: stdout={stdout[-500:]} stderr={stderr[-500:]}")
+            stdout.flush()
+            stderr.flush()
+            stdout.seek(0)
+            stderr.seek(0)
+            stdout_text = stdout.read()
+            stderr_text = stderr.read()
+            raise AssertionError(
+                f"gateway process exited early: stdout={stdout_text[-500:]} stderr={stderr_text[-500:]}"
+            )
         try:
             with socket.create_connection(("127.0.0.1", port), timeout=0.2):
                 return
@@ -155,7 +175,9 @@ async def test_live_gateway_http_requires_auth_and_exposes_policy_tools() -> Non
     assert "search_provider_enrollment" in tools
     assert inventory["gateway"] == "live-gateway"
     assert inventory["policy"]["gateway_type"] == "live_policy_gateway"
-    assert any(tool["name"] == "screen_leie_batch" and "mcp:bulk" in tool["allowed_scopes"] for tool in inventory["tools"])
+    assert any(
+        tool["name"] == "screen_leie_batch" and "mcp:bulk" in tool["allowed_scopes"] for tool in inventory["tools"]
+    )
 
 
 @pytest.mark.asyncio
