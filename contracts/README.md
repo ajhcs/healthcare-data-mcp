@@ -18,6 +18,33 @@ producer-published handoff contract for the revised 2023 AHRQ system-universe
 and hospital-linkage receipt. The adjacent admitted receipt contains only
 public provenance and integrity metadata; raw CSV rows remain outside Git.
 
+`source-receipts/irs-form-990-filing-index-receipt-v1.schema.json` is the
+producer contract for bounded, reviewed exact legal-filer queries against
+official IRS annual electronic-filing indexes. The adjacent pilot scope grants
+source-custody authority only. The admitted receipt preserves exact annual
+artifact hashes and every supported `990` or `990A` match without choosing a
+preferred return or inferring a health-system relationship. Raw annual index
+CSVs remain outside Git.
+
+Bootstrap a new reviewed snapshot only after double retrieval, or validate new
+custody against an existing receipt:
+
+```bash
+python scripts/download_irs_form_990_filing_indexes.py \
+  --bootstrap \
+  --scope contracts/source-receipts/irs-form-990-pilot-scope-v1.json \
+  --receipt-path /tmp/irs-form-990-pilot-receipt.json
+
+python scripts/download_irs_form_990_filing_indexes.py \
+  --expected-receipt contracts/source-receipts/irs-form-990-pilot-receipt.json \
+  --scope contracts/source-receipts/irs-form-990-pilot-scope-v1.json \
+  --receipt-path /tmp/validated-irs-form-990-pilot-receipt.json
+```
+
+The receipt describes exact legal filers and filing-index rows only. It grants
+no AHRQ, brand, ownership, operation, reporting-perimeter, financial,
+comparison, profile, publication, or release authority.
+
 Build a bundle from an acquired/normalized input packet without hand-editing an
 intermediate artifact:
 

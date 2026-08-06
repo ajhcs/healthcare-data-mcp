@@ -7,6 +7,9 @@ from pathlib import Path
 
 from shared.acquisition.ahrq_compendium_historical import AhrqHistoricalSourceReceipt
 from shared.acquisition.ahrq_compendium_receipt import AhrqCompendiumSourceReceipt
+from shared.acquisition.irs_form_990_filing_index_receipt import (
+    IrsForm990FilingIndexReceipt,
+)
 from shared.acquisition.scale_annual_discharges_packet import AnnualDischargesAcquisition
 from shared.acquisition.scale_emergency_department_count_contract import (
     EmergencyDepartmentCountAcquisition,
@@ -24,6 +27,10 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def main() -> None:
     schemas = {
+        ROOT
+        / "contracts"
+        / "source-receipts"
+        / "irs-form-990-filing-index-receipt-v1.schema.json": IrsForm990FilingIndexReceipt.model_json_schema(),
         ROOT
         / "contracts"
         / "source-receipts"

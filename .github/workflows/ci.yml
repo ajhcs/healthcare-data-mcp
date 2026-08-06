@@ -75,6 +75,11 @@ jobs:
           python scripts/render_client_configs.py claude-desktop --check
       - name: Product metadata gates
         run: pytest tests/test_client_packaging.py tests/test_distribution_artifacts.py tests/test_discovery_metadata.py tests/test_doctor.py tests/test_workflows.py tests/test_presets.py tests/test_gateway_auth.py tests/test_gateway_metadata.py tests/test_gateway_http_integration.py tests/servers/live_gateway/test_server.py -q
+      - name: Form 990 filing-index receipt gates
+        run: |
+          python scripts/export_contract_schemas.py
+          git diff --exit-code -- contracts/source-receipts/irs-form-990-filing-index-receipt-v1.schema.json
+          pytest tests/test_irs_form_990_filing_index_receipt.py tests/test_download_irs_form_990_filing_indexes.py -q
       - name: Read-only CLI readiness smoke
         run: |
           hc-mcp --version >/tmp/hc-mcp-version.txt
