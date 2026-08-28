@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.ushso.org/healthcare-data-platform/storage/v1/storage-benchmark.schema.json",
+  "title": "Healthcare Data Platform Storage Benchmark Manifest v1",
+  "description": "Index of deterministic synthetic P0-11 benchmark receipts. Raw samples and exact environment metadata remain in the workload contract fixture.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "record_type",
+    "record_id",
+    "packet_id",
+    "tracking_bead",
+    "frozen_dispatch_base",
+    "workload_contract_ref",
+    "benchmark_fixture_ref",
+    "measurement_mode",
+    "git_sha",
+    "fixture_release",
+    "source_release",
+    "hardware_or_service_class",
+    "captured_at",
+    "percentile_method",
+    "sample_count",
+    "benchmarks",
+    "method",
+    "limitations",
+    "owner"
+  ],
+  "properties": {
+    "schema_version": {"const": "hdp.storage-benchmark.v1"},
+    "record_type": {"const": "storage_benchmark"},
+    "record_id": {"type": "string", "pattern": "^hdp:storage-benchmark:[a-z0-9.-]+$"},
+    "packet_id": {"const": "p0-11-workload-storage-cost-adr"},
+    "tracking_bead": {"const": "healthcare-toolkit-rrna.11"},
+    "frozen_dispatch_base": {"const": "35e15a30eac8d9533741f9adb970d2028f73aab6"},
+    "workload_contract_ref": {"const": "contracts/healthcare-data-platform/storage/v1/storage-workload.schema.json"},
+    "benchmark_fixture_ref": {"const": "contracts/healthcare-data-platform/storage/v1/fixtures/valid-storage-workload.json"},
+    "measurement_mode": {"const": "deterministic_synthetic_fixture"},
+    "git_sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "fixture_release": {"type": "string", "minLength": 1},
+    "source_release": {"type": "string", "minLength": 1},
+    "hardware_or_service_class": {"type": "string", "minLength": 1},
+    "captured_at": {"type": "string", "format": "date-time"},
+    "percentile_method": {"const": "nearest_rank_v1"},
+    "sample_count": {"const": 3},
+    "benchmarks": {
+      "type": "array",
+      "minItems": 8,
+      "items": {"$ref": "#/$defs/benchmark"}
+    },
+    "method": {"$ref": "#/$defs/method"},
+    "limitations": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+    "owner": {"type": "string", "minLength": 1}
+  },
+  "$defs": {
+    "benchmark": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "benchmark_id",
+        "workload_id",
+        "store_id",
+        "metric_scope",
+        "evidence_class",
+        "sample_count",
+        "p50_elapsed_ms",
+        "p95_elapsed_ms",
+        "p99_elapsed_ms",
+        "throughput_mib_per_s",
+        "storage_amplification_ratio",
+        "cost_units",
+        "approved_cost_cap_units",
+        "quota_result",
+        "status",
+        "interpretation"
+      ],
+      "properties": {
+        "benchmark_id": {"type": "string", "pattern": "^bench:p0-11:[a-z0-9-]+$"},
+        "workload_id": {"enum": ["control_metadata", "national_backbone", "cohort_enrichment", "hospital_mrf", "tic_optional"]},
+        "store_id": {"enum": ["postgresql", "object_storage", "parquet", "duckdb"]},
+        "metric_scope": {"enum": ["ingest", "query", "egress", "storage"]},
+        "evidence_class": {"const": "C"},
+        "sample_count": {"const": 3},
+        "p50_elapsed_ms": {"type": "number", "exclusiveMinimum": 0},
+        "p95_elapsed_ms": {"type": "number", "exclusiveMinimum": 0},
+        "p99_elapsed_ms": {"type": "number", "exclusiveMinimum": 0},
+        "throughput_mib_per_s": {"type": "number", "exclusiveMinimum": 0},
+        "storage_amplification_ratio": {"type": "number", "exclusiveMinimum": 0},
+        "cost_units": {"type": "number", "minimum": 0},
+        "approved_cost_cap_units": {"type": "number", "exclusiveMinimum": 0},
+        "quota_result": {"const": "within_quota"},
+        "status": {"enum": ["pass", "objective_variance"]},
+        "interpretation": {"type": "string", "minLength": 1}
+      }
+    },
+    "method": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["percentile", "throughput", "storage_amplification", "cost", "fixture_generation", "quota_behavior"],
+      "properties": {
+        "percentile": {"const": "nearest-rank: ceil(percentile / 100 * n), clamped to rank 1"},
+        "throughput": {"const": "input_bytes / p95_elapsed_seconds / 2^20"},
+        "storage_amplification": {"const": "stored_bytes / logical_workload_bytes"},
+        "cost": {"const": "synthetic cost units; ratio must remain <= approved cap"},
+        "fixture_generation": {"const": "deterministic, non-sensitive, source-shape-only"},
+        "quota_behavior": {"const": "abort_before_commit and preserve prior pointer"}
+      }
+    }
+  }
+}

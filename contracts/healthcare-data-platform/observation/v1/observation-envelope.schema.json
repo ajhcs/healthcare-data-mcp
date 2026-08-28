@@ -1,0 +1,1007 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.ushso.org/healthcare-data-platform/observation/v1/observation-envelope.schema.json",
+  "title": "Healthcare Data Platform source-scoped observation envelope v1",
+  "description": "An additive, secret-free bridge between a producer source receipt and Toolkit evidence. It records source release, immutable artifact custody, run/activity, observations, valid and transaction time, conflict or missingness, and replay lineage without granting promotion or current-projection authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "record_type",
+    "record_id",
+    "packet_id",
+    "tracking_bead",
+    "frozen_dispatch_base",
+    "source_release",
+    "artifact",
+    "receipt",
+    "activity",
+    "observations",
+    "lineage",
+    "authority_limits"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "hdp.observation-envelope.v1",
+      "type": "string"
+    },
+    "record_type": {
+      "const": "observation_envelope",
+      "type": "string"
+    },
+    "record_id": {
+      "type": "string",
+      "pattern": "^hdp:observation-envelope:[a-z0-9][a-z0-9._:-]*$"
+    },
+    "packet_id": {
+      "const": "p0-09-observation-provenance-delta-v1",
+      "type": "string"
+    },
+    "tracking_bead": {
+      "const": "healthcare-toolkit-rrna.9",
+      "type": "string"
+    },
+    "frozen_dispatch_base": {
+      "const": "11d16f8303226619161f9bef03cb312f693b2d49",
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "source_release": {
+      "$ref": "#/$defs/sourceRelease"
+    },
+    "artifact": {
+      "$ref": "#/$defs/artifact"
+    },
+    "receipt": {
+      "$ref": "#/$defs/receipt"
+    },
+    "activity": {
+      "$ref": "#/$defs/activity"
+    },
+    "observations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/observation"
+      }
+    },
+    "lineage": {
+      "$ref": "#/$defs/lineage"
+    },
+    "authority_limits": {
+      "$ref": "#/$defs/authorityLimits"
+    }
+  },
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500,
+      "pattern": "\\S"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "sourceId": {
+      "type": "string",
+      "pattern": "^source:[a-z0-9][a-z0-9._:-]*$"
+    },
+    "releaseId": {
+      "type": "string",
+      "pattern": "^release:[a-z0-9][a-z0-9._:-]*$"
+    },
+    "artifactId": {
+      "type": "string",
+      "pattern": "^artifact:[a-z0-9][a-z0-9._:-]*$"
+    },
+    "receiptId": {
+      "type": "string",
+      "pattern": "^receipt:[a-z0-9][a-z0-9._:-]*$"
+    },
+    "activityId": {
+      "type": "string",
+      "pattern": "^activity:[a-z0-9][a-z0-9._:-]*$"
+    },
+    "runId": {
+      "type": "string",
+      "pattern": "^run:[a-z0-9][a-z0-9._:-]*$"
+    },
+    "observationId": {
+      "type": "string",
+      "pattern": "^observation:[a-z0-9][a-z0-9._:-]*$"
+    },
+    "identityKey": {
+      "type": "string",
+      "pattern": "^identity:[a-z0-9][a-z0-9._:-]*$"
+    },
+    "lineageId": {
+      "type": "string",
+      "pattern": "^lineage:[a-z0-9][a-z0-9._:-]*$"
+    },
+    "idempotencyKey": {
+      "type": "string",
+      "pattern": "^idempotency:[a-z0-9][a-z0-9._:-]*$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "safeLocator": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500,
+      "pattern": "^(?:https://|object://|parquet://|docs/|contracts/)[A-Za-z0-9._:/-]+$"
+    },
+    "selector": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300,
+      "pattern": "^(?:row|record|field|json-pointer):[A-Za-z0-9._:/-]+$"
+    },
+    "sourceRelease": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_id",
+        "release_id",
+        "release_label",
+        "source_kind",
+        "release_sha256",
+        "evidence_locator",
+        "coverage_state"
+      ],
+      "properties": {
+        "source_id": {
+          "$ref": "#/$defs/sourceId"
+        },
+        "release_id": {
+          "$ref": "#/$defs/releaseId"
+        },
+        "release_label": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "source_kind": {
+          "type": "string",
+          "enum": [
+            "official_dataset",
+            "legacy_field",
+            "registry",
+            "contract",
+            "synthetic_fixture",
+            "research_note"
+          ]
+        },
+        "release_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "evidence_locator": {
+          "$ref": "#/$defs/safeLocator"
+        },
+        "coverage_state": {
+          "type": "string",
+          "enum": [
+            "present",
+            "not_yet_researched",
+            "unavailable_public",
+            "not_applicable",
+            "blocked_source_conflict"
+          ]
+        }
+      }
+    },
+    "custody": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "locator",
+        "storage_plane",
+        "immutable",
+        "retention"
+      ],
+      "properties": {
+        "locator": {
+          "$ref": "#/$defs/safeLocator"
+        },
+        "storage_plane": {
+          "type": "string",
+          "enum": [
+            "object_storage",
+            "parquet",
+            "evidence_ledger"
+          ]
+        },
+        "immutable": {
+          "const": true,
+          "type": "boolean"
+        },
+        "retention": {
+          "type": "string",
+          "enum": [
+            "indefinite",
+            "legal_hold",
+            "append_only"
+          ]
+        }
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_id",
+        "release_ref",
+        "artifact_kind",
+        "media_type",
+        "content_sha256",
+        "byte_length",
+        "custody"
+      ],
+      "properties": {
+        "artifact_id": {
+          "$ref": "#/$defs/artifactId"
+        },
+        "release_ref": {
+          "$ref": "#/$defs/releaseId"
+        },
+        "artifact_kind": {
+          "type": "string",
+          "enum": [
+            "raw_source",
+            "source_receipt",
+            "normalized_rows",
+            "observation_batch",
+            "evidence_bundle"
+          ]
+        },
+        "media_type": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9.+/-]*$"
+        },
+        "content_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "byte_length": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "custody": {
+          "$ref": "#/$defs/custody"
+        }
+      }
+    },
+    "receipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "receipt_id",
+        "producer",
+        "receipt_schema",
+        "source_release_ref",
+        "artifact_ref",
+        "source_release_sha256",
+        "artifact_sha256",
+        "receipt_sha256",
+        "state",
+        "recorded_at",
+        "evidence_locator"
+      ],
+      "properties": {
+        "receipt_id": {
+          "$ref": "#/$defs/receiptId"
+        },
+        "producer": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "receipt_schema": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "source_release_ref": {
+          "$ref": "#/$defs/releaseId"
+        },
+        "artifact_ref": {
+          "$ref": "#/$defs/artifactId"
+        },
+        "source_release_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "artifact_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "receipt_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "succeeded",
+            "unchanged",
+            "failed",
+            "blocked"
+          ]
+        },
+        "recorded_at": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "evidence_locator": {
+          "$ref": "#/$defs/safeLocator"
+        }
+      }
+    },
+    "actor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "actor_type",
+        "actor_id"
+      ],
+      "properties": {
+        "actor_type": {
+          "type": "string",
+          "enum": [
+            "human",
+            "agent",
+            "system_ingest",
+            "deterministic_transform",
+            "migration"
+          ]
+        },
+        "actor_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "activity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "activity_id",
+        "run_id",
+        "activity_type",
+        "actor",
+        "started_at",
+        "ended_at",
+        "status",
+        "input_artifact_refs",
+        "output_artifact_refs"
+      ],
+      "properties": {
+        "activity_id": {
+          "$ref": "#/$defs/activityId"
+        },
+        "run_id": {
+          "$ref": "#/$defs/runId"
+        },
+        "activity_type": {
+          "type": "string",
+          "enum": [
+            "source_receipt",
+            "acquisition",
+            "change_detection",
+            "parsing",
+            "normalization",
+            "observation",
+            "admission",
+            "replay"
+          ]
+        },
+        "actor": {
+          "$ref": "#/$defs/actor"
+        },
+        "started_at": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "ended_at": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "succeeded",
+            "unchanged",
+            "failed",
+            "blocked"
+          ]
+        },
+        "input_artifact_refs": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/artifactId"
+          }
+        },
+        "output_artifact_refs": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/artifactId"
+          }
+        }
+      }
+    },
+    "validTime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "precision",
+        "as_of",
+        "valid_from",
+        "valid_to"
+      ],
+      "properties": {
+        "precision": {
+          "type": "string",
+          "enum": [
+            "point",
+            "day",
+            "month",
+            "year",
+            "interval",
+            "as_of",
+            "unknown",
+            "not_applicable"
+          ]
+        },
+        "as_of": {
+          "$ref": "#/$defs/date"
+        },
+        "valid_from": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/date"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "valid_to": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/date"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "transactionTime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "recorded_from",
+        "recorded_to"
+      ],
+      "properties": {
+        "recorded_from": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "recorded_to": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/timestamp"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "sourceScope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scope_id",
+        "source_id",
+        "release_ref",
+        "artifact_ref",
+        "custody_locator",
+        "selector",
+        "authority_state"
+      ],
+      "properties": {
+        "scope_id": {
+          "type": "string",
+          "pattern": "^scope:[a-z0-9][a-z0-9._:-]*$"
+        },
+        "source_id": {
+          "$ref": "#/$defs/sourceId"
+        },
+        "release_ref": {
+          "$ref": "#/$defs/releaseId"
+        },
+        "artifact_ref": {
+          "$ref": "#/$defs/artifactId"
+        },
+        "custody_locator": {
+          "$ref": "#/$defs/safeLocator"
+        },
+        "selector": {
+          "$ref": "#/$defs/selector"
+        },
+        "authority_state": {
+          "type": "string",
+          "enum": [
+            "source_scoped",
+            "candidate_only",
+            "abstained"
+          ]
+        }
+      }
+    },
+    "conflict": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "reason",
+        "resolution",
+        "competing_observation_refs"
+      ],
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": [
+            "none",
+            "source_conflict",
+            "missingness",
+            "ambiguous"
+          ]
+        },
+        "reason": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "resolution": {
+          "type": "string",
+          "enum": [
+            "not_required",
+            "unresolved",
+            "abstained"
+          ]
+        },
+        "competing_observation_refs": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/observationId"
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "none"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "resolution": {
+                "const": "not_required"
+              },
+              "competing_observation_refs": {
+                "maxItems": 0
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "source_conflict"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "resolution": {
+                "const": "unresolved"
+              },
+              "competing_observation_refs": {
+                "minItems": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "missingness"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "resolution": {
+                "const": "abstained"
+              },
+              "competing_observation_refs": {
+                "maxItems": 0
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "ambiguous"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "resolution": {
+                "const": "unresolved"
+              },
+              "competing_observation_refs": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "observation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "observation_id",
+        "identity_key",
+        "subject_ref",
+        "attribute_term_ref",
+        "value",
+        "value_state",
+        "source_scope",
+        "activity_ref",
+        "receipt_ref",
+        "valid_time",
+        "transaction_time",
+        "conflict",
+        "promotion_state"
+      ],
+      "properties": {
+        "observation_id": {
+          "$ref": "#/$defs/observationId"
+        },
+        "identity_key": {
+          "$ref": "#/$defs/identityKey"
+        },
+        "subject_ref": {
+          "type": "string",
+          "pattern": "^(?:entity|source-record):[a-z0-9][a-z0-9._:-]*$"
+        },
+        "attribute_term_ref": {
+          "type": "string",
+          "pattern": "^term:[a-z][a-z0-9-]*$"
+        },
+        "value": {},
+        "value_state": {
+          "type": "string",
+          "enum": [
+            "observed",
+            "ambiguous",
+            "abstained",
+            "not_yet_researched",
+            "unavailable_public",
+            "not_applicable",
+            "blocked_source_conflict"
+          ]
+        },
+        "source_scope": {
+          "$ref": "#/$defs/sourceScope"
+        },
+        "activity_ref": {
+          "$ref": "#/$defs/activityId"
+        },
+        "receipt_ref": {
+          "$ref": "#/$defs/receiptId"
+        },
+        "valid_time": {
+          "$ref": "#/$defs/validTime"
+        },
+        "transaction_time": {
+          "$ref": "#/$defs/transactionTime"
+        },
+        "conflict": {
+          "$ref": "#/$defs/conflict"
+        },
+        "promotion_state": {
+          "const": "unpromoted_observation",
+          "type": "string"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "value_state": {
+                "const": "observed"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "not": {
+                  "type": "null"
+                }
+              },
+              "conflict": {
+                "properties": {
+                  "state": {
+                    "const": "none"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+                "value_state": {
+                  "const": "ambiguous"
+                }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "type": "null"
+              },
+              "conflict": {
+                "properties": {
+                  "state": {
+                    "const": "ambiguous"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "value_state": {
+                "const": "blocked_source_conflict"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "type": "null"
+              },
+              "conflict": {
+                "properties": {
+                  "state": {
+                    "const": "source_conflict"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "value_state": {
+                "enum": [
+                  "abstained",
+                  "not_yet_researched",
+                  "unavailable_public",
+                  "not_applicable"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "type": "null"
+              },
+              "conflict": {
+                "properties": {
+                  "state": {
+                    "const": "missingness"
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "replay": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "idempotency_key",
+        "state",
+        "replay_of",
+        "deterministic"
+      ],
+      "properties": {
+        "idempotency_key": {
+          "$ref": "#/$defs/idempotencyKey"
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "first_seen",
+            "replayed",
+            "unchanged"
+          ]
+        },
+        "replay_of": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/lineageId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "deterministic": {
+          "const": true,
+          "type": "boolean"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "first_seen"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "replay_of": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "enum": [
+                  "replayed",
+                  "unchanged"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "replay_of": {
+                "$ref": "#/$defs/lineageId"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "lineage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "lineage_id",
+        "source_release_ref",
+        "artifact_ref",
+        "receipt_ref",
+        "activity_ref",
+        "observation_ids",
+        "deterministic_order",
+        "replay"
+      ],
+      "properties": {
+        "lineage_id": {
+          "$ref": "#/$defs/lineageId"
+        },
+        "source_release_ref": {
+          "$ref": "#/$defs/releaseId"
+        },
+        "artifact_ref": {
+          "$ref": "#/$defs/artifactId"
+        },
+        "receipt_ref": {
+          "$ref": "#/$defs/receiptId"
+        },
+        "activity_ref": {
+          "$ref": "#/$defs/activityId"
+        },
+        "observation_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/observationId"
+          }
+        },
+        "deterministic_order": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/observationId"
+          }
+        },
+        "replay": {
+          "$ref": "#/$defs/replay"
+        }
+      }
+    },
+    "authorityLimits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "acquisition_allowed",
+        "mutation_allowed",
+        "deletion_allowed",
+        "publication_allowed",
+        "release_allowed",
+        "production_allowed",
+        "runtime_allowed",
+        "current_projection_allowed",
+        "identity_promotion_allowed"
+      ],
+      "properties": {
+        "acquisition_allowed": {
+          "const": false,
+          "type": "boolean"
+        },
+        "mutation_allowed": {
+          "const": false,
+          "type": "boolean"
+        },
+        "deletion_allowed": {
+          "const": false,
+          "type": "boolean"
+        },
+        "publication_allowed": {
+          "const": false,
+          "type": "boolean"
+        },
+        "release_allowed": {
+          "const": false,
+          "type": "boolean"
+        },
+        "production_allowed": {
+          "const": false,
+          "type": "boolean"
+        },
+        "runtime_allowed": {
+          "const": false,
+          "type": "boolean"
+        },
+        "current_projection_allowed": {
+          "const": false,
+          "type": "boolean"
+        },
+        "identity_promotion_allowed": {
+          "const": false,
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
