@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.ushso.org/healthcare-data-platform/ahrq/v1/ahrq-release.schema.json",
+  "title": "Healthcare Data Platform AHRQ official release probe v1",
+  "description": "Offline fixture contract for resolving and fingerprinting official AHRQ release metadata.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "record_type", "fixture_id", "source_id", "source_url", "probe_state"],
+  "properties": {
+    "schema_version": {"const": "hdp.ahrq-release-probe.v1", "type": "string"},
+    "record_type": {"const": "ahrq_release_probe", "type": "string"},
+    "fixture_id": {"type": "string", "pattern": "^fixture:ahrq:[a-z0-9][a-z0-9._:-]*$"},
+    "source_id": {"type": "string", "pattern": "^source:[a-z0-9][a-z0-9._:-]*$"},
+    "source_url": {"type": "string", "pattern": "^https://[A-Za-z0-9._:/-]+$"},
+    "probe_state": {"type": "string", "enum": ["release_metadata", "failed_probe"]},
+    "release_metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_id", "source_url", "release_id", "release_label", "published_at"],
+      "properties": {
+        "source_id": {"type": "string", "pattern": "^source:[a-z0-9][a-z0-9._:-]*$"},
+        "source_url": {"type": "string", "pattern": "^https://[A-Za-z0-9._:/-]+$"},
+        "release_id": {"type": "string", "pattern": "^release:[a-z0-9][a-z0-9._:-]*$"},
+        "release_label": {"type": "string", "minLength": 1, "maxLength": 200},
+        "published_at": {"type": "string", "format": "date-time"}
+      }
+    },
+    "response_body": {"type": "string", "minLength": 1, "maxLength": 131072},
+    "failure_reason": {"type": ["string", "null"], "maxLength": 300}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"probe_state": {"const": "failed_probe"}}},
+      "then": {
+        "required": ["failure_reason"],
+        "properties": {"failure_reason": {"type": "string", "minLength": 1}},
+        "not": {"anyOf": [{"required": ["release_metadata"]}, {"required": ["response_body"]}]}
+      },
+      "else": {
+        "required": ["release_metadata", "response_body"],
+        "properties": {"failure_reason": {"type": "null"}}
+      }
+    }
+  ]
+}
