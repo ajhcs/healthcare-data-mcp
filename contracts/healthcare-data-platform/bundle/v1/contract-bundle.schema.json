@@ -1,0 +1,840 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.ushso.org/healthcare-data-platform/bundle/v1/contract-bundle.schema.json",
+  "title": "Healthcare Data Platform contract distribution bundle v1",
+  "description": "A strict, source-bound index for the reviewed ontology, observation, fact/coverage, and storage contracts. Publication is non-runtime and does not transfer semantic ownership.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "record_type",
+    "record_id",
+    "tracking_bead",
+    "frozen_dispatch_base",
+    "bundle_id",
+    "bundle_semver",
+    "compatibility_floor",
+    "canonical_owner",
+    "versioning",
+    "source_contracts",
+    "artifacts",
+    "field_compatibility",
+    "consumer_matrix",
+    "generated_bindings",
+    "conformance_policy",
+    "release",
+    "rollback",
+    "authority_limits"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "hdp.contract-bundle.v1",
+      "type": "string"
+    },
+    "record_type": {
+      "const": "contract_bundle",
+      "type": "string"
+    },
+    "record_id": {
+      "type": "string",
+      "pattern": "^hdp:contract-bundle:[a-z0-9][a-z0-9._:-]*$"
+    },
+    "tracking_bead": {
+      "const": "healthcare-toolkit-rrna.13",
+      "type": "string"
+    },
+    "frozen_dispatch_base": {
+      "const": "cbc86bd1f03e10e9c88e8a7e5913c8c8399c1de4",
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "bundle_id": {
+      "const": "bundle:healthcare-data-platform:v1",
+      "type": "string"
+    },
+    "bundle_semver": {
+      "const": "1.0.0",
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "compatibility_floor": {
+      "const": "1.0",
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+$"
+    },
+    "canonical_owner": {
+      "$ref": "#/$defs/canonicalOwner"
+    },
+    "versioning": {
+      "$ref": "#/$defs/versioning"
+    },
+    "source_contracts": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "items": {
+        "$ref": "#/$defs/sourceContract"
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "minItems": 8,
+      "items": {
+        "$ref": "#/$defs/artifact"
+      }
+    },
+    "field_compatibility": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "items": {
+        "$ref": "#/$defs/fieldCompatibility"
+      }
+    },
+    "consumer_matrix": {
+      "type": "array",
+      "minItems": 5,
+      "items": {
+        "$ref": "#/$defs/consumer"
+      }
+    },
+    "generated_bindings": {
+      "$ref": "#/$defs/generatedBindings"
+    },
+    "conformance_policy": {
+      "$ref": "#/$defs/conformancePolicy"
+    },
+    "release": {
+      "$ref": "#/$defs/release"
+    },
+    "rollback": {
+      "$ref": "#/$defs/rollback"
+    },
+    "authority_limits": {
+      "$ref": "#/$defs/authorityLimits"
+    }
+  },
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500,
+      "pattern": "\\S"
+    },
+    "path": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500,
+      "pattern": "^(?:contracts|docs)/[A-Za-z0-9._*/-]+(?:\\.json|\\.yaml)$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "semver": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "artifactId": {
+      "type": "string",
+      "pattern": "^artifact:hdp-bundle-v1:[a-z0-9][a-z0-9._:-]*$"
+    },
+    "contractId": {
+      "type": "string",
+      "enum": [
+        "bundle",
+        "ontology",
+        "observation",
+        "fact_coverage",
+        "storage_workload",
+        "storage_benchmark"
+      ]
+    },
+    "family": {
+      "type": "string",
+      "enum": [
+        "bundle",
+        "ontology",
+        "observation",
+        "fact_coverage",
+        "storage_workload",
+        "storage_benchmark"
+      ]
+    },
+    "temporalSemantics": {
+      "type": "string",
+      "enum": [
+        "valid_time_and_transaction_time",
+        "validity_interval_with_as_of",
+        "validity_interval_with_period_as_of",
+        "capture_timestamp_and_declared_validity",
+        "capture_timestamp_and_benchmark_window"
+      ]
+    },
+    "unitSemantics": {
+      "type": "string",
+      "enum": [
+        "explicit_source_unit_no_implicit_conversion",
+        "catalog_allowed_unit_no_implicit_conversion",
+        "explicit_or_not_applicable"
+      ]
+    },
+    "breakingCategory": {
+      "type": "string",
+      "enum": [
+        "required_field_removal",
+        "field_type_or_meaning_change",
+        "constraint_tightening",
+        "enum_value_removal",
+        "source_scope_narrowing",
+        "temporal_semantics_change",
+        "unit_semantics_change"
+      ]
+    },
+    "canonicalOwner": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "owner_id",
+        "repository",
+        "canonical_path",
+        "semantic_authority",
+        "approval_state"
+      ],
+      "properties": {
+        "owner_id": {
+          "const": "data-platform-contract-owner",
+          "type": "string"
+        },
+        "repository": {
+          "const": "healthcare-toolkit",
+          "type": "string"
+        },
+        "canonical_path": {
+          "const": "contracts/healthcare-data-platform/bundle/v1",
+          "type": "string"
+        },
+        "semantic_authority": {
+          "const": "manifest_indexes_existing_source_contracts",
+          "type": "string"
+        },
+        "approval_state": {
+          "const": "human_merge_required",
+          "type": "string"
+        }
+      }
+    },
+    "versioning": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scheme",
+        "current",
+        "compatibility_floor",
+        "unknown_fields",
+        "removed_field_policy",
+        "artifact_identity_policy",
+        "breaking_change_categories",
+        "non_breaking_change_categories",
+        "minor_release_policy",
+        "strict_consumer_breaking_categories"
+      ],
+      "properties": {
+        "scheme": {
+          "const": "semver",
+          "type": "string"
+        },
+        "current": {
+          "const": "1.0.0",
+          "$ref": "#/$defs/semver"
+        },
+        "compatibility_floor": {
+          "const": "1.0",
+          "type": "string"
+        },
+        "unknown_fields": {
+          "const": "reject",
+          "type": "string"
+        },
+        "removed_field_policy": {
+          "const": "required_field_removal_is_major",
+          "type": "string"
+        },
+        "artifact_identity_policy": {
+          "const": "immutable_id_and_sha256",
+          "type": "string"
+        },
+        "breaking_change_categories": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/breakingCategory"
+          }
+        },
+        "non_breaking_change_categories": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "enum": [
+              "documentation_or_example_correction",
+              "unchanged_artifact_hash_republication"
+            ]
+          }
+        },
+        "minor_release_policy": {
+          "const": "reserved_for_explicit_consumer_opt_in",
+          "type": "string"
+        },
+        "strict_consumer_breaking_categories": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "enum": [
+              "optional_field_addition",
+              "enum_value_addition",
+              "new_artifact_or_contract_family"
+            ]
+          }
+        }
+      }
+    },
+    "sourceContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_id",
+        "family",
+        "artifact_id",
+        "path",
+        "semver",
+        "source_scope",
+        "temporal_semantics",
+        "unit_semantics"
+      ],
+      "properties": {
+        "contract_id": {
+          "$ref": "#/$defs/contractId"
+        },
+        "family": {
+          "$ref": "#/$defs/family"
+        },
+        "artifact_id": {
+          "$ref": "#/$defs/artifactId"
+        },
+        "path": {
+          "$ref": "#/$defs/path"
+        },
+        "semver": {
+          "const": "1.0.0",
+          "$ref": "#/$defs/semver"
+        },
+        "source_scope": {
+          "type": "string",
+          "enum": [
+            "bounded_ontology_source_scope",
+            "source_release_artifact_observation_scope",
+            "catalog_identity_period_fact_scope",
+            "synthetic_storage_workload_scope",
+            "synthetic_storage_benchmark_scope"
+          ]
+        },
+        "temporal_semantics": {
+          "$ref": "#/$defs/temporalSemantics"
+        },
+        "unit_semantics": {
+          "$ref": "#/$defs/unitSemantics"
+        }
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_id",
+        "family",
+        "role",
+        "path",
+        "media_type",
+        "sha256",
+        "source_contract_id",
+        "semver",
+        "required",
+        "generated",
+        "generator"
+      ],
+      "properties": {
+        "artifact_id": {
+          "$ref": "#/$defs/artifactId"
+        },
+        "family": {
+          "$ref": "#/$defs/family"
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "source_schema",
+            "bundle_schema",
+            "openapi_representation",
+            "arrow_representation"
+          ]
+        },
+        "path": {
+          "$ref": "#/$defs/path"
+        },
+        "media_type": {
+          "type": "string",
+          "enum": [
+            "application/schema+json",
+            "application/json",
+            "application/yaml"
+          ]
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "source_contract_id": {
+          "$ref": "#/$defs/contractId"
+        },
+        "semver": {
+          "const": "1.0.0",
+          "$ref": "#/$defs/semver"
+        },
+        "required": {
+          "const": true,
+          "type": "boolean"
+        },
+        "generated": {
+          "type": "boolean"
+        },
+        "generator": {
+          "type": "string",
+          "enum": [
+            "none",
+            "p0-13-openapi-view-v1",
+            "p0-13-arrow-view-v1"
+          ]
+        }
+      }
+    },
+    "fieldCompatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "family",
+        "source_contract_id",
+        "artifact_id",
+        "supported_fields",
+        "required_fields",
+        "removed_fields",
+        "source_scope",
+        "temporal_semantics",
+        "unit_semantics",
+        "unknown_fields",
+        "compatibility_class",
+        "breaking_change_categories"
+      ],
+      "properties": {
+        "family": {
+          "$ref": "#/$defs/family"
+        },
+        "source_contract_id": {
+          "$ref": "#/$defs/contractId"
+        },
+        "artifact_id": {
+          "$ref": "#/$defs/artifactId"
+        },
+        "supported_fields": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/nonEmptyString"
+          }
+        },
+        "required_fields": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/nonEmptyString"
+          }
+        },
+        "removed_fields": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nonEmptyString"
+          }
+        },
+        "source_scope": {
+          "type": "string",
+          "enum": [
+            "bounded_ontology_source_scope",
+            "source_release_artifact_observation_scope",
+            "catalog_identity_period_fact_scope",
+            "synthetic_storage_workload_scope",
+            "synthetic_storage_benchmark_scope"
+          ]
+        },
+        "temporal_semantics": {
+          "$ref": "#/$defs/temporalSemantics"
+        },
+        "unit_semantics": {
+          "$ref": "#/$defs/unitSemantics"
+        },
+        "unknown_fields": {
+          "const": "reject",
+          "type": "string"
+        },
+        "compatibility_class": {
+          "const": "A",
+          "type": "string"
+        },
+        "breaking_change_categories": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/breakingCategory"
+          }
+        }
+      }
+    },
+    "consumer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "consumer_id",
+        "repository",
+        "mode",
+        "required_artifact_ids",
+        "supported_semver",
+        "strict",
+        "source_scope_required",
+        "runtime_state"
+      ],
+      "properties": {
+        "consumer_id": {
+          "type": "string",
+          "enum": [
+            "hc-ingest",
+            "healthcare-data-mcp",
+            "hc-api",
+            "hc-web",
+            "storage-reviewers"
+          ]
+        },
+        "repository": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "strict_conformance",
+            "source_bound_receipt",
+            "read_only_admission",
+            "documentation_generation",
+            "evidence_review"
+          ]
+        },
+        "required_artifact_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/artifactId"
+          }
+        },
+        "supported_semver": {
+          "const": "1.0.x",
+          "type": "string"
+        },
+        "strict": {
+          "type": "boolean"
+        },
+        "source_scope_required": {
+          "const": true,
+          "type": "boolean"
+        },
+        "runtime_state": {
+          "type": "string",
+          "enum": [
+            "test_only",
+            "external_producer_seam",
+            "not_adopted",
+            "evidence_only"
+          ]
+        }
+      }
+    },
+    "generatedBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "representation",
+        "artifact_id",
+        "generator",
+        "source_artifact_ids",
+        "source_hashes_required",
+        "hand_edit_policy"
+      ],
+      "properties": {
+        "representation": {
+          "type": "string",
+          "enum": [
+            "openapi",
+            "arrow"
+          ]
+        },
+        "artifact_id": {
+          "$ref": "#/$defs/artifactId"
+        },
+        "generator": {
+          "type": "string",
+          "enum": [
+            "p0-13-openapi-view-v1",
+            "p0-13-arrow-view-v1"
+          ]
+        },
+        "source_artifact_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/artifactId"
+          }
+        },
+        "source_hashes_required": {
+          "const": true,
+          "type": "boolean"
+        },
+        "hand_edit_policy": {
+          "const": "forbidden",
+          "type": "string"
+        }
+      }
+    },
+    "generatedBindings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_of_truth",
+        "representations",
+        "reproducibility",
+        "hand_edit_policy",
+        "generated_output_policy"
+      ],
+      "properties": {
+        "source_of_truth": {
+          "const": "json_schema_source_artifacts",
+          "type": "string"
+        },
+        "representations": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "$ref": "#/$defs/generatedBinding"
+          }
+        },
+        "reproducibility": {
+          "const": "manifest_hashes_and_generator_versions_must_match",
+          "type": "string"
+        },
+        "hand_edit_policy": {
+          "const": "forbidden",
+          "type": "string"
+        },
+        "generated_output_policy": {
+          "const": "commit_only_with_source_hashes",
+          "type": "string"
+        }
+      }
+    },
+    "conformancePolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "class_a_gate",
+        "unknown_fields",
+        "required_field_removal",
+        "source_scope_loss",
+        "temporal_semantics",
+        "unit_semantics",
+        "duplicate_artifact_ids",
+        "stale_hashes",
+        "hash_algorithm",
+        "publication_convenience"
+      ],
+      "properties": {
+        "class_a_gate": {
+          "const": "blocking",
+          "type": "string"
+        },
+        "unknown_fields": {
+          "const": "reject",
+          "type": "string"
+        },
+        "required_field_removal": {
+          "const": "reject_as_major",
+          "type": "string"
+        },
+        "source_scope_loss": {
+          "const": "reject",
+          "type": "string"
+        },
+        "temporal_semantics": {
+          "const": "exact_match_required",
+          "type": "string"
+        },
+        "unit_semantics": {
+          "const": "exact_match_required",
+          "type": "string"
+        },
+        "duplicate_artifact_ids": {
+          "const": "reject",
+          "type": "string"
+        },
+        "stale_hashes": {
+          "const": "reject",
+          "type": "string"
+        },
+        "hash_algorithm": {
+          "const": "sha256",
+          "type": "string"
+        },
+        "publication_convenience": {
+          "const": "non_blocking",
+          "type": "string"
+        }
+      }
+    },
+    "release": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "release_id",
+        "state",
+        "published_at",
+        "runtime_adoption",
+        "required_checks",
+        "approval"
+      ],
+      "properties": {
+        "release_id": {
+          "const": "release:healthcare-data-platform-bundle-v1",
+          "type": "string"
+        },
+        "state": {
+          "const": "published_non_runtime",
+          "type": "string"
+        },
+        "published_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "runtime_adoption": {
+          "const": "not_adopted",
+          "type": "string"
+        },
+        "required_checks": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/nonEmptyString"
+          }
+        },
+        "approval": {
+          "const": "human_merge_required",
+          "type": "string"
+        }
+      }
+    },
+    "rollback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "strategy",
+        "commit_order_newest_first",
+        "preserve_prior_artifacts",
+        "runtime_action",
+        "approval"
+      ],
+      "properties": {
+        "strategy": {
+          "const": "revert_additive_commits",
+          "type": "string"
+        },
+        "commit_order_newest_first": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": {
+            "type": "string",
+            "enum": [
+              "test(contracts): add compatibility and fixture gate",
+              "feat(contracts): publish v1 schema bundle",
+              "docs(contracts): define ownership and versioning"
+            ]
+          }
+        },
+        "preserve_prior_artifacts": {
+          "const": true,
+          "type": "boolean"
+        },
+        "runtime_action": {
+          "const": "none",
+          "type": "string"
+        },
+        "approval": {
+          "const": "human_merge_required",
+          "type": "string"
+        }
+      }
+    },
+    "authorityLimits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_acquisition",
+        "producer_mutation",
+        "artifact_deletion",
+        "runtime_adoption",
+        "database_migration",
+        "deployment",
+        "production_release",
+        "current_projection"
+      ],
+      "properties": {
+        "source_acquisition": {
+          "const": false,
+          "type": "boolean"
+        },
+        "producer_mutation": {
+          "const": false,
+          "type": "boolean"
+        },
+        "artifact_deletion": {
+          "const": false,
+          "type": "boolean"
+        },
+        "runtime_adoption": {
+          "const": false,
+          "type": "boolean"
+        },
+        "database_migration": {
+          "const": false,
+          "type": "boolean"
+        },
+        "deployment": {
+          "const": false,
+          "type": "boolean"
+        },
+        "production_release": {
+          "const": false,
+          "type": "boolean"
+        },
+        "current_projection": {
+          "const": false,
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

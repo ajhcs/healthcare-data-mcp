@@ -1,0 +1,36 @@
+openapi: 3.1.0
+info:
+  title: Healthcare Data Platform contract distribution bundle
+  version: 1.0.0
+  description: >-
+    Documentation-only OpenAPI representation of the source-bound v1 contract
+    family. This artifact intentionally has no paths and does not activate a
+    runtime endpoint.
+  x-bundle-id: bundle:healthcare-data-platform:v1
+  x-source-of-truth: json_schema_source_artifacts
+  x-generator: p0-13-openapi-view-v1
+  x-source-artifact-ids:
+    - artifact:hdp-bundle-v1:ontology-schema
+    - artifact:hdp-bundle-v1:observation-schema
+    - artifact:hdp-bundle-v1:fact-coverage-schema
+    - artifact:hdp-bundle-v1:storage-workload-schema
+    - artifact:hdp-bundle-v1:storage-benchmark-schema
+  x-source-artifact-sha256:
+    artifact:hdp-bundle-v1:ontology-schema: sha256:5d4c9187421b232afad9fad31240396f1fcadf6acbcd30bfa5ae5572a3ec5eb5
+    artifact:hdp-bundle-v1:observation-schema: sha256:75f3f28f6682cb1ab665aff7a036722ce0bd3cb4ed083c03101bffd53b951d6c
+    artifact:hdp-bundle-v1:fact-coverage-schema: sha256:6ec20e6694b2b58dbf0cacdde086a540b9496c49adb8e722f5968461231a7250
+    artifact:hdp-bundle-v1:storage-workload-schema: sha256:e5ace5ba95186712ff43ad33f3571098982c863cd4a4931726daa6b650dc98b4
+    artifact:hdp-bundle-v1:storage-benchmark-schema: sha256:b647136b040f56f8cb98b410358b78b83e931477c8930bfb6cc9a6cf43606143
+paths: {}
+components:
+  schemas:
+    OntologyDelta:
+      $ref: ../../ontology/v1/ontology-delta.schema.json
+    ObservationEnvelope:
+      $ref: ../../observation/v1/observation-envelope.schema.json
+    FactCoverageProjectionDelta:
+      $ref: ../../fact/v1/fact-coverage-projection-delta.schema.json
+    StorageWorkload:
+      $ref: ../../storage/v1/storage-workload.schema.json
+    StorageBenchmark:
+      $ref: ../../storage/v1/storage-benchmark.schema.json

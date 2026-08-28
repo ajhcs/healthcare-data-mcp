@@ -1,0 +1,494 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.ushso.org/healthcare-data-platform/storage/v1/storage-workload.schema.json",
+  "title": "Healthcare Data Platform Storage Workload and Cost Contract v1",
+  "description": "Synthetic, bounded workload and storage-boundary evidence for the P0-11 MVP. It records shape and control assumptions, not production capacity or spend claims.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "record_type",
+    "record_id",
+    "packet_id",
+    "tracking_bead",
+    "frozen_dispatch_base",
+    "source_contracts",
+    "measurement_mode",
+    "git_sha",
+    "fixture_release",
+    "source_release",
+    "hardware_or_service_class",
+    "captured_at",
+    "owner",
+    "workloads",
+    "storage_targets",
+    "benchmark_receipts",
+    "quota_policy",
+    "retention_policy",
+    "cost_envelope",
+    "rollback",
+    "limitations",
+    "variances"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "hdp.storage-workload.v1"
+    },
+    "record_type": {
+      "const": "storage_workload"
+    },
+    "record_id": {
+      "type": "string",
+      "pattern": "^hdp:storage-workload:[a-z0-9.-]+$"
+    },
+    "packet_id": {
+      "const": "p0-11-workload-storage-cost-adr"
+    },
+    "tracking_bead": {
+      "const": "healthcare-toolkit-rrna.11"
+    },
+    "frozen_dispatch_base": {
+      "const": "35e15a30eac8d9533741f9adb970d2028f73aab6"
+    },
+    "source_contracts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mvp_boundary", "performance_contract"],
+      "properties": {
+        "mvp_boundary": {"$ref": "#/$defs/sourceContract"},
+        "performance_contract": {"$ref": "#/$defs/sourceContract"}
+      }
+    },
+    "measurement_mode": {
+      "enum": ["deterministic_synthetic_fixture", "observational_live"]
+    },
+    "git_sha": {
+      "$ref": "#/$defs/sha40"
+    },
+    "fixture_release": {
+      "$ref": "#/$defs/nonEmptyString"
+    },
+    "source_release": {
+      "$ref": "#/$defs/nonEmptyString"
+    },
+    "hardware_or_service_class": {
+      "$ref": "#/$defs/nonEmptyString"
+    },
+    "captured_at": {
+      "$ref": "#/$defs/timestamp"
+    },
+    "owner": {
+      "$ref": "#/$defs/nonEmptyString"
+    },
+    "workloads": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "prefixItems": [
+        {"allOf": [{"$ref": "#/$defs/workload"}, {"properties": {"workload_id": {"const": "control_metadata"}}}]},
+        {"allOf": [{"$ref": "#/$defs/workload"}, {"properties": {"workload_id": {"const": "national_backbone"}}}]},
+        {"allOf": [{"$ref": "#/$defs/workload"}, {"properties": {"workload_id": {"const": "cohort_enrichment"}}}]},
+        {"allOf": [{"$ref": "#/$defs/workload"}, {"properties": {"workload_id": {"const": "hospital_mrf"}}}]},
+        {"allOf": [{"$ref": "#/$defs/workload"}, {"properties": {"workload_id": {"const": "tic_optional"}}}]}
+      ],
+      "items": false
+    },
+    "storage_targets": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "prefixItems": [
+        {"allOf": [{"$ref": "#/$defs/storageTarget"}, {"properties": {"store_id": {"const": "postgresql"}}}]},
+        {"allOf": [{"$ref": "#/$defs/storageTarget"}, {"properties": {"store_id": {"const": "object_storage"}}}]},
+        {"allOf": [{"$ref": "#/$defs/storageTarget"}, {"properties": {"store_id": {"const": "parquet"}}}]},
+        {"allOf": [{"$ref": "#/$defs/storageTarget"}, {"properties": {"store_id": {"const": "duckdb"}}}]}
+      ],
+      "items": false
+    },
+    "benchmark_receipts": {
+      "type": "array",
+      "minItems": 8,
+      "items": {"$ref": "#/$defs/benchmarkReceipt"}
+    },
+    "quota_policy": {
+      "$ref": "#/$defs/quotaPolicy"
+    },
+    "retention_policy": {
+      "$ref": "#/$defs/retentionPolicy"
+    },
+    "cost_envelope": {
+      "$ref": "#/$defs/costEnvelope"
+    },
+    "rollback": {
+      "$ref": "#/$defs/rollback"
+    },
+    "limitations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/nonEmptyString"}
+    },
+    "variances": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/variance"}
+    }
+  },
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sha40": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "sourceContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["record_id", "head_sha", "path", "role"],
+      "properties": {
+        "record_id": {"$ref": "#/$defs/nonEmptyString"},
+        "head_sha": {"$ref": "#/$defs/sha40"},
+        "path": {"type": "string", "pattern": "^(contracts|docs)/[A-Za-z0-9._*/-]+$"},
+        "role": {"$ref": "#/$defs/nonEmptyString"}
+      }
+    },
+    "denominator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["expected", "included", "unresolved", "excluded", "unavailable", "accounted", "completeness_claim"],
+      "properties": {
+        "expected": {"type": "integer", "minimum": 1},
+        "included": {"type": "integer", "minimum": 0},
+        "unresolved": {"type": "integer", "minimum": 0},
+        "excluded": {"type": "integer", "minimum": 0},
+        "unavailable": {"type": "integer", "minimum": 0},
+        "accounted": {"type": "integer", "minimum": 0},
+        "completeness_claim": {"const": false}
+      }
+    },
+    "sourceBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contract_ref", "source_class", "release", "source_fidelity", "receipt_ref", "acquisition_allowed", "body_download_allowed"],
+      "properties": {
+        "contract_ref": {"$ref": "#/$defs/nonEmptyString"},
+        "source_class": {
+          "enum": ["mvp_boundary", "ahrq_opportunity", "cohort_identity", "hospital_mrf", "tic_optional"]
+        },
+        "release": {"$ref": "#/$defs/nonEmptyString"},
+        "source_fidelity": {"enum": ["control_metadata", "source_faithful_rows", "derived_projection", "known_reference_only"]},
+        "receipt_ref": {"$ref": "#/$defs/nonEmptyString"},
+        "acquisition_allowed": {"const": false},
+        "body_download_allowed": {"const": false}
+      }
+    },
+    "queryProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile_id", "consumer_kind", "requests_per_release", "response_bytes_p95", "hard_response_bound_bytes", "query_latency_p95_ms", "evidence_class", "egress_bytes_per_request"],
+      "properties": {
+        "profile_id": {"$ref": "#/$defs/nonEmptyString"},
+        "consumer_kind": {"enum": ["control_lookup", "national_export", "cohort_snapshot", "hospital_price_query", "tic_reference_query"]},
+        "requests_per_release": {"type": "integer", "minimum": 1},
+        "response_bytes_p95": {"type": "integer", "minimum": 0},
+        "hard_response_bound_bytes": {"type": "integer", "minimum": 1},
+        "query_latency_p95_ms": {"type": "number", "exclusiveMinimum": 0},
+        "evidence_class": {"enum": ["A", "B", "C"]},
+        "egress_bytes_per_request": {"type": "integer", "minimum": 0}
+      }
+    },
+    "workload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "workload_id",
+        "display_name",
+        "lane",
+        "required",
+        "denominator",
+        "coverage_state",
+        "fixture_data_class",
+        "row_count",
+        "average_row_bytes",
+        "logical_bytes",
+        "compressed_bytes",
+        "expected_egress_bytes_per_query",
+        "queries_per_release",
+        "retention_class",
+        "query_profiles",
+        "source_binding",
+        "exclusions",
+        "notes"
+      ],
+      "properties": {
+        "workload_id": {"enum": ["control_metadata", "national_backbone", "cohort_enrichment", "hospital_mrf", "tic_optional"]},
+        "display_name": {"$ref": "#/$defs/nonEmptyString"},
+        "lane": {"enum": ["control", "national_backbone", "cohort_enrichment", "hospital_pricing", "optional_tic"]},
+        "required": {"type": "boolean"},
+        "denominator": {"$ref": "#/$defs/denominator"},
+        "coverage_state": {"enum": ["present", "unavailable_public", "not_yet_researched", "not_applicable", "blocked_source_conflict"]},
+        "fixture_data_class": {"const": "synthetic_non_sensitive"},
+        "row_count": {"type": "integer", "minimum": 1},
+        "average_row_bytes": {"type": "integer", "minimum": 1},
+        "logical_bytes": {"type": "integer", "minimum": 1},
+        "compressed_bytes": {"type": "integer", "minimum": 1},
+        "expected_egress_bytes_per_query": {"type": "integer", "minimum": 0},
+        "queries_per_release": {"type": "integer", "minimum": 1},
+        "retention_class": {"enum": ["hot", "warm", "cold", "rebuildable"]},
+        "query_profiles": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/queryProfile"}},
+        "source_binding": {"$ref": "#/$defs/sourceBinding"},
+        "exclusions": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/nonEmptyString"}},
+        "notes": {"$ref": "#/$defs/nonEmptyString"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"workload_id": {"const": "tic_optional"}}},
+          "then": {
+            "properties": {
+              "required": {"const": false},
+              "lane": {"const": "optional_tic"}
+            }
+          }
+        }
+      ]
+    },
+    "storageTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["store_id", "role", "authority", "data_classes", "source_faithful_rows_allowed", "mutable", "hot_boundary_days", "cold_boundary_days", "partitioning", "rebuild_from", "rollback_behavior", "consumer_surface", "quota_enforced", "notes"],
+      "properties": {
+        "store_id": {"enum": ["postgresql", "object_storage", "parquet", "duckdb"]},
+        "role": {"enum": ["control_and_projection", "immutable_custody", "canonical_row_storage", "rebuildable_query_cache"]},
+        "authority": {"enum": ["catalog_projection", "source_evidence", "source_faithful_rows", "derived_only"]},
+        "data_classes": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/nonEmptyString"}},
+        "source_faithful_rows_allowed": {"type": "boolean"},
+        "mutable": {"type": "boolean"},
+        "hot_boundary_days": {"type": "integer", "minimum": 0},
+        "cold_boundary_days": {"type": "integer", "minimum": 0},
+        "partitioning": {"$ref": "#/$defs/nonEmptyString"},
+        "rebuild_from": {"$ref": "#/$defs/nonEmptyString"},
+        "rollback_behavior": {"$ref": "#/$defs/nonEmptyString"},
+        "consumer_surface": {"$ref": "#/$defs/nonEmptyString"},
+        "quota_enforced": {"const": true},
+        "notes": {"$ref": "#/$defs/nonEmptyString"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"store_id": {"const": "postgresql"}}},
+          "then": {
+            "properties": {
+              "role": {"const": "control_and_projection"},
+              "authority": {"const": "catalog_projection"},
+              "source_faithful_rows_allowed": {"const": false}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"store_id": {"const": "duckdb"}}},
+          "then": {
+            "properties": {
+              "role": {"const": "rebuildable_query_cache"},
+              "authority": {"const": "derived_only"},
+              "source_faithful_rows_allowed": {"const": false}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"store_id": {"enum": ["object_storage", "parquet"]}}},
+          "then": {"properties": {"source_faithful_rows_allowed": {"const": true}}}
+        }
+      ]
+    },
+    "sample": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["elapsed_ms", "rows_processed", "input_bytes", "output_bytes", "egress_bytes", "storage_bytes", "cost_units"],
+      "properties": {
+        "elapsed_ms": {"type": "number", "exclusiveMinimum": 0},
+        "rows_processed": {"type": "integer", "minimum": 1},
+        "input_bytes": {"type": "integer", "minimum": 1},
+        "output_bytes": {"type": "integer", "minimum": 0},
+        "egress_bytes": {"type": "integer", "minimum": 0},
+        "storage_bytes": {"type": "integer", "minimum": 1},
+        "cost_units": {"type": "number", "minimum": 0}
+      }
+    },
+    "benchmarkReceipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "benchmark_id",
+        "workload_id",
+        "store_id",
+        "metric_scope",
+        "measurement_mode",
+        "git_sha",
+        "fixture_release",
+        "source_release",
+        "hardware_or_service_class",
+        "concurrency",
+        "cold_warm_state",
+        "sample_count",
+        "percentile_method",
+        "samples",
+        "p50_elapsed_ms",
+        "p95_elapsed_ms",
+        "p99_elapsed_ms",
+        "throughput_mib_per_s",
+        "storage_amplification_ratio",
+        "egress_bytes",
+        "cost_units",
+        "approved_cost_cap_units",
+        "quota_result",
+        "status",
+        "variance_class",
+        "owner"
+      ],
+      "properties": {
+        "benchmark_id": {"pattern": "^bench:p0-11:[a-z0-9-]+$", "type": "string"},
+        "workload_id": {"enum": ["control_metadata", "national_backbone", "cohort_enrichment", "hospital_mrf", "tic_optional"]},
+        "store_id": {"enum": ["postgresql", "object_storage", "parquet", "duckdb"]},
+        "metric_scope": {"enum": ["ingest", "query", "egress", "storage"]},
+        "measurement_mode": {"const": "deterministic_synthetic_fixture"},
+        "git_sha": {"$ref": "#/$defs/sha40"},
+        "fixture_release": {"$ref": "#/$defs/nonEmptyString"},
+        "source_release": {"$ref": "#/$defs/nonEmptyString"},
+        "hardware_or_service_class": {"$ref": "#/$defs/nonEmptyString"},
+        "concurrency": {"type": "integer", "minimum": 1},
+        "cold_warm_state": {"enum": ["cold", "warm", "mixed", "not_applicable"]},
+        "sample_count": {"type": "integer", "minimum": 3},
+        "percentile_method": {"const": "nearest_rank_v1"},
+        "samples": {"type": "array", "minItems": 3, "items": {"$ref": "#/$defs/sample"}},
+        "p50_elapsed_ms": {"type": "number", "exclusiveMinimum": 0},
+        "p95_elapsed_ms": {"type": "number", "exclusiveMinimum": 0},
+        "p99_elapsed_ms": {"type": "number", "exclusiveMinimum": 0},
+        "throughput_mib_per_s": {"type": "number", "exclusiveMinimum": 0},
+        "storage_amplification_ratio": {"type": "number", "exclusiveMinimum": 0},
+        "egress_bytes": {"type": "integer", "minimum": 0},
+        "cost_units": {"type": "number", "minimum": 0},
+        "approved_cost_cap_units": {"type": "number", "exclusiveMinimum": 0},
+        "quota_result": {"enum": ["within_quota", "would_abort_on_breach"]},
+        "status": {"enum": ["pass", "objective_variance", "not_run"]},
+        "variance_class": {"enum": ["A", "B", "C", "none"]},
+        "owner": {"$ref": "#/$defs/nonEmptyString"}
+      }
+    },
+    "quota": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["workload_id", "max_rows", "max_input_bytes", "max_elapsed_seconds", "max_egress_bytes", "max_cost_units", "on_breach", "rollback_ref"],
+      "properties": {
+        "workload_id": {"enum": ["control_metadata", "national_backbone", "cohort_enrichment", "hospital_mrf", "tic_optional"]},
+        "max_rows": {"type": "integer", "minimum": 1},
+        "max_input_bytes": {"type": "integer", "minimum": 1},
+        "max_elapsed_seconds": {"type": "number", "exclusiveMinimum": 0},
+        "max_egress_bytes": {"type": "integer", "minimum": 1},
+        "max_cost_units": {"type": "number", "exclusiveMinimum": 0},
+        "on_breach": {"const": "abort_before_commit"},
+        "rollback_ref": {"$ref": "#/$defs/nonEmptyString"}
+      }
+    },
+    "quotaPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["unbounded_workloads_allowed", "abort_semantics", "quotas", "owner"],
+      "properties": {
+        "unbounded_workloads_allowed": {"const": false},
+        "abort_semantics": {"type": "array", "minItems": 2, "items": {"$ref": "#/$defs/nonEmptyString"}},
+        "quotas": {"type": "array", "minItems": 5, "maxItems": 5, "items": {"$ref": "#/$defs/quota"}},
+        "owner": {"$ref": "#/$defs/nonEmptyString"}
+      }
+    },
+    "retention": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["store_id", "hot_days", "warm_days", "cold_days", "minimum_days", "expiration_action", "legal_hold_action", "source_evidence_preserved", "owner"],
+      "properties": {
+        "store_id": {"enum": ["postgresql", "object_storage", "parquet", "duckdb"]},
+        "hot_days": {"type": "integer", "minimum": 0},
+        "warm_days": {"type": "integer", "minimum": 0},
+        "cold_days": {"type": "integer", "minimum": 0},
+        "minimum_days": {"type": "integer", "minimum": 0},
+        "expiration_action": {"const": "mark_expired_then_gc_after_approval"},
+        "legal_hold_action": {"const": "suspend_expiry"},
+        "source_evidence_preserved": {"const": true},
+        "owner": {"$ref": "#/$defs/nonEmptyString"}
+      }
+    },
+    "retentionPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["policies", "legal_hold_preserves_evidence", "destructive_gc_requires_approval", "owner"],
+      "properties": {
+        "policies": {"type": "array", "minItems": 4, "maxItems": 4, "items": {"$ref": "#/$defs/retention"}},
+        "legal_hold_preserves_evidence": {"const": true},
+        "destructive_gc_requires_approval": {"const": true},
+        "owner": {"$ref": "#/$defs/nonEmptyString"}
+      }
+    },
+    "costComponent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["component_id", "store_id", "workload_id", "monthly_storage_gib", "monthly_egress_gib", "compute_units", "estimated_monthly_usd", "assumption"],
+      "properties": {
+        "component_id": {"$ref": "#/$defs/nonEmptyString"},
+        "store_id": {"enum": ["postgresql", "object_storage", "parquet", "duckdb"]},
+        "workload_id": {"enum": ["control_metadata", "national_backbone", "cohort_enrichment", "hospital_mrf", "tic_optional"]},
+        "monthly_storage_gib": {"type": "number", "minimum": 0},
+        "monthly_egress_gib": {"type": "number", "minimum": 0},
+        "compute_units": {"type": "number", "minimum": 0},
+        "estimated_monthly_usd": {"type": "number", "minimum": 0},
+        "assumption": {"$ref": "#/$defs/nonEmptyString"}
+      }
+    },
+    "costEnvelope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["currency", "horizon", "basis", "status", "cash_ceiling_usd", "estimated_monthly_usd", "components", "approved_for_production", "owner", "follow_up"],
+      "properties": {
+        "currency": {"const": "USD"},
+        "horizon": {"const": "monthly"},
+        "basis": {"const": "synthetic_shape_assumption"},
+        "status": {"const": "provisional"},
+        "cash_ceiling_usd": {"type": "number", "exclusiveMinimum": 0},
+        "estimated_monthly_usd": {"type": "number", "minimum": 0},
+        "components": {"type": "array", "minItems": 4, "items": {"$ref": "#/$defs/costComponent"}},
+        "approved_for_production": {"const": false},
+        "owner": {"$ref": "#/$defs/nonEmptyString"},
+        "follow_up": {"$ref": "#/$defs/nonEmptyString"}
+      }
+    },
+    "rollback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["strategy", "order", "preserves_existing_data", "production_mutation_authorized", "verification"],
+      "properties": {
+        "strategy": {"const": "ordinary_revert_of_additive_p0_11_commits_newest_first"},
+        "order": {"type": "array", "minItems": 3, "items": {"$ref": "#/$defs/nonEmptyString"}},
+        "preserves_existing_data": {"const": true},
+        "production_mutation_authorized": {"const": false},
+        "verification": {"type": "array", "minItems": 2, "items": {"$ref": "#/$defs/nonEmptyString"}}
+      }
+    },
+    "variance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["variance_id", "affected_lane", "class", "status", "owner", "follow_up_ref", "blocks_release", "reason"],
+      "properties": {
+        "variance_id": {"pattern": "^variance:p0-11:[a-z0-9-]+$", "type": "string"},
+        "affected_lane": {"$ref": "#/$defs/nonEmptyString"},
+        "class": {"enum": ["A", "B", "C"]},
+        "status": {"enum": ["open", "in_progress", "resolved"]},
+        "owner": {"$ref": "#/$defs/nonEmptyString"},
+        "follow_up_ref": {"$ref": "#/$defs/nonEmptyString"},
+        "blocks_release": {"const": false},
+        "reason": {"$ref": "#/$defs/nonEmptyString"}
+      }
+    }
+  }
+}
