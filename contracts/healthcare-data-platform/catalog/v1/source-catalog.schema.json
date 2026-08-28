@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.ushso.org/healthcare-data-platform/catalog/v1/source-catalog.schema.json",
+  "title": "Healthcare Data Platform source catalog v1",
+  "description": "Stable source registrations and bounded release polling cadence.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "record_type", "catalog_id", "sources"],
+  "properties": {
+    "schema_version": {"const": "hdp.source-catalog.v1", "type": "string"},
+    "record_type": {"const": "source_catalog", "type": "string"},
+    "catalog_id": {"type": "string", "pattern": "^catalog:[a-z0-9][a-z0-9._:-]*$"},
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 128,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "source_id",
+          "title",
+          "family",
+          "source_url",
+          "change_mode",
+          "cadence",
+          "release_locator",
+          "rights_status",
+          "enabled",
+          "owner"
+        ],
+        "properties": {
+          "source_id": {"type": "string", "pattern": "^source:[a-z0-9][a-z0-9._:-]*$"},
+          "title": {"type": "string", "minLength": 1, "maxLength": 200},
+          "family": {"type": "string", "enum": ["system", "facility", "payer", "practitioner", "discovery", "optional"]},
+          "source_url": {"type": "string", "pattern": "^https://[A-Za-z0-9._:/-]+$"},
+          "change_mode": {
+            "type": "string",
+            "enum": ["etag", "last_modified", "release_metadata", "content_hash"]
+          },
+          "cadence": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["interval_seconds", "jitter_seconds", "missed_run_grace_seconds"],
+            "properties": {
+              "interval_seconds": {"type": "integer", "minimum": 60, "maximum": 2678400},
+              "jitter_seconds": {"type": "integer", "minimum": 0, "maximum": 3600},
+              "missed_run_grace_seconds": {"type": "integer", "minimum": 60, "maximum": 604800}
+            }
+          },
+          "release_locator": {"type": "string", "pattern": "^https://[A-Za-z0-9._:/-]+$"},
+          "rights_status": {"type": "string", "enum": ["approved_public", "pending_review", "blocked"]},
+          "enabled": {"type": "boolean"},
+          "owner": {"type": "string", "minLength": 1, "maxLength": 120}
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "schema_version": "hdp.source-catalog.v1",
+  "record_type": "source_catalog",
+  "catalog_id": "catalog:healthcare-data-platform:v1",
+  "sources": [
+    {
+      "source_id": "source:ahrq:lighthouse",
+      "title": "AHRQ official hospital release",
+      "family": "system",
+      "source_url": "https://example.gov/ahrq/release.json",
+      "change_mode": "release_metadata",
+      "cadence": {"interval_seconds": 3600, "jitter_seconds": 30, "missed_run_grace_seconds": 7200},
+      "release_locator": "https://example.gov/ahrq/releases",
+      "rights_status": "approved_public",
+      "enabled": true,
+      "owner": "data-platform"
+    },
+    {
+      "source_id": "source:cms:pdc",
+      "title": "CMS Provider Data Catalog",
+      "family": "facility",
+      "source_url": "https://data.cms.gov/provider-data/api/1/datastore/query",
+      "change_mode": "etag",
+      "cadence": {"interval_seconds": 86400, "jitter_seconds": 300, "missed_run_grace_seconds": 172800},
+      "release_locator": "https://data.cms.gov/provider-data",
+      "rights_status": "approved_public",
+      "enabled": true,
+      "owner": "data-platform"
+    },
+    {
+      "source_id": "source:fast:identity-snapshot",
+      "title": "FAST conditional identity snapshot",
+      "family": "optional",
+      "source_url": "https://fast.example.org/snapshot",
+      "change_mode": "content_hash",
+      "cadence": {"interval_seconds": 86400, "jitter_seconds": 0, "missed_run_grace_seconds": 172800},
+      "release_locator": "https://fast.example.org/releases",
+      "rights_status": "pending_review",
+      "enabled": false,
+      "owner": "identity-lane"
+    }
+  ]
+}
