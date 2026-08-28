@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 import json
 from pathlib import Path
@@ -101,6 +102,42 @@ def test_operator_replay_is_bounded_and_not_duplicated_by_schedule() -> None:
     assert scheduler.intents[intent.intent_id] == intent
 
 
+def test_repeated_operator_replay_for_same_range_is_idempotent() -> None:
+    scheduler = _scheduler()
+    first = scheduler.replay(
+        "source:ahrq:lighthouse",
+        from_release="release:ahrq:2026-08-01",
+        to_release="release:ahrq:2026-08-22",
+        now=_utc(2),
+    )
+
+    second = scheduler.replay(
+        "source:ahrq:lighthouse",
+        from_release="release:ahrq:2026-08-01",
+        to_release="release:ahrq:2026-08-22",
+        now=_utc(3),
+    )
+
+    assert second == first
+    assert scheduler.states["source:ahrq:lighthouse"].generation == 1
+    assert len(scheduler.intents) == 1
+
+
+def test_operator_replay_is_failure_atomic_for_naive_timestamps() -> None:
+    scheduler = _scheduler()
+    before = scheduler.snapshot()
+
+    with pytest.raises(SchedulerError, match="timestamp"):
+        scheduler.replay(
+            "source:ahrq:lighthouse",
+            from_release="release:ahrq:2026-08-01",
+            to_release="release:ahrq:2026-08-22",
+            now=datetime(2026, 8, 29, 2, 0),
+        )
+
+    assert scheduler.snapshot() == before
+
+
 def test_mark_missed_does_not_discard_an_active_backfill_range() -> None:
     scheduler = _scheduler()
     scheduler.replay(
@@ -124,6 +161,22 @@ def test_replay_rejects_unapproved_source() -> None:
             "source:fast:identity-snapshot",
             from_release="release:fast:old",
             to_release="release:fast:new",
+            now=_utc(2),
+        )
+
+
+def test_blocked_source_remains_fail_closed() -> None:
+    registrations = tuple(item for item in load_catalog(CATALOG_FIXTURE) if item.source_id == "source:ahrq:lighthouse")
+    states = (replace(PollState.initial("source:ahrq:lighthouse", next_due_at=_utc(0)), state="blocked"),)
+    scheduler = DurableScheduler(registrations, states)
+
+    assert scheduler.mark_missed(now=datetime(2026, 9, 1, 0, 0, tzinfo=timezone.utc)) == ()
+    assert scheduler.schedule(now=datetime(2026, 9, 1, 0, 0, tzinfo=timezone.utc)) == ()
+    with pytest.raises(SchedulerError, match="blocked"):
+        scheduler.replay(
+            "source:ahrq:lighthouse",
+            from_release="release:ahrq:old",
+            to_release="release:ahrq:new",
             now=_utc(2),
         )
 
@@ -234,6 +287,13 @@ def test_intent_history_is_bounded_and_checkpoint_remains_restorable(tmp_path: P
         )
         current += timedelta(hours=1)
 
+    assert len(scheduler.intents) == 1_024
+    scheduler.replay(
+        "source:ahrq:lighthouse",
+        from_release="release:ahrq:2026-01-01",
+        to_release="release:ahrq:2026-12-31",
+        now=current,
+    )
     assert len(scheduler.intents) == 1_024
     path = scheduler.checkpoint(tmp_path / "bounded-state.json")
     restored = DurableScheduler.restore(path, registrations)

@@ -199,9 +199,23 @@ class DurableScheduler:
             raise SchedulerError(f"unknown source_id: {source_id}")
         if not registration.enabled or registration.rights_status != "approved_public":
             raise SchedulerError(f"source is not eligible for replay: {source_id}")
+        if state.state == "blocked":
+            raise SchedulerError(f"source is blocked for replay: {source_id}")
+        scheduled = _utc(now)
+        if (
+            state.state in {"backfill_pending", "backfill_running"}
+            and state.backfill_from == from_release
+            and state.backfill_to == to_release
+        ):
+            for existing in self._intents.values():
+                if (
+                    existing.source_id == source_id
+                    and existing.reason == "operator_replay"
+                    and existing.generation == state.generation
+                ):
+                    return existing
         pending = request_backfill(state, from_release=from_release, to_release=to_release)
         self._states[source_id] = pending
-        scheduled = _utc(now)
         material = f"{source_id}|{from_release}|{to_release}|{pending.generation}".encode()
         from hashlib import sha256
 
@@ -216,6 +230,7 @@ class DurableScheduler:
         if existing is not None and existing != intent:
             raise SchedulerError("operator replay intent collision")
         self._intents[intent.intent_id] = intent
+        self._trim_intents()
         return intent
 
     def apply_result(
@@ -236,6 +251,8 @@ class DurableScheduler:
         registration = self._registrations[source_id]
         if not registration.enabled or registration.rights_status != "approved_public":
             raise SchedulerError(f"source is not eligible for result application: {source_id}")
+        if state.state == "blocked":
+            raise SchedulerError(f"source is blocked for result application: {source_id}")
         if result not in {"no_op", "changed", "failed_probe", "interrupted"}:
             raise SchedulerError(f"unsupported probe result: {result}")
         try:
