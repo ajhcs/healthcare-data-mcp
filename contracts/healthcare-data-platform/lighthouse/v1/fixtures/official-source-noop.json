@@ -1,0 +1,27 @@
+{
+  "schema_version": "hdp.lighthouse-fixture.v1",
+  "record_type": "lighthouse_fixture",
+  "fixture_id": "fixture:lighthouse:ahrq-noop",
+  "source_id": "source:ahrq:lighthouse",
+  "source_url": "https://example.gov/ahrq/lighthouse/release.json",
+  "release_id": "release:ahrq:2026-08-15",
+  "release_label": "AHRQ synthetic official release 2026-08-15",
+  "release_fingerprint": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "response_fingerprint": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "prior_release_fingerprint": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "probe_state": "no_op",
+  "failure_reason": null,
+  "body": null,
+  "artifact": {
+    "artifact_id": "artifact:lighthouse:ahrq-noop",
+    "content_sha256": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "byte_length": 0,
+    "media_type": "application/json"
+  },
+  "budget": {
+    "max_bytes": 4096,
+    "max_chunks": 8,
+    "chunk_size": 256,
+    "max_seconds": 5
+  }
+}

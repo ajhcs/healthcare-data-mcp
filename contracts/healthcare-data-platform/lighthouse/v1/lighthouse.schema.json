@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.ushso.org/healthcare-data-platform/lighthouse/v1/lighthouse.schema.json",
+  "title": "Healthcare Data Platform lighthouse fixture v1",
+  "description": "A deterministic, bounded official-source probe fixture used by the Phase 1 lighthouse spike.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "record_type",
+    "fixture_id",
+    "source_id",
+    "source_url",
+    "release_id",
+    "release_label",
+    "release_fingerprint",
+    "response_fingerprint",
+    "probe_state",
+    "body",
+    "artifact",
+    "budget"
+  ],
+  "properties": {
+    "schema_version": {"const": "hdp.lighthouse-fixture.v1", "type": "string"},
+    "record_type": {"const": "lighthouse_fixture", "type": "string"},
+    "fixture_id": {
+      "type": "string",
+      "pattern": "^fixture:lighthouse:[a-z0-9][a-z0-9._:-]*$"
+    },
+    "source_id": {
+      "type": "string",
+      "pattern": "^source:[a-z0-9][a-z0-9._:-]*$"
+    },
+    "source_url": {
+      "type": "string",
+      "pattern": "^https://[A-Za-z0-9._:/-]+$"
+    },
+    "release_id": {
+      "type": "string",
+      "pattern": "^release:[a-z0-9][a-z0-9._:-]*$"
+    },
+    "release_label": {"type": "string", "minLength": 1, "maxLength": 200},
+    "release_fingerprint": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "response_fingerprint": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "prior_release_fingerprint": {
+      "type": ["string", "null"],
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "probe_state": {
+      "type": "string",
+      "enum": ["no_op", "changed", "failed_probe"]
+    },
+    "failure_reason": {"type": ["string", "null"], "maxLength": 300},
+    "body": {"type": ["string", "null"], "maxLength": 65536},
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifact_id", "content_sha256", "byte_length", "media_type"],
+      "properties": {
+        "artifact_id": {
+          "type": "string",
+          "pattern": "^artifact:lighthouse:[a-z0-9][a-z0-9._:-]*$"
+        },
+        "content_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "byte_length": {"type": "integer", "minimum": 0, "maximum": 65536},
+        "media_type": {"const": "application/json", "type": "string"}
+      }
+    },
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["max_bytes", "max_chunks", "chunk_size", "max_seconds"],
+      "properties": {
+        "max_bytes": {"type": "integer", "minimum": 1, "maximum": 131072},
+        "max_chunks": {"type": "integer", "minimum": 1, "maximum": 128},
+        "chunk_size": {"type": "integer", "minimum": 1, "maximum": 65536},
+        "max_seconds": {"type": "integer", "minimum": 1, "maximum": 60}
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"probe_state": {"const": "failed_probe"}}},
+      "then": {
+        "required": ["failure_reason"],
+        "properties": {
+          "failure_reason": {"type": "string", "minLength": 1},
+          "body": {"type": "null"}
+        }
+      },
+      "else": {
+        "properties": {"failure_reason": {"type": "null"}}
+      }
+    },
+    {
+      "if": {"properties": {"probe_state": {"const": "changed"}}},
+      "then": {
+        "properties": {
+          "body": {"type": "string", "minLength": 1},
+          "prior_release_fingerprint": {"type": ["string", "null"]}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"probe_state": {"const": "no_op"}}},
+      "then": {
+        "properties": {
+          "body": {"type": ["string", "null"]},
+          "prior_release_fingerprint": {"type": "string"}
+        }
+      }
+    }
+  ]
+}
