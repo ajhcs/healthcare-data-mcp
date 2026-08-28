@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 import json
 from pathlib import Path
-from typing import Mapping, Sequence, cast
+from typing import Mapping, Sequence, TypeAlias, cast
 
 from shared.utils.cache import write_atomic_json
 from shared.utils.source_cadence import (
@@ -31,6 +31,9 @@ from shared.utils.source_cadence import (
 
 class SchedulerError(SourceCatalogError):
     """Raised when serialized scheduler state or an operator request is unsafe."""
+
+
+JsonValue: TypeAlias = None | bool | int | float | str | list["JsonValue"] | dict[str, "JsonValue"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -230,7 +233,10 @@ class DurableScheduler:
 
 
 def _state_schema_path() -> Path:
-    return Path(__file__).resolve().parents[2] / "contracts/healthcare-data-platform/scheduler/v1/scheduler-state.schema.json"
+    return (
+        Path(__file__).resolve().parents[2]
+        / "contracts/healthcare-data-platform/scheduler/v1/scheduler-state.schema.json"
+    )
 
 
 def _validate_schema(value: object, path: Path, label: str) -> None:
@@ -239,7 +245,7 @@ def _validate_schema(value: object, path: Path, label: str) -> None:
 
         schema = json.loads(path.read_text(encoding="utf-8"))
         errors = sorted(
-            Draft202012Validator(schema, format_checker=FormatChecker()).iter_errors(value),
+            Draft202012Validator(schema, format_checker=FormatChecker()).iter_errors(cast(JsonValue, value)),
             key=lambda error: str(error.absolute_path),
         )
     except ImportError as exc:  # pragma: no cover - dependency installation failure
@@ -272,7 +278,12 @@ def _intent_from_mapping(value: Mapping[str, object]) -> PollIntent:
         raise SchedulerError("poll intent is incomplete")
     try:
         scheduled = datetime.fromisoformat(str(value["scheduled_at"]).replace("Z", "+00:00"))
-        generation = int(value["generation"])
+        raw_generation = value["generation"]
+        if isinstance(raw_generation, bool) or not isinstance(raw_generation, (str, int)):
+            raise SchedulerError("poll intent generation must be an integer")
+        generation = int(raw_generation)
+    except SchedulerError:
+        raise
     except (TypeError, ValueError) as exc:
         raise SchedulerError("poll intent has invalid timestamp or generation") from exc
     if scheduled.tzinfo is None:

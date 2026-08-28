@@ -24,10 +24,7 @@ def _utc(hour: int) -> datetime:
 
 def _scheduler() -> DurableScheduler:
     registrations = load_catalog(CATALOG_FIXTURE)
-    states = tuple(
-        PollState.initial(registration.source_id, next_due_at=_utc(0))
-        for registration in registrations
-    )
+    states = tuple(PollState.initial(registration.source_id, next_due_at=_utc(0)) for registration in registrations)
     return DurableScheduler(registrations, states)
 
 
