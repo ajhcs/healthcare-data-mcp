@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.ushso.org/healthcare-data-platform/scheduler/v1/scheduler-state.schema.json",
+  "title": "Healthcare Data Platform durable scheduler state v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "record_type", "state_id", "states", "intents"],
+  "properties": {
+    "schema_version": {"const": "hdp.scheduler-state.v1", "type": "string"},
+    "record_type": {"const": "scheduler_state", "type": "string"},
+    "state_id": {"type": "string", "pattern": "^scheduler:[a-z0-9][a-z0-9._:-]*$"},
+    "states": {
+      "type": "array",
+      "maxItems": 128,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "record_type",
+          "source_id",
+          "state",
+          "generation",
+          "consecutive_failures",
+          "next_due_at",
+          "last_attempt_at",
+          "last_success_at",
+          "last_release_id",
+          "last_release_fingerprint"
+        ],
+        "properties": {
+          "schema_version": {"const": "hdp.source-poll-state.v1", "type": "string"},
+          "record_type": {"const": "source_poll_state", "type": "string"},
+          "source_id": {"type": "string", "pattern": "^source:[a-z0-9][a-z0-9._:-]*$"},
+          "state": {
+            "type": "string",
+            "enum": ["never_run", "succeeded", "no_op", "failed", "missed", "backfill_pending", "backfill_running", "blocked"]
+          },
+          "generation": {"type": "integer", "minimum": 0, "maximum": 1000000},
+          "consecutive_failures": {"type": "integer", "minimum": 0, "maximum": 1000},
+          "next_due_at": {"type": "string", "format": "date-time"},
+          "last_attempt_at": {"type": ["string", "null"], "format": "date-time"},
+          "last_success_at": {"type": ["string", "null"], "format": "date-time"},
+          "last_release_id": {"type": ["string", "null"], "pattern": "^release:[a-z0-9][a-z0-9._:-]*$"},
+          "last_release_fingerprint": {"type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$"},
+          "backfill_from": {"type": ["string", "null"], "pattern": "^release:[a-z0-9][a-z0-9._:-]*$"},
+          "backfill_to": {"type": ["string", "null"], "pattern": "^release:[a-z0-9][a-z0-9._:-]*$"}
+        }
+      }
+    },
+    "intents": {
+      "type": "array",
+      "maxItems": 1024,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["intent_id", "source_id", "scheduled_at", "reason", "generation"],
+        "properties": {
+          "intent_id": {"type": "string", "pattern": "^intent:poll:[a-f0-9]{24}$"},
+          "source_id": {"type": "string", "pattern": "^source:[a-z0-9][a-z0-9._:-]*$"},
+          "scheduled_at": {"type": "string", "format": "date-time"},
+          "reason": {"type": "string", "enum": ["cadence", "retry", "operator_replay", "backfill"]},
+          "generation": {"type": "integer", "minimum": 0, "maximum": 1000000}
+        }
+      }
+    }
+  }
+}
