@@ -141,11 +141,38 @@ def test_malformed_prior_receipt_is_rejected_before_classification() -> None:
     detector = AhrqChangeDetector()
     fixture = detector.load_fixture(FIXTURE_ROOT / "official-release-changed.json")
     prior = detector.detect(fixture)
+    unchanged = detector.detect(
+        detector.load_fixture(FIXTURE_ROOT / "official-release-unchanged.json"),
+        prior=prior,
+    )
 
     with pytest.raises(AhrqDetectorError, match="prior .*fingerprint"):
         detector.detect(fixture, prior=replace(prior, release_fingerprint="bogus"))
     with pytest.raises(AhrqDetectorError, match="both release and response"):
         detector.detect(fixture, prior=replace(prior, response_fingerprint=None))
+    with pytest.raises(AhrqDetectorError, match="history must contain"):
+        detector.detect(fixture, prior=replace(unchanged, prior_release_fingerprint=None))
+    with pytest.raises(AhrqDetectorError, match="successful prior receipt cannot"):
+        detector.detect(fixture, prior=replace(prior, failure_reason="tampered"))
+    with pytest.raises(AhrqDetectorError, match="receipt_id does not match"):
+        detector.detect(fixture, prior=replace(prior, release_id="release:ahrq:tampered"))
+
+    failed = detector.detect(detector.load_fixture(FIXTURE_ROOT / "failed-release-probe.json"), prior=prior)
+    with pytest.raises(AhrqDetectorError, match="failed prior receipt is missing"):
+        detector.detect(fixture, prior=replace(failed, failure_reason=None))
+
+
+def test_failure_reason_is_part_of_receipt_identity() -> None:
+    detector = AhrqChangeDetector()
+    prior = detector.detect(detector.load_fixture(FIXTURE_ROOT / "official-release-changed.json"))
+    first_fixture = detector.load_fixture(FIXTURE_ROOT / "failed-release-probe.json")
+    second_fixture = dict(first_fixture)
+    second_fixture["failure_reason"] = "official release endpoint returned an invalid response"
+
+    first = detector.detect(first_fixture, prior=prior)
+    second = detector.detect(second_fixture, prior=prior)
+
+    assert first.receipt_id != second.receipt_id
 
 
 def test_non_ascii_response_is_bounded_by_utf8_bytes() -> None:
@@ -165,6 +192,15 @@ def test_invalid_utf8_fixture_is_wrapped_as_detector_error(tmp_path: Path) -> No
 
     with pytest.raises(AhrqDetectorError, match="unable to read AHRQ release fixture"):
         AhrqChangeDetector().load_fixture(path)
+
+
+def test_lone_surrogate_in_response_body_is_wrapped_as_detector_error() -> None:
+    detector = AhrqChangeDetector()
+    fixture = detector.load_fixture(FIXTURE_ROOT / "official-release-changed.json")
+    fixture["response_body"] = "\ud800"
+
+    with pytest.raises(AhrqDetectorError, match="malformed Unicode"):
+        detector.detect(fixture)
 
 
 def test_prior_receipt_from_another_source_is_rejected() -> None:

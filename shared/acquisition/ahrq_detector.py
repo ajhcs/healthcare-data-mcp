@@ -153,7 +153,10 @@ class AhrqChangeDetector:
         body = fixture.get("response_body")
         if not isinstance(body, str) or not body:
             raise AhrqDetectorError("release metadata response_body must be non-empty text")
-        response_bytes = body.encode("utf-8")
+        try:
+            response_bytes = body.encode("utf-8")
+        except UnicodeError as exc:
+            raise AhrqDetectorError("response_body contains malformed Unicode") from exc
         if len(response_bytes) > _MAX_RESPONSE_BYTES:
             raise AhrqDetectorError("response_body exceeds the 131072-byte probe bound")
         _validate_response_metadata(body, metadata)
@@ -164,7 +167,18 @@ class AhrqChangeDetector:
         state: Literal["changed", "unchanged"] = (
             "unchanged" if prior_release is not None and prior_release == release_fingerprint else "changed"
         )
-        receipt_id = _receipt_id(source_id, release_fingerprint, response_fingerprint, state)
+        receipt_id = _receipt_id(
+            source_id=source_id,
+            state=state,
+            release_id=metadata.release_id,
+            release_label=metadata.release_label,
+            published_at=_iso(metadata.published_at),
+            release_fingerprint=release_fingerprint,
+            response_fingerprint=response_fingerprint,
+            prior_release_fingerprint=prior_release,
+            prior_response_fingerprint=prior_response,
+            failure_reason=None,
+        )
         return DetectionReceipt(
             state=state,
             source_id=source_id,
@@ -190,7 +204,18 @@ class AhrqChangeDetector:
         release_id = prior.release_id if prior is not None else None
         release_label = prior.release_label if prior is not None else None
         published_at = prior.published_at if prior is not None else None
-        receipt_id = _receipt_id(source_id, prior_release or "none", prior_response or "none", "failed_probe")
+        receipt_id = _receipt_id(
+            source_id=source_id,
+            state="failed_probe",
+            release_id=release_id,
+            release_label=release_label,
+            published_at=published_at,
+            release_fingerprint=prior_release,
+            response_fingerprint=prior_response,
+            prior_release_fingerprint=prior_release,
+            prior_response_fingerprint=prior_response,
+            failure_reason=reason,
+        )
         return DetectionReceipt(
             state="failed_probe",
             source_id=source_id,
@@ -266,8 +291,16 @@ def _validate_prior(prior: DetectionReceipt, source_id: str) -> None:
     has_response = prior.response_fingerprint is not None
     if has_release != has_response:
         raise AhrqDetectorError("prior receipt must contain both release and response fingerprints")
+    has_prior_release = prior.prior_release_fingerprint is not None
+    has_prior_response = prior.prior_response_fingerprint is not None
+    if has_prior_release != has_prior_response:
+        raise AhrqDetectorError("prior receipt history must contain both release and response fingerprints")
     if prior.state in {"changed", "unchanged"} and not has_release:
         raise AhrqDetectorError("successful prior receipt is missing release fingerprints")
+    if prior.state in {"changed", "unchanged"} and prior.failure_reason is not None:
+        raise AhrqDetectorError("successful prior receipt cannot contain a failure reason")
+    if prior.state == "failed_probe" and (prior.failure_reason is None or not prior.failure_reason.strip()):
+        raise AhrqDetectorError("failed prior receipt is missing a failure reason")
     if has_release:
         if prior.release_id is None or _RELEASE_ID.fullmatch(prior.release_id) is None:
             raise AhrqDetectorError("prior release_id is malformed")
@@ -279,10 +312,16 @@ def _validate_prior(prior: DetectionReceipt, source_id: str) -> None:
     elif any(value is not None for value in (prior.release_id, prior.release_label, prior.published_at)):
         raise AhrqDetectorError("prior release metadata is incomplete")
     expected_id = _receipt_id(
-        source_id,
-        prior.release_fingerprint or "none",
-        prior.response_fingerprint or "none",
-        prior.state,
+        source_id=source_id,
+        state=prior.state,
+        release_id=prior.release_id,
+        release_label=prior.release_label,
+        published_at=prior.published_at,
+        release_fingerprint=prior.release_fingerprint,
+        response_fingerprint=prior.response_fingerprint,
+        prior_release_fingerprint=prior.prior_release_fingerprint,
+        prior_response_fingerprint=prior.prior_response_fingerprint,
+        failure_reason=prior.failure_reason,
     )
     if prior.receipt_id != expected_id:
         raise AhrqDetectorError("prior receipt_id does not match receipt content")
@@ -306,6 +345,10 @@ def _mapping(value: object, label: str) -> Mapping[str, object]:
 def _required_string(value: object, label: str, pattern: re.Pattern[str] | None = None) -> str:
     if not isinstance(value, str) or not value:
         raise AhrqDetectorError(f"{label} must be a non-empty string")
+    try:
+        value.encode("utf-8")
+    except UnicodeError as exc:
+        raise AhrqDetectorError(f"{label} contains malformed Unicode") from exc
     if pattern is not None and pattern.fullmatch(value) is None:
         raise AhrqDetectorError(f"{label} has an invalid format")
     return value
@@ -333,8 +376,35 @@ def _sha256(value: bytes) -> str:
     return "sha256:" + sha256(value).hexdigest()
 
 
-def _receipt_id(source_id: str, release_fingerprint: str, response_fingerprint: str, state: str) -> str:
-    material = f"{source_id}|{release_fingerprint}|{response_fingerprint}|{state}".encode("utf-8")
+def _receipt_id(
+    *,
+    source_id: str,
+    state: str,
+    release_id: str | None,
+    release_label: str | None,
+    published_at: str | None,
+    release_fingerprint: str | None,
+    response_fingerprint: str | None,
+    prior_release_fingerprint: str | None,
+    prior_response_fingerprint: str | None,
+    failure_reason: str | None,
+) -> str:
+    material = json.dumps(
+        {
+            "source_id": source_id,
+            "state": state,
+            "release_id": release_id,
+            "release_label": release_label,
+            "published_at": published_at,
+            "release_fingerprint": release_fingerprint,
+            "response_fingerprint": response_fingerprint,
+            "prior_release_fingerprint": prior_release_fingerprint,
+            "prior_response_fingerprint": prior_response_fingerprint,
+            "failure_reason": failure_reason,
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
     return "receipt:ahrq:" + sha256(material).hexdigest()[:24]
 
 
