@@ -13,7 +13,7 @@ from hashlib import sha256
 import json
 from pathlib import Path
 import re
-from typing import Literal, Mapping, Sequence, cast
+from typing import Literal, Mapping, Sequence, TypeAlias, cast
 
 
 ChangeMode = Literal["etag", "last_modified", "release_metadata", "content_hash"]
@@ -29,6 +29,8 @@ PollStateName = Literal[
     "blocked",
 ]
 PollIntentReason = Literal["cadence", "retry", "operator_replay", "backfill"]
+
+JsonValue: TypeAlias = None | bool | int | float | str | list["JsonValue"] | dict[str, "JsonValue"]
 
 _ROOT = Path(__file__).resolve().parents[2]
 _CATALOG_SCHEMA = _ROOT / "contracts/healthcare-data-platform/catalog/v1/source-catalog.schema.json"
@@ -79,7 +81,7 @@ def _schema_validate(value: object, path: Path, label: str) -> None:
     except (OSError, json.JSONDecodeError) as exc:
         raise SourceCatalogError(f"unable to read {label} schema") from exc
     errors = sorted(
-        Draft202012Validator(schema, format_checker=FormatChecker()).iter_errors(cast(object, value)),
+        Draft202012Validator(schema, format_checker=FormatChecker()).iter_errors(cast(JsonValue, value)),
         key=lambda error: str(error.absolute_path),
     )
     if errors:
@@ -371,12 +373,14 @@ def mark_missed(state: PollState, *, now: datetime, cadence: SourceCadence) -> P
     """Mark a due state missed after its explicit grace window."""
 
     current = _utc(now)
+    if state.state in {"blocked", "backfill_pending", "backfill_running"}:
+        return state
     if current <= state.next_due_at + timedelta(seconds=cadence.missed_run_grace_seconds):
         return state
     updated = PollState(
         source_id=state.source_id,
         state="missed",
-        generation=state.generation,
+        generation=state.generation + 1,
         consecutive_failures=state.consecutive_failures,
         next_due_at=current,
         last_attempt_at=state.last_attempt_at,
