@@ -371,12 +371,14 @@ def mark_missed(state: PollState, *, now: datetime, cadence: SourceCadence) -> P
     """Mark a due state missed after its explicit grace window."""
 
     current = _utc(now)
+    if state.state in {"backfill_pending", "backfill_running"}:
+        return state
     if current <= state.next_due_at + timedelta(seconds=cadence.missed_run_grace_seconds):
         return state
     updated = PollState(
         source_id=state.source_id,
         state="missed",
-        generation=state.generation,
+        generation=state.generation + 1,
         consecutive_failures=state.consecutive_failures,
         next_due_at=current,
         last_attempt_at=state.last_attempt_at,

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import json
 from pathlib import Path
 
@@ -70,6 +70,19 @@ def test_mark_missed_emits_explicit_state_and_retry_intent() -> None:
     assert {state.source_id for state in changed} == {"source:ahrq:lighthouse", "source:cms:pdc"}
     assert all(state.state == "missed" for state in changed)
     assert all(intent.reason == "retry" for intent in intents)
+    assert all(intent.generation == 1 for intent in intents)
+
+
+def test_mark_missed_after_a_cadence_intent_still_emits_retry() -> None:
+    scheduler = _scheduler()
+    scheduler.schedule(now=_utc(1))
+
+    late = datetime(2026, 9, 1, 0, 0, tzinfo=timezone.utc)
+    scheduler.mark_missed(now=late)
+    retries = scheduler.schedule(now=late)
+
+    assert {intent.source_id for intent in retries} == {"source:ahrq:lighthouse", "source:cms:pdc"}
+    assert all(intent.reason == "retry" for intent in retries)
 
 
 def test_operator_replay_is_bounded_and_not_duplicated_by_schedule() -> None:
@@ -86,6 +99,21 @@ def test_operator_replay_is_bounded_and_not_duplicated_by_schedule() -> None:
     assert scheduler.states["source:ahrq:lighthouse"].state == "backfill_pending"
     assert [item.source_id for item in scheduler.schedule(now=_utc(2))] == ["source:cms:pdc"]
     assert scheduler.intents[intent.intent_id] == intent
+
+
+def test_mark_missed_does_not_discard_an_active_backfill_range() -> None:
+    scheduler = _scheduler()
+    scheduler.replay(
+        "source:ahrq:lighthouse",
+        from_release="release:ahrq:2026-08-01",
+        to_release="release:ahrq:2026-08-22",
+        now=_utc(2),
+    )
+
+    changed = scheduler.mark_missed(now=datetime(2026, 9, 1, 0, 0, tzinfo=timezone.utc))
+
+    assert [state.source_id for state in changed] == ["source:cms:pdc"]
+    assert scheduler.states["source:ahrq:lighthouse"].backfill_from == "release:ahrq:2026-08-01"
 
 
 def test_replay_rejects_unapproved_source() -> None:
@@ -134,6 +162,19 @@ def test_invalid_checkpoint_is_rejected_before_restore(tmp_path: Path) -> None:
         DurableScheduler.restore(path, load_catalog(CATALOG_FIXTURE))
 
 
+def test_restore_rejects_backfill_state_without_release_range(tmp_path: Path) -> None:
+    scheduler = _scheduler()
+    path = scheduler.checkpoint(tmp_path / "scheduler-state.json")
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    raw["states"][0]["state"] = "backfill_pending"
+    raw["states"][0]["backfill_from"] = None
+    raw["states"][0]["backfill_to"] = None
+    path.write_text(json.dumps(raw), encoding="utf-8")
+
+    with pytest.raises(SchedulerError, match="schema validation|backfill_pending"):
+        DurableScheduler.restore(path, load_catalog(CATALOG_FIXTURE))
+
+
 def test_duplicate_checkpoint_key_is_rejected(tmp_path: Path) -> None:
     path = tmp_path / "duplicate.json"
     path.write_text('{"schema_version":"hdp.scheduler-state.v1","schema_version":"bad"}', encoding="utf-8")
@@ -147,6 +188,56 @@ def test_apply_result_rejects_unknown_result() -> None:
 
     with pytest.raises(SchedulerError, match="unsupported probe result"):
         scheduler.apply_result("source:ahrq:lighthouse", "unknown", attempted_at=_utc(1), next_due_at=_utc(2))
+
+
+def test_apply_result_rejects_disabled_source() -> None:
+    scheduler = _scheduler()
+
+    with pytest.raises(SchedulerError, match="not eligible"):
+        scheduler.apply_result("source:fast:identity-snapshot", "no_op", attempted_at=_utc(1), next_due_at=_utc(2))
+
+
+def test_restore_rejects_intent_for_disabled_source(tmp_path: Path) -> None:
+    scheduler = _scheduler()
+    path = scheduler.checkpoint(tmp_path / "scheduler-state.json")
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    raw["intents"] = [
+        {
+            "intent_id": "intent:poll:0123456789abcdef01234567",
+            "source_id": "source:fast:identity-snapshot",
+            "scheduled_at": "2026-08-29T00:00:00Z",
+            "reason": "cadence",
+            "generation": 0,
+        }
+    ]
+    path.write_text(json.dumps(raw), encoding="utf-8")
+
+    with pytest.raises(SchedulerError, match="ineligible"):
+        DurableScheduler.restore(path, load_catalog(CATALOG_FIXTURE))
+
+
+def test_intent_history_is_bounded_and_checkpoint_remains_restorable(tmp_path: Path) -> None:
+    registrations = tuple(item for item in load_catalog(CATALOG_FIXTURE) if item.source_id == "source:ahrq:lighthouse")
+    scheduler = DurableScheduler(
+        registrations,
+        (PollState.initial("source:ahrq:lighthouse", next_due_at=_utc(0)),),
+    )
+    current = _utc(0)
+    for _ in range(1_100):
+        intents = scheduler.schedule(now=current)
+        assert len(intents) == 1
+        scheduler.apply_result(
+            "source:ahrq:lighthouse",
+            "no_op",
+            attempted_at=current,
+            next_due_at=current + timedelta(hours=1),
+        )
+        current += timedelta(hours=1)
+
+    assert len(scheduler.intents) == 1_024
+    path = scheduler.checkpoint(tmp_path / "bounded-state.json")
+    restored = DurableScheduler.restore(path, registrations)
+    assert len(restored.intents) == 1_024
 
 
 def test_changed_result_requires_release_identity() -> None:

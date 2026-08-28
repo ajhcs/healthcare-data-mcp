@@ -45,7 +45,25 @@
           "last_release_fingerprint": {"type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$"},
           "backfill_from": {"type": ["string", "null"], "pattern": "^release:[a-z0-9][a-z0-9._:-]*$"},
           "backfill_to": {"type": ["string", "null"], "pattern": "^release:[a-z0-9][a-z0-9._:-]*$"}
-        }
+        },
+        "allOf": [
+          {
+            "if": {"properties": {"state": {"enum": ["backfill_pending", "backfill_running"]}}},
+            "then": {
+              "required": ["backfill_from", "backfill_to"],
+              "properties": {
+                "backfill_from": {"type": "string", "pattern": "^release:[a-z0-9][a-z0-9._:-]*$"},
+                "backfill_to": {"type": "string", "pattern": "^release:[a-z0-9][a-z0-9._:-]*$"}
+              }
+            },
+            "else": {
+              "properties": {
+                "backfill_from": {"type": "null"},
+                "backfill_to": {"type": "null"}
+              }
+            }
+          }
+        ]
       }
     },
     "intents": {

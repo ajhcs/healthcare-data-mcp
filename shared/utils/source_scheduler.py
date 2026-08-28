@@ -26,6 +26,7 @@ from shared.utils.source_cadence import (
     request_backfill,
     schedule_due,
     validate_registrations,
+    validate_poll_state,
 )
 
 
@@ -34,6 +35,7 @@ class SchedulerError(SourceCatalogError):
 
 
 JsonValue: TypeAlias = None | bool | int | float | str | list["JsonValue"] | dict[str, "JsonValue"]
+_MAX_INTENTS = 1024
 
 
 @dataclass(frozen=True, slots=True)
@@ -77,9 +79,24 @@ class DurableScheduler:
             raise SchedulerError("duplicate poll state source_id")
         if set(self._states) - set(self._registrations):
             raise SchedulerError("poll state references an unregistered source")
+        for state in self._states.values():
+            try:
+                validate_poll_state(state)
+            except SourceCatalogError as exc:
+                raise SchedulerError(str(exc)) from exc
         self._intents = {intent.intent_id: intent for intent in intent_items}
         if len(self._intents) != len(intent_items):
             raise SchedulerError("duplicate poll intent id")
+        for intent in self._intents.values():
+            registration = self._registrations.get(intent.source_id)
+            if registration is None:
+                raise SchedulerError(f"poll intent references an unregistered source: {intent.source_id}")
+            if not registration.enabled or registration.rights_status != "approved_public":
+                raise SchedulerError(f"poll intent references an ineligible source: {intent.source_id}")
+            if intent.source_id not in self._states:
+                raise SchedulerError(f"poll intent has no poll state: {intent.source_id}")
+        if len(self._intents) > _MAX_INTENTS:
+            raise SchedulerError(f"poll intent history exceeds {_MAX_INTENTS} records")
         self.state_id = state_id
 
     @property
@@ -148,6 +165,7 @@ class DurableScheduler:
                 continue
             if intent.intent_id not in self._intents:
                 self._intents[intent.intent_id] = intent
+                self._trim_intents()
                 fresh.append(intent)
         return tuple(fresh)
 
@@ -215,6 +233,9 @@ class DurableScheduler:
         state = self._states.get(source_id)
         if state is None:
             raise SchedulerError(f"unknown source_id: {source_id}")
+        registration = self._registrations[source_id]
+        if not registration.enabled or registration.rights_status != "approved_public":
+            raise SchedulerError(f"source is not eligible for result application: {source_id}")
         if result not in {"no_op", "changed", "failed_probe", "interrupted"}:
             raise SchedulerError(f"unsupported probe result: {result}")
         try:
@@ -230,6 +251,13 @@ class DurableScheduler:
             raise SchedulerError(str(exc)) from exc
         self._states[source_id] = updated
         return updated
+
+    def _trim_intents(self) -> None:
+        """Retain a bounded recent history so checkpoints remain restorable."""
+
+        while len(self._intents) > _MAX_INTENTS:
+            oldest = min(self._intents.values(), key=lambda item: (item.scheduled_at, item.intent_id))
+            del self._intents[oldest.intent_id]
 
 
 def _state_schema_path() -> Path:
