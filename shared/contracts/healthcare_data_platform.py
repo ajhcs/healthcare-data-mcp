@@ -15,7 +15,10 @@ from hashlib import sha256
 import json
 from pathlib import Path
 import re
-from typing import Mapping
+from typing import Mapping, Sequence, TypeAlias, cast
+
+
+JsonParameter: TypeAlias = str | int | float | bool | None | Mapping[str, "JsonParameter"] | Sequence["JsonParameter"]
 
 
 class HealthcareDataPlatformContractError(ValueError):
@@ -103,7 +106,10 @@ def _validate_json_schema(instance: object, schema_path: Path, label: str) -> No
     except ImportError as exc:  # pragma: no cover - installation failure, not a contract result
         raise HealthcareDataPlatformContractError("jsonschema is required for contract validation") from exc
     schema = _read_json(schema_path)
-    errors = sorted(Draft202012Validator(schema, format_checker=FormatChecker()).iter_errors(instance), key=str)
+    errors = sorted(
+        Draft202012Validator(schema, format_checker=FormatChecker()).iter_errors(cast(JsonParameter, instance)),
+        key=str,
+    )
     if errors:
         first = errors[0]
         location = ".".join(str(part) for part in first.absolute_path)
