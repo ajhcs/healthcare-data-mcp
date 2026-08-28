@@ -360,6 +360,15 @@ class RawArtifactStore:
     def _validate_metadata(self, item: RawArtifactMetadata) -> None:
         if item.schema_version != _SCHEMA_VERSION or item.record_type != _RECORD_TYPE:
             raise RawCustodyError("raw artifact metadata version or record_type is unsupported")
+        _required_string(item.artifact_id, "artifact_id", _ARTIFACT_ID)
+        _required_string(item.source_id, "source_id", _SOURCE_ID)
+        _https_url(item.source_url, "source_url")
+        _required_string(item.release_id, "release_id", _RELEASE_ID)
+        _required_string(item.media_type, "media_type", _MEDIA_TYPE)
+        _required_string(item.content_sha256, "content_sha256", _SHA256)
+        _required_string(item.idempotency_key, "idempotency_key", _IDEMPOTENCY_KEY)
+        if _timestamp(item.captured_at, "captured_at") != item.captured_at:
+            raise RawCustodyError("captured_at must use canonical UTC form")
         if item.rights_status != "approved_public":
             raise RawCustodyError("raw artifact custody requires approved_public rights")
         expected_identity = _identity_digest(item.source_id, item.release_id, item.content_sha256)
