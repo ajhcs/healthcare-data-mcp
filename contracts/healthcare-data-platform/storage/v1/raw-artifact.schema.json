@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.ushso.org/healthcare-data-platform/storage/v1/raw-artifact.schema.json",
+  "title": "Healthcare Data Platform immutable raw artifact manifest v1",
+  "description": "Strict metadata and object locator contract for bounded source-native raw custody.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "record_type", "artifact", "object_key", "metadata_sha256"],
+  "properties": {
+    "schema_version": {"const": "hdp.raw-artifact.v1"},
+    "record_type": {"const": "raw_artifact_manifest"},
+    "artifact": {"$ref": "#/$defs/artifact"},
+    "object_key": {"type": "string", "pattern": "^objects/sha256/[0-9a-f]{2}/[0-9a-f]{64}$"},
+    "metadata_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  },
+  "$defs": {
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version", "record_type", "artifact_id", "source_id", "source_url",
+        "release_id", "media_type", "content_sha256", "byte_length", "chunk_count",
+        "chunk_size", "idempotency_key", "captured_at", "rights_status",
+        "prior_artifact_id", "response_fingerprint"
+      ],
+      "properties": {
+        "schema_version": {"const": "hdp.raw-artifact.v1"},
+        "record_type": {"const": "raw_artifact"},
+        "artifact_id": {"type": "string", "pattern": "^artifact:raw:[a-f0-9]{32}$"},
+        "source_id": {"type": "string", "pattern": "^source:[a-z0-9][a-z0-9._:-]*$"},
+        "source_url": {"type": "string", "format": "uri", "pattern": "^https://"},
+        "release_id": {"type": "string", "pattern": "^release:[a-z0-9][a-z0-9._:-]*$"},
+        "media_type": {"type": "string", "pattern": "^[a-z0-9][a-z0-9!#$&^_.+*-]*/[a-z0-9][a-z0-9!#$&^_.+*-]*$"},
+        "content_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "byte_length": {"type": "integer", "minimum": 1, "maximum": 131072},
+        "chunk_count": {"type": "integer", "minimum": 1, "maximum": 128},
+        "chunk_size": {"type": "integer", "minimum": 1, "maximum": 65536},
+        "idempotency_key": {"type": "string", "pattern": "^idempotency:raw:[a-f0-9]{32}$"},
+        "captured_at": {"type": "string", "format": "date-time"},
+        "rights_status": {"enum": ["approved_public", "terms_unclear", "restricted", "blocked"]},
+        "prior_artifact_id": {"type": ["string", "null"], "pattern": "^artifact:raw:[a-f0-9]{32}$"},
+        "response_fingerprint": {"type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$"}
+      }
+    }
+  }
+}
