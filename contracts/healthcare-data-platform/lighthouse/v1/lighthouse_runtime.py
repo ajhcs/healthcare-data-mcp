@@ -212,6 +212,7 @@ class DisposableReceiver:
         *,
         interrupt_after_chunks: int | None = None,
         budget: LighthouseBudget,
+        deadline: float | None = None,
     ) -> tuple[DeliveryState, bool, int, int]:
         """Receive bounded chunks, returning state, ack, bytes, and chunk count."""
 
@@ -232,16 +233,33 @@ class DisposableReceiver:
 
         if len(chunks) > budget.max_chunks:
             raise LighthouseContractError("delivery exceeds max_chunks")
+        declared_chunk_count = delivery["chunk_count"]
+        declared_chunk_size = delivery["chunk_size"]
+        if declared_chunk_count != len(chunks):
+            raise LighthouseContractError("delivery chunk_count does not match received chunks")
+        if declared_chunk_size != budget.chunk_size:
+            raise LighthouseContractError("delivery chunk_size does not match the fixture budget")
         received = bytearray()
         for index, chunk in enumerate(chunks, start=1):
             if not isinstance(chunk, bytes) or not chunk:
                 raise LighthouseContractError("delivery chunks must be non-empty bytes")
+            if len(chunk) > declared_chunk_size:
+                raise LighthouseContractError("delivery chunk exceeds declared chunk_size")
+            if index < declared_chunk_count and len(chunk) != declared_chunk_size:
+                raise LighthouseContractError("non-final delivery chunks must use declared chunk_size")
+            if deadline is not None and perf_counter() >= deadline:
+                self._partial[idempotency_key] = received
+                return "interrupted", False, len(received), index - 1
             received.extend(chunk)
             if len(received) > budget.max_bytes:
                 raise LighthouseContractError("delivery exceeds max_bytes")
             if interrupt_after_chunks is not None and index >= interrupt_after_chunks:
                 self._partial[idempotency_key] = received
                 return "interrupted", False, len(received), index
+
+        if deadline is not None and perf_counter() >= deadline:
+            self._partial[idempotency_key] = received
+            return "interrupted", False, len(received), len(chunks)
 
         expected_length = artifact["byte_length"]
         expected_hash = artifact["content_sha256"]
@@ -368,6 +386,7 @@ class LighthouseSpike:
             chunks,
             interrupt_after_chunks=interrupt_after_chunks,
             budget=budget,
+            deadline=started + budget.max_seconds,
         )
         return LighthouseReceipt(
             **common,

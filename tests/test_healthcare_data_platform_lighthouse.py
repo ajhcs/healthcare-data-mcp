@@ -107,13 +107,52 @@ def test_interruption_does_not_ack_and_retry_is_idempotent() -> None:
 
 def test_failed_probe_preserves_prior_state() -> None:
     runtime = _runtime()
+    changed = runtime.load_fixture(FIXTURE_ROOT / "official-source-changed.json")
     fixture = runtime.load_fixture(FIXTURE_ROOT / "official-source-failed-probe.json")
     receiver = runtime.DisposableReceiver()
-    receipt = runtime.LighthouseSpike(receiver).run(fixture)
+    spike = runtime.LighthouseSpike(receiver)
+    prior = spike.run(changed)
+    receipt = spike.run(fixture)
 
+    assert prior.state == "changed"
     assert receipt.state == "failed_probe"
     assert receipt.acknowledged is False
     assert receipt.failure_reason
+    assert len(receiver.deliveries) == 1
+    assert len(receiver.artifacts) == 1
+
+
+def test_delivery_rejects_inconsistent_chunk_metadata() -> None:
+    runtime = _runtime()
+    fixture = runtime.load_fixture(FIXTURE_ROOT / "official-source-changed.json")
+    receiver = runtime.DisposableReceiver()
+    spike = runtime.LighthouseSpike(receiver)
+    receipt = spike.run(fixture)
+    envelope = dict(receiver.deliveries[receipt.idempotency_key].envelope)
+    envelope["delivery"] = dict(envelope["delivery"])
+    envelope["delivery"]["chunk_count"] = 1
+    body = fixture["body"].encode()
+    fresh_receiver = runtime.DisposableReceiver()
+
+    with pytest.raises(runtime.LighthouseContractError, match="chunk_(count|size)"):
+        fresh_receiver.stream(
+            envelope,
+            [body],
+            budget=runtime.LighthouseBudget.from_fixture(fixture),
+        )
+
+
+def test_deadline_exhaustion_cannot_ack(monkeypatch: pytest.MonkeyPatch) -> None:
+    runtime = _runtime()
+    fixture = runtime.load_fixture(FIXTURE_ROOT / "official-source-changed.json")
+    receiver = runtime.DisposableReceiver()
+    ticks = iter([0.0, 6.0, 6.0, 6.0, 6.0])
+    monkeypatch.setattr(runtime, "perf_counter", lambda: next(ticks))
+
+    receipt = runtime.LighthouseSpike(receiver).run(fixture)
+
+    assert receipt.state == "interrupted"
+    assert receipt.acknowledged is False
     assert receiver.deliveries == {}
     assert receiver.artifacts == {}
 
