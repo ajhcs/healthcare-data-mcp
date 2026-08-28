@@ -10,7 +10,7 @@
     "schema_version": {"const": "hdp.ahrq-release-probe.v1", "type": "string"},
     "record_type": {"const": "ahrq_release_probe", "type": "string"},
     "fixture_id": {"type": "string", "pattern": "^fixture:ahrq:[a-z0-9][a-z0-9._:-]*$"},
-    "source_id": {"type": "string", "pattern": "^source:[a-z0-9][a-z0-9._:-]*$"},
+    "source_id": {"const": "source:ahrq:lighthouse", "type": "string"},
     "source_url": {"type": "string", "pattern": "^https://[A-Za-z0-9._:/-]+$"},
     "probe_state": {"type": "string", "enum": ["release_metadata", "failed_probe"]},
     "release_metadata": {
@@ -18,7 +18,7 @@
       "additionalProperties": false,
       "required": ["source_id", "source_url", "release_id", "release_label", "published_at"],
       "properties": {
-        "source_id": {"type": "string", "pattern": "^source:[a-z0-9][a-z0-9._:-]*$"},
+        "source_id": {"const": "source:ahrq:lighthouse", "type": "string"},
         "source_url": {"type": "string", "pattern": "^https://[A-Za-z0-9._:/-]+$"},
         "release_id": {"type": "string", "pattern": "^release:[a-z0-9][a-z0-9._:-]*$"},
         "release_label": {"type": "string", "minLength": 1, "maxLength": 200},

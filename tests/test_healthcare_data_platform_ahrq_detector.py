@@ -8,7 +8,11 @@ from pathlib import Path
 
 import pytest
 
-from shared.acquisition.ahrq_detector import AhrqChangeDetector, AhrqDetectorError, ReleaseMetadata
+from shared.acquisition.ahrq_detector import (
+    AhrqChangeDetector,
+    AhrqDetectorError,
+    ReleaseMetadata,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -101,6 +105,66 @@ def test_response_metadata_mismatch_fails_closed() -> None:
 
     with pytest.raises(AhrqDetectorError, match="does not match"):
         detector.detect(fixture)
+
+
+def test_source_url_and_response_lineage_mismatch_fails_closed() -> None:
+    detector = AhrqChangeDetector()
+    fixture = detector.load_fixture(FIXTURE_ROOT / "official-release-changed.json")
+    metadata = fixture["release_metadata"]
+    assert isinstance(metadata, dict)
+    metadata["source_url"] = "https://evil.example/release.json"
+
+    with pytest.raises(AhrqDetectorError, match="source_url"):
+        detector.detect(fixture)
+
+    fixture = detector.load_fixture(FIXTURE_ROOT / "official-release-changed.json")
+    body = fixture["response_body"]
+    assert isinstance(body, str)
+    fixture["response_body"] = body[:-1] + ',"source_url":"https://evil.example/release.json"}'
+    with pytest.raises(AhrqDetectorError, match="response_body source_url"):
+        detector.detect(fixture)
+
+
+def test_generic_source_fixture_is_rejected_by_ahrq_binding() -> None:
+    detector = AhrqChangeDetector()
+    fixture = detector.load_fixture(FIXTURE_ROOT / "official-release-changed.json")
+    fixture["source_id"] = "source:other:release"
+    metadata = fixture["release_metadata"]
+    assert isinstance(metadata, dict)
+    metadata["source_id"] = "source:other:release"
+
+    with pytest.raises(AhrqDetectorError, match="schema validation|unsupported AHRQ source"):
+        detector.detect(fixture)
+
+
+def test_malformed_prior_receipt_is_rejected_before_classification() -> None:
+    detector = AhrqChangeDetector()
+    fixture = detector.load_fixture(FIXTURE_ROOT / "official-release-changed.json")
+    prior = detector.detect(fixture)
+
+    with pytest.raises(AhrqDetectorError, match="prior .*fingerprint"):
+        detector.detect(fixture, prior=replace(prior, release_fingerprint="bogus"))
+    with pytest.raises(AhrqDetectorError, match="both release and response"):
+        detector.detect(fixture, prior=replace(prior, response_fingerprint=None))
+
+
+def test_non_ascii_response_is_bounded_by_utf8_bytes() -> None:
+    detector = AhrqChangeDetector()
+    fixture = detector.load_fixture(FIXTURE_ROOT / "official-release-changed.json")
+    body = fixture["response_body"]
+    assert isinstance(body, str)
+    fixture["response_body"] = body[:-1] + ',"padding":"' + ("😀" * 40_000) + '"}'
+
+    with pytest.raises(AhrqDetectorError, match="131072-byte"):
+        detector.detect(fixture)
+
+
+def test_invalid_utf8_fixture_is_wrapped_as_detector_error(tmp_path: Path) -> None:
+    path = tmp_path / "invalid-encoding.json"
+    path.write_bytes(b'{"schema_version":"hdp.ahrq-release-probe.v1",\xff}')
+
+    with pytest.raises(AhrqDetectorError, match="unable to read AHRQ release fixture"):
+        AhrqChangeDetector().load_fixture(path)
 
 
 def test_prior_receipt_from_another_source_is_rejected() -> None:

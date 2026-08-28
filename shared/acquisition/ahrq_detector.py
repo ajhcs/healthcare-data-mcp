@@ -25,6 +25,9 @@ _SOURCE_ID = re.compile(r"^source:[a-z0-9][a-z0-9._:-]*$")
 _RELEASE_ID = re.compile(r"^release:[a-z0-9][a-z0-9._:-]*$")
 _SHA256 = re.compile(r"^sha256:[0-9a-f]{64}$")
 _FIXTURE_ID = re.compile(r"^fixture:ahrq:[a-z0-9][a-z0-9._:-]*$")
+_RECEIPT_ID = re.compile(r"^receipt:ahrq:[a-f0-9]{24}$")
+_EXPECTED_SOURCE_ID = "source:ahrq:lighthouse"
+_MAX_RESPONSE_BYTES = 131_072
 
 
 JsonValue: TypeAlias = None | bool | int | float | str | list["JsonValue"] | dict[str, "JsonValue"]
@@ -116,7 +119,7 @@ class AhrqChangeDetector:
             value = json.loads(Path(path).read_text(encoding="utf-8"), object_pairs_hook=_strict_pairs)
         except AhrqDetectorError:
             raise
-        except (OSError, json.JSONDecodeError) as exc:
+        except (OSError, UnicodeError, json.JSONDecodeError) as exc:
             raise AhrqDetectorError(f"unable to read AHRQ release fixture: {path}") from exc
         if not isinstance(value, dict):
             raise AhrqDetectorError("AHRQ release fixture must be an object")
@@ -128,6 +131,11 @@ class AhrqChangeDetector:
 
         _validate_schema(dict(fixture), _SCHEMA, "AHRQ release fixture")
         source_id = _required_string(fixture.get("source_id"), "source_id", _SOURCE_ID)
+        if source_id != _EXPECTED_SOURCE_ID:
+            raise AhrqDetectorError(f"unsupported AHRQ source_id: {source_id}")
+        source_url = _required_https(fixture.get("source_url"), "source_url")
+        if prior is not None:
+            _validate_prior(prior, source_id)
         if prior is not None and prior.source_id != source_id:
             raise AhrqDetectorError("prior receipt source_id does not match fixture")
         probe_state = fixture.get("probe_state")
@@ -140,11 +148,16 @@ class AhrqChangeDetector:
         metadata = ReleaseMetadata.from_mapping(_mapping(metadata_value, "release_metadata"))
         if metadata.source_id != source_id:
             raise AhrqDetectorError("release metadata source_id does not match fixture")
+        if metadata.source_url != source_url:
+            raise AhrqDetectorError("release metadata source_url does not match fixture")
         body = fixture.get("response_body")
         if not isinstance(body, str) or not body:
             raise AhrqDetectorError("release metadata response_body must be non-empty text")
+        response_bytes = body.encode("utf-8")
+        if len(response_bytes) > _MAX_RESPONSE_BYTES:
+            raise AhrqDetectorError("response_body exceeds the 131072-byte probe bound")
         _validate_response_metadata(body, metadata)
-        response_fingerprint = _sha256(body.encode("utf-8"))
+        response_fingerprint = _sha256(response_bytes)
         release_fingerprint = metadata.release_fingerprint
         prior_release = prior.release_fingerprint if prior is not None else None
         prior_response = prior.response_fingerprint if prior is not None else None
@@ -220,6 +233,9 @@ def _validate_response_metadata(body: str, metadata: ReleaseMetadata) -> None:
         raise AhrqDetectorError("response_body is not valid JSON metadata") from exc
     if not isinstance(parsed, dict):
         raise AhrqDetectorError("response_body metadata must be an object")
+    for key, expected in (("source_id", metadata.source_id), ("source_url", metadata.source_url)):
+        if key in parsed and parsed[key] != expected:
+            raise AhrqDetectorError(f"response_body {key} does not match resolved release metadata")
     for key, expected in (
         ("release_id", metadata.release_id),
         ("release_label", metadata.release_label),
@@ -227,6 +243,49 @@ def _validate_response_metadata(body: str, metadata: ReleaseMetadata) -> None:
     ):
         if parsed.get(key) != expected:
             raise AhrqDetectorError(f"response_body {key} does not match resolved release metadata")
+
+
+def _validate_prior(prior: DetectionReceipt, source_id: str) -> None:
+    """Validate prior receipt lineage before it can influence classification."""
+
+    if prior.source_id != source_id:
+        raise AhrqDetectorError("prior receipt source_id does not match fixture")
+    if prior.state not in {"changed", "unchanged", "failed_probe"}:
+        raise AhrqDetectorError("prior receipt has an unsupported state")
+    if _RECEIPT_ID.fullmatch(prior.receipt_id) is None:
+        raise AhrqDetectorError("prior receipt_id is malformed")
+    for label, value in (
+        ("release_fingerprint", prior.release_fingerprint),
+        ("response_fingerprint", prior.response_fingerprint),
+        ("prior_release_fingerprint", prior.prior_release_fingerprint),
+        ("prior_response_fingerprint", prior.prior_response_fingerprint),
+    ):
+        if value is not None and _SHA256.fullmatch(value) is None:
+            raise AhrqDetectorError(f"prior {label} is malformed")
+    has_release = prior.release_fingerprint is not None
+    has_response = prior.response_fingerprint is not None
+    if has_release != has_response:
+        raise AhrqDetectorError("prior receipt must contain both release and response fingerprints")
+    if prior.state in {"changed", "unchanged"} and not has_release:
+        raise AhrqDetectorError("successful prior receipt is missing release fingerprints")
+    if has_release:
+        if prior.release_id is None or _RELEASE_ID.fullmatch(prior.release_id) is None:
+            raise AhrqDetectorError("prior release_id is malformed")
+        if prior.release_label is None or not prior.release_label.strip():
+            raise AhrqDetectorError("prior release_label is missing")
+        if prior.published_at is None:
+            raise AhrqDetectorError("prior published_at is missing")
+        _timestamp(prior.published_at, "prior published_at")
+    elif any(value is not None for value in (prior.release_id, prior.release_label, prior.published_at)):
+        raise AhrqDetectorError("prior release metadata is incomplete")
+    expected_id = _receipt_id(
+        source_id,
+        prior.release_fingerprint or "none",
+        prior.response_fingerprint or "none",
+        prior.state,
+    )
+    if prior.receipt_id != expected_id:
+        raise AhrqDetectorError("prior receipt_id does not match receipt content")
 
 
 def _strict_pairs(pairs: list[tuple[str, object]]) -> dict[str, object]:
