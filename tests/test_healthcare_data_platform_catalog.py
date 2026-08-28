@@ -49,9 +49,13 @@ def test_catalog_fixture_loads_stable_source_ids_and_change_modes() -> None:
 
 def test_poll_state_fixture_validates_explicit_noop_and_backfill_states() -> None:
     values = json.loads((FIXTURE_ROOT / "valid-poll-states.json").read_text(encoding="utf-8"))
+    from jsonschema import Draft202012Validator, FormatChecker
+
+    schema = json.loads((ROOT / "contracts/healthcare-data-platform/catalog/v1/poll-state.schema.json").read_text())
 
     states = tuple(PollState.from_mapping(value) for value in values)
     for state in states:
+        assert list(Draft202012Validator(schema, format_checker=FormatChecker()).iter_errors(state.as_dict())) == []
         validate_poll_state(state)
 
     assert states[0].state == "no_op"
@@ -142,6 +146,24 @@ def test_invalid_catalog_and_rights_boundaries_fail_closed() -> None:
     )
     with pytest.raises(SourceCatalogError, match="approved public rights"):
         validate_registrations((pending,))
+
+
+def test_poll_state_parser_rejects_unknown_fields_and_missing_backfill_range() -> None:
+    raw = _state().as_dict()
+    raw["unexpected"] = "reject"
+    with pytest.raises(SourceCatalogError, match="schema validation"):
+        PollState.from_mapping(raw)
+
+    running = _state()
+    running = PollState(
+        source_id=running.source_id,
+        state="backfill_running",
+        generation=running.generation,
+        consecutive_failures=running.consecutive_failures,
+        next_due_at=running.next_due_at,
+    )
+    with pytest.raises(SourceCatalogError, match="backfill_running"):
+        validate_poll_state(running)
 
 
 def test_duplicate_catalog_key_is_rejected(tmp_path: Path) -> None:

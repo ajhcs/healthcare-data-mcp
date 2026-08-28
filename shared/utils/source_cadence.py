@@ -208,6 +208,7 @@ class PollState:
 
     @classmethod
     def from_mapping(cls, value: Mapping[str, object]) -> "PollState":
+        _schema_validate(value, _POLL_STATE_SCHEMA, "poll state")
         source_id = _required_string(value.get("source_id"), "source_id", _SOURCE_ID)
         raw_state = _required_string(value.get("state"), f"{source_id}.state")
         allowed = {
@@ -328,8 +329,10 @@ def validate_poll_state(state: PollState) -> None:
     """Validate the serialized poll state against the v1 schema."""
 
     _schema_validate(state.as_dict(), _POLL_STATE_SCHEMA, "poll state")
-    if state.state == "backfill_pending" and (state.backfill_from is None or state.backfill_to is None):
-        raise SourceCatalogError("backfill_pending state requires a release range")
+    if state.state in {"backfill_pending", "backfill_running"} and (
+        state.backfill_from is None or state.backfill_to is None
+    ):
+        raise SourceCatalogError(f"{state.state} state requires a release range")
     if state.state not in {"backfill_pending", "backfill_running"} and (state.backfill_from or state.backfill_to):
         raise SourceCatalogError("backfill release range is only valid while backfill is active")
 
