@@ -1,0 +1,32 @@
+[
+  {
+    "schema_version": "hdp.source-poll-state.v1",
+    "record_type": "source_poll_state",
+    "source_id": "source:ahrq:lighthouse",
+    "state": "no_op",
+    "generation": 4,
+    "consecutive_failures": 0,
+    "next_due_at": "2026-08-29T00:00:00Z",
+    "last_attempt_at": "2026-08-28T23:00:00Z",
+    "last_success_at": "2026-08-28T23:00:00Z",
+    "last_release_id": "release:ahrq:2026-08-22",
+    "last_release_fingerprint": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "backfill_from": null,
+    "backfill_to": null
+  },
+  {
+    "schema_version": "hdp.source-poll-state.v1",
+    "record_type": "source_poll_state",
+    "source_id": "source:cms:pdc",
+    "state": "backfill_pending",
+    "generation": 2,
+    "consecutive_failures": 0,
+    "next_due_at": "2026-08-28T20:00:00Z",
+    "last_attempt_at": "2026-08-27T20:00:00Z",
+    "last_success_at": "2026-08-27T20:00:00Z",
+    "last_release_id": "release:cms:pdc:2026-08-01",
+    "last_release_fingerprint": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "backfill_from": "release:cms:pdc:2026-07-01",
+    "backfill_to": "release:cms:pdc:2026-08-01"
+  }
+]
