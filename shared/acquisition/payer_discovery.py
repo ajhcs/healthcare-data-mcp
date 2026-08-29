@@ -11,7 +11,7 @@ from types import MappingProxyType
 from shared.contracts.healthcare_data_platform import validate_observation_envelope
 from shared.storage.raw_custody import RawArtifactStore, RawCustodyError
 
-PayerType = Literal["medicare_advantage", "medicare_part_d", "marketplace"]
+PayerType = Literal["medicare_advantage", "medicare_part_d", "marketplace", "f7_reference"]
 Missingness = Literal["not_yet_researched", "unavailable_public", "not_applicable", "blocked_source_conflict"]
 
 
@@ -72,7 +72,7 @@ _SOURCE_CATALOG_RAW = {
     },
     "f7_payer_toc_reference": {
         "source_id": "source:cms:payer-toc-reference",
-        "payer_type": "marketplace",
+        "payer_type": "f7_reference",
         "source_url": "https://www.cms.gov/marketplace",
         "release_locator": "https://www.cms.gov/marketplace",
         "owner": "CMS",
@@ -127,6 +127,8 @@ class PayerCandidate:
             raise ValueError("payer type is not registered for source family")
         if not str(value.get("source_period") or "") or not str(value.get("geography") or value.get("state") or ""):
             raise ValueError("source period and geography are required")
+        if payer == "f7_reference" and not str(value.get("reference_id") or ""):
+            raise ValueError("F7 reference candidate requires reference_id")
         if not str(
             value.get("plan_or_contract_id") or value.get("plan_id") or value.get("contract_id") or ""
         ) and not value.get("missingness"):
@@ -174,6 +176,32 @@ class PayerCandidate:
             "unverified_external",
             cast(Missingness | None, missingness),
         )
+
+
+def validate_payer_catalog() -> dict[str, object]:
+    """Return JSON-safe validation evidence for the immutable payer catalog."""
+    if len(SOURCE_CATALOG) != 4 or any(
+        not registration.source_url.startswith("https://") for registration in SOURCE_CATALOG.values()
+    ):
+        raise ValueError("payer catalog registration is incomplete")
+    return {
+        key: {
+            "source_id": value.source_id,
+            "title": value.title,
+            "family": value.family,
+            "source_url": value.source_url,
+            "release_locator": value.release_locator,
+            "change_mode": value.change_mode,
+            "owner": value.owner,
+            "rights_status": value.rights_status,
+            "cadence": {
+                "interval_seconds": value.cadence.interval_seconds,
+                "jitter_seconds": value.cadence.jitter_seconds,
+            },
+            "enabled_fields": list(value.enabled_fields),
+        }
+        for key, value in SOURCE_CATALOG.items()
+    }
 
 
 def build_payer_observation_envelope(
