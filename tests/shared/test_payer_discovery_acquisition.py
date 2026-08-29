@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 import hashlib
+import json
 from typing import cast
 import pytest
 
@@ -75,6 +76,46 @@ def test_catalog_is_json_safe_and_f7_reference_is_first_class() -> None:
         )
 
 
+def test_payer_value_schema_rejects_missing_identity_and_preserves_f7_reference() -> None:
+    with pytest.raises(ValueError, match="plan or contract"):
+        PayerCandidate.from_mapping(
+            {
+                "payer_type": "marketplace",
+                "source_family": "cms_marketplace_effectuated_enrollment",
+                "source_period": "2024",
+                "geography": "PA",
+                "denominator": 4,
+            }
+        )
+    reference = PayerCandidate.from_mapping(
+        {
+            "payer_type": "f7_reference",
+            "source_family": "f7_payer_toc_reference",
+            "source_period": "2024",
+            "geography": "PA",
+            "reference_id": "f7:toc:pa",
+        }
+    )
+    assert reference.reference_id == "f7:toc:pa"
+
+
+def test_blocked_conflict_requires_caller_attested_source_release_authority() -> None:
+    with pytest.raises(ValueError, match="authority"):
+        PayerCandidate.from_mapping(
+            {
+                "payer_type": "marketplace",
+                "source_family": "cms_marketplace_effectuated_enrollment",
+                "source_period": "2024",
+                "geography": "PA",
+                "plan_id": "plan-1",
+                "missingness": "blocked_source_conflict",
+                "competing_observation_ref": "observation:payer:fake",
+                "competing_source_id": "source:wrong",
+                "competing_release_id": "release:wrong:2024",
+            }
+        )
+
+
 def test_observation_envelope_contains_custody_hash_and_validates_schema(tmp_path) -> None:
     raw = b"fixture"
     store = RawArtifactStore(tmp_path / "store")
@@ -115,6 +156,15 @@ def test_observation_envelope_contains_custody_hash_and_validates_schema(tmp_pat
     assert envelope["schema_version"] == "hdp.observation-envelope.v1"
     assert cast(dict[str, object], envelope["artifact"])["content_sha256"].__class__ is str
     assert cast(dict[str, object], envelope["authority_limits"])["current_projection_allowed"] is False
+    receipt = cast(dict[str, object], envelope["receipt"])
+    assert receipt["source_release_sha256"] != receipt["artifact_sha256"]
+    receipt_payload = dict(receipt)
+    receipt_payload.pop("receipt_sha256")
+    expected = (
+        "sha256:"
+        + hashlib.sha256(json.dumps(receipt_payload, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    )
+    assert receipt["receipt_sha256"] == expected
 
 
 def test_empty_candidates_emit_explicit_valid_missingness_observation(tmp_path) -> None:
