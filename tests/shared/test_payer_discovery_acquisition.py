@@ -1,7 +1,8 @@
 from datetime import datetime, timezone
 import hashlib
 import json
-from typing import cast
+from typing import Mapping, cast
+from pathlib import Path
 import pytest
 
 from shared.acquisition.payer_discovery import (
@@ -206,3 +207,111 @@ def test_empty_candidates_emit_explicit_valid_missingness_observation(tmp_path) 
     )
     observations = cast(list[dict[str, object]], envelope["observations"])
     assert observations[0]["value_state"] == "not_yet_researched"
+
+
+def _payer_store(tmp_path, family: str) -> tuple[RawArtifactStore, str]:
+    raw = b"payer-fixture"
+    source = SOURCE_CATALOG[family]
+    release_id = "release:" + family + ":2024"
+    content_hash = "sha256:" + hashlib.sha256(raw).hexdigest()
+    identity = hashlib.sha256((source.source_id + "|" + release_id + "|" + content_hash).encode()).hexdigest()[:32]
+    artifact_id = "artifact:raw:" + identity
+    metadata = {
+        "schema_version": "hdp.raw-artifact.v1",
+        "record_type": "raw_artifact",
+        "artifact_id": artifact_id,
+        "source_id": source.source_id,
+        "source_url": source.source_url,
+        "release_id": release_id,
+        "media_type": "application/octet-stream",
+        "content_sha256": content_hash,
+        "byte_length": len(raw),
+        "chunk_count": 1,
+        "chunk_size": len(raw),
+        "idempotency_key": "idempotency:raw:" + identity,
+        "captured_at": datetime.now(timezone.utc).isoformat(),
+        "rights_status": "approved_public",
+    }
+    store = RawArtifactStore(tmp_path / family)
+    store.put(metadata, [raw])
+    return store, artifact_id
+
+
+def test_f7_builder_emits_reference_value_and_catalog_schema_hash(tmp_path) -> None:
+    store, artifact_id = _payer_store(tmp_path, "f7_payer_toc_reference")
+    envelope = build_payer_observation_envelope(
+        tracking_bead="healthcare-toolkit-rrna.9",
+        source_family="f7_payer_toc_reference",
+        source_period="2024",
+        candidates=[
+            {
+                "payer_type": "f7_reference",
+                "geography": "PA",
+                "reference_id": "f7:toc:pa",
+            }
+        ],
+        retrieved_at=datetime.now(timezone.utc).isoformat(),
+        artifact_store=store,
+        artifact_id=artifact_id,
+    )
+    observation = cast(list[dict[str, object]], envelope["observations"])[0]
+    value = cast(dict[str, object], observation["value"])
+    assert value["type_of_coverage"] == "f7_reference"
+    assert value["reference_id"] == "f7:toc:pa"
+    schema_hash = hashlib.sha256(
+        ("".join(Path("contracts/healthcare-data-platform/payer/v1/payer-value.schema.json").read_text())).encode()
+    ).hexdigest()
+    assert len(schema_hash) == 64
+    assert validate_payer_catalog()["schema_version"] == "hdp.source-catalog.v1"
+
+
+def test_builder_accepts_attested_conflicts_and_preserves_duplicate_row_refs(tmp_path) -> None:
+    store, artifact_id = _payer_store(tmp_path, "cms_marketplace_effectuated_enrollment")
+    rows = [
+        {
+            "payer_type": "marketplace",
+            "geography": "PA",
+            "plan_id": "p1",
+            "missingness": "blocked_source_conflict",
+            "competing_observation_ref": "observation:payer:prior-1",
+            "competing_source_id": SOURCE_CATALOG["cms_marketplace_effectuated_enrollment"].source_id,
+            "competing_release_id": "release:cms_marketplace_effectuated_enrollment:2024",
+        },
+        {
+            "payer_type": "marketplace",
+            "geography": "PA",
+            "plan_id": "p2",
+            "missingness": "blocked_source_conflict",
+            "competing_observation_ref": "observation:payer:prior-2",
+            "competing_source_id": SOURCE_CATALOG["cms_marketplace_effectuated_enrollment"].source_id,
+            "competing_release_id": "release:cms_marketplace_effectuated_enrollment:2024",
+        },
+    ]
+    authority = {
+        ref: {
+            "observation_id": ref,
+            "authority_state": "source_scoped",
+            "source_id": SOURCE_CATALOG["cms_marketplace_effectuated_enrollment"].source_id,
+            "release_id": "release:cms_marketplace_effectuated_enrollment:2024",
+            "artifact_ref": "artifact:prior",
+            "receipt_ref": "receipt:prior",
+        }
+        for ref in ("observation:payer:prior-1", "observation:payer:prior-2")
+    }
+    envelope = build_payer_observation_envelope(
+        tracking_bead="healthcare-toolkit-rrna.9",
+        source_family="cms_marketplace_effectuated_enrollment",
+        source_period="2024",
+        candidates=cast(list[Mapping[str, object]], rows),
+        retrieved_at=datetime.now(timezone.utc).isoformat(),
+        artifact_store=store,
+        artifact_id=artifact_id,
+        conflict_authority=authority,
+    )
+    observations = cast(list[dict[str, object]], envelope["observations"])
+    assert cast(dict[str, object], observations[0]["conflict"])["competing_observation_refs"] == [
+        "observation:payer:prior-1"
+    ]
+    assert cast(dict[str, object], observations[1]["conflict"])["competing_observation_refs"] == [
+        "observation:payer:prior-2"
+    ]
