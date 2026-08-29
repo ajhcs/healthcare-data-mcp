@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
 import json
 from pathlib import Path
 from typing import Mapping
@@ -135,6 +136,25 @@ def test_distribution_denominator_drift_is_explicit() -> None:
     assert "distribution.denominator_drift" in report.issue_codes
 
 
+def test_missing_or_empty_distribution_values_fail_closed_even_at_zero_ratio() -> None:
+    candidate = _batch()
+    candidate["rows"] = [
+        {"row_id": "row:1"},
+        {"row_id": "row:2", "scope": ""},
+    ]
+    baseline = DriftBaseline(
+        schema_version="adapter.batch.v1",
+        expected_row_count=2,
+        row_id_field="row_id",
+        distribution_rules=(DistributionRule("scope", {"system": 1}, min_ratio=0, max_ratio=2),),
+    )
+
+    report = validate_drift(candidate, baseline)
+
+    assert report.rejected
+    assert "distribution.missing_value" in report.issue_codes
+
+
 def test_distribution_policy_rejects_non_finite_or_reversed_bounds() -> None:
     with pytest.raises(DriftValidationError, match="finite"):
         DistributionRule("scope", {"system": 1}, min_ratio=float("nan"))
@@ -205,6 +225,18 @@ def test_checkpoint_and_cursor_identity_participate_in_key_drift() -> None:
     assert "key.identity_drift" in report.issue_codes
 
 
+def test_idempotency_reuse_with_changed_observation_content_is_rejected() -> None:
+    candidate = _envelope()
+    baseline = DriftBaseline.from_envelope(candidate)
+    changed = deepcopy(candidate)
+    changed["observations"][0]["identity_key"] = "identity:changed"
+
+    report = validate_drift(changed, baseline)
+
+    assert report.rejected
+    assert "key.identity_drift" in report.issue_codes
+
+
 def test_rejected_candidate_is_quarantined_and_never_projected(tmp_path: Path) -> None:
     candidate = _batch()
     candidate["rows"] = [{"row_id": "row:1", "scope": "system", "secret": "do-not-store"}]
@@ -263,6 +295,22 @@ def test_quarantine_record_integrity_is_verified_on_read(tmp_path: Path) -> None
 
     with pytest.raises(QuarantineError, match="integrity"):
         store.read(record.quarantine_id)
+
+
+def test_redacted_metadata_quarantine_record_round_trips(tmp_path: Path) -> None:
+    candidate = _batch()
+    candidate["source_id"] = "patient name"
+    candidate["rows"] = []
+    report = validate_drift(candidate, _batch_baseline())
+    record = build_quarantine_record(candidate, report, recorded_at="2026-08-29T00:00:00Z")
+    store = QuarantineStore(tmp_path)
+
+    store.put(record)
+    restored = store.read(record.quarantine_id)
+
+    assert restored == record
+    assert restored.source_id == record.source_id
+    assert restored.source_id is not None and restored.source_id.startswith("redacted:")
 
 
 def test_quarantine_rejects_record_path_symlink(tmp_path: Path) -> None:

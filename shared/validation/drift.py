@@ -44,6 +44,7 @@ _SHA256 = re.compile(r"^sha256:[0-9a-f]{64}$")
 _ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/-]{0,299}$")
 _LOCATOR = re.compile(r"^(?:https://|object://|parquet://|docs/|contracts/)[A-Za-z0-9._:/-]+$")
 _PATH = re.compile(r"^[A-Za-z0-9_$.-]+(?:\[\])?(?:\.[A-Za-z0-9_$.-]+(?:\[\])?)*$")
+_REDACTED_METADATA_ID = re.compile(r"^redacted:[0-9a-f]{64}$")
 _METADATA_PREFIXES = {
     "source_id": "source:",
     "release_id": "release:",
@@ -126,6 +127,8 @@ def _quarantine_metadata_id(value: object, label: str) -> str | None:
     if value is None:
         return None
     prefix = _METADATA_PREFIXES[label]
+    if isinstance(value, str) and _REDACTED_METADATA_ID.fullmatch(value) is not None:
+        return value
     if isinstance(value, str) and _ID.fullmatch(value) is not None and value.startswith(prefix):
         return value
     try:
@@ -1071,11 +1074,23 @@ def _distribution_issues(
     issues: list[DriftIssue] = []
     for rule in rules:
         values = _rule_values(candidate, rows, collection_path, rule.path)
+        missing_count = sum(1 for value in values if _is_missing_distribution_value(value))
+        if missing_count:
+            issues.append(
+                _issue(
+                    "distribution.missing_value",
+                    rule.path,
+                    "distribution",
+                    "non-empty value",
+                    missing_count,
+                )
+            )
+        present_values = [value for value in values if not _is_missing_distribution_value(value)]
         actual_counts: dict[str, int] = {}
-        for value in values:
+        for value in present_values:
             category = _category(value)
             actual_counts[category] = actual_counts.get(category, 0) + 1
-        actual_total = len(values)
+        actual_total = len(present_values)
         if rule.expected_total is not None and actual_total != rule.expected_total:
             issues.append(
                 _issue(
@@ -1120,26 +1135,29 @@ def _distribution_issues(
 def _rule_values(candidate: Mapping[str, object], rows: list[object], collection_path: str, path: str) -> list[object]:
     if path.startswith("observations[].") or path.startswith("rows[]."):
         relative = path.split("[].", 1)[1]
-        return [
-            _path_value(row, relative.split("."))
-            for row in rows
-            if isinstance(row, Mapping) and _path_value(row, relative.split(".")) is not _MISSING
-        ]
+        return [_path_value(row, relative.split(".")) if isinstance(row, Mapping) else _MISSING for row in rows]
     if "[]." in path:
         prefix, relative = path.split("[].", 1)
         values = _path_value(candidate, prefix.split("."))
         if isinstance(values, list):
             return [
-                _path_value(item, relative.split("."))
-                for item in values
-                if _path_value(item, relative.split(".")) is not _MISSING
-            ]
-        return []
-    values = [_path_value(row, path.split(".")) for row in rows if isinstance(row, Mapping)]
-    return [value for value in values if value is not _MISSING]
+                _path_value(item, relative.split(".")) if isinstance(item, Mapping) else _MISSING for item in values
+            ] or [_MISSING]
+        return [_MISSING]
+    return [_path_value(row, path.split(".")) if isinstance(row, Mapping) else _MISSING for row in rows]
 
 
 _MISSING = object()
+
+
+def _is_missing_distribution_value(value: object) -> bool:
+    if value is _MISSING or value is None:
+        return True
+    if isinstance(value, str):
+        return not value.strip()
+    if isinstance(value, (bytes, bytearray, Mapping, Sequence)):
+        return len(value) == 0
+    return False
 
 
 def _candidate_rows(candidate: Mapping[str, object]) -> tuple[list[object], str]:
@@ -1182,6 +1200,10 @@ def _candidate_key_digest(candidate: Mapping[str, object]) -> str | None:
     lineage = _mapping(candidate.get("lineage"))
     replay = _mapping(lineage.get("replay"))
     checkpoint_id, cursor = _candidate_checkpoint_cursor(candidate)
+    try:
+        content_sha256 = _fingerprint(candidate)
+    except DriftValidationError:
+        content_sha256 = None
     values = {
         "record_id": candidate.get("record_id"),
         "source_id": source_release.get("source_id") or candidate.get("source_id"),
@@ -1191,6 +1213,7 @@ def _candidate_key_digest(candidate: Mapping[str, object]) -> str | None:
         "idempotency_key": replay.get("idempotency_key") or candidate.get("idempotency_key"),
         "checkpoint_id": checkpoint_id,
         "cursor": cursor,
+        "content_sha256": content_sha256,
     }
     if all(value is None for value in values.values()):
         return None
