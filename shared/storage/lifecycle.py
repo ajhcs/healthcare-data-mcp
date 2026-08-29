@@ -161,10 +161,8 @@ class LifecycleMetadata:
         object_retained = value.get("object_retained")
         if not isinstance(object_retained, bool):
             raise LifecycleError("object_retained must be a boolean")
-        if legal_hold and retention_value not in {"legal_hold", "append_only", "indefinite"}:
-            # The original class is retained when an operator adds a hold;
-            # registration may still set a temporary class before the hold.
-            pass
+        if retention_value == "legal_hold" and not legal_hold:
+            raise LifecycleError("retention_class=legal_hold requires legal_hold=true")
         if state_value == "active" and (quarantined_at or quarantine_manifest or quarantine_object):
             raise LifecycleError("active lifecycle metadata cannot carry quarantine paths")
         if state_value == "quarantined" and quarantined_at is None:
@@ -281,6 +279,8 @@ class RawArtifactLifecycle:
         if retention_class not in RETENTION_CLASSES:
             raise LifecycleError("retention_class is unsupported")
         _bounded_int(reference_count, "reference_count", 0, MAX_REFERENCE_COUNT)
+        if not isinstance(legal_hold, bool):
+            raise LifecycleError("legal_hold must be a boolean")
         current = _timestamp(now, "now") if now is not None else _utc_now()
         grace = _optional_timestamp(grace_until, "grace_until")
         expiry = _optional_timestamp(expires_at, "expires_at")
@@ -356,6 +356,8 @@ class RawArtifactLifecycle:
         if not isinstance(held, bool):
             raise LifecycleError("held must be a boolean")
         metadata = self.read(artifact_id)
+        if metadata.retention_class == "legal_hold" and not held:
+            raise LifecycleConflictError("legal_hold retention cannot be cleared by this operation")
         updated = replace(metadata, legal_hold=held)
         self._write_metadata(updated, overwrite=True)
         receipt = self._receipt("legal_hold_set" if held else "legal_hold_cleared", updated)
@@ -429,10 +431,10 @@ class RawArtifactLifecycle:
         if metadata.quarantine_manifest is None:
             raise LifecycleError("quarantined artifact is missing its manifest path")
         manifest_path = self._confined(self.root / metadata.quarantine_manifest)
-        active_manifest = self._manifest_path(artifact_id)
+        active_manifest = self._confined(self._manifest_path(artifact_id))
         if active_manifest.exists():
             raise LifecycleConflictError("active manifest already exists during restore")
-        object_path = self._object_path(metadata.content_sha256)
+        object_path = self._confined(self._object_path(metadata.content_sha256))
         object_moved = False
         if metadata.quarantine_object is not None:
             quarantine_object = self._confined(self.root / metadata.quarantine_object)
@@ -457,6 +459,7 @@ class RawArtifactLifecycle:
                 self._safe_move(active_manifest, manifest_path)
             if object_moved and object_path.exists() and not object_path.is_symlink():
                 self._safe_move(object_path, self._confined(self.root / cast(str, metadata.quarantine_object)))
+            self._write_metadata(metadata, overwrite=True)
             raise
         receipt = self._receipt("restored", restored)
         self._write_action_receipt(receipt)
@@ -485,23 +488,29 @@ class RawArtifactLifecycle:
 
     def _quarantine(self, metadata: LifecycleMetadata, now: datetime) -> None:
         item = self._verified_item(metadata.artifact_id)
+        # Verify the immutable object before moving its manifest out of the
+        # active store.  ``read_metadata`` alone cannot detect byte tampering.
+        self.store.read_bytes(metadata.artifact_id)
         if item.content_sha256 != metadata.content_sha256:
             raise LifecycleConflictError("quarantine candidate hash differs from lifecycle metadata")
-        manifest = self._manifest_path(metadata.artifact_id)
-        object_path = self._object_path(metadata.content_sha256)
+        manifest = self._confined(self._manifest_path(metadata.artifact_id))
+        object_path = self._confined(self._object_path(metadata.content_sha256))
         if manifest.is_symlink() or object_path.is_symlink():
             raise LifecycleConflictError("refusing to quarantine a symlinked custody path")
         if not manifest.exists() or not object_path.exists():
             raise LifecycleError("quarantine candidate is missing immutable custody")
         digest = _artifact_digest(metadata.artifact_id)
-        destination = (
+        destination = self._confined(
             self.root / "lifecycle" / "quarantine" / digest / _format_timestamp(now).replace(":", "").replace("Z", "")
         )
         destination.mkdir(parents=True, exist_ok=True)
         quarantine_manifest = destination / "manifest.json"
         quarantine_object = destination / "object"
         object_references = self._manifest_index().get(metadata.content_sha256.removeprefix("sha256:"), ())
-        move_object = len(object_references) <= 1
+        retained_quarantine = self._retained_quarantine_object_digests()
+        move_object = (
+            len(object_references) <= 1 and metadata.content_sha256.removeprefix("sha256:") not in retained_quarantine
+        )
         self._safe_move(manifest, quarantine_manifest)
         try:
             if move_object:
@@ -524,8 +533,9 @@ class RawArtifactLifecycle:
 
     def _quarantine_orphans(self, now: datetime) -> list[str]:
         references = self._manifest_index()
+        retained_quarantine = self._retained_quarantine_object_digests()
         quarantined: list[str] = []
-        objects_root = self.root / "objects" / "sha256"
+        objects_root = self._confined(self.root / "objects" / "sha256")
         if not objects_root.exists():
             return quarantined
         for prefix in objects_root.iterdir():
@@ -535,9 +545,9 @@ class RawArtifactLifecycle:
                 if object_path.is_symlink() or not object_path.is_file():
                     continue
                 digest = object_path.name
-                if digest in references:
+                if digest in references or digest in retained_quarantine:
                     continue
-                destination = (
+                destination = self._confined(
                     self.root
                     / "lifecycle"
                     / "quarantine"
@@ -585,7 +595,7 @@ class RawArtifactLifecycle:
             return item
 
     def _read_optional(self, artifact_id: str) -> LifecycleMetadata | None:
-        path = self._lifecycle_path(artifact_id)
+        path = self._confined(self._lifecycle_path(artifact_id))
         if not path.exists():
             return None
         return self._read_path(path)
@@ -602,17 +612,20 @@ class RawArtifactLifecycle:
             raise LifecycleError(f"unable to read lifecycle metadata: {path.name}") from exc
 
     def _write_metadata(self, metadata: LifecycleMetadata, *, overwrite: bool) -> None:
-        _atomic_json(self._lifecycle_path(metadata.artifact_id), metadata.as_dict(), overwrite=overwrite)
+        path = self._confined(self._lifecycle_path(metadata.artifact_id))
+        _atomic_json(path, metadata.as_dict(), overwrite=overwrite)
 
     def _write_run_receipt(self, receipt: CompactionReceipt, now: datetime) -> None:
         name = f"{_format_timestamp(now).replace(':', '')}-{sha256(_canonical_json(receipt.as_dict())).hexdigest()[:16]}.json"
-        _atomic_json(self.root / "lifecycle" / "receipts" / name, receipt.as_dict(), overwrite=False)
+        path = self._confined(self.root / "lifecycle" / "receipts" / name)
+        _atomic_json(path, receipt.as_dict(), overwrite=False)
 
     def _write_action_receipt(self, receipt: LifecycleReceipt) -> None:
         recorded_at = _utc_now()
         payload = {"recorded_at": recorded_at, "receipt": receipt.as_dict()}
         name = f"{recorded_at.replace(':', '')}-{sha256(_canonical_json(payload)).hexdigest()[:16]}.json"
-        _atomic_json(self.root / "lifecycle" / "receipts" / name, payload, overwrite=False)
+        path = self._confined(self.root / "lifecycle" / "receipts" / name)
+        _atomic_json(path, payload, overwrite=False)
 
     def _receipt(
         self, action: LifecycleAction, metadata: LifecycleMetadata, detail: str | None = None
@@ -628,14 +641,14 @@ class RawArtifactLifecycle:
         )
 
     def _metadata_paths(self) -> Iterable[Path]:
-        directory = self.root / "lifecycle" / "metadata"
+        directory = self._confined(self.root / "lifecycle" / "metadata")
         if not directory.exists():
             return ()
         return tuple(path for path in directory.rglob("*.json") if not path.is_symlink())
 
     def _manifest_index(self) -> dict[str, tuple[tuple[str, Path], ...]]:
         result: dict[str, list[tuple[str, Path]]] = {}
-        directory = self.root / "metadata"
+        directory = self._confined(self.root / "metadata")
         if not directory.exists():
             return {}
         for path in directory.rglob("*.json"):
@@ -653,6 +666,21 @@ class RawArtifactLifecycle:
             except (OSError, UnicodeError, json.JSONDecodeError):
                 continue
         return {key: tuple(value) for key, value in result.items()}
+
+    def _retained_quarantine_object_digests(self) -> set[str]:
+        """Return content digests retained by quarantined lifecycle records.
+
+        A shared object must remain available while any quarantined record
+        points at the active object.  Otherwise the final active manifest could
+        move the bytes away and strand earlier quarantined records.
+        """
+
+        retained: set[str] = set()
+        for path in self._metadata_paths():
+            metadata = self._read_path(path)
+            if metadata is not None and metadata.state == "quarantined" and metadata.object_retained:
+                retained.add(metadata.content_sha256.removeprefix("sha256:"))
+        return retained
 
     def _lifecycle_path(self, artifact_id: str) -> Path:
         digest = _artifact_digest(artifact_id)

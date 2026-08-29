@@ -14,7 +14,7 @@ from shared.storage.lifecycle import (
     LifecycleMetadata,
     RawArtifactLifecycle,
 )
-from shared.storage.raw_custody import RawArtifactMetadata, RawArtifactStore
+from shared.storage.raw_custody import ArtifactCollisionError, RawArtifactMetadata, RawArtifactStore
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -199,3 +199,96 @@ def test_release_reference_cannot_underflow_and_registration_is_idempotent(tmp_p
     assert first.content_sha256 == again.content_sha256
     with pytest.raises(LifecycleConflictError, match="negative"):
         lifecycle.release_reference(metadata.artifact_id)
+
+
+def test_compaction_verifies_active_object_bytes_before_quarantine(tmp_path: Path) -> None:
+    store, metadata = _stored(tmp_path)
+    lifecycle = RawArtifactLifecycle(store, quota_bytes=1)
+    lifecycle.register(
+        metadata.artifact_id,
+        retention_class="cold",
+        expires_at="2026-08-29T00:00:00Z",
+        grace_until="2026-08-29T00:00:00Z",
+        now="2026-08-28T00:00:00Z",
+    )
+    object_path = (
+        tmp_path / "objects" / "sha256" / hashlib.sha256(BODY).hexdigest()[:2] / hashlib.sha256(BODY).hexdigest()
+    )
+    object_path.write_bytes(b"tampered bytes\n")
+
+    with pytest.raises(ArtifactCollisionError, match="immutable hash verification"):
+        lifecycle.compact(now="2026-09-01T00:00:00Z")
+
+    assert lifecycle.read(metadata.artifact_id).state == "active"
+
+
+def test_shared_content_remains_recoverable_while_quarantine_records_retain_object(tmp_path: Path) -> None:
+    store, first = _stored(tmp_path)
+    second = _metadata(release_id="release:ahrq:2026-08-23")
+    second_manifest = store._manifest_path(second.artifact_id)
+    store._write_manifest(second, second_manifest, store._object_key(second.content_sha256))
+    lifecycle = RawArtifactLifecycle(store, quota_bytes=len(BODY) + 1)
+    for item in (first, second):
+        lifecycle.register(
+            item.artifact_id,
+            retention_class="cold",
+            expires_at="2026-08-29T00:00:00Z",
+            grace_until="2026-08-29T00:00:00Z",
+            now="2026-08-28T00:00:00Z",
+        )
+
+    result = lifecycle.compact(now="2026-09-01T00:00:00Z")
+
+    assert set(result.quarantined_artifacts) == {first.artifact_id, second.artifact_id}
+    assert lifecycle.read(first.artifact_id).object_retained is True
+    assert lifecycle.read(second.artifact_id).object_retained is True
+    assert lifecycle.restore(first.artifact_id).action == "restored"
+    assert lifecycle.restore(second.artifact_id).action == "restored"
+    assert store.read_bytes(first.artifact_id) == BODY
+    assert store.read_bytes(second.artifact_id) == BODY
+
+
+def test_lifecycle_rejects_parent_symlink_before_writing(tmp_path: Path) -> None:
+    store, metadata = _stored(tmp_path)
+    lifecycle = RawArtifactLifecycle(store)
+    outside = tmp_path.parent / f"{tmp_path.name}-outside"
+    outside.mkdir()
+    (tmp_path / "lifecycle").symlink_to(outside, target_is_directory=True)
+
+    with pytest.raises(LifecycleConflictError, match="symlink"):
+        lifecycle.register(metadata.artifact_id)
+    assert not list(outside.rglob("*.json"))
+
+
+def test_restore_rolls_lifecycle_metadata_back_when_verification_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    store, metadata = _stored(tmp_path)
+    lifecycle = RawArtifactLifecycle(store, quota_bytes=1)
+    lifecycle.register(
+        metadata.artifact_id,
+        retention_class="cold",
+        expires_at="2026-08-29T00:00:00Z",
+        grace_until="2026-08-29T00:00:00Z",
+        now="2026-08-28T00:00:00Z",
+    )
+    lifecycle.compact(now="2026-09-01T00:00:00Z")
+
+    def fail_read(_artifact_id: str) -> bytes:
+        raise ArtifactCollisionError("forced restore verification failure")
+
+    monkeypatch.setattr(store, "read_bytes", fail_read)
+    with pytest.raises(ArtifactCollisionError, match="forced restore"):
+        lifecycle.restore(metadata.artifact_id)
+
+    assert lifecycle.read(metadata.artifact_id).state == "quarantined"
+    assert not store._manifest_path(metadata.artifact_id).exists()
+
+
+def test_legal_hold_retention_cannot_be_cleared_without_policy_transition(tmp_path: Path) -> None:
+    store, metadata = _stored(tmp_path)
+    lifecycle = RawArtifactLifecycle(store)
+    lifecycle.register(metadata.artifact_id, retention_class="legal_hold")
+
+    with pytest.raises(LifecycleConflictError, match="legal_hold retention"):
+        lifecycle.set_legal_hold(metadata.artifact_id, held=False)
