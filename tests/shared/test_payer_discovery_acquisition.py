@@ -259,9 +259,9 @@ def test_f7_builder_emits_reference_value_and_catalog_schema_hash(tmp_path) -> N
     assert value["type_of_coverage"] == "f7_reference"
     assert value["reference_id"] == "f7:toc:pa"
     schema_hash = hashlib.sha256(
-        ("".join(Path("contracts/healthcare-data-platform/payer/v1/payer-value.schema.json").read_text())).encode()
+        Path("contracts/healthcare-data-platform/payer/v1/payer-value.schema.json").read_bytes()
     ).hexdigest()
-    assert len(schema_hash) == 64
+    assert schema_hash == "83ed34cbcbe2a67f5339623fa157f0982b50e47ea6feca0aa208eea6a66a0900"
     assert validate_payer_catalog()["schema_version"] == "hdp.source-catalog.v1"
 
 
@@ -280,7 +280,7 @@ def test_builder_accepts_attested_conflicts_and_preserves_duplicate_row_refs(tmp
         {
             "payer_type": "marketplace",
             "geography": "PA",
-            "plan_id": "p2",
+            "plan_id": "p1",
             "missingness": "blocked_source_conflict",
             "competing_observation_ref": "observation:payer:prior-2",
             "competing_source_id": SOURCE_CATALOG["cms_marketplace_effectuated_enrollment"].source_id,
@@ -315,3 +315,14 @@ def test_builder_accepts_attested_conflicts_and_preserves_duplicate_row_refs(tmp
     assert cast(dict[str, object], observations[1]["conflict"])["competing_observation_refs"] == [
         "observation:payer:prior-2"
     ]
+    with pytest.raises(ValueError, match="authority"):
+        build_payer_observation_envelope(
+            tracking_bead="healthcare-toolkit-rrna.9",
+            source_family="cms_marketplace_effectuated_enrollment",
+            source_period="2024",
+            candidates=cast(list[Mapping[str, object]], rows),
+            retrieved_at=datetime.now(timezone.utc).isoformat(),
+            artifact_store=store,
+            artifact_id=artifact_id,
+            conflict_authority={},
+        )
