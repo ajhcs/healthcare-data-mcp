@@ -272,8 +272,12 @@ class AdapterCatalog(Protocol):
     def registration(self, source_id: str) -> AdapterCatalogEntry | None:
         """Return a source registration or ``None`` when it is unknown."""
 
+        ...
+
     def get(self, source_id: str) -> AdapterCatalogEntry | None:
         """Alias for registration used by mapping-like adapter callers."""
+
+        ...
 
 
 class InMemoryAdapterCatalog:
@@ -350,8 +354,12 @@ class CursorStore(Protocol):
     def current(self, source_id: str) -> SourceCursor | None:
         """Return the current cursor for one source."""
 
+        ...
+
     def compare_and_swap(self, precondition: CursorPrecondition) -> SourceCursor:
         """Advance the cursor only when its expected state still matches."""
+
+        ...
 
 
 class InMemoryCursorStore:
@@ -408,6 +416,7 @@ __all__ = [
     "Fingerprint",
     "InMemoryAdapterCatalog",
     "InMemoryCursorStore",
+    "JsonValue",
     "ProbeState",
     "SourceCursor",
     "fingerprint_bytes",
