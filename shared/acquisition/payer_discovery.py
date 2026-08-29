@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from hashlib import sha256
 import json
 from typing import Literal, Mapping, cast
+from types import MappingProxyType
 
 from shared.contracts.healthcare_data_platform import validate_observation_envelope
 from shared.storage.raw_custody import RawArtifactStore, RawCustodyError
@@ -13,7 +14,32 @@ from shared.storage.raw_custody import RawArtifactStore, RawCustodyError
 PayerType = Literal["medicare_advantage", "medicare_part_d", "marketplace"]
 Missingness = Literal["not_yet_researched", "unavailable_public", "not_applicable", "blocked_source_conflict"]
 
-SOURCE_CATALOG = {
+
+@dataclass(frozen=True, slots=True)
+class PayerCadence:
+    interval_seconds: int
+    jitter_seconds: int = 0
+
+
+@dataclass(frozen=True, slots=True)
+class PayerSourceRegistration:
+    source_id: str
+    payer_type: str
+    source_url: str
+    release_locator: str
+    title: str
+    family: str = "payer"
+    change_mode: str = "release_metadata"
+    owner: str = "CMS"
+    rights_status: str = "approved_public"
+    cadence: PayerCadence = PayerCadence(86400)
+    enabled_fields: tuple[str, ...] = ("type_of_coverage", "denominator", "geography")
+
+    def __getitem__(self, key: str) -> object:
+        return getattr(self, key)
+
+
+_SOURCE_CATALOG_RAW = {
     "cms_ma_state_county_enrollment": {
         "source_id": "source:cms:ma-state-county-enrollment",
         "payer_type": "medicare_advantage",
@@ -55,6 +81,21 @@ SOURCE_CATALOG = {
         "artifact_identity": "F7 TOC/reference candidate registry",
     },
 }
+SOURCE_CATALOG = MappingProxyType(
+    {
+        key: PayerSourceRegistration(
+            source_id=value["source_id"],
+            payer_type=value["payer_type"],
+            source_url=value["source_url"],
+            release_locator=value["release_locator"],
+            title=key,
+            owner=value["owner"],
+            rights_status=value["rights_status"],
+            cadence=PayerCadence(86400 if value["cadence"] == "daily" else 2592000),
+        )
+        for key, value in _SOURCE_CATALOG_RAW.items()
+    }
+)
 REJECTED_FAMILIES = frozenset({"census_population", "acs_population", "census_insurance", "modeled_population"})
 
 
@@ -232,7 +273,7 @@ def build_payer_observation_envelope(
         },
         "receipt": {
             "receipt_id": receipt_id,
-            "producer": "healthcare-data-mcp:payer-observation-producer",
+            "producer": "healthcare-data-mcp:payer-observation-producer:bead=healthcare-toolkit-rrna.p1-28-payer-discovery-20260829",
             "receipt_schema": "hdp.receipt.v1",
             "source_release_ref": release_id,
             "artifact_ref": artifact_id,
