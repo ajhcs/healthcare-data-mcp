@@ -30,7 +30,9 @@ receipt that can be replayed after a crash.
   returned by an optional local `RawArtifactStore`. Delivery additionally
   requires the builder-held trusted capability created by independently
   re-verifying that normalized artifact through the store; an offline or
-  JSON-only envelope is construction-only.
+  JSON-only envelope is construction-only. The capability is bound outside
+  mutable payload keys to the original canonical envelope digest and material
+  artifact/lineage references.
 
 ## Delivery protocol
 
@@ -72,9 +74,10 @@ Focused tests cover valid system/facility parsing, malformed/duplicate rows,
 strict malformed headers, immutable source-row fields, orphan links, envelope
 hash and locator lineage, strict schema rejection, byte-identical replay,
 conflicting replay, acknowledgement rejection, trusted-custody relabel
-rejection, and checkpoint CAS ordering. Required checks are the focused pytest
-suite, Ruff check/format, Python compileall, JSON Schema validation,
-`git diff --check`, and a final self-review on the exact committed tree.
+rejection, source-row hash verification, and checkpoint CAS ordering. Required
+checks are the focused pytest suite, Ruff check/format, Python compileall, JSON
+Schema validation, `git diff --check`, and a final self-review on the exact
+committed tree.
 
 Rollback is additive: revert the docs, tests, and implementation commits in
 reverse order. No raw object, queue, database, scheduler, runtime, or

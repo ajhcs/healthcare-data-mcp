@@ -20,6 +20,10 @@ activation occurred.
   offline-prefix delivery guard with a builder-held capability backed by
   independently re-verified P1-04 custody, closes malformed-header error
   leakage, and freezes source-row fields so row hashes cannot become stale.
+- A final integrity correction follows that commit. It holds the capability in
+  a private weak registry, binds it to the original canonical envelope digest
+  and material artifact/lineage references, and verifies caller-supplied row
+  hashes against canonical fields before envelope construction.
 
 The branch is
 `codex/healthcare-toolkit-rrna.p1-07-ahrq-envelope-20260829` in the isolated
@@ -59,8 +63,11 @@ Luna because Grok Build repository egress was unavailable.
 - A trusted capability is created only for normalized bytes checked through the
   bounded `RawArtifactStore`; delivery re-reads the immutable manifest and
   object bytes and matches source, release, role, hash, length, custody, and
-  lineage references. Serialization to JSON intentionally drops the capability
-  and must be rebuilt or rehydrated through trusted custody before delivery.
+  lineage references. The capability is held outside mutable payload keys and
+  is bound to the original canonical envelope digest plus all material
+  artifact/lineage references, so payload edits or capability grafts fail.
+  Serialization to JSON intentionally drops the capability and must be rebuilt
+  or rehydrated through trusted custody before delivery.
 - The file acknowledgement adapter uses a sidecar OS lock around read,
   idempotency comparison, and atomic write, preserving records and rejecting
   cross-process conflicts safely.
@@ -114,6 +121,11 @@ command is claimed here.
   JSON-only envelope data.
 - [x] Malformed CSV headers are normalized to `AhrqRowParseError`, and source
   row fields are copied/frozen so their row hashes remain valid.
+- [x] The custody capability is private-registry-held, immutable, canonical
+  digest-bound, and material-reference-bound; grafted or modified payloads are
+  rejected before acknowledgement/CAS.
+- [x] Caller-supplied source-row hashes are recomputed from canonical fields and
+  unrelated hashes fail closed.
 - [x] The file acknowledgement store is protected by an OS-level sidecar lock
   and has cross-process preservation and conflict regression coverage.
 - [x] Focused pytest, Ruff, Pyright, compile, schema, and diff checks were run

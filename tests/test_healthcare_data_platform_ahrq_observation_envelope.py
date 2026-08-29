@@ -153,6 +153,7 @@ def _envelope(
     *,
     system_id: str = "SYS-1",
     hospital_id: str = "H-1",
+    source_url: str = "https://example.gov/ahrq/release.json",
 ) -> dict[str, object]:
     current_release = release or _release()
     _, _, parsed = _source_files(tmp_path, current_release, system_id=system_id, hospital_id=hospital_id)
@@ -160,7 +161,7 @@ def _envelope(
         parsed,
         current_release,
         normalized_store=RawArtifactStore(tmp_path / "normalized"),
-        source_url="https://example.gov/ahrq/release.json",
+        source_url=source_url,
         recorded_at=datetime(2026, 8, 29, tzinfo=timezone.utc),
     )
 
@@ -372,6 +373,15 @@ def test_source_row_fields_are_copied_and_immutable(tmp_path: Path) -> None:
     supplied_fields["health_sys_name"] = "Mutated after construction"
     assert copied.fields["health_sys_name"] == original_fields["health_sys_name"]
     assert copied.as_dict()["row_sha256"] == row.as_dict()["row_sha256"]
+    with pytest.raises(AhrqRowParseError, match="row_sha256 does not match"):
+        AhrqSourceRow(
+            role=row.role,
+            row_number=row.row_number,
+            source_row_id=row.source_row_id,
+            fields=dict(row.fields),
+            row_sha256="sha256:" + "f" * 64,
+            artifact=row.artifact,
+        )
 
 
 def test_envelope_is_pinned_source_scoped_and_deterministic(tmp_path: Path) -> None:
@@ -482,6 +492,29 @@ def test_trusted_normalized_custody_rejects_relabelled_artifact(tmp_path: Path) 
     with pytest.raises(AhrqAcknowledgementError, match="trusted custody capability"):
         InMemoryAhrqAcknowledgementStore().acknowledge(relabeled)
 
+    modified = deepcopy(envelope)
+    cast(dict[str, object], modified["receipt"])["producer"] = "healthcare-data-mcp:ahrq-modified"
+    with pytest.raises(AhrqAcknowledgementError, match="bytes do not match"):
+        InMemoryAhrqAcknowledgementStore().acknowledge(modified)
+    with pytest.raises(AhrqAcknowledgementError, match="bytes do not match"):
+        AhrqObservationProducer(acknowledger=InMemoryAhrqAcknowledgementStore()).acknowledge_and_checkpoint(modified)
+
+    offline = _offline_envelope(tmp_path / "offline")
+    with pytest.raises(AttributeError):
+        setattr(offline, "_normalized_custody", object())
+    with pytest.raises(AhrqAcknowledgementError, match="trusted custody capability"):
+        InMemoryAhrqAcknowledgementStore().acknowledge(offline)
+
+    copied = deepcopy(envelope)
+    copied_artifact = cast(dict[str, object], copied["artifact"])
+    copied_custody = cast(dict[str, object], copied_artifact["custody"])
+    copied_custody["locator"] = "object://ahrq/normalized/offline"
+    for copied_observation in cast(list[object], copied["observations"]):
+        copied_scope = cast(dict[str, object], cast(dict[str, object], copied_observation)["source_scope"])
+        copied_scope["custody_locator"] = "object://ahrq/normalized/offline"
+    with pytest.raises(AhrqAcknowledgementError, match="bytes do not match"):
+        AhrqObservationProducer(acknowledger=InMemoryAhrqAcknowledgementStore()).acknowledge_and_checkpoint(copied)
+
 
 def test_acknowledgement_replay_is_idempotent_and_conflicting_bytes_fail(tmp_path: Path) -> None:
     envelope = _envelope(tmp_path)
@@ -492,9 +525,7 @@ def test_acknowledgement_replay_is_idempotent_and_conflicting_bytes_fail(tmp_pat
     assert first.duplicate is False
     assert duplicate.duplicate is True
     assert duplicate.acknowledgement_id == first.acknowledgement_id
-    changed = deepcopy(envelope)
-    changed_receipt = cast(dict[str, object], changed["receipt"])
-    changed_receipt["producer"] = "healthcare-data-mcp:ahrq-producer-replay"
+    changed = _envelope(tmp_path / "changed", source_url="https://example.gov/ahrq/replay.json")
     with pytest.raises(AhrqReplayConflictError, match="different envelope bytes"):
         store.acknowledge(changed)
 
@@ -603,8 +634,13 @@ def test_file_acknowledgement_store_is_cross_process_conflict_safe(tmp_path: Pat
     second_key = cast(Mapping[str, object], cast(Mapping[str, object], second["lineage"])["replay"])["idempotency_key"]
     assert set(persisted) == {first_key, second_key}
 
-    conflicting = deepcopy(first)
-    cast(dict[str, object], conflicting["receipt"])["producer"] = "healthcare-data-mcp:ahrq-conflict"
+    conflicting = _envelope(
+        tmp_path / "conflicting",
+        release,
+        system_id="SYS-1",
+        hospital_id="H-1",
+        source_url="https://example.gov/ahrq/conflict.json",
+    )
     conflict_path = tmp_path / "conflict" / "ack.json"
     with ProcessPoolExecutor(max_workers=2, mp_context=context) as executor:
         conflict_results = list(
