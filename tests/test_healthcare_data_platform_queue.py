@@ -1,12 +1,16 @@
+import json
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 import sqlite3
 import threading
 
 import pytest
+from jsonschema import Draft202012Validator
 
 from shared.queue import (
     DurableQueue,
     QueueCollisionError,
+    QueueError,
     QueuePolicy,
     QueueStateError,
     SourceBudget,
@@ -130,3 +134,19 @@ def test_queue_does_not_store_payload_bytes():
     columns = {row[1] for row in connection.execute("PRAGMA table_info(queue_work_items)")}
     assert "payload" not in columns
     assert "payload_ref" in columns
+
+
+def test_work_item_schema_accepts_freshly_enqueued_nullable_timestamps():
+    queue = DurableQueue(":memory:")
+    item = add(queue, "work-1").item
+    schema_path = Path(__file__).parents[1] / "contracts/healthcare-data-platform/queue/v1/queue.schema.json"
+    schema = json.loads(schema_path.read_text())
+    validator = Draft202012Validator(schema)
+    # jsonschema's strict stub omits the ordinary JSON object shape here.
+    assert list(validator.iter_errors(item.as_dict())) == []  # pyright: ignore[reportArgumentType]
+
+
+def test_seconds_rejects_float_overflow_as_queue_error():
+    with pytest.raises(QueueError) as error:
+        QueuePolicy(lease_ttl_seconds=10**1000)
+    assert "finite number" in str(error.value)

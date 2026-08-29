@@ -122,7 +122,10 @@ def _nonnegative_int(value: object, label: str, maximum: int) -> int:
 def _seconds(value: object, label: str, maximum: float, *, positive: bool = False) -> float:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise QueueError(f"{label} must be a finite number")
-    result = float(value)
+    try:
+        result = float(value)
+    except (OverflowError, ValueError) as exc:
+        raise QueueError(f"{label} must be a finite number") from exc
     lower_ok = result > 0 if positive else result >= 0
     if not math.isfinite(result) or not lower_ok or result > maximum:
         lower = "greater than 0" if positive else "at least 0"

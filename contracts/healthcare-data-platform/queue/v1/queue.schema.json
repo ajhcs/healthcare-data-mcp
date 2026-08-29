@@ -116,13 +116,13 @@
         "max_attempts": {"type": "integer", "minimum": 1, "maximum": 100},
         "created_at": {"$ref": "#/$defs/timestamp"},
         "updated_at": {"$ref": "#/$defs/timestamp"},
-        "claimed_at": {"$ref": "#/$defs/timestamp"},
-        "lease_expires_at": {"$ref": "#/$defs/timestamp"},
+        "claimed_at": {"type": ["string", "null"], "format": "date-time"},
+        "lease_expires_at": {"type": ["string", "null"], "format": "date-time"},
         "lease_owner": {"type": ["string", "null"], "maxLength": 128},
         "last_error": {"$ref": "#/$defs/reason"},
         "blocked_reason": {"$ref": "#/$defs/reason"},
         "poison_reason": {"$ref": "#/$defs/reason"},
-        "completed_at": {"$ref": "#/$defs/timestamp"}
+        "completed_at": {"type": ["string", "null"], "format": "date-time"}
       }
     },
     "leaseReceipt": {
