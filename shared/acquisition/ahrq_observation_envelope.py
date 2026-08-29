@@ -169,7 +169,7 @@ class AhrqArtifactLocator:
         byte_length = value.get("byte_length", value.get("content_length"))
         source_id = value.get("source_id", AHRQ_SOURCE_ID)
         release_id = value.get("release_id")
-        verified = value.get("verified", True)
+        verified = value.get("verified", False)
         if not isinstance(artifact_id, str):
             raise AhrqProducerError("artifact_id is missing from custody locator")
         if not isinstance(custody_locator, str):
@@ -286,8 +286,10 @@ class AhrqAcknowledgement:
         _require_id(self.envelope_id, "envelope_id", re.compile(r"^hdp:observation-envelope:[a-z0-9][a-z0-9._:-]*$"))
         _require_id(self.idempotency_key, "idempotency_key", re.compile(r"^idempotency:[a-z0-9][a-z0-9._:-]*$"))
         _require_hash(self.envelope_sha256, "envelope_sha256")
-        if not self.durable:
+        if not isinstance(self.durable, bool) or not self.durable:
             raise AhrqAcknowledgementError("acknowledgement is not durable")
+        if not isinstance(self.duplicate, bool):
+            raise AhrqAcknowledgementError("acknowledgement duplicate flag must be boolean")
 
     def as_dict(self) -> dict[str, object]:
         """Return JSON-safe acknowledgement evidence."""
@@ -767,9 +769,21 @@ class FileAhrqAcknowledgementStore:
         if not isinstance(raw, dict):
             raise AhrqAcknowledgementError("acknowledgement store must be an object")
         result: dict[str, AhrqAcknowledgement] = {}
+        expected = {
+            "acknowledgement_id",
+            "envelope_id",
+            "idempotency_key",
+            "envelope_sha256",
+            "durable",
+            "duplicate",
+        }
         for key, value in raw.items():
             if not isinstance(key, str) or not isinstance(value, Mapping):
                 raise AhrqAcknowledgementError("acknowledgement store contains malformed record")
+            if set(value) != expected:
+                raise AhrqAcknowledgementError("acknowledgement store record has unknown or missing fields")
+            if value["durable"] is not True or value["duplicate"] is not False:
+                raise AhrqAcknowledgementError("acknowledgement store contains a non-durable record")
             record = AhrqAcknowledgement(
                 acknowledgement_id=_required_text(value, "acknowledgement_id"),
                 envelope_id=_required_text(value, "envelope_id"),
@@ -924,17 +938,30 @@ class FileAhrqCheckpointStore:
         generation = raw["generation"]
         if isinstance(generation, bool) or not isinstance(generation, int):
             raise AhrqCheckpointConflictError("checkpoint generation must be an integer")
-        values = {key: raw[key] for key in expected}
-        values["generation"] = generation
+        source_id = raw["source_id"]
+        cursor = raw["cursor"]
+        envelope_id = raw["envelope_id"]
+        acknowledgement_id = raw["acknowledgement_id"]
+        envelope_sha256 = raw["envelope_sha256"]
+        artifact_sha256 = raw["artifact_sha256"]
+        updated_at = raw["updated_at"]
+        if not isinstance(source_id, str) or not isinstance(cursor, str):
+            raise AhrqCheckpointConflictError("checkpoint source_id and cursor must be strings")
+        if not isinstance(envelope_id, str) or not isinstance(acknowledgement_id, str):
+            raise AhrqCheckpointConflictError("checkpoint envelope and acknowledgement IDs must be strings")
+        if not isinstance(envelope_sha256, str) or not isinstance(artifact_sha256, str):
+            raise AhrqCheckpointConflictError("checkpoint hashes must be strings")
+        if not isinstance(updated_at, str):
+            raise AhrqCheckpointConflictError("checkpoint updated_at must be a string")
         return AhrqCheckpoint(
-            source_id=cast(str, values["source_id"]),
+            source_id=source_id,
             generation=generation,
-            cursor=cast(str, values["cursor"]),
-            envelope_id=cast(str, values["envelope_id"]),
-            acknowledgement_id=cast(str, values["acknowledgement_id"]),
-            envelope_sha256=cast(str, values["envelope_sha256"]),
-            artifact_sha256=cast(str, values["artifact_sha256"]),
-            updated_at=cast(str, values["updated_at"]),
+            cursor=cursor,
+            envelope_id=envelope_id,
+            acknowledgement_id=acknowledgement_id,
+            envelope_sha256=envelope_sha256,
+            artifact_sha256=artifact_sha256,
+            updated_at=updated_at,
         )
 
 
