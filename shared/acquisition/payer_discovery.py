@@ -126,8 +126,9 @@ class PayerCandidate:
         payer = str(value.get("payer_type") or value.get("type_of_coverage") or "")
         if family in REJECTED_FAMILIES or "census" in family or "acs" in family:
             raise ValueError("census/ACS sources cannot provide payer denominators")
-        if configured is None or payer != configured["payer_type"]:
+        if configured is None or payer != configured.payer_type:
             raise ValueError("payer type is not registered for source family")
+        typed_payer = cast(PayerType, payer)
         if not str(value.get("source_period") or "") or not str(value.get("geography") or value.get("state") or ""):
             raise ValueError("source period and geography are required")
         if payer == "f7_reference" and not str(value.get("reference_id") or ""):
@@ -142,7 +143,7 @@ class PayerCandidate:
         ):
             raise ValueError("plan or contract identity is required")
         denominator = value.get("denominator")
-        denominator_scope = str(value.get("denominator_scope") or configured["payer_type"] + " enrollment").lower()
+        denominator_scope = str(value.get("denominator_scope") or configured.payer_type + " enrollment").lower()
         if any(token in denominator_scope for token in ("census", "acs", "population", "insurance")):
             raise ValueError("semantic population/insurance denominator is not a payer denominator")
         if denominator is None and not value.get("missingness") and payer != "f7_reference":
@@ -169,20 +170,20 @@ class PayerCandidate:
         ).startswith("observation:payer:"):
             raise ValueError("blocked source conflict requires competing observation reference")
         if missingness == "blocked_source_conflict" and (
-            value.get("competing_source_id") != configured["source_id"]
+            value.get("competing_source_id") != configured.source_id
             or value.get("competing_release_id") != "release:" + family + ":" + str(value["source_period"])
         ):
             raise ValueError("blocked conflict authority does not match source release")
         return cls(
-            payer,
+            typed_payer,
             family,
             str(value["source_period"]),
             str(value.get("geography") or value["state"]),
             str(value.get("plan_or_contract_id") or value.get("plan_id") or value.get("contract_id") or ""),
-            value.get("numerator") if isinstance(value.get("numerator"), int) else None,
+            numerator if isinstance(numerator, int) else None,
             denominator if isinstance(denominator, int) else None,
-            str(value.get("denominator_scope") or configured["payer_type"] + " enrollment"),
-            str(value.get("source_url") or configured["source_url"]),
+            str(value.get("denominator_scope") or configured.payer_type + " enrollment"),
+            str(value.get("source_url") or configured.source_url),
             str(value.get("artifact_id") or ""),
             str(value.get("content_sha256") or ""),
             "approved_public",
@@ -244,8 +245,8 @@ def build_payer_observation_envelope(
     if custody.content_sha256 != digest or custody.byte_length != len(artifact_bytes):
         raise ValueError("custody metadata does not match artifact bytes")
     if (
-        custody.source_id != source["source_id"]
-        or custody.source_url != source["source_url"]
+        custody.source_id != source.source_id
+        or custody.source_url != source.source_url
         or custody.release_id != "release:" + source_family + ":" + source_period
     ):
         raise ValueError("custody metadata source or period identity mismatch")
@@ -267,7 +268,7 @@ def build_payer_observation_envelope(
         parsed = [
             PayerCandidate.from_mapping(
                 {
-                    "payer_type": source["payer_type"],
+                    "payer_type": source.payer_type,
                     "source_family": source_family,
                     "source_period": source_period,
                     "geography": "unresolved",
@@ -289,7 +290,7 @@ def build_payer_observation_envelope(
                 raise ValueError("blocked conflict reference is missing or unknown")
             boundary = authority[reference]
             if (
-                boundary.get("source_id") != source["source_id"]
+                boundary.get("source_id") != source.source_id
                 or boundary.get("release_id") != "release:" + source_family + ":" + source_period
             ):
                 raise ValueError("blocked conflict reference source boundary mismatch")
@@ -311,10 +312,10 @@ def build_payer_observation_envelope(
                     "source_id": custody.source_id,
                     "release_id": release_id,
                     "source_period": source_period,
-                    "source_url": source["source_url"],
-                    "release_locator": source["release_locator"],
+                    "source_url": source.source_url,
+                    "release_locator": source.release_locator,
                     "rights_status": custody.rights_status,
-                    "cadence": source["cadence"].interval_seconds,
+                    "cadence": source.cadence.interval_seconds,
                 },
                 sort_keys=True,
                 separators=(",", ":"),
@@ -352,7 +353,7 @@ def build_payer_observation_envelope(
             "release_label": source_period,
             "source_kind": "official_dataset",
             "release_sha256": release_digest,
-            "evidence_locator": source["release_locator"],
+            "evidence_locator": source.release_locator,
             "coverage_state": "present",
         },
         "artifact": {
@@ -446,7 +447,7 @@ def build_payer_observation_envelope(
                 "value_state": state,
                 "source_scope": {
                     "scope_id": "scope:payer:" + source_period,
-                    "source_id": source["source_id"],
+                    "source_id": source.source_id,
                     "release_ref": release_id,
                     "artifact_ref": artifact_id,
                     "custody_locator": custody_locator,
