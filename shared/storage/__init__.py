@@ -7,6 +7,15 @@ from shared.storage.raw_custody import (
     RawArtifactStore,
     RawCustodyError,
 )
+from shared.storage.lifecycle import (
+    CompactionReceipt,
+    LifecycleConflictError,
+    LifecycleError,
+    LifecycleMetadata,
+    LifecycleReceipt,
+    RawArtifactLifecycle,
+    RawObjectLifecycle,
+)
 
 __all__ = [
     "ArtifactCollisionError",
@@ -14,4 +23,11 @@ __all__ = [
     "RawArtifactMetadata",
     "RawArtifactStore",
     "RawCustodyError",
+    "CompactionReceipt",
+    "LifecycleConflictError",
+    "LifecycleError",
+    "LifecycleMetadata",
+    "LifecycleReceipt",
+    "RawArtifactLifecycle",
+    "RawObjectLifecycle",
 ]
