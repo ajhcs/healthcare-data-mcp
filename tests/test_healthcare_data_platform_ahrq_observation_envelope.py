@@ -78,9 +78,9 @@ def _release() -> DetectionReceipt:
 
 def _artifact(role: Literal["system", "facility"], content: bytes, release: DetectionReceipt) -> AhrqArtifactLocator:
     content_sha256 = "sha256:" + hashlib.sha256(content).hexdigest()
-    identity = hashlib.sha256(
-        f"{AHRQ_SOURCE_ID}|{release.release_id}|{content_sha256}".encode("utf-8")
-    ).hexdigest()[:32]
+    identity = hashlib.sha256(f"{AHRQ_SOURCE_ID}|{release.release_id}|{content_sha256}".encode("utf-8")).hexdigest()[
+        :32
+    ]
     return AhrqArtifactLocator(
         role=role,
         artifact_id=f"artifact:raw:{identity}",

@@ -144,7 +144,8 @@ class AhrqArtifactLocator:
         """Build a locator from P1-04 metadata or a strict metadata mapping."""
 
         item = metadata if isinstance(metadata, RawArtifactMetadata) else RawArtifactMetadata.from_mapping(metadata)
-        locator = custody_locator or f"object://{item.artifact_id.removeprefix('artifact:raw:')}"
+        digest = item.content_sha256.removeprefix("sha256:")
+        locator = custody_locator or f"object://objects/sha256/{digest[:2]}/{digest}"
         return cls(
             role=role,
             artifact_id=item.artifact_id,
@@ -442,7 +443,9 @@ def parse_ahrq_system_rows(
     """Parse and validate source-native AHRQ system rows without coercion."""
 
     locator = _coerce_artifact("system", artifact)
-    return _parse_rows(Path(path), role="system", required_columns=SYSTEM_REQUIRED_COLUMNS, artifact=locator, encoding=encoding)
+    return _parse_rows(
+        Path(path), role="system", required_columns=SYSTEM_REQUIRED_COLUMNS, artifact=locator, encoding=encoding
+    )
 
 
 def parse_ahrq_facility_rows(
@@ -492,11 +495,7 @@ def parse_ahrq_source_rows(
         encoding=encoding,
     )
     system_ids = {row.fields["health_sys_id"] for row in systems}
-    linked_ids = {
-        row.fields["health_sys_id"]
-        for row in facilities
-        if row.fields.get("health_sys_id", "")
-    }
+    linked_ids = {row.fields["health_sys_id"] for row in facilities if row.fields.get("health_sys_id", "")}
     orphaned = sorted(linked_ids - system_ids)
     if orphaned:
         raise AhrqRowParseError("facility rows reference unknown health_sys_id: " + ", ".join(orphaned))
@@ -571,9 +570,7 @@ def build_ahrq_observation_envelope(
     lineage_id = f"lineage:ahrq:{digest[:32]}"
     receipt_id = f"receipt:ahrq:{digest[:24]}"
     idempotency_key = f"idempotency:ahrq:{digest[:32]}"
-    observation_ids = [
-        f"observation:ahrq:{row.role}:{_slug(row.source_row_id)}" for row in raw_rows
-    ]
+    observation_ids = [f"observation:ahrq:{row.role}:{_slug(row.source_row_id)}" for row in raw_rows]
     replay_state: Literal["first_seen", "replayed"] = "first_seen"
     if prior_lineage_id is not None:
         _require_id(prior_lineage_id, "prior_lineage_id", re.compile(r"^lineage:[a-z0-9][a-z0-9._:-]*$"))
@@ -827,7 +824,10 @@ class InMemoryAhrqCheckpointStore:
         values = _envelope_identity(envelope)
         if precondition.source_id != values["source_id"]:
             raise AhrqCheckpointConflictError("checkpoint source_id does not match envelope")
-        if acknowledgement.envelope_id != values["envelope_id"] or acknowledgement.envelope_sha256 != values["envelope_sha256"]:
+        if (
+            acknowledgement.envelope_id != values["envelope_id"]
+            or acknowledgement.envelope_sha256 != values["envelope_sha256"]
+        ):
             raise AhrqCheckpointConflictError("acknowledgement does not match envelope for checkpoint CAS")
         if acknowledgement.idempotency_key != values["idempotency_key"]:
             raise AhrqCheckpointConflictError("acknowledgement idempotency key does not match envelope")
@@ -933,7 +933,10 @@ class FileAhrqCheckpointStore:
         }
         if set(raw) != expected:
             raise AhrqCheckpointConflictError("checkpoint has unknown or missing fields")
-        if raw["schema_version"] != "hdp.ahrq-producer-checkpoint.v1" or raw["record_type"] != "ahrq_producer_checkpoint":
+        if (
+            raw["schema_version"] != "hdp.ahrq-producer-checkpoint.v1"
+            or raw["record_type"] != "ahrq_producer_checkpoint"
+        ):
             raise AhrqCheckpointConflictError("checkpoint schema version is unsupported")
         generation = raw["generation"]
         if isinstance(generation, bool) or not isinstance(generation, int):
@@ -1093,10 +1096,7 @@ def _parse_rows(
             raise AhrqRowParseError(f"{role} AHRQ CSV has duplicate header: {canonical}")
         seen.add(canonical)
         headers.append(canonical)
-    canonical_by_original = {
-        original: canonical
-        for original, canonical in zip(original_headers, headers)
-    }
+    canonical_by_original = {original: canonical for original, canonical in zip(original_headers, headers)}
     missing = sorted(required_columns - set(headers))
     if missing:
         raise AhrqRowParseError(f"{role} AHRQ CSV is missing required columns: {', '.join(missing)}")
@@ -1138,7 +1138,9 @@ def _parse_rows(
     return tuple(rows)
 
 
-def _coerce_artifact(role: ArtifactRole, value: AhrqArtifactLocator | Mapping[str, object] | None) -> AhrqArtifactLocator:
+def _coerce_artifact(
+    role: ArtifactRole, value: AhrqArtifactLocator | Mapping[str, object] | None
+) -> AhrqArtifactLocator:
     if value is None:
         return AhrqArtifactLocator(
             role=role,
@@ -1205,7 +1207,7 @@ def _validate_raw_artifact_lineage(rows: Sequence[AhrqSourceRow], release: Detec
             raise AhrqProducerError("AHRQ producer requires verified raw custody for every source row")
         if artifact.source_id != release.source_id:
             raise AhrqProducerError("raw artifact source_id does not match detector receipt")
-        if artifact.release_id not in (None, release.release_id):
+        if artifact.release_id != release.release_id:
             raise AhrqProducerError("raw artifact release_id does not match detector receipt")
 
 
