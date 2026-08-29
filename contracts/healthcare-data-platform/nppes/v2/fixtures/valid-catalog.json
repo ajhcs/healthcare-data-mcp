@@ -1,0 +1,20 @@
+{
+  "schema_version": "hdp.nppes-catalog.v2",
+  "record_type": "nppes_catalog",
+  "catalog_id": "catalog:nppes:registry",
+  "sources": [
+    {
+      "source_id": "source:nppes:registry",
+      "title": "NPPES NPI Registry V2 full baseline",
+      "source_url": "https://download.cms.gov/nppes/NPPES_Data_Dissemination.html",
+      "release_locator": "https://download.cms.gov/nppes/NPPES_Data_Dissemination.html",
+      "change_mode": "release_metadata",
+      "rights_status": "approved_public",
+      "enabled": true,
+      "max_bytes": 8589934592,
+      "max_chunks": 2000000,
+      "max_seconds": 14400,
+      "max_chunk_bytes": 8388608
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": "hdp.nppes-release.v2",
+  "record_type": "nppes_release",
+  "source_id": "source:nppes:registry",
+  "release_id": "release:nppes:2026-08",
+  "release_label": "NPPES August 2026",
+  "source_url": "https://download.cms.gov/nppes/NPPES_Data_Dissemination.html",
+  "probe_state": "changed",
+  "final_url": "https://download.cms.gov/nppes/NPPES_Data_Dissemination.html",
+  "http_status": 200,
+  "published_at": "2026-08-01T00:00:00Z",
+  "evidence_locator": "https://download.cms.gov/nppes/NPPES_Data_Dissemination.html",
+  "files": [
+    {"file_kind": "provider", "source_file_name": "nppes_provider.csv", "source_url": "https://download.cms.gov/nppes/NPPES_Data_Dissemination.html", "evidence_locator": "https://download.cms.gov/nppes/NPPES_Data_Dissemination.html", "availability": "present", "expected_sha256": null},
+    {"file_kind": "location", "source_file_name": "nppes_location.csv", "source_url": "https://download.cms.gov/nppes/NPPES_Data_Dissemination.html", "evidence_locator": "https://download.cms.gov/nppes/NPPES_Data_Dissemination.html", "availability": "present", "expected_sha256": null},
+    {"file_kind": "endpoint", "source_file_name": "nppes_endpoint.csv", "source_url": "https://download.cms.gov/nppes/NPPES_Data_Dissemination.html", "evidence_locator": "https://download.cms.gov/nppes/NPPES_Data_Dissemination.html", "availability": "present", "expected_sha256": null},
+    {"file_kind": "reference", "source_file_name": "nppes_reference.csv", "source_url": "https://download.cms.gov/nppes/NPPES_Data_Dissemination.html", "evidence_locator": "https://download.cms.gov/nppes/NPPES_Data_Dissemination.html", "availability": "present", "expected_sha256": null},
+    {"file_kind": "deactivation", "source_file_name": "nppes_deactivation.csv", "source_url": "https://download.cms.gov/nppes/NPPES_Data_Dissemination.html", "evidence_locator": "https://download.cms.gov/nppes/NPPES_Data_Dissemination.html", "availability": "present", "expected_sha256": null}
+  ],
+  "failure_reason": null,
+  "release_sha256": "sha256:b37054ddb8678f0b0a8cb5310be3c7563c378cdffbc169e3c02cc15f79a28cbd"
+}

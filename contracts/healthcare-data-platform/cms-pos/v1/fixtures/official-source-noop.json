@@ -1,0 +1,66 @@
+{
+  "schema_version": "hdp.cms-pos-producer.v1",
+  "record_type": "cms_pos_source_result",
+  "fixture_id": "fixture:cms:pos:official-source-noop",
+  "source_id": "source:cms:pos",
+  "release": {
+    "source_id": "source:cms:pos",
+    "release_id": "release:cms:pos:2026-q1",
+    "release_label": "CMS Provider of Services synthetic Q1 2026",
+    "source_period": "2026-Q1",
+    "source_url": "https://data.cms.gov/provider-data/dataset/cms-pos",
+    "release_locator": "https://data.cms.gov/provider-data/dataset/cms-pos/releases",
+    "landing_page": "https://data.cms.gov/provider-data/dataset/cms-pos",
+    "published_at": "2026-01-15T00:00:00Z",
+    "release_fingerprint": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "distribution": {
+    "distribution_id": "distribution:cms:pos:2026-q1-csv",
+    "url": "https://data.cms.gov/provider-data/dataset/cms-pos/files/2026-q1.csv",
+    "media_type": "text/csv",
+    "etag": "\"cms-pos-q1\"",
+    "last_modified": null,
+    "distribution_fingerprint": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "content_sha256": null,
+    "byte_length": null
+  },
+  "receipt": {
+    "receipt_id": "receipt:cms:pos:aaaaaaaaaaaaaaaaaaaaaaaa",
+    "probe_state": "no_op",
+    "state": "no_op",
+    "source_id": "source:cms:pos",
+    "release_id": "release:cms:pos:2026-q1",
+    "release_fingerprint": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "distribution_id": "distribution:cms:pos:2026-q1-csv",
+    "distribution_fingerprint": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "content_sha256": null,
+    "artifact_id": null,
+    "idempotency_key": null,
+    "acknowledged": true,
+    "stream_state": "not_started",
+    "received_bytes": 0,
+    "chunk_count": 0,
+    "row_count": 0,
+    "failure_reason": null
+  },
+  "rows": [],
+  "budget": {
+    "max_bytes": 131072,
+    "max_chunks": 128,
+    "max_seconds": 60.0,
+    "max_chunk_bytes": null
+  },
+  "authority_limits": {
+    "source_scoped": true,
+    "acquisition_allowed": false,
+    "mutation_allowed": false,
+    "canonical_identity_admission_allowed": false,
+    "fact_admission_allowed": false,
+    "publication_allowed": false,
+    "production_allowed": false
+  },
+  "preview": {
+    "authorized": false,
+    "max_rows": 100
+  }
+}
