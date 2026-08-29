@@ -1,6 +1,6 @@
 # P1-24 HCU authority boundary
 
-Tracking bead: `healthcare-toolkit-rrna.p1-24-hcu-snapshot-20260829`  
+Tracking bead: `healthcare-toolkit-rrna.p1-24-hcu-snapshot-20260829`
 Status: bounded, transport-neutral producer complete for local review.
 
 The HCU snapshot producer accepts an already-authorized external manifest,

@@ -55,7 +55,9 @@ def _text(value: object, label: str, *, pattern: re.Pattern[str] | None = None) 
 
 def _canonical(value: object) -> bytes:
     try:
-        return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode("utf-8")
+        return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode(
+            "utf-8"
+        )
     except (TypeError, ValueError) as exc:
         raise HcuSnapshotError("manifest, checkpoint, and snapshot must be JSON-compatible") from exc
 
@@ -160,7 +162,9 @@ def build_hcu_observation_envelope(
     if _fingerprint(receipt_value.get("receipt_sha256"), "receipt.receipt_sha256") != _hash(receipt_without_hash):
         raise HcuSnapshotError("external HCU receipt fingerprint is invalid")
     receipt_id = _text(receipt_value.get("receipt_id"), "receipt.receipt_id")
-    receipt_locator = _text(receipt_value.get("evidence_locator", evidence_locator), "receipt.evidence_locator", pattern=_LOCATOR)
+    receipt_locator = _text(
+        receipt_value.get("evidence_locator", evidence_locator), "receipt.evidence_locator", pattern=_LOCATOR
+    )
     recorded_at = _timestamp(receipt_value.get("recorded_at"))
 
     raw_records = snapshot_value.get("records")
@@ -182,14 +186,16 @@ def build_hcu_observation_envelope(
         if source_record_id in seen:
             raise HcuSnapshotError(f"duplicate HCU source record: {source_record_id}")
         seen.add(source_record_id)
-        records.append({
-            "source_record_id": source_record_id,
-            "layer_id": layer_id,
-            "review_state": review_state,
-            "source_value": record.get("source_value"),
-            "valid_date": valid_date,
-            "source_selector": source_selector,
-        })
+        records.append(
+            {
+                "source_record_id": source_record_id,
+                "layer_id": layer_id,
+                "review_state": review_state,
+                "source_value": record.get("source_value"),
+                "valid_date": valid_date,
+                "source_selector": source_selector,
+            }
+        )
 
     artifact_digest = snapshot_hash.removeprefix("sha256:")
     artifact_id = f"artifact:hcu:snapshot:{artifact_digest[:32]}"
@@ -207,37 +213,120 @@ def build_hcu_observation_envelope(
         for item in records
     ]
     replay_state = "replayed" if prior_lineage_id is not None else "first_seen"
-    if prior_lineage_id is not None and (not isinstance(prior_lineage_id, str) or not prior_lineage_id.startswith("lineage:")):
+    if prior_lineage_id is not None and (
+        not isinstance(prior_lineage_id, str) or not prior_lineage_id.startswith("lineage:")
+    ):
         raise HcuSnapshotError("prior_lineage_id is invalid")
     custody_locator = f"object://hcu/snapshots/{artifact_digest}"
     observations: list[dict[str, object]] = []
     for observation_id, record in zip(observation_ids, records):
         source_record_id = cast(str, record["source_record_id"])
         missing = record["source_value"] is None
-        observations.append({
-            "observation_id": observation_id,
-            "identity_key": f"identity:hcu:{sha256(source_record_id.encode()).hexdigest()[:24]}",
-            "subject_ref": f"source-record:{_slug(source_record_id)}",
-            "attribute_term_ref": "term:hcu-source-record",
-            "value": None if missing else {**record, "ontology_layers": layers, "checkpoint": checkpoint},
-            "value_state": "not_yet_researched" if missing else "observed",
-            "source_scope": {"scope_id": f"scope:hcu:{digest[:16]}", "source_id": source_id, "release_ref": release_id, "artifact_ref": artifact_id, "custody_locator": custody_locator, "selector": record["source_selector"], "authority_state": "source_scoped"},
-            "activity_ref": activity_id,
-            "receipt_ref": receipt_id,
-            "valid_time": {"precision": "day", "as_of": record["valid_date"], "valid_from": record["valid_date"], "valid_to": None},
-            "transaction_time": {"recorded_from": recorded_at, "recorded_to": None},
-            "conflict": {"state": "missingness" if missing else "none", "reason": "HCU source value is absent" if missing else "HCU source record retained", "resolution": "abstained" if missing else "not_required", "competing_observation_refs": []},
-            "promotion_state": "unpromoted_observation",
-        })
+        observations.append(
+            {
+                "observation_id": observation_id,
+                "identity_key": f"identity:hcu:{sha256(source_record_id.encode()).hexdigest()[:24]}",
+                "subject_ref": f"source-record:{_slug(source_record_id)}",
+                "attribute_term_ref": "term:hcu-source-record",
+                "value": None if missing else {**record, "ontology_layers": layers, "checkpoint": checkpoint},
+                "value_state": "not_yet_researched" if missing else "observed",
+                "source_scope": {
+                    "scope_id": f"scope:hcu:{digest[:16]}",
+                    "source_id": source_id,
+                    "release_ref": release_id,
+                    "artifact_ref": artifact_id,
+                    "custody_locator": custody_locator,
+                    "selector": record["source_selector"],
+                    "authority_state": "source_scoped",
+                },
+                "activity_ref": activity_id,
+                "receipt_ref": receipt_id,
+                "valid_time": {
+                    "precision": "day",
+                    "as_of": record["valid_date"],
+                    "valid_from": record["valid_date"],
+                    "valid_to": None,
+                },
+                "transaction_time": {"recorded_from": recorded_at, "recorded_to": None},
+                "conflict": {
+                    "state": "missingness" if missing else "none",
+                    "reason": "HCU source value is absent" if missing else "HCU source record retained",
+                    "resolution": "abstained" if missing else "not_required",
+                    "competing_observation_refs": [],
+                },
+                "promotion_state": "unpromoted_observation",
+            }
+        )
     envelope: dict[str, object] = {
-        "schema_version": HCU_ENVELOPE_SCHEMA_VERSION, "record_type": "observation_envelope", "record_id": record_id,
-        "packet_id": HCU_PACKET_ID, "tracking_bead": HCU_TRACKING_BEAD, "frozen_dispatch_base": HCU_FROZEN_DISPATCH_BASE,
-        "source_release": {"source_id": source_id, "release_id": release_id, "release_label": release_label, "source_kind": "official_dataset", "release_sha256": manifest_hash, "evidence_locator": evidence_locator, "coverage_state": "present"},
-        "artifact": {"artifact_id": artifact_id, "release_ref": release_id, "artifact_kind": "observation_batch", "media_type": "application/json", "content_sha256": snapshot_hash, "byte_length": len(snapshot_bytes), "custody": {"locator": custody_locator, "storage_plane": "object_storage", "immutable": True, "retention": "append_only"}},
-        "receipt": {"receipt_id": receipt_id, "producer": HCU_PRODUCER_NAME, "receipt_schema": HCU_RECEIPT_SCHEMA, "source_release_ref": release_id, "artifact_ref": artifact_id, "source_release_sha256": manifest_hash, "artifact_sha256": snapshot_hash, "receipt_sha256": _text(receipt_value.get("receipt_sha256"), "receipt.receipt_sha256", pattern=_SHA), "state": "succeeded", "recorded_at": recorded_at, "evidence_locator": receipt_locator},
-        "activity": {"activity_id": activity_id, "run_id": run_id, "activity_type": "observation", "actor": {"actor_type": "deterministic_transform", "actor_id": HCU_PRODUCER_NAME}, "started_at": recorded_at, "ended_at": recorded_at, "status": "succeeded", "input_artifact_refs": [artifact_id], "output_artifact_refs": [artifact_id]},
+        "schema_version": HCU_ENVELOPE_SCHEMA_VERSION,
+        "record_type": "observation_envelope",
+        "record_id": record_id,
+        "packet_id": HCU_PACKET_ID,
+        "tracking_bead": HCU_TRACKING_BEAD,
+        "frozen_dispatch_base": HCU_FROZEN_DISPATCH_BASE,
+        "source_release": {
+            "source_id": source_id,
+            "release_id": release_id,
+            "release_label": release_label,
+            "source_kind": "official_dataset",
+            "release_sha256": manifest_hash,
+            "evidence_locator": evidence_locator,
+            "coverage_state": "present",
+        },
+        "artifact": {
+            "artifact_id": artifact_id,
+            "release_ref": release_id,
+            "artifact_kind": "observation_batch",
+            "media_type": "application/json",
+            "content_sha256": snapshot_hash,
+            "byte_length": len(snapshot_bytes),
+            "custody": {
+                "locator": custody_locator,
+                "storage_plane": "object_storage",
+                "immutable": True,
+                "retention": "append_only",
+            },
+        },
+        "receipt": {
+            "receipt_id": receipt_id,
+            "producer": HCU_PRODUCER_NAME,
+            "receipt_schema": HCU_RECEIPT_SCHEMA,
+            "source_release_ref": release_id,
+            "artifact_ref": artifact_id,
+            "source_release_sha256": manifest_hash,
+            "artifact_sha256": snapshot_hash,
+            "receipt_sha256": _text(receipt_value.get("receipt_sha256"), "receipt.receipt_sha256", pattern=_SHA),
+            "state": "succeeded",
+            "recorded_at": recorded_at,
+            "evidence_locator": receipt_locator,
+        },
+        "activity": {
+            "activity_id": activity_id,
+            "run_id": run_id,
+            "activity_type": "observation",
+            "actor": {"actor_type": "deterministic_transform", "actor_id": HCU_PRODUCER_NAME},
+            "started_at": recorded_at,
+            "ended_at": recorded_at,
+            "status": "succeeded",
+            "input_artifact_refs": [artifact_id],
+            "output_artifact_refs": [artifact_id],
+        },
         "observations": observations,
-        "lineage": {"lineage_id": lineage_id, "source_release_ref": release_id, "artifact_ref": artifact_id, "receipt_ref": receipt_id, "activity_ref": activity_id, "observation_ids": observation_ids, "deterministic_order": observation_ids, "replay": {"idempotency_key": idempotency_key, "state": replay_state, "replay_of": prior_lineage_id, "deterministic": True}},
+        "lineage": {
+            "lineage_id": lineage_id,
+            "source_release_ref": release_id,
+            "artifact_ref": artifact_id,
+            "receipt_ref": receipt_id,
+            "activity_ref": activity_id,
+            "observation_ids": observation_ids,
+            "deterministic_order": observation_ids,
+            "replay": {
+                "idempotency_key": idempotency_key,
+                "state": replay_state,
+                "replay_of": prior_lineage_id,
+                "deterministic": True,
+            },
+        },
         "authority_limits": _authority_limits(),
     }
     return validate_observation_envelope(envelope)

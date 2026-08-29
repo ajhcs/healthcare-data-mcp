@@ -30,8 +30,22 @@ def _inputs() -> tuple[dict[str, object], dict[str, object], dict[str, object]]:
     }
     snapshot: dict[str, object] = {
         "records": [
-            {"source_record_id": "hcu-001", "layer_id": "layer-01", "review_state": "reviewed", "source_value": {"name": "North"}, "valid_date": "2026-08-01", "source_selector": "record:hcu-001"},
-            {"source_record_id": "hcu-002", "layer_id": "layer-02", "review_state": "held", "source_value": "pending", "valid_date": "2026-08-02", "source_selector": "record:hcu-002"},
+            {
+                "source_record_id": "hcu-001",
+                "layer_id": "layer-01",
+                "review_state": "reviewed",
+                "source_value": {"name": "North"},
+                "valid_date": "2026-08-01",
+                "source_selector": "record:hcu-001",
+            },
+            {
+                "source_record_id": "hcu-002",
+                "layer_id": "layer-02",
+                "review_state": "held",
+                "source_value": "pending",
+                "valid_date": "2026-08-02",
+                "source_selector": "record:hcu-002",
+            },
         ]
     }
     receipt: dict[str, object] = {
@@ -79,7 +93,7 @@ def test_hcu_receipt_fingerprint_mismatch_fails_closed(field: str) -> None:
 
 def test_hcu_rejects_wrong_layer_count_and_untrusted_rights() -> None:
     manifest, snapshot, receipt = _inputs()
-    manifest["ontology_layers"] = manifest["ontology_layers"][:-1]
+    manifest["ontology_layers"] = cast(list[object], manifest["ontology_layers"])[:-1]
     receipt["manifest_sha256"] = _hash(manifest)
     receipt["receipt_sha256"] = _hash({key: value for key, value in receipt.items() if key != "receipt_sha256"})
     with pytest.raises(HcuSnapshotError, match="exactly ten"):
