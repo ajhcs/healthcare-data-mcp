@@ -1,0 +1,306 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.ushso.org/healthcare-data-platform/cms-pos/v1/cms-pos.schema.json",
+  "title": "Healthcare Data Platform CMS Provider of Services source result v1",
+  "description": "Source-scoped, release-aware CMS POS result. Source-native rows are not canonical identities or facts.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "record_type",
+    "source_id",
+    "release",
+    "distribution",
+    "receipt",
+    "rows",
+    "budget",
+    "authority_limits",
+    "preview"
+  ],
+  "properties": {
+    "schema_version": {"const": "hdp.cms-pos-producer.v1", "type": "string"},
+    "record_type": {"const": "cms_pos_source_result", "type": "string"},
+    "fixture_id": {
+      "type": "string",
+      "pattern": "^fixture:cms:pos:[a-z0-9][a-z0-9._:-]*$"
+    },
+    "source_id": {"const": "source:cms:pos", "type": "string"},
+    "release": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_id",
+        "release_id",
+        "release_label",
+        "source_period",
+        "source_url",
+        "release_locator",
+        "landing_page",
+        "published_at",
+        "release_fingerprint"
+      ],
+      "properties": {
+        "source_id": {"const": "source:cms:pos", "type": "string"},
+        "release_id": {
+          "type": "string",
+          "pattern": "^release:cms:pos:[a-z0-9][a-z0-9._:-]*$"
+        },
+        "release_label": {"type": "string", "minLength": 1, "maxLength": 200},
+        "source_period": {"type": "string", "minLength": 1, "maxLength": 64},
+        "source_url": {"type": "string", "pattern": "^https://[A-Za-z0-9._:/-]+$"},
+        "release_locator": {"type": "string", "pattern": "^https://[A-Za-z0-9._:/-]+$"},
+        "landing_page": {"type": "string", "pattern": "^https://[A-Za-z0-9._:/-]+$"},
+        "published_at": {"type": "string", "format": "date-time"},
+        "release_fingerprint": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      }
+    },
+    "distribution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "distribution_id",
+        "url",
+        "media_type",
+        "etag",
+        "last_modified",
+        "distribution_fingerprint",
+        "content_sha256",
+        "byte_length"
+      ],
+      "properties": {
+        "distribution_id": {
+          "type": "string",
+          "pattern": "^distribution:cms:pos:[a-z0-9][a-z0-9._:-]*$"
+        },
+        "url": {"type": "string", "pattern": "^https://[A-Za-z0-9._:/-]+$"},
+        "media_type": {"const": "text/csv", "type": "string"},
+        "etag": {"type": ["string", "null"], "maxLength": 512},
+        "last_modified": {"type": ["string", "null"], "maxLength": 512},
+        "distribution_fingerprint": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "content_sha256": {
+          "type": ["string", "null"],
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "byte_length": {"type": ["integer", "null"], "minimum": 0}
+      }
+    },
+    "receipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "receipt_id",
+        "probe_state",
+        "state",
+        "source_id",
+        "release_id",
+        "release_fingerprint",
+        "distribution_id",
+        "distribution_fingerprint",
+        "content_sha256",
+        "artifact_id",
+        "idempotency_key",
+        "acknowledged",
+        "stream_state",
+        "received_bytes",
+        "chunk_count",
+        "row_count",
+        "failure_reason"
+      ],
+      "properties": {
+        "receipt_id": {
+          "type": "string",
+          "pattern": "^receipt:cms:pos:[a-f0-9]{24}$"
+        },
+        "probe_state": {
+          "type": "string",
+          "enum": ["no_op", "changed", "drift", "replayed", "failed_probe"]
+        },
+        "state": {
+          "type": "string",
+          "enum": ["no_op", "changed", "drift", "replayed", "failed_probe"]
+        },
+        "source_id": {"const": "source:cms:pos", "type": "string"},
+        "release_id": {
+          "type": "string",
+          "pattern": "^release:cms:pos:[a-z0-9][a-z0-9._:-]*$"
+        },
+        "release_fingerprint": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "distribution_id": {
+          "type": "string",
+          "pattern": "^distribution:cms:pos:[a-z0-9][a-z0-9._:-]*$"
+        },
+        "distribution_fingerprint": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "content_sha256": {
+          "type": ["string", "null"],
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "artifact_id": {
+          "type": ["string", "null"],
+          "pattern": "^artifact:cms:pos:[a-f0-9]{32}$"
+        },
+        "idempotency_key": {
+          "type": ["string", "null"],
+          "pattern": "^idempotency:cms:pos:[a-f0-9]{32}$"
+        },
+        "acknowledged": {"type": "boolean"},
+        "stream_state": {"type": "string", "enum": ["not_started", "completed", "interrupted"]},
+        "received_bytes": {"type": "integer", "minimum": 0, "maximum": 131072},
+        "chunk_count": {"type": "integer", "minimum": 0, "maximum": 128},
+        "row_count": {"type": "integer", "minimum": 0, "maximum": 10000},
+        "failure_reason": {"type": ["string", "null"], "maxLength": 120}
+      }
+    },
+    "rows": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "source_record_id",
+          "source_identifier_column",
+          "source_identifier",
+          "row_number",
+          "row_sha256",
+          "source_selector",
+          "fields"
+        ],
+        "properties": {
+          "source_record_id": {
+            "type": "string",
+            "pattern": "^record:cms:pos:[a-f0-9]{32}$"
+          },
+          "source_identifier_column": {"const": "PRVDR_NUM", "type": "string"},
+          "source_identifier": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+          },
+          "row_number": {"type": "integer", "minimum": 2},
+          "row_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+          "source_selector": {
+            "type": "string",
+            "pattern": "^csv:PRVDR_NUM=[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+          },
+          "fields": {
+            "type": "object",
+            "minProperties": 1,
+            "additionalProperties": {"type": "string"}
+          }
+        }
+      }
+    },
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["max_bytes", "max_chunks", "max_seconds", "max_chunk_bytes"],
+      "properties": {
+        "max_bytes": {"type": "integer", "minimum": 1, "maximum": 131072},
+        "max_chunks": {"type": "integer", "minimum": 1, "maximum": 128},
+        "max_seconds": {"type": "number", "exclusiveMinimum": 0, "maximum": 60},
+        "max_chunk_bytes": {"type": ["integer", "null"], "minimum": 1, "maximum": 65536}
+      }
+    },
+    "authority_limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_scoped",
+        "acquisition_allowed",
+        "mutation_allowed",
+        "canonical_identity_admission_allowed",
+        "fact_admission_allowed",
+        "publication_allowed",
+        "production_allowed"
+      ],
+      "properties": {
+        "source_scoped": {"const": true, "type": "boolean"},
+        "acquisition_allowed": {"const": false, "type": "boolean"},
+        "mutation_allowed": {"const": false, "type": "boolean"},
+        "canonical_identity_admission_allowed": {"const": false, "type": "boolean"},
+        "fact_admission_allowed": {"const": false, "type": "boolean"},
+        "publication_allowed": {"const": false, "type": "boolean"},
+        "production_allowed": {"const": false, "type": "boolean"}
+      }
+    },
+    "preview": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["authorized", "max_rows"],
+      "properties": {
+        "authorized": {"type": "boolean"},
+        "max_rows": {"const": 100, "type": "integer"}
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"receipt": {"properties": {"probe_state": {"enum": ["changed", "replayed"]}}}}},
+      "then": {
+        "properties": {
+          "receipt": {
+            "required": ["content_sha256", "artifact_id", "idempotency_key"],
+            "properties": {
+              "acknowledged": {"const": true},
+              "stream_state": {"const": "completed"},
+              "failure_reason": {"type": "null"},
+              "content_sha256": {"type": "string"},
+              "artifact_id": {"type": "string"},
+              "idempotency_key": {"type": "string"}
+            }
+          },
+          "distribution": {"properties": {"content_sha256": {"type": "string"}, "byte_length": {"type": "integer", "minimum": 1}}},
+          "rows": {"minItems": 1}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"receipt": {"properties": {"probe_state": {"const": "no_op"}}}}},
+      "then": {
+        "properties": {
+          "receipt": {
+            "properties": {
+              "acknowledged": {"const": false},
+              "stream_state": {"const": "not_started"},
+              "received_bytes": {"const": 0},
+              "chunk_count": {"const": 0},
+              "row_count": {"const": 0},
+              "artifact_id": {"type": "null"},
+              "idempotency_key": {"type": "null"},
+              "failure_reason": {"type": "null"}
+            }
+          },
+          "rows": {"maxItems": 0}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"receipt": {"properties": {"probe_state": {"enum": ["drift", "failed_probe"]}}}}},
+      "then": {
+        "properties": {
+          "receipt": {
+            "required": ["failure_reason"],
+            "properties": {
+              "acknowledged": {"const": false},
+              "artifact_id": {"type": "null"},
+              "idempotency_key": {"type": "null"},
+              "failure_reason": {"type": "string", "minLength": 1}
+            }
+          },
+          "rows": {"maxItems": 0}
+        }
+      }
+    }
+  ]
+}
