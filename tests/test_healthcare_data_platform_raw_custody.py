@@ -275,3 +275,25 @@ def test_unmarked_orphan_object_cannot_recreate_altered_metadata(tmp_path: Path)
 
     with pytest.raises(ArtifactCollisionError, match="recovery state marker"):
         store.put(altered, _chunks())
+
+
+def test_recovery_marker_counters_require_strict_integers(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    metadata = _metadata()
+    store = RawArtifactStore(tmp_path)
+    original = store._write_manifest  # noqa: SLF001
+
+    def fail_after_promotion(*args: object, **kwargs: object) -> None:
+        raise RuntimeError("simulated manifest crash")
+
+    monkeypatch.setattr(store, "_write_manifest", fail_after_promotion)
+    with pytest.raises(RuntimeError, match="manifest crash"):
+        store.put(metadata, _chunks())
+    monkeypatch.setattr(store, "_write_manifest", original)
+    state_path = next((tmp_path / "partials").rglob("*.state.json"))
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    state["chunk_count"] = float(metadata.chunk_count)
+    state["byte_length"] = float(metadata.byte_length)
+    state_path.write_text(json.dumps(state), encoding="utf-8")
+
+    with pytest.raises(RawCustodyError, match="counters"):
+        store.put(metadata, _chunks())

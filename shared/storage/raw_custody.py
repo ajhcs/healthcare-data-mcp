@@ -448,7 +448,16 @@ class RawArtifactStore:
             raise ArtifactCollisionError("complete recovery state does not match artifact metadata")
         if value.get("schema_version") != _SCHEMA_VERSION or value.get("record_type") != "raw_artifact_partial":
             raise RawCustodyError("complete recovery state has an unsupported contract")
-        if value.get("chunk_count") != item.chunk_count or value.get("byte_length") != item.byte_length:
+        chunk_count = value.get("chunk_count")
+        byte_length = value.get("byte_length")
+        if (
+            isinstance(chunk_count, bool)
+            or not isinstance(chunk_count, int)
+            or isinstance(byte_length, bool)
+            or not isinstance(byte_length, int)
+            or chunk_count != item.chunk_count
+            or byte_length != item.byte_length
+        ):
             raise RawCustodyError("complete recovery state counters are inconsistent")
 
     def _promote_object(self, partial_path: Path, object_path: Path, content_sha256: str) -> None:
