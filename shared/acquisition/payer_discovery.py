@@ -8,7 +8,7 @@ import json
 from typing import Literal, Mapping, cast
 
 from shared.contracts.healthcare_data_platform import validate_observation_envelope
-from shared.storage.raw_custody import RawArtifactMetadata, RawArtifactStore, RawCustodyError
+from shared.storage.raw_custody import RawArtifactStore, RawCustodyError
 
 PayerType = Literal["medicare_advantage", "medicare_part_d", "marketplace"]
 Missingness = Literal["not_yet_researched", "unavailable_public", "not_applicable", "blocked_source_conflict"]
@@ -113,6 +113,10 @@ class PayerCandidate:
             "blocked_source_conflict",
         }:
             raise ValueError("unknown missingness state")
+        if missingness == "blocked_source_conflict" and not str(
+            value.get("competing_observation_ref") or ""
+        ).startswith("observation:payer:"):
+            raise ValueError("blocked source conflict requires competing observation reference")
         return cls(
             payer,
             family,
@@ -186,7 +190,6 @@ def build_payer_observation_envelope(
             )
         ]
     release_id = custody.release_id
-    raw_artifact_id = custody.artifact_id
     candidate_digest = sha256(
         json.dumps([dict(row) for row in candidates], sort_keys=True, separators=(",", ":")).encode()
     ).hexdigest()
@@ -194,7 +197,6 @@ def build_payer_observation_envelope(
         (source_family + "|" + source_period + "|" + digest + "|" + tracking_bead + "|" + candidate_digest).encode()
     ).hexdigest()[:32]
     artifact_id = custody.artifact_id
-    normalized_id = artifact_id
     activity_id = "activity:payer:observation:" + seed
     receipt_id = "receipt:payer:" + seed[:24]
     observation_ids = ["observation:payer:" + seed + ":" + str(index) for index in range(1, max(1, len(parsed)) + 1)]
@@ -244,16 +246,16 @@ def build_payer_observation_envelope(
         "activity": {
             "activity_id": activity_id,
             "run_id": "run:payer:" + seed,
-            "activity_type": "normalization",
+            "activity_type": "observation",
             "actor": {
                 "actor_type": "deterministic_transform",
-                "actor_id": "healthcare-data-mcp:payer-observation-producer",
+                "actor_id": "healthcare-data-mcp:payer-observation-producer:bead=healthcare-toolkit-rrna.p1-28-payer-discovery-20260829",
             },
             "started_at": retrieved_at,
             "ended_at": retrieved_at,
             "status": "succeeded",
             "input_artifact_refs": [artifact_id],
-            "output_artifact_refs": [normalized_id],
+            "output_artifact_refs": [artifact_id],
         },
         "observations": [],
         "lineage": {
@@ -335,7 +337,12 @@ def build_payer_observation_envelope(
         if candidate.missingness == "blocked_source_conflict":
             observation["conflict"]["state"] = "source_conflict"
             observation["conflict"]["resolution"] = "unresolved"
-            observation["conflict"]["competing_observation_refs"] = [observation["observation_id"]]
+            competing = (
+                candidates[parsed.index(candidate)].get("competing_observation_ref")
+                if parsed.index(candidate) < len(candidates)
+                else None
+            )
+            observation["conflict"]["competing_observation_refs"] = [str(competing)]
             observation["value_state"] = "blocked_source_conflict"
             observation["value"] = None
     return validate_observation_envelope(envelope)
