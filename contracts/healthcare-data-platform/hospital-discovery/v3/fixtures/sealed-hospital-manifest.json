@@ -1,0 +1,19 @@
+{
+  "schema_version": "hospital-discovery.manifest.v3",
+  "manifest_id": "hospital-discovery-20260829",
+  "lane": "hospital",
+  "seal": "sealed",
+  "generated_at": "2026-08-29T12:00:00Z",
+  "owner_promotion_state": "outstanding",
+  "sources": [{
+    "source_id": "source:cms:hospital",
+    "url": "https://data.cms.gov/hospitals",
+    "url_state": "unverified",
+    "probe_state": "pending",
+    "final_url": "",
+    "http_status": null,
+    "content_sha256": "",
+    "note": "Probe is outstanding."
+  }],
+  "evidence": []
+}

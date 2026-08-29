@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://healthcare-data-mcp.local/contracts/hospital-discovery/v3/manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "manifest_id", "lane", "seal", "generated_at", "owner_promotion_state", "sources", "evidence"],
+  "properties": {
+    "schema_version": {"const": "hospital-discovery.manifest.v3"},
+    "manifest_id": {"type": "string", "minLength": 1},
+    "lane": {"const": "hospital"},
+    "seal": {"const": "sealed"},
+    "generated_at": {"type": "string", "minLength": 1},
+    "owner_promotion_state": {"const": "outstanding"},
+    "sources": {"type": "array", "items": {"$ref": "#/$defs/source"}},
+    "evidence": {"type": "array", "items": {"$ref": "#/$defs/evidence"}}
+  },
+  "$defs": {
+    "source": {
+      "type": "object", "additionalProperties": false,
+      "required": ["source_id", "url", "url_state", "probe_state", "final_url", "http_status", "content_sha256", "note"],
+      "properties": {
+        "source_id": {"type": "string", "minLength": 1},
+        "url": {"type": "string", "format": "uri", "pattern": "^https?://"},
+        "url_state": {"enum": ["unverified", "verified", "redirected", "invalid"]},
+        "probe_state": {"enum": ["pending", "succeeded", "failed"]},
+        "final_url": {"type": "string"}, "http_status": {"type": ["integer", "null"]},
+        "content_sha256": {"type": "string"}, "note": {"type": "string"}
+      }
+    },
+    "evidence": {
+      "type": "object", "additionalProperties": false,
+      "required": ["evidence_id", "source_id", "entity_ref", "field", "observed_value", "candidate_state", "authority_state", "owner_promotion_state", "caveat"],
+      "properties": {
+        "evidence_id": {"type": "string", "minLength": 1}, "source_id": {"type": "string", "minLength": 1},
+        "entity_ref": {"type": "string", "minLength": 1}, "field": {"type": "string", "minLength": 1},
+        "observed_value": {"type": "string", "minLength": 1},
+        "candidate_state": {"enum": ["not_evaluated", "candidate", "rejected"]},
+        "authority_state": {"const": "non_authoritative"}, "owner_promotion_state": {"const": "outstanding"},
+        "caveat": {"type": "string"}
+      }
+    }
+  }
+}
