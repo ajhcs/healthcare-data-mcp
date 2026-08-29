@@ -116,4 +116,4 @@ scope.
 ## Owner and Status
 
 - Owner: Luna Max direct writer
-- Status: implementation in progress
+- Status: implementation complete pending independent acceptance review
