@@ -1,0 +1,13 @@
+{
+  "schema_version": "hdp.staging-fixture-input.v1",
+  "record_type": "staging_fixture_input",
+  "source_id": "source:ahrq:lighthouse",
+  "source_url": "https://example.gov/ahrq/release.json",
+  "baseline_release_id": "release:ahrq.fixture.20260829",
+  "changed_release_id": "release:ahrq.fixture.20260830",
+  "media_type": "application/octet-stream",
+  "baseline_payload": "fixture-source-bytes",
+  "changed_payload": "fixture-source-bytes-v2",
+  "quarantine_payload": "fixture-source-bytes-invalid",
+  "rights_status": "approved_public"
+}
