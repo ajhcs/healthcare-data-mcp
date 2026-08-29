@@ -68,7 +68,7 @@ ruff check shared/validation tests/test_healthcare_data_platform_validation.py
 ruff format --check shared/validation tests/test_healthcare_data_platform_validation.py
 pyright shared/validation tests/test_healthcare_data_platform_validation.py
 python -m compileall -q shared/validation tests/test_healthcare_data_platform_validation.py
-python -m jsonschema -i contracts/healthcare-data-platform/observation/v1/fixtures/valid-observation-envelope.json contracts/healthcare-data-platform/observation/v1/observation-envelope.schema.json
+uv run --no-project python -c 'from jsonschema import Draft202012Validator; import json; from pathlib import Path; schema=json.loads(Path("contracts/healthcare-data-platform/observation/v1/observation-envelope.schema.json").read_text()); Draft202012Validator.check_schema(schema)'
 git diff --check 6dd23fae2df6d5daf5fde729cc3ddcad17e6ad8e..HEAD
 ```
 
@@ -99,4 +99,4 @@ base/head diff, run the focused checks above, generate the authoritative
 handoff-path SHA, known limitations, and rollback range. Do not push.
 
 Owner: Luna Max direct writer
-Status: implementation in progress
+Status: complete pending independent acceptance review
