@@ -34,6 +34,8 @@ class PayerSourceRegistration:
     rights_status: str = "approved_public"
     cadence: PayerCadence = PayerCadence(86400)
     enabled_fields: tuple[str, ...] = ("type_of_coverage", "denominator", "geography")
+    enabled: bool = True
+    missed_run_grace_seconds: int = 86400
 
     def __getitem__(self, key: str) -> object:
         return getattr(self, key)
@@ -133,9 +135,11 @@ class PayerCandidate:
         reference_id = str(value.get("reference_id") or "")
         if payer == "f7_reference" and not reference_id and not value.get("missingness"):
             raise ValueError("F7 reference candidate requires reference_id")
-        if not str(
-            value.get("plan_or_contract_id") or value.get("plan_id") or value.get("contract_id") or ""
-        ) and not value.get("missingness"):
+        if (
+            not str(value.get("plan_or_contract_id") or value.get("plan_id") or value.get("contract_id") or "")
+            and not value.get("missingness")
+            and payer != "f7_reference"
+        ):
             raise ValueError("plan or contract identity is required")
         denominator = value.get("denominator")
         denominator_scope = str(value.get("denominator_scope") or configured["payer_type"] + " enrollment").lower()
@@ -209,6 +213,8 @@ def validate_payer_catalog() -> dict[str, object]:
                 "jitter_seconds": value.cadence.jitter_seconds,
             },
             "enabled_fields": list(value.enabled_fields),
+            "enabled": value.enabled,
+            "missed_run_grace_seconds": value.missed_run_grace_seconds,
         }
         for key, value in SOURCE_CATALOG.items()
     }
@@ -279,6 +285,41 @@ def build_payer_observation_envelope(
     artifact_id = custody.artifact_id
     activity_id = "activity:payer:observation:" + seed
     receipt_id = "receipt:payer:" + seed[:24]
+    release_digest = (
+        "sha256:"
+        + sha256(
+            json.dumps(
+                {
+                    "source_id": custody.source_id,
+                    "release_id": release_id,
+                    "source_period": source_period,
+                    "source_url": source["source_url"],
+                    "release_locator": source["release_locator"],
+                    "rights_status": custody.rights_status,
+                    "cadence": source["cadence"].interval_seconds,
+                },
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode()
+        ).hexdigest()
+    )
+    receipt_digest = (
+        "sha256:"
+        + sha256(
+            json.dumps(
+                {
+                    "receipt_id": receipt_id,
+                    "producer": "healthcare-data-mcp:payer-observation-producer:bead=healthcare-toolkit-rrna.p1-28-payer-discovery-20260829",
+                    "source_release_ref": release_id,
+                    "artifact_ref": artifact_id,
+                    "state": "succeeded",
+                    "recorded_at": retrieved_at,
+                },
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode()
+        ).hexdigest()
+    )
     observation_ids = ["observation:payer:" + seed + ":" + str(index) for index in range(1, max(1, len(parsed)) + 1)]
     envelope = {
         "schema_version": "hdp.observation-envelope.v1",
@@ -292,7 +333,7 @@ def build_payer_observation_envelope(
             "release_id": release_id,
             "release_label": source_period,
             "source_kind": "official_dataset",
-            "release_sha256": digest,
+            "release_sha256": release_digest,
             "evidence_locator": source["release_locator"],
             "coverage_state": "present",
         },
@@ -318,7 +359,7 @@ def build_payer_observation_envelope(
             "artifact_ref": artifact_id,
             "source_release_sha256": digest,
             "artifact_sha256": digest,
-            "receipt_sha256": digest,
+            "receipt_sha256": receipt_digest,
             "state": "succeeded",
             "recorded_at": retrieved_at,
             "evidence_locator": custody.source_url,
