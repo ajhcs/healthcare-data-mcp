@@ -3,7 +3,7 @@
   "$id": "https://healthcare-data-mcp.local/contracts/hospital-discovery/v3/manifest",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "manifest_id", "lane", "seal", "generated_at", "owner_promotion_state", "sources", "evidence"],
+  "required": ["schema_version", "manifest_id", "lane", "seal", "generated_at", "owner_promotion_state", "manifest_sha256", "sources", "evidence"],
   "properties": {
     "schema_version": {"const": "hospital-discovery.manifest.v3"},
     "manifest_id": {"type": "string", "minLength": 1},
@@ -11,6 +11,7 @@
     "seal": {"const": "sealed"},
     "generated_at": {"type": "string", "minLength": 1},
     "owner_promotion_state": {"const": "outstanding"},
+    "manifest_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
     "sources": {"type": "array", "items": {"$ref": "#/$defs/source"}},
     "evidence": {"type": "array", "items": {"$ref": "#/$defs/evidence"}}
   },
@@ -29,9 +30,10 @@
     },
     "evidence": {
       "type": "object", "additionalProperties": false,
-      "required": ["evidence_id", "source_id", "entity_ref", "field", "observed_value", "candidate_state", "authority_state", "owner_promotion_state", "caveat"],
+      "required": ["evidence_id", "source_id", "receipt_id", "receipt_sha256", "entity_ref", "field", "observed_value", "candidate_state", "authority_state", "owner_promotion_state", "caveat"],
       "properties": {
-        "evidence_id": {"type": "string", "minLength": 1}, "source_id": {"type": "string", "minLength": 1},
+        "evidence_id": {"type": "string", "minLength": 1}, "source_id": {"type": "string", "minLength": 1}, "receipt_id": {"type": "string", "minLength": 1},
+        "receipt_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
         "entity_ref": {"type": "string", "minLength": 1}, "field": {"type": "string", "minLength": 1},
         "observed_value": {"type": "string", "minLength": 1},
         "candidate_state": {"enum": ["not_evaluated", "candidate", "rejected"]},

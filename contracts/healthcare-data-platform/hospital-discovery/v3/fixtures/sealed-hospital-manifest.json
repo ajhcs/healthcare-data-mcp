@@ -5,6 +5,7 @@
   "seal": "sealed",
   "generated_at": "2026-08-29T12:00:00Z",
   "owner_promotion_state": "outstanding",
+  "manifest_sha256": "sha256:52f5711f4d6e2aafea3875ba1697361d2a2e0c364713aa086b043df853776c4f",
   "sources": [{
     "source_id": "source:cms:hospital",
     "url": "https://data.cms.gov/hospitals",
