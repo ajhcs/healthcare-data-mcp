@@ -27,7 +27,7 @@ JsonValue: TypeAlias = JsonScalar | list["JsonValue"] | dict[str, "JsonValue"]
 DriftKind: TypeAlias = Literal["schema", "row", "key", "distribution"]
 ValidationState: TypeAlias = Literal["accepted", "rejected"]
 QuarantineState: TypeAlias = Literal["stored", "duplicate"]
-SafeSummary: TypeAlias = int | float | bool | None | str | dict[str, "SafeSummary"] | list["SafeSummary"]
+SafeSummary: TypeAlias = None | bool | int | float | str | dict[str, "SafeSummary"] | list["SafeSummary"]
 
 VALIDATION_SCHEMA_VERSION = "hdp.validation-report.v1"
 QUARANTINE_SCHEMA_VERSION = "hdp.validation-quarantine.v1"
@@ -38,10 +38,17 @@ MAX_SAMPLE_PATH = 300
 MAX_QUARANTINE_BYTES = 256 * 1024
 MAX_DISTRIBUTION_CATEGORIES = 256
 MAX_CANDIDATE_ROWS = 1_000_000
+MAX_CURSOR_LENGTH = 512
+PINNED_OBSERVATION_SCHEMA_VERSION = "hdp.observation-envelope.v1"
 _SHA256 = re.compile(r"^sha256:[0-9a-f]{64}$")
 _ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/-]{0,299}$")
 _LOCATOR = re.compile(r"^(?:https://|object://|parquet://|docs/|contracts/)[A-Za-z0-9._:/-]+$")
 _PATH = re.compile(r"^[A-Za-z0-9_$.-]+(?:\[\])?(?:\.[A-Za-z0-9_$.-]+(?:\[\])?)*$")
+_METADATA_PREFIXES = {
+    "source_id": "source:",
+    "release_id": "release:",
+    "artifact_id": "artifact:",
+}
 
 
 class DriftValidationError(ValueError):
@@ -107,6 +114,27 @@ def _optional_locator(value: object, label: str) -> str | None:
     return text
 
 
+def _optional_cursor(value: object, label: str) -> str | None:
+    if value is None:
+        return None
+    return _required_text(value, label, maximum=MAX_CURSOR_LENGTH)
+
+
+def _quarantine_metadata_id(value: object, label: str) -> str | None:
+    """Keep only registered-looking IDs; hash all untrusted metadata."""
+
+    if value is None:
+        return None
+    prefix = _METADATA_PREFIXES[label]
+    if isinstance(value, str) and _ID.fullmatch(value) is not None and value.startswith(prefix):
+        return value
+    try:
+        digest = _fingerprint(value).removeprefix("sha256:")
+    except DriftValidationError:
+        digest = sha256(type(value).__name__.encode("utf-8")).hexdigest()
+    return f"redacted:{digest}"
+
+
 def _bounded_int(value: object, label: str, *, minimum: int = 0, maximum: int = 2**31 - 1) -> int:
     if isinstance(value, bool) or not isinstance(value, int):
         raise DriftValidationError(f"{label} must be an integer")
@@ -127,18 +155,28 @@ def _finite_ratio(value: object, label: str, *, minimum: float = 0.0) -> float:
 def _safe_summary(value: object) -> SafeSummary:
     """Return a bounded summary that cannot retain source values.
 
-    Counts, booleans, and null are useful for operations and are safe to keep.
-    Strings and arbitrary containers are represented by type/length/hash only;
-    this prevents PHI, source rows, credentials, and arbitrary adapter values
-    from leaking into receipts or quarantine files.
+    Every source value is represented by type/shape/length and a digest.  No
+    source integer, number, boolean, null, string, row, or key is copied into
+    a report or quarantine record.  Operational counts are carried by the
+    report's dedicated fields, not by these source-value summaries.
     """
 
-    if value is None or isinstance(value, bool):
-        return value
+    if value is None:
+        return {"type": "null", "sha256": _fingerprint(None)}
+    if isinstance(value, bool):
+        return {"type": "boolean", "sha256": _fingerprint(value)}
     if isinstance(value, int):
-        return value
+        return {
+            "type": "integer",
+            "digits": len(str(abs(value))),
+            "sha256": _fingerprint(value),
+        }
     if isinstance(value, float):
-        return value if math.isfinite(value) else {"type": "number", "finite": False}
+        return {
+            "type": "number",
+            "finite": math.isfinite(value),
+            "sha256": _fingerprint(value) if math.isfinite(value) else _fingerprint(str(value)),
+        }
     if isinstance(value, str):
         return {
             "type": "string",
@@ -168,11 +206,17 @@ def _preserve_safe_summary(value: object) -> SafeSummary:
         kind = value.get("type")
         if kind == "string":
             return {"type": "string", "length": value["length"], "sha256": value["sha256"]}
+        if kind == "integer":
+            return {"type": "integer", "digits": value["digits"], "sha256": value["sha256"]}
         if kind == "object":
             return {"type": "object", "key_count": value["key_count"], "keys_sha256": value["keys_sha256"]}
         if kind == "array":
             return {"type": "array", "length": value["length"], "sha256": value["sha256"]}
-        return {"type": "number", "finite": False}
+        if kind == "number":
+            return {"type": "number", "finite": value["finite"], "sha256": value["sha256"]}
+        if kind == "boolean":
+            return {"type": "boolean", "sha256": value["sha256"]}
+        return {"type": "null", "sha256": value["sha256"]}
     return _safe_summary(value)
 
 
@@ -195,8 +239,19 @@ def _is_safe_summary(value: Mapping[object, object]) -> bool:
         return (
             isinstance(value.get("length"), int) and isinstance(digest, str) and _SHA256.fullmatch(digest) is not None
         )
+    if kind == "integer":
+        digest = value.get("sha256")
+        return (
+            isinstance(value.get("digits"), int) and isinstance(digest, str) and _SHA256.fullmatch(digest) is not None
+        )
     if kind == "number":
-        return value.get("finite") is False
+        digest = value.get("sha256")
+        return (
+            isinstance(value.get("finite"), bool) and isinstance(digest, str) and _SHA256.fullmatch(digest) is not None
+        )
+    if kind in {"boolean", "null"}:
+        digest = value.get("sha256")
+        return isinstance(digest, str) and _SHA256.fullmatch(digest) is not None
     return False
 
 
@@ -227,6 +282,7 @@ class DistributionRule:
     max_ratio: float = 2.0
     denominator: bool = False
     expected_total: int | None = None
+    cardinality: int | None = None
 
     def __post_init__(self) -> None:
         path = _required_text(self.path, "distribution path")
@@ -249,15 +305,26 @@ class DistributionRule:
         if not isinstance(self.denominator, bool):
             raise DriftValidationError("distribution denominator must be boolean")
         expected_total = self.expected_total
+        cardinality = self.cardinality
+        if cardinality is not None:
+            cardinality = _bounded_int(cardinality, "distribution cardinality")
+            if cardinality < 1:
+                raise DriftValidationError("distribution cardinality must be positive")
+            if expected_total is not None and expected_total != cardinality:
+                raise DriftValidationError("distribution expected_total and cardinality must match")
+            expected_total = cardinality
         if expected_total is not None:
             expected_total = _bounded_int(expected_total, "distribution expected_total")
             if expected_total < 1:
                 raise DriftValidationError("distribution expected_total must be positive")
+        if self.denominator and expected_total is None:
+            raise DriftValidationError("denominator distribution requires expected_total or cardinality")
         object.__setattr__(self, "path", path)
         object.__setattr__(self, "expected_counts", MappingProxyType(counts))
         object.__setattr__(self, "min_ratio", min_ratio)
         object.__setattr__(self, "max_ratio", max_ratio)
         object.__setattr__(self, "expected_total", expected_total)
+        object.__setattr__(self, "cardinality", cardinality)
 
 
 @dataclass(frozen=True, slots=True)
@@ -273,6 +340,8 @@ class DriftBaseline:
     row_id_field: str = "observation_id"
     max_row_count_delta_ratio: float = 1.0
     expected_key_digest: str | None = None
+    expected_checkpoint_id: str | None = None
+    expected_cursor: str | None = None
     distribution_rules: tuple[DistributionRule, ...] = ()
 
     def __post_init__(self) -> None:
@@ -288,6 +357,8 @@ class DriftBaseline:
             raise DriftValidationError("baseline row_id_field is malformed")
         ratio = _finite_ratio(self.max_row_count_delta_ratio, "baseline max_row_count_delta_ratio")
         key_digest = _optional_sha256(self.expected_key_digest, "baseline expected_key_digest")
+        checkpoint_id = _optional_id(self.expected_checkpoint_id, "baseline expected_checkpoint_id")
+        cursor = _optional_cursor(self.expected_cursor, "baseline expected_cursor")
         ids = tuple(
             _required_text(item, "baseline observation id", maximum=300) for item in self.expected_observation_ids
         )
@@ -306,6 +377,8 @@ class DriftBaseline:
         object.__setattr__(self, "expected_observation_ids", ids)
         object.__setattr__(self, "max_row_count_delta_ratio", ratio)
         object.__setattr__(self, "expected_key_digest", key_digest)
+        object.__setattr__(self, "expected_checkpoint_id", checkpoint_id)
+        object.__setattr__(self, "expected_cursor", cursor)
         object.__setattr__(self, "distribution_rules", rules)
 
     @classmethod
@@ -331,6 +404,8 @@ class DriftBaseline:
             expected_row_count=len(observations),
             expected_observation_ids=ids,
             expected_key_digest=_candidate_key_digest(envelope),
+            expected_checkpoint_id=_candidate_checkpoint_cursor(envelope)[0],
+            expected_cursor=_candidate_checkpoint_cursor(envelope)[1],
             distribution_rules=tuple(distribution_rules),
         )
 
@@ -423,7 +498,7 @@ class QuarantineSample:
         if not isinstance(self.summary, Mapping):
             raise QuarantineError("quarantine sample summary must be an object")
         safe = {
-            str(key): _preserve_safe_summary(value) if key == "value" else _safe_summary(value)
+            str(key): value if key == "present" and isinstance(value, bool) else _preserve_safe_summary(value)
             for key, value in self.summary.items()
         }
         object.__setattr__(self, "path", path)
@@ -453,9 +528,9 @@ class QuarantineRecord:
         quarantine_id = _required_text(self.quarantine_id, "quarantine_id")
         if _ID.fullmatch(quarantine_id) is None or not quarantine_id.startswith("quarantine:"):
             raise QuarantineError("quarantine_id is malformed")
-        source_id = _optional_id(self.source_id, "quarantine source_id")
-        release_id = _optional_id(self.release_id, "quarantine release_id")
-        artifact_id = _optional_id(self.artifact_id, "quarantine artifact_id")
+        source_id = _quarantine_metadata_id(self.source_id, "source_id")
+        release_id = _quarantine_metadata_id(self.release_id, "release_id")
+        artifact_id = _quarantine_metadata_id(self.artifact_id, "artifact_id")
         artifact_sha256 = _optional_sha256(self.artifact_sha256, "quarantine artifact_sha256")
         custody_locator = _optional_locator(self.custody_locator, "quarantine custody_locator")
         envelope_sha256 = _optional_sha256(self.envelope_sha256, "quarantine envelope_sha256")
@@ -482,7 +557,7 @@ class QuarantineRecord:
         object.__setattr__(self, "samples", samples)
         object.__setattr__(self, "recorded_at", recorded_at)
 
-    def as_dict(self) -> dict[str, object]:
+    def _body_dict(self) -> dict[str, object]:
         return {
             "schema_version": QUARANTINE_SCHEMA_VERSION,
             "record_type": QUARANTINE_RECORD_TYPE,
@@ -499,9 +574,14 @@ class QuarantineRecord:
             "recorded_at": self.recorded_at,
         }
 
+    def as_dict(self) -> dict[str, object]:
+        value = self._body_dict()
+        value["record_sha256"] = self.record_sha256
+        return value
+
     @property
     def record_sha256(self) -> str:
-        return _fingerprint(self.as_dict())
+        return _fingerprint(self._body_dict())
 
 
 @dataclass(frozen=True, slots=True)
@@ -578,6 +658,8 @@ class QuarantineStore:
 
         _required_text(quarantine_id, "quarantine_id")
         path = self.root / f"{_safe_filename(quarantine_id)}.json"
+        if path.is_symlink():
+            raise QuarantineError("quarantine record path must not be a symlink")
         try:
             value = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError) as exc:
@@ -665,11 +747,32 @@ def validate_observation_candidate(
             _issue("schema.version_drift", "schema_version", "schema", expected.schema_version, schema_version)
         )
 
-    looks_like_envelope = "observations" in candidate or schema_version == "hdp.observation-envelope.v1"
+    is_observation_schema = isinstance(schema_version, str) and schema_version.startswith("hdp.observation-envelope.")
+    if is_observation_schema and schema_version != PINNED_OBSERVATION_SCHEMA_VERSION:
+        issues.append(
+            _issue(
+                "schema.version_drift",
+                "schema_version",
+                "schema",
+                PINNED_OBSERVATION_SCHEMA_VERSION,
+                schema_version,
+            )
+        )
+    looks_like_envelope = "observations" in candidate or is_observation_schema
     if looks_like_envelope:
         issues.extend(_validate_pinned_envelope(candidate))
     elif "rows" not in candidate:
         issues.append(_issue("schema.missing_rows", "rows", "schema", "array", candidate.get("rows")))
+    elif expected.schema_version is None:
+        issues.append(
+            _issue(
+                "schema.unregistered_adapter_version",
+                "schema_version",
+                "schema",
+                "explicit adapter schema baseline",
+                schema_version,
+            )
+        )
 
     rows, collection_path = _candidate_rows(candidate)
     row_count = len(rows)
@@ -681,9 +784,9 @@ def validate_observation_candidate(
     issues.extend(_distribution_issues(candidate, rows, collection_path, expected.distribution_rules))
     return DriftReport(
         state="rejected" if issues else "accepted",
-        source_id=source_id,
-        release_id=release_id,
-        artifact_id=artifact_id,
+        source_id=_quarantine_metadata_id(source_id, "source_id"),
+        release_id=_quarantine_metadata_id(release_id, "release_id"),
+        artifact_id=_quarantine_metadata_id(artifact_id, "artifact_id"),
         envelope_sha256=envelope_sha256,
         row_count=row_count,
         issues=tuple(_dedupe_issues(issues)),
@@ -715,6 +818,9 @@ def build_quarantine_record(
         release_id = report.release_id
     if artifact_id is None:
         artifact_id = report.artifact_id
+    source_id = _quarantine_metadata_id(source_id, "source_id")
+    release_id = _quarantine_metadata_id(release_id, "release_id")
+    artifact_id = _quarantine_metadata_id(artifact_id, "artifact_id")
     artifact_sha256 = _optional_sha256(artifact_sha256, "artifact_sha256")
     if artifact_sha256 is None:
         artifact_sha256 = _artifact_hash(candidate)
@@ -724,7 +830,7 @@ def build_quarantine_record(
         "release_id": release_id,
         "artifact_id": artifact_id,
         "envelope_sha256": report.envelope_sha256,
-        "reason_codes": sorted(report.issue_codes),
+        "reason_codes": _reason_codes(report.issue_codes),
     }
     quarantine_id = "quarantine:" + sha256(_canonical_bytes(identity)).hexdigest()[:32]
     samples = _quarantine_samples(candidate, report.issues)
@@ -736,7 +842,7 @@ def build_quarantine_record(
         artifact_sha256=artifact_sha256,
         custody_locator=custody_locator,
         envelope_sha256=report.envelope_sha256,
-        reason_codes=tuple(sorted(report.issue_codes)),
+        reason_codes=_reason_codes(report.issue_codes),
         samples=samples,
         recorded_at=recorded_at or _utc_now(),
     )
@@ -806,6 +912,7 @@ def _row_issues(rows: list[object], collection_path: str, baseline: DriftBaselin
     if not rows:
         issues.append(_issue("row.empty", collection_path, "row", "at least one row", 0))
     identifiers: list[str] = []
+    identifier_counts: dict[str, int] = {}
     for index, row in enumerate(rows):
         if not isinstance(row, Mapping):
             issues.append(_issue("row.malformed", f"{collection_path}[{index}]", "row", "object", row))
@@ -823,7 +930,8 @@ def _row_issues(rows: list[object], collection_path: str, baseline: DriftBaselin
             )
             continue
         identifiers.append(identifier)
-    duplicates = sorted({identifier for identifier in identifiers if identifiers.count(identifier) > 1})
+        identifier_counts[identifier] = identifier_counts.get(identifier, 0) + 1
+    duplicates = sorted(identifier for identifier, count in identifier_counts.items() if count > 1)
     if duplicates:
         issues.append(
             _issue(
@@ -865,9 +973,9 @@ def _row_issues(rows: list[object], collection_path: str, baseline: DriftBaselin
 def _key_issues(
     candidate: Mapping[str, object],
     baseline: DriftBaseline,
-    source_id: str | None,
-    release_id: str | None,
-    artifact_id: str | None,
+    source_id: object | None,
+    release_id: object | None,
+    artifact_id: object | None,
 ) -> list[DriftIssue]:
     issues: list[DriftIssue] = []
     if baseline.source_id is not None and source_id != baseline.source_id:
@@ -880,6 +988,19 @@ def _key_issues(
         issues.append(
             _issue("key.artifact_drift", "artifact.artifact_id", "key", baseline.expected_artifact_id, artifact_id)
         )
+    checkpoint_id, cursor = _candidate_checkpoint_cursor(candidate)
+    if baseline.expected_checkpoint_id is not None and checkpoint_id != baseline.expected_checkpoint_id:
+        issues.append(
+            _issue(
+                "key.checkpoint_drift",
+                "checkpoint.checkpoint_id",
+                "key",
+                baseline.expected_checkpoint_id,
+                checkpoint_id,
+            )
+        )
+    if baseline.expected_cursor is not None and cursor != baseline.expected_cursor:
+        issues.append(_issue("key.cursor_drift", "checkpoint.cursor", "key", baseline.expected_cursor, cursor))
     key_digest = _candidate_key_digest(candidate)
     if baseline.expected_key_digest is not None and key_digest != baseline.expected_key_digest:
         issues.append(_issue("key.identity_drift", "lineage", "key", baseline.expected_key_digest, key_digest))
@@ -1031,13 +1152,15 @@ def _candidate_rows(candidate: Mapping[str, object]) -> tuple[list[object], str]
     return [], "observations" if "observations" in candidate else "rows"
 
 
-def _envelope_metadata(candidate: Mapping[str, object]) -> tuple[str | None, str | None, str | None]:
+def _envelope_metadata(candidate: Mapping[str, object]) -> tuple[object | None, object | None, object | None]:
     source_release = _mapping(candidate.get("source_release"))
     artifact = _mapping(candidate.get("artifact"))
     return (
-        _text(source_release.get("source_id")) or _text(candidate.get("source_id")),
-        _text(source_release.get("release_id")) or _text(candidate.get("release_id")),
-        _text(artifact.get("artifact_id")) or _text(candidate.get("artifact_id")),
+        source_release.get("source_id") if source_release.get("source_id") is not None else candidate.get("source_id"),
+        source_release.get("release_id")
+        if source_release.get("release_id") is not None
+        else candidate.get("release_id"),
+        artifact.get("artifact_id") if artifact.get("artifact_id") is not None else candidate.get("artifact_id"),
     )
 
 
@@ -1058,6 +1181,7 @@ def _candidate_key_digest(candidate: Mapping[str, object]) -> str | None:
     artifact = _mapping(candidate.get("artifact"))
     lineage = _mapping(candidate.get("lineage"))
     replay = _mapping(lineage.get("replay"))
+    checkpoint_id, cursor = _candidate_checkpoint_cursor(candidate)
     values = {
         "record_id": candidate.get("record_id"),
         "source_id": source_release.get("source_id") or candidate.get("source_id"),
@@ -1065,6 +1189,8 @@ def _candidate_key_digest(candidate: Mapping[str, object]) -> str | None:
         "artifact_id": artifact.get("artifact_id") or candidate.get("artifact_id"),
         "lineage_id": lineage.get("lineage_id"),
         "idempotency_key": replay.get("idempotency_key") or candidate.get("idempotency_key"),
+        "checkpoint_id": checkpoint_id,
+        "cursor": cursor,
     }
     if all(value is None for value in values.values()):
         return None
@@ -1072,6 +1198,21 @@ def _candidate_key_digest(candidate: Mapping[str, object]) -> str | None:
         return _fingerprint(values)
     except DriftValidationError:
         return None
+
+
+def _candidate_checkpoint_cursor(candidate: Mapping[str, object]) -> tuple[str | None, str | None]:
+    """Read checkpoint identity from envelope or generic adapter metadata."""
+
+    checkpoint = candidate.get("checkpoint")
+    if isinstance(checkpoint, Mapping):
+        checkpoint_id = checkpoint.get("checkpoint_id") or checkpoint.get("id") or checkpoint.get("key")
+        cursor = checkpoint.get("cursor")
+    else:
+        checkpoint_id = checkpoint or candidate.get("checkpoint_id")
+        cursor = None
+    if cursor is None:
+        cursor = candidate.get("cursor")
+    return _text(checkpoint_id), _text(cursor)
 
 
 def _envelope_key_values(candidate: Mapping[str, object]) -> dict[str, object]:
@@ -1185,6 +1326,12 @@ def _dedupe_issues(issues: Iterable[DriftIssue]) -> list[DriftIssue]:
     return result[:MAX_REASON_CODES]
 
 
+def _reason_codes(codes: Iterable[str]) -> tuple[str, ...]:
+    """Return stable unique reason codes for strict quarantine records."""
+
+    return tuple(dict.fromkeys(sorted(codes)))[:MAX_REASON_CODES]
+
+
 def _safe_filename(value: str) -> str:
     return "quarantine-" + re.sub(r"[^A-Za-z0-9._-]+", "-", value.removeprefix("quarantine:"))
 
@@ -1208,6 +1355,25 @@ def _timestamp(value: object, label: str) -> str:
 def _record_from_mapping(value: object) -> QuarantineRecord:
     if not isinstance(value, Mapping):
         raise QuarantineError("quarantine record must be an object")
+    expected_fields = {
+        "schema_version",
+        "record_type",
+        "quarantine_id",
+        "source_id",
+        "release_id",
+        "artifact_id",
+        "artifact_sha256",
+        "custody_locator",
+        "envelope_sha256",
+        "reason_codes",
+        "samples",
+        "current_projection_preserved",
+        "recorded_at",
+        "record_sha256",
+    }
+    unknown_fields = set(value) - expected_fields
+    if unknown_fields:
+        raise QuarantineError(f"quarantine record has unknown fields: {sorted(unknown_fields)}")
     if value.get("schema_version") != QUARANTINE_SCHEMA_VERSION or value.get("record_type") != QUARANTINE_RECORD_TYPE:
         raise QuarantineError("quarantine record schema is unsupported")
     raw_samples = value.get("samples")
@@ -1224,7 +1390,7 @@ def _record_from_mapping(value: object) -> QuarantineRecord:
     reasons = value.get("reason_codes")
     if not isinstance(reasons, list):
         raise QuarantineError("quarantine reason_codes must be an array")
-    return QuarantineRecord(
+    record = QuarantineRecord(
         quarantine_id=cast(str, value.get("quarantine_id")),
         source_id=cast(str | None, value.get("source_id")),
         release_id=cast(str | None, value.get("release_id")),
@@ -1237,12 +1403,25 @@ def _record_from_mapping(value: object) -> QuarantineRecord:
         current_projection_preserved=value.get("current_projection_preserved", True),
         recorded_at=cast(str, value.get("recorded_at", "")),
     )
+    declared_hash = value.get("record_sha256")
+    if not isinstance(declared_hash, str) or _SHA256.fullmatch(declared_hash) is None:
+        raise QuarantineError("quarantine record is missing a valid record_sha256")
+    raw_body = {key: item for key, item in value.items() if key != "record_sha256"}
+    try:
+        raw_hash = _fingerprint(raw_body)
+    except DriftValidationError as exc:
+        raise QuarantineError("quarantine record body is not canonical JSON") from exc
+    if declared_hash != raw_hash:
+        raise QuarantineError("quarantine record integrity hash does not match its stored contents")
+    if declared_hash != record.record_sha256:
+        raise QuarantineError("quarantine record integrity hash does not match its contents")
+    return record
 
 
 def _without_recorded_at(value: Mapping[str, object]) -> dict[str, object]:
     """Compare retries by evidence identity while retaining first-seen time."""
 
-    return {key: item for key, item in value.items() if key != "recorded_at"}
+    return {key: item for key, item in value.items() if key not in {"recorded_at", "record_sha256"}}
 
 
 __all__ = [

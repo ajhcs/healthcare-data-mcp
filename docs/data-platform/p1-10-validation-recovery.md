@@ -8,19 +8,22 @@ operator repairs the source contract or producer.
 ## Decision states
 
 `validate_drift` returns an `hdp.validation-report.v1` report.  `accepted`
-means that the pinned observation contract (when applicable), row keys,
-lineage keys, and configured distributions passed.  `rejected` means that at
-least one `schema.*`, `row.*`, `key.*`, or `distribution.*` invariant failed.
-The report contains counts, paths, and hashes only; it never contains source
-row values.
+means that the pinned observation contract (when applicable), an explicit
+adapter schema pin, row keys, lineage keys, checkpoint/cursor identity, and
+configured distributions passed.  `rejected` means that at least one
+`schema.*`, `row.*`, `key.*`, or `distribution.*` invariant failed.  Every
+source value in the report is represented by a bounded structural summary and
+digest; no source integer, number, boolean, string, or row value is copied into
+the report.
 
 `validate_and_project` invokes its caller-owned projection callback only for
 an accepted candidate.  A rejected candidate returns
 `current_projection_preserved=true`, creates a `QuarantineRecord`, and may
 persist that record with `QuarantineStore`.  The store writes one immutable,
-idempotent JSON record per deterministic quarantine identity.  Retrying the
-same evidence at a different time returns a duplicate receipt and retains the
-first recording time.
+integrity-hashed, idempotent JSON record per deterministic quarantine identity.
+On every read it verifies the record hash against the stored body and the
+normalized redacted record.  Retrying the same evidence at a different time
+returns a duplicate receipt and retains the first recording time.
 
 ## Operator recovery sequence
 
@@ -49,12 +52,13 @@ first recording time.
 
 ## Evidence and privacy
 
-The quarantine record is limited to source/release/artifact identifiers,
-SHA-256 hashes, a custody locator, issue codes, structural paths, bounded
-counts, and an event timestamp.  Payload fields, names, addresses, provider
-details, credentials, bearer tokens, and request headers are not stored in a
-report or quarantine record.  The source-rights policy still controls whether
-raw custody may be read or replayed.
+The quarantine record is limited to registered source/release/artifact
+identifiers (or deterministic redactions of untrusted metadata), SHA-256
+hashes, a custody locator, issue codes, structural paths, bounded counts, and
+an event timestamp.  Payload fields, names, addresses, provider details,
+credentials, bearer tokens, and request headers are not stored in a report or
+quarantine record.  The source-rights policy still controls whether raw
+custody may be read or replayed.
 
 The expected row count and distribution rules are source-specific policy, not
 completeness claims.  A denominator change is a review signal and blocks only

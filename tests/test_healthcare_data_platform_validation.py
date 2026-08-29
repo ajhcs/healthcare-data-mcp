@@ -18,6 +18,7 @@ from shared.validation import (
     validate_and_project,
     validate_drift,
 )
+from shared.validation.drift import _candidate_key_digest
 from tests.test_healthcare_data_platform_contract_adoption import _envelope
 
 
@@ -67,12 +68,22 @@ def test_valid_adapter_batch_is_accepted_with_explicit_distribution_baseline() -
     assert "patient-name" not in json.dumps(report.as_dict(), sort_keys=True)
 
 
-def test_generic_adapter_batch_does_not_require_observation_schema_pin() -> None:
+def test_generic_adapter_batch_requires_an_explicit_adapter_schema_pin() -> None:
     baseline = DriftBaseline(expected_row_count=2, row_id_field="row_id")
 
     report = validate_drift(_batch(), baseline)
 
-    assert report.accepted
+    assert report.rejected
+    assert "schema.unregistered_adapter_version" in report.issue_codes
+
+
+def test_unsupported_observation_envelope_version_is_classified_and_rejected() -> None:
+    candidate = {"schema_version": "hdp.observation-envelope.v2", "rows": _batch()["rows"]}
+
+    report = validate_drift(candidate)
+
+    assert report.rejected
+    assert "schema.version_drift" in report.issue_codes
 
 
 def test_schema_drift_is_fail_closed_and_report_is_redacted() -> None:
@@ -129,6 +140,69 @@ def test_distribution_policy_rejects_non_finite_or_reversed_bounds() -> None:
         DistributionRule("scope", {"system": 1}, min_ratio=float("nan"))
     with pytest.raises(DriftValidationError, match="at least"):
         DistributionRule("scope", {"system": 1}, min_ratio=2, max_ratio=1)
+    with pytest.raises(DriftValidationError, match="expected_total or cardinality"):
+        DistributionRule("scope", {"system": 1}, denominator=True)
+    assert DistributionRule("scope", {"system": 1}, denominator=True, cardinality=1).expected_total == 1
+
+
+def test_malformed_numeric_rows_are_quarantined_with_unique_reasons_and_no_raw_values() -> None:
+    raw_value = 9876543210123456789
+    candidate = _batch()
+    candidate["rows"] = [raw_value, raw_value]
+
+    report = validate_drift(candidate, _batch_baseline())
+    record = build_quarantine_record(candidate, report, recorded_at="2026-08-29T00:00:00Z")
+    encoded = json.dumps({"report": report.as_dict(), "record": record.as_dict()}, sort_keys=True)
+
+    assert report.rejected
+    assert report.issue_codes.count("row.malformed") == 2
+    assert len(record.reason_codes) == len(set(record.reason_codes))
+    assert str(raw_value) not in encoded
+
+
+def test_untrusted_quarantine_metadata_is_redacted_or_prefixed() -> None:
+    candidate = _batch()
+    candidate["source_id"] = "patient name"
+    candidate["release_id"] = 123456789
+    candidate["artifact_id"] = {"untrusted": "raw-artifact-value"}
+    candidate["rows"] = []
+
+    report = validate_drift(candidate, _batch_baseline())
+    record = build_quarantine_record(candidate, report, recorded_at="2026-08-29T00:00:00Z")
+    encoded = json.dumps({"report": report.as_dict(), "record": record.as_dict()}, sort_keys=True)
+
+    assert record.source_id is not None and record.source_id.startswith("redacted:")
+    assert record.release_id is not None and record.release_id.startswith("redacted:")
+    assert record.artifact_id is not None and record.artifact_id.startswith("redacted:")
+    assert "patient name" not in encoded
+    assert "raw-artifact-value" not in encoded
+    assert str(123456789) not in encoded
+
+
+def test_checkpoint_and_cursor_identity_participate_in_key_drift() -> None:
+    candidate = _batch()
+    candidate["checkpoint"] = {"checkpoint_id": "checkpoint:fixture:v1", "cursor": "cursor:1"}
+    expected_digest = _candidate_key_digest(candidate)
+    assert expected_digest is not None
+    baseline = DriftBaseline(
+        source_id="source:fixture",
+        schema_version="adapter.batch.v1",
+        expected_row_count=2,
+        expected_observation_ids=("row:1", "row:2"),
+        row_id_field="row_id",
+        max_row_count_delta_ratio=0,
+        expected_key_digest=expected_digest,
+        expected_checkpoint_id="checkpoint:fixture:v1",
+        expected_cursor="cursor:1",
+    )
+
+    assert validate_drift(candidate, baseline).accepted
+    drifted = {**candidate, "checkpoint": {"checkpoint_id": "checkpoint:fixture:v1", "cursor": "cursor:2"}}
+    report = validate_drift(drifted, baseline)
+
+    assert report.rejected
+    assert "key.cursor_drift" in report.issue_codes
+    assert "key.identity_drift" in report.issue_codes
 
 
 def test_rejected_candidate_is_quarantined_and_never_projected(tmp_path: Path) -> None:
@@ -173,6 +247,22 @@ def test_quarantine_retry_is_idempotent_across_recording_times(tmp_path: Path) -
     assert first_receipt.state == "stored"
     assert duplicate_receipt.state == "duplicate"
     assert duplicate_receipt.record_sha256 == first.record_sha256
+
+
+def test_quarantine_record_integrity_is_verified_on_read(tmp_path: Path) -> None:
+    candidate = _batch()
+    candidate["rows"] = []
+    report = validate_drift(candidate, _batch_baseline())
+    record = build_quarantine_record(candidate, report, recorded_at="2026-08-29T00:00:00Z")
+    store = QuarantineStore(tmp_path)
+    receipt = store.put(record)
+    path = Path(receipt.path)
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload["record_sha256"] = "sha256:" + "0" * 64
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(QuarantineError, match="integrity"):
+        store.read(record.quarantine_id)
 
 
 def test_quarantine_rejects_record_path_symlink(tmp_path: Path) -> None:
