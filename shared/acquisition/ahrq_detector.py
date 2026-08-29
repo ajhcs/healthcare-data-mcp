@@ -16,6 +16,8 @@ from pathlib import Path
 import re
 from typing import Literal, Mapping, TypeAlias, cast
 
+from shared.adapters.contracts import fingerprint_bytes
+
 
 DetectionState = Literal["changed", "unchanged", "failed_probe"]
 
@@ -373,7 +375,7 @@ def _timestamp(value: object, label: str) -> datetime:
 
 
 def _sha256(value: bytes) -> str:
-    return "sha256:" + sha256(value).hexdigest()
+    return fingerprint_bytes(value)
 
 
 def _receipt_id(
