@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.ushso.org/healthcare-data-platform/staging/v2/staging-activation-blocked-host-custody.schema.json",
+  "title": "Healthcare Data MCP blocked staging activation evidence v2",
+  "description": "Additive blocker evidence. This receipt supplements and never replaces the retained v1 pending-approval receipt; it cannot prove a healthy activation.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "record_type", "receipt_id", "environment", "state", "status", "activation_performed", "approval", "targets", "port_preflight", "fixture_verification", "host_custody", "prohibitions", "hash_algorithm", "hash_scope", "receipt_hash"],
+  "properties": {
+    "schema_version": {"const": "hdp.staging-activation-blocked-host-custody.v2"},
+    "record_type": {"const": "staging_activation_blocked_host_custody"},
+    "receipt_id": {"type": "string", "pattern": "^receipt:staging-activation-blocked:[a-z0-9][a-z0-9._:-]*$"},
+    "environment": {"const": "staging"},
+    "state": {"const": "blocked_host_custody"},
+    "status": {"const": "pending"},
+    "activation_performed": {"const": false},
+    "approval": {"$ref": "#/$defs/pending_approval"},
+    "targets": {"$ref": "#/$defs/targets"},
+    "port_preflight": {"$ref": "#/$defs/port_preflight"},
+    "fixture_verification": {"$ref": "#/$defs/fixture_verification"},
+    "host_custody": {"$ref": "#/$defs/host_custody"},
+    "prohibitions": {"$ref": "#/$defs/prohibitions"},
+    "hash_algorithm": {"const": "sha256"},
+    "hash_scope": {"const": "canonical_json_without_receipt_hash"},
+    "receipt_hash": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  },
+  "$defs": {
+    "pending_approval": {
+      "type": "object", "additionalProperties": false,
+      "required": ["state", "scope", "required_before"],
+      "properties": {
+        "state": {"const": "pending"},
+        "scope": {"const": "staging-activation"},
+        "required_before": {"enum": ["restart", "migration", "activation"]},
+        "approved_by": {"type": ["string", "null"], "pattern": "^[^\\s].{0,127}$"},
+        "approved_at": {"type": ["string", "null"], "format": "date-time"}
+      }
+    },
+    "targets": {
+      "type": "object", "additionalProperties": false,
+      "required": ["data_mcp_commit", "paired_toolkit_commit"],
+      "properties": {
+        "data_mcp_commit": {"const": "7b11b83268c72634dbfe36f4fe5f61b447975770"},
+        "paired_toolkit_commit": {"const": "d21074bf9eae5bcf793186a2e003f64a7d543e27"}
+      }
+    },
+    "port_preflight": {
+      "type": "object", "additionalProperties": false,
+      "required": ["command", "observed_at", "ports"],
+      "properties": {
+        "command": {"const": "ss -H -ltnp '( sport = :8110 or sport = :3020 )'"},
+        "observed_at": {"type": "string", "format": "date-time"},
+        "ports": {
+          "type": "array", "minItems": 2, "maxItems": 2, "uniqueItems": true,
+          "allOf": [
+            {"contains": {"type": "object", "required": ["port"], "properties": {"port": {"const": 8110}}}},
+            {"contains": {"type": "object", "required": ["port"], "properties": {"port": {"const": 3020}}}}
+          ],
+          "items": {"$ref": "#/$defs/free_port"}
+        }
+      }
+    },
+    "free_port": {
+      "type": "object", "additionalProperties": false,
+      "required": ["port", "state", "listeners"],
+      "properties": {
+        "port": {"enum": [8110, 3020]},
+        "state": {"const": "free"},
+        "listeners": {"const": []}
+      }
+    },
+    "fixture_verification": {
+      "type": "object", "additionalProperties": false,
+      "required": ["state", "execution", "temporary_root", "artifacts"],
+      "properties": {
+        "state": {"const": "blocked_host_custody"},
+        "execution": {"const": "not_run"},
+        "temporary_root": {"$ref": "#/$defs/temporary_root"},
+        "artifacts": {
+          "type": "object", "additionalProperties": false,
+          "required": ["scheduler", "queue", "raw_custody"],
+          "properties": {
+            "scheduler": {"$ref": "#/$defs/fixture_artifact"},
+            "queue": {"$ref": "#/$defs/fixture_artifact"},
+            "raw_custody": {"$ref": "#/$defs/fixture_artifact"}
+          }
+        }
+      }
+    },
+    "temporary_root": {
+      "type": "object", "additionalProperties": false,
+      "required": ["ownership", "path_template", "provided_by_caller", "source_bytes_written"],
+      "properties": {
+        "ownership": {"const": "caller_owned_tmp_path"},
+        "path_template": {"const": "{tmp_path}"},
+        "provided_by_caller": {"const": true},
+        "source_bytes_written": {"const": false}
+      }
+    },
+    "fixture_artifact": {
+      "type": "object", "additionalProperties": false,
+      "required": ["path_template", "ownership", "provided_by_caller", "evidence_state", "content_present", "source_bytes_written"],
+      "properties": {
+        "path_template": {"type": "string", "pattern": "^\\{tmp_path\\}/(control/scheduler\\.json|control/control\\.sqlite3|raw-custody)$"},
+        "ownership": {"const": "caller_owned_tmp_path"},
+        "provided_by_caller": {"const": true},
+        "evidence_state": {"const": "pending"},
+        "content_present": {"const": false},
+        "source_bytes_written": {"const": false}
+      }
+    },
+    "host_custody": {
+      "type": "object", "additionalProperties": false,
+      "required": ["state", "reason_code", "staging_root", "staging_root_present", "parent_custody_verified", "mutations_performed"],
+      "properties": {
+        "state": {"const": "blocked_host_custody"},
+        "reason_code": {"const": "staging_root_absent_parent_world_writable"},
+        "staging_root": {"const": "/mnt/d/services/healthcare-toolkit-staging"},
+        "staging_root_present": {"const": false},
+        "parent_custody_verified": {"const": false},
+        "mutations_performed": {"const": false}
+      }
+    },
+    "prohibitions": {
+      "type": "object", "additionalProperties": false,
+      "required": ["services_started", "ports_bound", "migrations_applied", "credentials_resolved", "sources_probed", "runtime_state_written"],
+      "properties": {
+        "services_started": {"const": false},
+        "ports_bound": {"const": false},
+        "migrations_applied": {"const": false},
+        "credentials_resolved": {"const": false},
+        "sources_probed": {"const": false},
+        "runtime_state_written": {"const": false}
+      }
+    }
+  }
+}

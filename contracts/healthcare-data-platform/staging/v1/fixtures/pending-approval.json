@@ -3,7 +3,7 @@
   "record_type": "staging_activation_receipt",
   "receipt_id": "receipt:staging-activation:p1-33-preparation-20260829",
   "bundle_release_id": "p1-31-data-mcp-staging-20260829",
-  "source_commit": "f477e126cc09d5a8ce7edc7ffcd4833cb484f766",
+  "source_commit": "ce43147c30793a4dbb35ed97649998a3a5426441",
   "environment": "staging",
   "state": "pending_approval",
   "activation_performed": false,
@@ -17,57 +17,5 @@
     "telemetry": {"state": "pending_approval", "approval_required": true, "mutation_performed": false, "evidence_refs": ["fixture.telemetry"]},
     "rollback": {"state": "pending_approval", "approval_required": true, "mutation_performed": false, "evidence_refs": ["bundle.rollback"]}
   },
-  "prohibitions": {"services_started": false, "ports_bound": false, "migrations_applied": false, "credentials_resolved": false, "sources_probed": false, "runtime_state_written": false},
-  "verification": {
-    "state": "blocked_host_custody",
-    "status": "pending",
-    "execution": "not_run",
-    "activation_claim": "not_activated",
-    "source_commit": "f477e126cc09d5a8ce7edc7ffcd4833cb484f766",
-    "port_preflight": {
-      "command": "ss -H -ltnp '( sport = :8110 or sport = :3020 )'",
-      "observed_at": "2026-08-29T16:08:11Z",
-      "ports": [
-        {"port": 8110, "state": "free", "listeners": []},
-        {"port": 3020, "state": "free", "listeners": []}
-      ]
-    },
-    "temporary_root": {
-      "ownership": "caller_owned_tmp_path",
-      "path_template": "{tmp_path}",
-      "provided_by_caller": true,
-      "source_bytes_written": false
-    },
-    "host_custody": {
-      "state": "blocked_host_custody",
-      "reason_code": "staging_root_absent_parent_world_writable",
-      "staging_root": "/mnt/d/services/healthcare-toolkit-staging",
-      "staging_root_present": false,
-      "parent_custody_verified": false,
-      "mutations_performed": false
-    },
-    "artifacts": {
-      "scheduler": {
-        "path_template": "{tmp_path}/control/scheduler.json",
-        "ownership": "caller_owned_tmp_path",
-        "provided_by_caller": true,
-        "evidence_state": "pending",
-        "content_present": false
-      },
-      "queue": {
-        "path_template": "{tmp_path}/control/control.sqlite3",
-        "ownership": "caller_owned_tmp_path",
-        "provided_by_caller": true,
-        "evidence_state": "pending",
-        "content_present": false
-      },
-      "raw_custody": {
-        "path_template": "{tmp_path}/raw-custody",
-        "ownership": "caller_owned_tmp_path",
-        "provided_by_caller": true,
-        "evidence_state": "pending",
-        "content_present": false
-      }
-    }
-  }
+  "prohibitions": {"services_started": false, "ports_bound": false, "migrations_applied": false, "credentials_resolved": false, "sources_probed": false, "runtime_state_written": false}
 }

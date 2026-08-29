@@ -5,7 +5,7 @@
   "description": "Approval-gated evidence contract. A pending receipt is preparation evidence only and never proves activation.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "record_type", "receipt_id", "bundle_release_id", "source_commit", "environment", "state", "activation_performed", "approval", "outcomes", "prohibitions", "verification"],
+  "required": ["schema_version", "record_type", "receipt_id", "bundle_release_id", "source_commit", "environment", "state", "activation_performed", "approval", "outcomes", "prohibitions"],
   "properties": {
     "schema_version": {"const": "hdp.staging-activation-receipt.v1"},
     "record_type": {"const": "staging_activation_receipt"},
@@ -47,8 +47,7 @@
         "migrations_applied": {"const": false}, "credentials_resolved": {"const": false},
         "sources_probed": {"const": false}, "runtime_state_written": {"const": false}
       }
-    },
-    "verification": {"$ref": "#/$defs/verification"}
+    }
   },
   "$defs": {
     "outcome": {
@@ -60,87 +59,6 @@
         "mutation_performed": {"const": false},
         "evidence_refs": {"type": "array", "maxItems": 16, "items": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._:/-]{0,159}$"}},
         "note": {"type": "string", "maxLength": 512}
-      }
-    },
-    "verification": {
-      "type": "object", "additionalProperties": false,
-      "required": ["state", "status", "execution", "activation_claim", "source_commit", "port_preflight", "temporary_root", "host_custody", "artifacts"],
-      "properties": {
-        "state": {"const": "blocked_host_custody"},
-        "status": {"const": "pending"},
-        "execution": {"const": "not_run"},
-        "activation_claim": {"const": "not_activated"},
-        "source_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
-        "port_preflight": {"$ref": "#/$defs/port_preflight"},
-        "temporary_root": {"$ref": "#/$defs/temporary_root"},
-        "host_custody": {"$ref": "#/$defs/host_custody"},
-        "artifacts": {
-          "type": "object", "additionalProperties": false,
-          "required": ["scheduler", "queue", "raw_custody"],
-          "properties": {
-            "scheduler": {"$ref": "#/$defs/fixture_artifact"},
-            "queue": {"$ref": "#/$defs/fixture_artifact"},
-            "raw_custody": {"$ref": "#/$defs/fixture_artifact"}
-          }
-        }
-      }
-    },
-    "port_preflight": {
-      "type": "object", "additionalProperties": false,
-      "required": ["command", "observed_at", "ports"],
-      "properties": {
-        "command": {"const": "ss -H -ltnp '( sport = :8110 or sport = :3020 )'"},
-        "observed_at": {"type": "string", "format": "date-time"},
-        "ports": {
-          "type": "array", "minItems": 2, "maxItems": 2, "uniqueItems": true,
-          "allOf": [
-            {"contains": {"type": "object", "properties": {"port": {"const": 8110}}}},
-            {"contains": {"type": "object", "properties": {"port": {"const": 3020}}}}
-          ],
-          "items": {"$ref": "#/$defs/free_port"}
-        }
-      }
-    },
-    "free_port": {
-      "type": "object", "additionalProperties": false,
-      "required": ["port", "state", "listeners"],
-      "properties": {
-        "port": {"enum": [8110, 3020]},
-        "state": {"const": "free"},
-        "listeners": {"const": []}
-      }
-    },
-    "temporary_root": {
-      "type": "object", "additionalProperties": false,
-      "required": ["ownership", "path_template", "provided_by_caller", "source_bytes_written"],
-      "properties": {
-        "ownership": {"const": "caller_owned_tmp_path"},
-        "path_template": {"const": "{tmp_path}"},
-        "provided_by_caller": {"const": true},
-        "source_bytes_written": {"const": false}
-      }
-    },
-    "host_custody": {
-      "type": "object", "additionalProperties": false,
-      "required": ["state", "reason_code", "staging_root", "staging_root_present", "parent_custody_verified", "mutations_performed"],
-      "properties": {
-        "state": {"const": "blocked_host_custody"},
-        "reason_code": {"const": "staging_root_absent_parent_world_writable"},
-        "staging_root": {"const": "/mnt/d/services/healthcare-toolkit-staging"},
-        "staging_root_present": {"const": false},
-        "parent_custody_verified": {"const": false},
-        "mutations_performed": {"const": false}
-      }
-    },
-    "fixture_artifact": {
-      "type": "object", "additionalProperties": false,
-      "required": ["path_template", "ownership", "provided_by_caller", "evidence_state", "content_present"],
-      "properties": {
-        "path_template": {"type": "string", "pattern": "^\\{tmp_path\\}/(control/scheduler\\.json|control/control\\.sqlite3|raw-custody)$"},
-        "ownership": {"const": "caller_owned_tmp_path"},
-        "provided_by_caller": {"const": true},
-        "evidence_state": {"const": "pending"},
-        "content_present": {"const": false}
       }
     }
   },
