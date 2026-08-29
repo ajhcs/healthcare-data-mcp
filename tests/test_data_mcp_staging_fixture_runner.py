@@ -47,9 +47,28 @@ def test_fixture_runner_proves_all_required_boundaries(tmp_path: Path) -> None:
     assert isinstance(binding, dict)
     assert binding["reviewed_candidate_sha"] == CANDIDATE_SHA
     assert binding["artifact_count"] >= 10
+    artifact_paths = {
+        cast(dict[str, object], artifact)["path"]
+        for artifact in cast(list[object], MANIFEST_VALUE["artifacts"])
+        if isinstance(artifact, dict)
+    }
+    assert {
+        "contracts/healthcare-data-platform/catalog/v1/fixtures/valid-source-catalog.json",
+        "contracts/healthcare-data-platform/scheduler/v1/scheduler-state.schema.json",
+        "contracts/healthcare-data-platform/queue/v1/queue.schema.json",
+        "contracts/healthcare-data-platform/storage/v1/raw-artifact.schema.json",
+        "shared/utils/source_cadence.py",
+        "shared/utils/source_scheduler.py",
+        "shared/queue/durable.py",
+        "shared/storage/raw_custody.py",
+    } <= artifact_paths
     queue = receipt["queue"]
     assert isinstance(queue, dict)
     assert queue["journal_mode"] == "wal"
+    assert receipt["ordering"] == {
+        "durable_ack_before_scheduler_checkpoint": True,
+        "events": ["acknowledgement_checkpoint", "raw_custody", "scheduler_checkpoint"],
+    }
     assert receipt["network"] == {
         "audit_events": [],
         "binds": [],
@@ -74,6 +93,8 @@ def test_fixture_runner_proves_all_required_boundaries(tmp_path: Path) -> None:
     assert not list((root / "control").glob(".*.tmp"))
 
     changed = cast(dict[str, object], cast(dict[str, object], receipt["custody"])["changed"])["artifact_id"]
+    custody = cast(dict[str, object], receipt["custody"])
+    assert custody["changed_artifact_absent_from_current"] is True
     projections = cast(dict[str, object], json.loads((root / "control/projections.json").read_text(encoding="utf-8")))
     current = cast(dict[str, object], projections["current"])
     assert current["artifact_id"] != changed
