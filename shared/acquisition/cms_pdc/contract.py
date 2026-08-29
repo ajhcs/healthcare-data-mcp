@@ -415,10 +415,14 @@ class CmsPdcReceipt:
     error: str | None = None
 
     def __post_init__(self) -> None:
-        if _RECEIPT_ID.fullmatch(self.receipt_id) is None:
+        receipt_id = _text(self.receipt_id, "receipt_id", 80)
+        idempotency_key = _text(self.idempotency_key, "idempotency_key", 80)
+        if _RECEIPT_ID.fullmatch(receipt_id) is None:
             raise CmsPdcError("receipt_id has an invalid format")
-        if _IDEMPOTENCY_KEY.fullmatch(self.idempotency_key) is None:
+        if _IDEMPOTENCY_KEY.fullmatch(idempotency_key) is None:
             raise CmsPdcError("idempotency_key has an invalid format")
+        object.__setattr__(self, "receipt_id", receipt_id)
+        object.__setattr__(self, "idempotency_key", idempotency_key)
         if self.state not in {"changed", "no_op", "schema_drift", "replayed", "interrupted", "failed_probe"}:
             raise CmsPdcError("state is unsupported")
         if self.change_kind not in {"release", "content", "none", "schema_drift", "replay", "interrupted", "failed"}:
@@ -438,8 +442,11 @@ class CmsPdcReceipt:
         object.__setattr__(
             self, "prior_content_sha256", _optional_sha256(self.prior_content_sha256, "prior_content_sha256")
         )
-        if self.prior_receipt_id is not None and _RECEIPT_ID.fullmatch(self.prior_receipt_id) is None:
-            raise CmsPdcError("prior_receipt_id has an invalid format")
+        if self.prior_receipt_id is not None:
+            prior_receipt_id = _text(self.prior_receipt_id, "prior_receipt_id", 80)
+            if _RECEIPT_ID.fullmatch(prior_receipt_id) is None:
+                raise CmsPdcError("prior_receipt_id has an invalid format")
+            object.__setattr__(self, "prior_receipt_id", prior_receipt_id)
         if self.probe_state not in {"changed", "not_modified", "failed_probe"}:
             raise CmsPdcError("probe_state is unsupported")
         if self.schema_state not in {"valid", "drift", "not_checked"}:

@@ -13,6 +13,7 @@ from shared.acquisition.cms_pdc.contract import (
     canonical_release_fingerprint,
     validate_cms_pdc_receipt,
 )
+from shared.acquisition.cms_pdc.producer import CmsPdcProducer
 
 __all__ = [
     "CMS_PDC_RECORD_TYPE",
@@ -24,6 +25,7 @@ __all__ = [
     "CmsPdcReceipt",
     "CmsPdcRelease",
     "CmsPdcState",
+    "CmsPdcProducer",
     "canonical_release_fingerprint",
     "validate_cms_pdc_receipt",
 ]
