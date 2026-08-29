@@ -7,7 +7,7 @@ from hashlib import sha256
 from typing import Literal, Mapping
 
 from shared.contracts.healthcare_data_platform import validate_observation_envelope
-from shared.storage.raw_custody import RawArtifactMetadata, RawCustodyError
+from shared.storage.raw_custody import RawArtifactMetadata, RawArtifactStore, RawCustodyError
 
 PayerType = Literal["medicare_advantage", "medicare_part_d", "marketplace"]
 Missingness = Literal["not_yet_researched", "unavailable_public", "not_applicable", "blocked_source_conflict"]
@@ -61,15 +61,16 @@ class PayerCandidate:
         return cls(payer, family, str(value["source_period"]), str(value.get("geography") or value["state"]), str(value.get("plan_or_contract_id") or value.get("plan_id") or value.get("contract_id") or ""), value.get("numerator") if isinstance(value.get("numerator"), int) else None, denominator if isinstance(denominator, int) else None, str(value.get("denominator_scope") or configured["payer_type"] + " enrollment"), str(value.get("source_url") or configured["source_url"]), str(value.get("artifact_id") or ""), str(value.get("content_sha256") or ""), "approved_public", "frozen_verified_external" if value.get("content_sha256") else "unverified_external", value.get("missingness") if value.get("missingness") in {"not_yet_researched", "unavailable_public", "not_applicable", "blocked_source_conflict"} else None)  # type: ignore[arg-type]
 
 
-def build_payer_observation_envelope(*, tracking_bead: str, source_family: str, source_period: str, artifact_bytes: bytes, candidates: list[Mapping[str, object]], retrieved_at: str, custody_metadata: RawArtifactMetadata | Mapping[str, object]) -> dict[str, object]:
+def build_payer_observation_envelope(*, tracking_bead: str, source_family: str, source_period: str, candidates: list[Mapping[str, object]], retrieved_at: str, artifact_store: RawArtifactStore, artifact_id: str) -> dict[str, object]:
     """Build a secret-free source-bound observation envelope for candidates."""
     source = SOURCE_CATALOG.get(source_family)
     if source is None:
         raise ValueError("unregistered payer source family")
     try:
-        custody = custody_metadata if isinstance(custody_metadata, RawArtifactMetadata) else RawArtifactMetadata.from_mapping(custody_metadata)
-    except RawCustodyError as exc:
-        raise ValueError("invalid P1-04 custody metadata") from exc
+        custody = artifact_store.read_metadata(artifact_id)
+        artifact_bytes = artifact_store.read_bytes(artifact_id)
+    except (RawCustodyError, OSError) as exc:
+        raise ValueError("unable to read P1-04 custody artifact") from exc
     digest = "sha256:" + sha256(artifact_bytes).hexdigest()
     if custody.content_sha256 != digest or custody.byte_length != len(artifact_bytes):
         raise ValueError("custody metadata does not match artifact bytes")
@@ -82,9 +83,10 @@ def build_payer_observation_envelope(*, tracking_bead: str, source_family: str, 
     if not parsed:
         parsed = [PayerCandidate.from_mapping({"payer_type": source["payer_type"], "source_family": source_family, "source_period": source_period, "geography": "unresolved", "missingness": "not_yet_researched"})]
     release_id = custody.release_id
-    artifact_id = custody.artifact_id
+    raw_artifact_id = custody.artifact_id
     seed = sha256((source_family + "|" + source_period + "|" + digest + "|" + tracking_bead).encode()).hexdigest()[:32]
-    normalized_id = artifact_id
+    normalized_id = "artifact:raw:" + seed
+    artifact_id = normalized_id
     activity_id = "activity:payer:normalize:" + seed
     receipt_id = "receipt:payer:" + seed[:24]
     observation_ids = ["observation:payer:" + seed + ":" + str(index) for index in range(1, max(1, len(parsed)) + 1)]
