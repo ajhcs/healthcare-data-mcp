@@ -20,7 +20,7 @@ import sqlite3
 import subprocess
 import sys
 import time
-from typing import Callable, Mapping, cast
+from typing import Callable, Mapping, TypeAlias, cast
 
 # Executing ``python scripts/...`` puts scripts/, rather than the checkout,
 # first on sys.path.  Make the exact reviewed checkout the import root.
@@ -95,6 +95,7 @@ RUN_AT = datetime(2026, 8, 29, tzinfo=timezone.utc)
 RUN_AT_TEXT = "2026-08-29T00:00:00Z"
 ENTRYPOINT = "scripts/run_data_mcp_staging_fixture.py"
 FIXTURE_VERSION = "r3-data-mcp-fixture.v1"
+JsonValue: TypeAlias = None | bool | int | float | str | list["JsonValue"] | dict[str, "JsonValue"]
 
 
 class _StrictLoader(yaml.SafeLoader):
@@ -267,7 +268,7 @@ _CONTROL_SCHEMAS: dict[str, dict[str, object]] = {
 
 
 def _validate_schema(value: object, schema: Mapping[str, object], label: str) -> None:
-    errors = Draft202012Validator(schema, format_checker=FormatChecker()).iter_errors(value)
+    errors = Draft202012Validator(schema, format_checker=FormatChecker()).iter_errors(cast(JsonValue, value))
     first = next(errors, None)
     if first is not None:
         raise FixtureError(f"{label} schema validation failed: {first.message}")
@@ -340,7 +341,7 @@ def _verify_candidate(candidate_sha: str) -> dict[str, object]:
     return manifest
 
 
-def _load_bundle() -> tuple[dict[str, object], dict[str, object]]:
+def _load_bundle() -> tuple[dict[str, object], dict[str, int]]:
     try:
         value = yaml.load(BUNDLE_PATH.read_text(encoding="utf-8"), Loader=_StrictLoader)
     except (OSError, UnicodeError, yaml.YAMLError) as exc:
@@ -655,9 +656,10 @@ def run(candidate_sha: str, root_value: str) -> dict[str, object]:
     )
     durable_order: list[str] = []
 
-    lease = _mapping(
+    worker_pool = _mapping(
         _mapping(_mapping(bundle["spec"], "bundle.spec")["topology"], "topology")["worker_pool"], "worker pool"
-    )["lease"]
+    )
+    lease = _mapping(worker_pool["lease"], "worker lease")
     policy = QueuePolicy(
         max_active_items=bounds["max_active_items"],
         max_active_bytes=bounds["max_active_bytes"],
@@ -989,7 +991,7 @@ def run(candidate_sha: str, root_value: str) -> dict[str, object]:
             "release_id": _mapping(_mapping(bundle["metadata"], "bundle.metadata"), "metadata")["release_id"],
         },
         "runs": 3,
-        "bounds": bounds | {"lease_ttl_seconds": lease["ttl_seconds"], "max_attempts": lease["max_attempts"]},
+        "bounds": dict(bounds),
         "lineage": {
             "source_id": source_id,
             "source_url": fixture["source_url"],
