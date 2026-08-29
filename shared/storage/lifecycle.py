@@ -288,8 +288,8 @@ class RawArtifactLifecycle:
             grace = _format_timestamp(_parse_timestamp(current) + self.default_grace)
         if retention_class in NON_EXPIRING_CLASSES and expiry is not None:
             raise LifecycleError("non-expiring retention classes cannot carry expires_at")
-        if grace is not None and expiry is not None and _parse_timestamp(grace) > _parse_timestamp(expiry):
-            raise LifecycleError("grace_until cannot be after expires_at")
+        if grace is not None and expiry is not None and _parse_timestamp(grace) < _parse_timestamp(expiry):
+            raise LifecycleError("grace_until cannot be before expires_at")
         existing = self._read_optional(artifact_id)
         if existing is not None:
             if existing.content_sha256 != item.content_sha256 or existing.byte_length != item.byte_length:
