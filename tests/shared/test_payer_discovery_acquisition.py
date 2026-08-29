@@ -2,7 +2,12 @@ from datetime import datetime, timezone
 import hashlib
 import pytest
 
-from shared.acquisition.payer_discovery import PayerCandidate, SOURCE_CATALOG, build_payer_observation_envelope
+from shared.acquisition.payer_discovery import (
+    PayerCandidate,
+    SOURCE_CATALOG,
+    build_payer_observation_envelope,
+    validate_payer_catalog,
+)
 from shared.storage.raw_custody import RawArtifactStore
 
 
@@ -17,6 +22,22 @@ def test_typed_candidate_rejects_census_and_unregistered_mapping() -> None:
                 "denominator": 4,
             }
         )
+
+
+def test_catalog_is_json_safe_and_f7_reference_is_first_class() -> None:
+    catalog = validate_payer_catalog()
+    assert set(catalog) == set(SOURCE_CATALOG)
+    candidate = PayerCandidate.from_mapping(
+        {
+            "payer_type": "f7_reference",
+            "source_family": "f7_payer_toc_reference",
+            "source_period": "2024",
+            "geography": "PA",
+            "reference_id": "f7:marketplace:pa",
+            "missingness": "not_applicable",
+        }
+    )
+    assert candidate.reference_id == "f7:marketplace:pa"
     with pytest.raises(ValueError, match="registered"):
         PayerCandidate.from_mapping(
             {
