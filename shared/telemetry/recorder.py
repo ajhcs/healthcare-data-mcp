@@ -74,9 +74,11 @@ _DIMENSION_KEY = re.compile(r"^[a-z][a-z0-9_]{0,31}$")
 _DIMENSION_VALUE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$")
 _SENSITIVE_FAILURE = re.compile(
     r"(?i)(?:authorization|proxy-authorization|cookie|set-cookie|x-api-key|api[_-]?key|password|private[_-]?key|"
-    r"secret|token)\s*[:=]\s*(?:(?:bearer|basic)\s+)?\S+|(?:bearer|basic)\s+\S+"
+    r"secret|token|key|credential)\s*[:=]\s*(?:(?:bearer|basic)\s+)?\S+|"
+    r"(?:bearer|basic)\s+\S+|"
+    r"(?:token|secret|password|key|credential|api[_-]?key|private[_-]?key)\s+\S+"
 )
-_CREDENTIAL_URL = re.compile(r"(?i)(https?://[^:/\s]+:)[^@/\s]+@")
+_REQUEST_URL = re.compile(r"(?i)\bhttps?://[^\s]+")
 _SENSITIVE_DIMENSION = re.compile(r"(?i)(?:authorization|cookie|key|password|secret|token|url|query|path)")
 
 
@@ -189,7 +191,7 @@ def _redact_failure(value: object, label: str) -> str | None:
         raise TelemetryValidationError(f"{label} must be a string or null")
     normalized = "".join(character if ord(character) >= 0x20 and ord(character) != 0x7F else " " for character in value)
     normalized = _SENSITIVE_FAILURE.sub("[REDACTED]", normalized)
-    normalized = _CREDENTIAL_URL.sub(r"\1[REDACTED]@", normalized).strip()
+    normalized = _REQUEST_URL.sub("[REDACTED_URL]", normalized).strip()
     if not normalized:
         raise TelemetryValidationError(f"{label} must not be blank when supplied")
     return normalized[:MAX_FAILURE_LENGTH]
@@ -368,8 +370,11 @@ class RunTelemetry:
         material_hash = "sha256:" + sha256(_canonical(_telemetry_material(self))).hexdigest()
         if self.telemetry_sha256 is None:
             object.__setattr__(self, "telemetry_sha256", material_hash)
-        elif _fingerprint(self.telemetry_sha256) != material_hash:
-            raise TelemetryValidationError("telemetry_sha256 does not match canonical telemetry")
+        else:
+            normalized_hash = _fingerprint(self.telemetry_sha256)
+            if normalized_hash != material_hash:
+                raise TelemetryValidationError("telemetry_sha256 does not match canonical telemetry")
+            object.__setattr__(self, "telemetry_sha256", normalized_hash)
 
     @property
     def input_bytes(self) -> int:
@@ -406,7 +411,11 @@ class RunTelemetry:
     def from_mapping(cls, value: Mapping[str, object]) -> "RunTelemetry":
         """Parse a schema-validated event without accepting unknown fields."""
 
-        _validate_schema(dict(value), "run telemetry")
+        payload = dict(value)
+        raw_hash = payload.get("telemetry_sha256")
+        if isinstance(raw_hash, str) and not raw_hash.startswith("sha256:"):
+            payload["telemetry_sha256"] = "sha256:" + raw_hash
+        _validate_schema(payload, "run telemetry")
         expected = {
             "schema_version",
             "record_type",
@@ -435,49 +444,49 @@ class RunTelemetry:
             "dlq_reason",
             "dimensions",
         }
-        unknown = set(value) - expected
+        unknown = set(payload) - expected
         if unknown:
             raise TelemetryValidationError(f"run telemetry has unknown fields: {sorted(unknown)}")
-        raw_dimensions = value.get("dimensions")
+        raw_dimensions = payload.get("dimensions")
         if not isinstance(raw_dimensions, Mapping):
             raise TelemetryValidationError("dimensions must be an object")
-        raw_status = value.get("status")
-        raw_freshness = value.get("freshness_state")
-        raw_dlq = value.get("dlq_state")
+        raw_status = payload.get("status")
+        raw_freshness = payload.get("freshness_state")
+        raw_dlq = payload.get("dlq_state")
         if raw_status not in {"started", "succeeded", "failed", "partial", "dead_lettered"}:
             raise TelemetryValidationError("status is unsupported")
         if raw_freshness not in {"fresh", "stale", "unknown"}:
             raise TelemetryValidationError("freshness_state is unsupported")
         if raw_dlq not in {"none", "queued", "resolved"}:
             raise TelemetryValidationError("dlq_state is unsupported")
-        raw_retryable = value.get("failure_retryable")
+        raw_retryable = payload.get("failure_retryable")
         if raw_retryable is not None and not isinstance(raw_retryable, bool):
             raise TelemetryValidationError("failure_retryable must be boolean or null")
         return cls(
-            telemetry_id=cast(str, value.get("telemetry_id")),
-            run_id=cast(str, value.get("run_id")),
-            source_id=cast(str, value.get("source_id")),
-            artifact_id=cast(str, value.get("artifact_id")),
-            envelope_id=cast(str, value.get("envelope_id")),
-            observed_at=_parse_timestamp(value.get("observed_at"), "observed_at"),
+            telemetry_id=cast(str, payload.get("telemetry_id")),
+            run_id=cast(str, payload.get("run_id")),
+            source_id=cast(str, payload.get("source_id")),
+            artifact_id=cast(str, payload.get("artifact_id")),
+            envelope_id=cast(str, payload.get("envelope_id")),
+            observed_at=_parse_timestamp(payload.get("observed_at"), "observed_at"),
             status=cast(TelemetryStatus, raw_status),
             freshness_state=cast(FreshnessState, raw_freshness),
-            freshness_seconds=cast(float | None, value.get("freshness_seconds")),
-            source_observed_at=_optional_timestamp(value.get("source_observed_at"), "source_observed_at"),
-            failure_code=cast(str | None, value.get("failure_code")),
-            failure_message=cast(str | None, value.get("failure_message")),
+            freshness_seconds=cast(float | None, payload.get("freshness_seconds")),
+            source_observed_at=_optional_timestamp(payload.get("source_observed_at"), "source_observed_at"),
+            failure_code=cast(str | None, payload.get("failure_code")),
+            failure_message=cast(str | None, payload.get("failure_message")),
             failure_retryable=cast(bool | None, raw_retryable),
-            lag_seconds=cast(float, value.get("lag_seconds")),
-            bytes_in=cast(int, value.get("bytes_in")),
-            bytes_out=cast(int, value.get("bytes_out")),
-            rows_in=cast(int, value.get("rows_in")),
-            rows_out=cast(int, value.get("rows_out")),
-            retry_count=cast(int, value.get("retry_count")),
+            lag_seconds=cast(float, payload.get("lag_seconds")),
+            bytes_in=cast(int, payload.get("bytes_in")),
+            bytes_out=cast(int, payload.get("bytes_out")),
+            rows_in=cast(int, payload.get("rows_in")),
+            rows_out=cast(int, payload.get("rows_out")),
+            retry_count=cast(int, payload.get("retry_count")),
             dlq_state=cast(DlqState, raw_dlq),
-            dlq_count=cast(int, value.get("dlq_count")),
-            dlq_reason=cast(str | None, value.get("dlq_reason")),
+            dlq_count=cast(int, payload.get("dlq_count")),
+            dlq_reason=cast(str | None, payload.get("dlq_reason")),
             dimensions=cast(Mapping[str, str], raw_dimensions),
-            telemetry_sha256=cast(str, value.get("telemetry_sha256")),
+            telemetry_sha256=cast(str, payload.get("telemetry_sha256")),
         )
 
 
@@ -636,7 +645,7 @@ class RunTelemetrySummary:
             self, "lag_max_seconds", _bounded_seconds(self.lag_max_seconds, "lag_max_seconds", MAX_METRIC_SECONDS)
         )
         for label in ("bytes_in", "bytes_out", "rows_in", "rows_out"):
-            object.__setattr__(self, label, _bounded_int(getattr(self, label), label, MAX_METRIC_VALUE * MAX_EVENTS))
+            object.__setattr__(self, label, _bounded_int(getattr(self, label), label, MAX_METRIC_VALUE))
         object.__setattr__(
             self, "retry_count", _bounded_int(self.retry_count, "retry_count", MAX_RETRY_COUNT * MAX_EVENTS)
         )

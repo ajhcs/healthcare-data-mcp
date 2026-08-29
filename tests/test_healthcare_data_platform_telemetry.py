@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 import json
 from pathlib import Path
@@ -129,6 +130,16 @@ def test_summary_aggregates_freshness_failure_lag_volume_retries_and_dlq() -> No
     assert summary.as_dict()["record_type"] == "run_telemetry_summary"
 
 
+def test_summary_volume_bounds_match_schema_field_cap() -> None:
+    with TelemetryRecorder(":memory:") as recorder:
+        recorder.record(_event("summary-bounds"))
+        summary = recorder.summarize("run:fixture:20260829")
+
+    for field in ("bytes_in", "bytes_out", "rows_in", "rows_out"):
+        with pytest.raises(TelemetryValidationError, match="between"):
+            replace(summary, **{field: 1_000_000_000_001})
+
+
 def test_failure_and_dlq_text_is_redacted_before_persistence(tmp_path: Path) -> None:
     database = tmp_path / "telemetry.sqlite"
     event = _event("redaction", status="failed")
@@ -148,6 +159,28 @@ def test_failure_and_dlq_text_is_redacted_before_persistence(tmp_path: Path) -> 
     assert stored.failure_message == event.failure_message
     assert "super-secret-token" not in str(raw)
     assert "Authorization" not in str(raw)
+
+
+@pytest.mark.parametrize(
+    "message",
+    (
+        "key=secret",
+        "credential=secret",
+        "token secret",
+        "GET https://example.test/request?token=secret&query=phi",
+    ),
+)
+def test_failure_redaction_covers_secret_forms_and_request_urls(message: str) -> None:
+    event = replace(
+        _event("redaction-regression", status="failed"),
+        failure_message=message,
+        telemetry_sha256=None,
+    )
+
+    assert event.failure_message is not None
+    assert "secret" not in event.failure_message.lower()
+    assert "https://" not in event.failure_message.lower()
+    assert "token=secret" not in event.failure_message.lower()
 
 
 def test_dimension_allowlist_and_cardinality_are_bounded() -> None:
@@ -242,6 +275,22 @@ def test_mapping_rejects_unknown_fields_and_hash_drift() -> None:
     payload["telemetry_sha256"] = "sha256:" + "b" * 64
     with pytest.raises(TelemetryValidationError, match="telemetry_sha256"):
         RunTelemetry.from_mapping(payload)
+
+
+def test_bare_sha256_is_normalized_for_events_and_mappings() -> None:
+    event = _event("bare-hash")
+    assert event.telemetry_sha256 is not None
+    bare_hash = event.telemetry_sha256.removeprefix("sha256:")
+
+    direct = replace(event, telemetry_sha256=bare_hash)
+    assert direct.telemetry_sha256 == event.telemetry_sha256
+    assert direct.as_dict()["telemetry_sha256"] == event.telemetry_sha256
+
+    payload = event.as_dict()
+    payload["telemetry_sha256"] = bare_hash
+    parsed = RunTelemetry.from_mapping(payload)
+    assert parsed.telemetry_sha256 == event.telemetry_sha256
+    assert parsed.as_dict()["telemetry_sha256"] == event.telemetry_sha256
 
 
 def test_database_does_not_store_source_payload_columns() -> None:
