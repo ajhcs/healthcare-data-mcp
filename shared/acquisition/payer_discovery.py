@@ -115,6 +115,7 @@ class PayerCandidate:
     rights_status: Literal["approved_public", "pending_review", "blocked"]
     custody_state: Literal["frozen_verified_external", "unverified_external", "rejected"]
     missingness: Missingness | None = None
+    reference_id: str = ""
 
     @classmethod
     def from_mapping(cls, value: Mapping[str, object]) -> "PayerCandidate":
@@ -129,6 +130,9 @@ class PayerCandidate:
             raise ValueError("source period and geography are required")
         if payer == "f7_reference" and not str(value.get("reference_id") or ""):
             raise ValueError("F7 reference candidate requires reference_id")
+        reference_id = str(value.get("reference_id") or "")
+        if payer == "f7_reference" and not reference_id and not value.get("missingness"):
+            raise ValueError("F7 reference candidate requires reference_id")
         if not str(
             value.get("plan_or_contract_id") or value.get("plan_id") or value.get("contract_id") or ""
         ) and not value.get("missingness"):
@@ -137,7 +141,7 @@ class PayerCandidate:
         denominator_scope = str(value.get("denominator_scope") or configured["payer_type"] + " enrollment").lower()
         if any(token in denominator_scope for token in ("census", "acs", "population", "insurance")):
             raise ValueError("semantic population/insurance denominator is not a payer denominator")
-        if denominator is None and not value.get("missingness"):
+        if denominator is None and not value.get("missingness") and payer != "f7_reference":
             raise ValueError("denominator is required for a supported payer candidate")
         if denominator is not None and (not isinstance(denominator, int) or denominator < 0):
             raise ValueError("denominator must be a non-negative integer")
@@ -160,6 +164,11 @@ class PayerCandidate:
             value.get("competing_observation_ref") or ""
         ).startswith("observation:payer:"):
             raise ValueError("blocked source conflict requires competing observation reference")
+        if missingness == "blocked_source_conflict" and (
+            value.get("competing_source_id") != configured["source_id"]
+            or value.get("competing_release_id") != "release:" + family + ":" + str(value["source_period"])
+        ):
+            raise ValueError("blocked conflict authority does not match source release")
         return cls(
             payer,
             family,
@@ -175,6 +184,7 @@ class PayerCandidate:
             "approved_public",
             "unverified_external",
             cast(Missingness | None, missingness),
+            reference_id,
         )
 
 
@@ -255,6 +265,7 @@ def build_payer_observation_envelope(
                     "source_period": source_period,
                     "geography": "unresolved",
                     "missingness": "not_yet_researched",
+                    "reference_id": "unresolved-f7-reference" if source_family == "f7_payer_toc_reference" else "",
                 }
             )
         ]
@@ -369,6 +380,7 @@ def build_payer_observation_envelope(
                     "numerator": candidate.numerator,
                     "denominator": candidate.denominator,
                     "denominator_scope": candidate.denominator_scope,
+                    "reference_id": candidate.reference_id,
                 }
                 if state == "observed"
                 else None,
