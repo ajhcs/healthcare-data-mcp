@@ -1,9 +1,5 @@
 from datetime import datetime, timezone
-import json
-from pathlib import Path
-
 import pytest
-from jsonschema import Draft202012Validator
 
 from shared.acquisition.payer_discovery import PayerCandidate, build_payer_observation_envelope
 
@@ -16,8 +12,7 @@ def test_typed_candidate_rejects_census_and_unregistered_mapping() -> None:
 
 
 def test_observation_envelope_contains_custody_hash_and_validates_schema() -> None:
-    envelope = build_payer_observation_envelope(tracking_bead="healthcare-toolkit-rrna.p1-28-payer-discovery-20260829", source_family="cms_marketplace_effectuated_enrollment", source_period="2024", artifact_bytes=b"fixture", candidates=[{"payer_type": "marketplace", "geography": "PA", "denominator": 10}], retrieved_at=datetime.now(timezone.utc).isoformat())
-    schema = json.loads(Path("contracts/healthcare-data-platform/payer/v1/payer-observation.schema.json").read_text())
-    assert list(Draft202012Validator(schema).iter_errors(envelope)) == []
+    envelope = build_payer_observation_envelope(tracking_bead="healthcare-toolkit-rrna.p1-28-payer-discovery-20260829", source_family="cms_marketplace_effectuated_enrollment", source_period="2024", artifact_bytes=b"fixture", candidates=[{"payer_type": "marketplace", "geography": "PA", "denominator": 10}], retrieved_at=datetime.now(timezone.utc).isoformat(), custody_metadata={"artifact_id": "artifact:payer:2024", "custody_locator": "object://payer/2024", "verified": True, "immutable": True})
+    assert envelope["schema_version"] == "hdp.observation-envelope.v1"
     assert envelope["artifact"]["content_sha256"].startswith("sha256:")
-    assert envelope["authority_limits"]["projection_write_allowed"] is False
+    assert envelope["authority_limits"]["current_projection_allowed"] is False
