@@ -307,7 +307,9 @@ class RawArtifactLifecycle:
             expires_at=expiry,
         )
         self._write_metadata(metadata, overwrite=False)
-        return self._receipt("registered", metadata)
+        receipt = self._receipt("registered", metadata)
+        self._write_action_receipt(receipt)
+        return receipt
 
     def read(self, artifact_id: str) -> LifecycleMetadata:
         """Read lifecycle metadata and verify it remains bound to custody."""
@@ -331,7 +333,9 @@ class RawArtifactLifecycle:
             raise LifecycleError("reference_count would overflow")
         updated = replace(metadata, reference_count=metadata.reference_count + delta)
         self._write_metadata(updated, overwrite=True)
-        return self._receipt("referenced", updated)
+        receipt = self._receipt("referenced", updated)
+        self._write_action_receipt(receipt)
+        return receipt
 
     def release_reference(self, artifact_id: str, *, count: int = 1) -> LifecycleReceipt:
         """Release references without allowing a negative count."""
@@ -342,7 +346,9 @@ class RawArtifactLifecycle:
             raise LifecycleConflictError("reference_count cannot become negative")
         updated = replace(metadata, reference_count=metadata.reference_count - delta)
         self._write_metadata(updated, overwrite=True)
-        return self._receipt("released", updated)
+        receipt = self._receipt("released", updated)
+        self._write_action_receipt(receipt)
+        return receipt
 
     def set_legal_hold(self, artifact_id: str, held: bool = True) -> LifecycleReceipt:
         """Set or clear a legal hold; held artifacts are never compacted."""
@@ -352,7 +358,9 @@ class RawArtifactLifecycle:
         metadata = self.read(artifact_id)
         updated = replace(metadata, legal_hold=held)
         self._write_metadata(updated, overwrite=True)
-        return self._receipt("legal_hold_set" if held else "legal_hold_cleared", updated)
+        receipt = self._receipt("legal_hold_set" if held else "legal_hold_cleared", updated)
+        self._write_action_receipt(receipt)
+        return receipt
 
     def compact(
         self,
@@ -371,7 +379,7 @@ class RawArtifactLifecycle:
         quota = self.quota_bytes if quota_bytes is None else _bounded_int(quota_bytes, "quota_bytes", 1, 2**63 - 1)
         current = _parse_timestamp(_timestamp(now, "now")) if now is not None else datetime.now(timezone.utc)
         records = [metadata for path in self._metadata_paths() if (metadata := self._read_path(path)) is not None]
-        before = sum(metadata.byte_length for metadata in records if metadata.state == "active")
+        before = self._active_bytes(records)
         candidates = sorted(
             (metadata for metadata in records if self._eligible(metadata, current)),
             key=lambda value: (value.expires_at or value.created_at, value.created_at, value.artifact_id),
@@ -397,10 +405,7 @@ class RawArtifactLifecycle:
             self._quarantine(candidate, current)
             quarantined.append(candidate.artifact_id)
         orphaned = self._quarantine_orphans(current)
-        after = before - sum(
-            next(metadata.byte_length for metadata in records if metadata.artifact_id == artifact_id)
-            for artifact_id in quarantined
-        )
+        after = self._active_bytes([metadata for metadata in records if metadata.artifact_id not in set(quarantined)])
         blocked = None
         if before > quota and after > quota:
             blocked = "quota remains above target because no additional eligible unreferenced evidence exists"
@@ -453,7 +458,20 @@ class RawArtifactLifecycle:
             if object_moved and object_path.exists() and not object_path.is_symlink():
                 self._safe_move(object_path, self._confined(self.root / cast(str, metadata.quarantine_object)))
             raise
-        return self._receipt("restored", restored)
+        receipt = self._receipt("restored", restored)
+        self._write_action_receipt(receipt)
+        return receipt
+
+    def _active_bytes(self, records: Iterable[LifecycleMetadata]) -> int:
+        """Count physical active objects once, preserving content dedupe."""
+
+        seen: set[str] = set()
+        total = 0
+        for metadata in records:
+            if metadata.state == "active" and metadata.content_sha256 not in seen:
+                seen.add(metadata.content_sha256)
+                total += metadata.byte_length
+        return total
 
     def _eligible(self, metadata: LifecycleMetadata, now: datetime) -> bool:
         if metadata.state != "active" or metadata.reference_count != 0 or metadata.legal_hold:
@@ -482,7 +500,7 @@ class RawArtifactLifecycle:
         destination.mkdir(parents=True, exist_ok=True)
         quarantine_manifest = destination / "manifest.json"
         quarantine_object = destination / "object"
-        object_references = self._manifest_index().get(metadata.content_sha256, ())
+        object_references = self._manifest_index().get(metadata.content_sha256.removeprefix("sha256:"), ())
         move_object = len(object_references) <= 1
         self._safe_move(manifest, quarantine_manifest)
         try:
@@ -550,6 +568,20 @@ class RawArtifactLifecycle:
             item = RawArtifactMetadata.from_mapping(artifact)
             if item.artifact_id != artifact_id:
                 raise LifecycleConflictError("quarantined manifest identity mismatch")
+            metadata_hash = value.get("metadata_sha256")
+            expected_hash = "sha256:" + sha256(_canonical_json(dict(artifact))).hexdigest()
+            if metadata_hash != expected_hash:
+                raise LifecycleConflictError("quarantined manifest metadata hash mismatch")
+            object_path = (
+                self._confined(self.root / metadata.quarantine_object)
+                if metadata.quarantine_object is not None
+                else self._object_path(item.content_sha256)
+            )
+            if object_path.is_symlink() or not object_path.exists():
+                raise LifecycleError("quarantined artifact object is missing")
+            payload = object_path.read_bytes()
+            if len(payload) != item.byte_length or "sha256:" + sha256(payload).hexdigest() != item.content_sha256:
+                raise LifecycleConflictError("quarantined artifact bytes failed hash verification")
             return item
 
     def _read_optional(self, artifact_id: str) -> LifecycleMetadata | None:
@@ -575,6 +607,12 @@ class RawArtifactLifecycle:
     def _write_run_receipt(self, receipt: CompactionReceipt, now: datetime) -> None:
         name = f"{_format_timestamp(now).replace(':', '')}-{sha256(_canonical_json(receipt.as_dict())).hexdigest()[:16]}.json"
         _atomic_json(self.root / "lifecycle" / "receipts" / name, receipt.as_dict(), overwrite=False)
+
+    def _write_action_receipt(self, receipt: LifecycleReceipt) -> None:
+        recorded_at = _utc_now()
+        payload = {"recorded_at": recorded_at, "receipt": receipt.as_dict()}
+        name = f"{recorded_at.replace(':', '')}-{sha256(_canonical_json(payload)).hexdigest()[:16]}.json"
+        _atomic_json(self.root / "lifecycle" / "receipts" / name, payload, overwrite=False)
 
     def _receipt(
         self, action: LifecycleAction, metadata: LifecycleMetadata, detail: str | None = None
@@ -631,10 +669,15 @@ class RawArtifactLifecycle:
         return self.root / "objects" / "sha256" / digest[:2] / digest
 
     def _confined(self, path: Path) -> Path:
-        root = self.root.resolve()
-        candidate = path.resolve(strict=False)
+        root = Path(os.path.abspath(self.root))
+        candidate = Path(os.path.abspath(path))
         if not candidate.is_relative_to(root):
             raise LifecycleConflictError("lifecycle path escapes the custody root")
+        current = root
+        for part in candidate.relative_to(root).parts:
+            current /= part
+            if current.is_symlink():
+                raise LifecycleConflictError("refusing to follow symlinked lifecycle path")
         return candidate
 
     def _safe_move(self, source: Path, destination: Path) -> None:
