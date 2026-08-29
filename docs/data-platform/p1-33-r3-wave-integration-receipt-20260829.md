@@ -1,6 +1,6 @@
 # P1-33 R3 wave integration receipt
 
-Date: 2026-08-29  
+Date: 2026-08-29
 Status: `prepared_not_applied`; offline fixture contract only. No source probe,
 listener, database, credential, host, production, push, reset, rebase, or
 destructive action occurred.
