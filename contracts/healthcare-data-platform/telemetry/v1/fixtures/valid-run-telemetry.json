@@ -1,0 +1,32 @@
+{
+  "schema_version": "hdp.telemetry.v1",
+  "record_type": "run_telemetry",
+  "telemetry_id": "telemetry:run:fixture-20260829",
+  "telemetry_sha256": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "run_id": "run:fixture:20260829",
+  "source_id": "source:fixture:public",
+  "artifact_id": "artifact:fixture:20260829",
+  "envelope_id": "hdp:observation-envelope:fixture:20260829",
+  "observed_at": "2026-08-29T00:00:00Z",
+  "status": "succeeded",
+  "freshness_state": "fresh",
+  "freshness_seconds": 12.5,
+  "source_observed_at": "2026-08-28T23:59:47Z",
+  "failure_code": null,
+  "failure_message": null,
+  "failure_retryable": null,
+  "lag_seconds": 4.25,
+  "bytes_in": 2048,
+  "bytes_out": 1024,
+  "rows_in": 20,
+  "rows_out": 18,
+  "retry_count": 1,
+  "dlq_state": "none",
+  "dlq_count": 0,
+  "dlq_reason": null,
+  "dimensions": {
+    "dataset": "fixture",
+    "operation": "load",
+    "stage": "envelope"
+  }
+}
