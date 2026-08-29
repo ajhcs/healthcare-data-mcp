@@ -257,6 +257,7 @@ class CmsPosDistribution:
     last_modified: str | None = None
     content_sha256: str | None = None
     byte_length: int | None = None
+    declared_distribution_fingerprint: str | None = field(default=None, repr=False)
 
     def __post_init__(self) -> None:
         _id(self.distribution_id, "distribution_id", _DISTRIBUTION_ID)
@@ -276,6 +277,10 @@ class CmsPosDistribution:
             isinstance(self.byte_length, bool) or not isinstance(self.byte_length, int) or self.byte_length < 0
         ):
             raise CmsPosError("distribution.byte_length must be a non-negative integer")
+        if self.declared_distribution_fingerprint is not None:
+            declared = _sha(self.declared_distribution_fingerprint, "distribution.distribution_fingerprint")
+            if declared != self.distribution_fingerprint:
+                raise CmsPosError("distribution semantic fingerprint drift")
 
     @classmethod
     def from_mapping(cls, value: Mapping[str, object]) -> "CmsPosDistribution":
@@ -288,6 +293,9 @@ class CmsPosDistribution:
             last_modified=_optional_header(raw.get("last_modified"), "distribution.last_modified"),
             content_sha256=_optional_sha(raw.get("content_sha256"), "distribution.content_sha256"),
             byte_length=cast(int | None, raw.get("byte_length")),
+            declared_distribution_fingerprint=_optional_sha(
+                raw.get("distribution_fingerprint"), "distribution.distribution_fingerprint"
+            ),
         )
 
     @property
@@ -306,14 +314,20 @@ class CmsPosDistribution:
     def with_content(self, content_sha256: str, byte_length: int) -> "CmsPosDistribution":
         """Return this distribution bound to verified stream content."""
 
+        observed_sha = _sha(content_sha256, "distribution.content_sha256")
+        if self.content_sha256 is not None and self.content_sha256 != observed_sha:
+            raise CmsPosError("distribution content fingerprint does not match observed stream")
+        if self.byte_length is not None and self.byte_length != byte_length:
+            raise CmsPosError("distribution byte length does not match observed stream")
         return CmsPosDistribution(
             distribution_id=self.distribution_id,
             url=self.url,
             media_type=self.media_type,
             etag=self.etag,
             last_modified=self.last_modified,
-            content_sha256=_sha(content_sha256, "distribution.content_sha256"),
+            content_sha256=observed_sha,
             byte_length=byte_length,
+            declared_distribution_fingerprint=self.declared_distribution_fingerprint,
         )
 
     def as_dict(self) -> dict[str, object]:
@@ -455,8 +469,10 @@ class CmsPosReceipt:
         _id(self.receipt_id, "receipt.receipt_id", _RECEIPT_ID)
         if not isinstance(self.acknowledged, bool):
             raise CmsPosError("receipt.acknowledged must be boolean")
-        if self.probe_state in {"no_op", "drift", "failed_probe"} and self.acknowledged:
-            raise CmsPosError("quarantined or no-op receipt cannot be acknowledged")
+        if self.probe_state in {"drift", "failed_probe"} and self.acknowledged:
+            raise CmsPosError("quarantined receipt cannot be acknowledged")
+        if self.probe_state == "no_op" and not self.acknowledged:
+            raise CmsPosError("verified no-op receipt must be acknowledged")
         if self.probe_state in {"changed", "replayed"} and not self.acknowledged:
             raise CmsPosError("accepted or replayed receipt must be acknowledged")
         if self.stream_state not in {"not_started", "completed", "interrupted"}:
@@ -639,7 +655,8 @@ class CmsPosProducer:
             if isinstance(distribution, CmsPosDistribution)
             else CmsPosDistribution.from_mapping(distribution)
         )
-        self._validate_catalog(resolved_release)
+        catalog_entry = self._validate_catalog(resolved_release)
+        self._validate_budget(catalog_entry)
         if not isinstance(preview_authorized, bool):
             raise CmsPosError("preview_authorized must be boolean")
         if prior is not None:
@@ -674,17 +691,17 @@ class CmsPosProducer:
                 )
             return self._result(
                 resolved_release,
-                resolved_distribution,
+                self._distribution_for_noop(resolved_distribution, prior),
                 self._receipt(
                     resolved_release,
-                    resolved_distribution,
+                    self._distribution_for_noop(resolved_distribution, prior),
                     probe_state="no_op",
                     content_sha256=prior.content_sha256 if prior is not None else None,
                     received_bytes=0,
                     chunk_count=0,
                     row_count=0,
                     stream_state="not_started",
-                    acknowledged=False,
+                    acknowledged=True,
                     failure_reason=None,
                 ),
                 (),
@@ -859,6 +876,30 @@ class CmsPosProducer:
             raise CmsPosError("release_locator does not match catalog")
         return entry
 
+    def _validate_budget(self, entry: AdapterCatalogEntry) -> None:
+        """Reject a caller budget that is wider than the catalog declaration."""
+
+        violations: list[str] = []
+        if self._budget.max_bytes > entry.max_bytes:
+            violations.append("max_bytes")
+        if self._budget.max_chunks > entry.max_chunks:
+            violations.append("max_chunks")
+        if self._budget.max_seconds > entry.max_seconds:
+            violations.append("max_seconds")
+        if violations:
+            raise CmsPosError(f"producer budget exceeds catalog bounds: {', '.join(violations)}")
+
+    @staticmethod
+    def _distribution_for_noop(
+        distribution: CmsPosDistribution,
+        prior: CmsPosReceipt | None,
+    ) -> CmsPosDistribution:
+        """Bind an unchanged distribution to the prior observed content, if any."""
+
+        if prior is None or prior.content_sha256 is None:
+            return distribution
+        return distribution.with_content(prior.content_sha256, prior.received_bytes)
+
     @staticmethod
     def _validate_prior(
         prior: CmsPosReceipt,
@@ -869,12 +910,8 @@ class CmsPosProducer:
             raise CmsPosError("prior must be a CmsPosReceipt")
         if prior.source_id != release.source_id:
             raise CmsPosError("prior receipt source_id does not match release")
-        if prior.release_id != release.release_id:
-            return
         if prior.probe_state not in {"changed", "replayed", "no_op", "drift", "failed_probe"}:
             raise CmsPosError("prior receipt state is unsupported")
-        if prior.distribution_id != distribution.distribution_id:
-            raise CmsPosError("prior receipt distribution_id does not match distribution")
 
     @staticmethod
     def _same_release_identity(

@@ -134,7 +134,7 @@ def test_conditional_noop_does_not_consume_body_or_advance_acknowledgement() -> 
 
     assert consumed is False
     assert result.receipt.probe_state == "no_op"
-    assert result.receipt.acknowledged is False
+    assert result.receipt.acknowledged is True
     assert result.receipt.stream_state == "not_started"
     assert result.rows == ()
     validate_cms_pos_result(result.as_dict())
@@ -223,6 +223,61 @@ def test_catalog_rights_and_url_boundaries_are_enforced() -> None:
         CmsPosProducer(build_cms_pos_catalog()).produce(
             _release(source_url="https://other.example/cms-pos"), _distribution(), [BODY]
         )
+
+
+def test_catalog_stream_bounds_reject_a_wider_producer_budget() -> None:
+    catalog = InMemoryAdapterCatalog(
+        [
+            AdapterCatalogEntry(
+                source_id=CMS_POS_SOURCE_ID,
+                source_url=SOURCE_URL,
+                change_mode="release_metadata",
+                release_locator=RELEASE_LOCATOR,
+                rights_status="approved_public",
+                max_bytes=32,
+                max_chunks=2,
+                max_seconds=30,
+            )
+        ]
+    )
+
+    with pytest.raises(CmsPosError, match="max_bytes"):
+        CmsPosProducer(catalog).produce(_release(), _distribution(), [BODY])
+    with pytest.raises(CmsPosError, match="max_bytes"):
+        CmsPosProducer(catalog, budget=StreamBudget(max_bytes=64, max_chunks=2, max_seconds=30)).produce(
+            _release(), _distribution(), [BODY]
+        )
+
+
+def test_declared_distribution_and_content_fingerprints_cannot_be_overwritten() -> None:
+    baseline = _distribution()
+    with pytest.raises(CmsPosError, match="semantic fingerprint"):
+        _distribution(distribution_fingerprint="sha256:" + "0" * 64)
+    round_trip = CmsPosDistribution.from_mapping(baseline.as_dict())
+    assert round_trip.distribution_fingerprint == baseline.distribution_fingerprint
+
+    with pytest.raises(CmsPosError, match="content fingerprint"):
+        _producer().produce(
+            _release(),
+            _distribution(content_sha256=fingerprint_bytes(b"different")),
+            [BODY],
+        )
+
+
+def test_same_release_distribution_identity_drift_is_quarantined_without_rows() -> None:
+    producer, first = _changed()
+    result = producer.produce(
+        _release(),
+        _distribution(distribution_id="distribution:cms:pos:2026-q1-republished"),
+        [BODY],
+        prior=first.receipt,
+    )
+
+    assert result.receipt.probe_state == "drift"
+    assert result.receipt.failure_reason == "distribution_identity_drift"
+    assert result.receipt.acknowledged is False
+    assert result.rows == ()
+    validate_cms_pos_result(result.as_dict())
 
 
 def test_fixtures_are_schema_valid_and_duplicate_json_keys_are_rejected() -> None:

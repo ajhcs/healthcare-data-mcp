@@ -32,13 +32,14 @@ distribution validator, or byte fingerprint is not silently accepted.
 | Probe state | Meaning | Rows | Acknowledged |
 | --- | --- | ---: | ---: |
 | `changed` | New release/content completed bounded CSV validation | present | yes |
-| `no_op` | Conditional `304`; no body is consumed | none | no |
+| `no_op` | Conditional `304`; no body is consumed and the unchanged check is recorded | none | yes |
 | `replayed` | Same accepted release/distribution/content supplied with prior receipt | same deterministic rows | yes |
 | `drift` | Same release's semantic metadata/distribution/content conflicts, or response hash disagrees | none | no |
 | `failed_probe` | Non-2xx/304 response, missing body, interrupted stream, or malformed CSV | none | no |
 
 No-op, drift, and failed-probe results do not advance a cursor or imply a
-custody write. A drift result may carry a content fingerprint for safe
+custody write. A verified `304` no-op is acknowledged as a successful
+conditional check, while still carrying no rows or artifact admission. A drift result may carry a content fingerprint for safe
 diagnostics, but it never carries an artifact admission or source rows.
 Replaying a completed result returns the same `receipt_id`, `artifact_id`,
 `idempotency_key`, row IDs, and row fingerprints. That is evidence of

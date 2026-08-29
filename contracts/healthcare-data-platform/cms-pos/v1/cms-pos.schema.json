@@ -271,7 +271,7 @@
         "properties": {
           "receipt": {
             "properties": {
-              "acknowledged": {"const": false},
+              "acknowledged": {"const": true},
               "stream_state": {"const": "not_started"},
               "received_bytes": {"const": 0},
               "chunk_count": {"const": 0},

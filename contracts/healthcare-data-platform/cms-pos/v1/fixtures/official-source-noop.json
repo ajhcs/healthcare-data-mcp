@@ -36,7 +36,7 @@
     "content_sha256": null,
     "artifact_id": null,
     "idempotency_key": null,
-    "acknowledged": false,
+    "acknowledged": true,
     "stream_state": "not_started",
     "received_bytes": 0,
     "chunk_count": 0,
