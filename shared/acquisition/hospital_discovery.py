@@ -45,6 +45,10 @@ def _url(value: object, name: str) -> str:
     parsed = urlparse(result)
     if parsed.scheme not in {"http", "https"} or not parsed.hostname or parsed.username or parsed.password:
         raise HospitalDiscoveryError(f"{name} must be an absolute HTTP(S) URL")
+    try:
+        parsed.port
+    except ValueError as exc:
+        raise HospitalDiscoveryError(f"{name} has an invalid port") from exc
     host = parsed.hostname.casefold().rstrip(".")
     if host in {"localhost", "localhost.localdomain"} or host.endswith(".local"):
         raise HospitalDiscoveryError(f"{name} has an unsafe local authority")
@@ -52,7 +56,9 @@ def _url(value: object, name: str) -> str:
         address = ipaddress.ip_address(host)
     except ValueError:
         address = None
-    if address is not None and (address.is_private or address.is_loopback or address.is_link_local or address.is_reserved):
+    if address is not None and (
+        address.is_private or address.is_loopback or address.is_link_local or address.is_reserved
+    ):
         raise HospitalDiscoveryError(f"{name} has an unsafe private authority")
     return result
 
@@ -107,8 +113,8 @@ class HospitalUrlProbe:
         elif self.probe_state == "pending":
             if self.url_state != "unverified" or self.final_url or self.http_status is not None or self.content_sha256:
                 raise HospitalDiscoveryError("pending probe cannot carry result fields")
-        elif self.url_state == "invalid" and (self.final_url or self.http_status is not None or self.content_sha256):
-            raise HospitalDiscoveryError("invalid URL cannot carry result fields")
+        elif self.final_url or self.http_status is not None or self.content_sha256:
+            raise HospitalDiscoveryError("failed probe cannot carry result fields")
 
     def as_dict(self) -> dict[str, object]:
         return {
@@ -146,10 +152,16 @@ class HospitalEvidenceRegistration:
             raise HospitalDiscoveryError("source_id must be source-scoped")
         _digest(self.receipt_sha256, "receipt_sha256")
         receipt_payload = {
-            "evidence_id": self.evidence_id, "source_id": self.source_id, "receipt_id": self.receipt_id,
-            "entity_ref": self.entity_ref, "field": self.field, "observed_value": self.observed_value,
-            "candidate_state": self.candidate_state, "authority_state": self.authority_state,
-            "owner_promotion_state": self.owner_promotion_state, "caveat": self.caveat,
+            "evidence_id": self.evidence_id,
+            "source_id": self.source_id,
+            "receipt_id": self.receipt_id,
+            "entity_ref": self.entity_ref,
+            "field": self.field,
+            "observed_value": self.observed_value,
+            "candidate_state": self.candidate_state,
+            "authority_state": self.authority_state,
+            "owner_promotion_state": self.owner_promotion_state,
+            "caveat": self.caveat,
         }
         if self.receipt_sha256 != canonical_digest(receipt_payload):
             raise HospitalDiscoveryError("receipt_sha256 does not match canonical evidence receipt")
@@ -206,9 +218,11 @@ class HospitalDiscoveryManifest:
             raise HospitalDiscoveryError("evidence references an unregistered source")
         if self.manifest_sha256:
             _digest(self.manifest_sha256, "manifest_sha256")
+            if self.manifest_sha256 != canonical_digest(self._payload()):
+                raise HospitalDiscoveryError("manifest_sha256 does not match canonical manifest")
 
-    def as_dict(self) -> dict[str, object]:
-        payload = {
+    def _payload(self) -> dict[str, object]:
+        return {
             "schema_version": self.schema_version,
             "manifest_id": self.manifest_id,
             "lane": self.lane,
@@ -218,6 +232,9 @@ class HospitalDiscoveryManifest:
             "sources": [item.as_dict() for item in self.sources],
             "evidence": [item.as_dict() for item in self.evidence],
         }
+
+    def as_dict(self) -> dict[str, object]:
+        payload = self._payload()
         payload["manifest_sha256"] = self.manifest_sha256 or canonical_digest(payload)
         return payload
 
@@ -236,7 +253,17 @@ def register_evidence(
 
 def validate_manifest(value: Mapping[str, object]) -> HospitalDiscoveryManifest:
     """Parse and validate a strict v3 manifest mapping."""
-    allowed = {"schema_version", "manifest_id", "lane", "seal", "generated_at", "owner_promotion_state", "sources", "evidence", "manifest_sha256"}
+    allowed = {
+        "schema_version",
+        "manifest_id",
+        "lane",
+        "seal",
+        "generated_at",
+        "owner_promotion_state",
+        "sources",
+        "evidence",
+        "manifest_sha256",
+    }
     unknown = set(value) - allowed
     if unknown:
         raise HospitalDiscoveryError(f"unknown manifest fields: {sorted(unknown)}")
@@ -244,33 +271,64 @@ def validate_manifest(value: Mapping[str, object]) -> HospitalDiscoveryManifest:
     raw_evidence = value.get("evidence", ())
     if not isinstance(raw_sources, list) or not isinstance(raw_evidence, list):
         raise HospitalDiscoveryError("sources and evidence must be arrays")
-    source_allowed = {"source_id", "url", "url_state", "probe_state", "final_url", "http_status", "content_sha256", "note"}
-    evidence_allowed = {"evidence_id", "source_id", "receipt_id", "receipt_sha256", "entity_ref", "field", "observed_value", "candidate_state", "authority_state", "owner_promotion_state", "caveat"}
+    source_allowed = {
+        "source_id",
+        "url",
+        "url_state",
+        "probe_state",
+        "final_url",
+        "http_status",
+        "content_sha256",
+        "note",
+    }
+    evidence_allowed = {
+        "evidence_id",
+        "source_id",
+        "receipt_id",
+        "receipt_sha256",
+        "entity_ref",
+        "field",
+        "observed_value",
+        "candidate_state",
+        "authority_state",
+        "owner_promotion_state",
+        "caveat",
+    }
     sources = []
     for item in raw_sources:
         if not isinstance(item, Mapping) or set(item) - source_allowed:
             raise HospitalDiscoveryError("source entry has unknown fields")
-        sources.append(HospitalUrlProbe(
-            source_id=_text(item.get("source_id"), "source_id"), url=_text(item.get("url"), "url"),
-            url_state=cast(UrlState, item.get("url_state", "unverified")),
-            probe_state=cast(ProbeState, item.get("probe_state", "pending")),
-            final_url=cast(str, item.get("final_url", "")), http_status=cast(int | None, item.get("http_status")),
-            content_sha256=cast(str, item.get("content_sha256", "")), note=cast(str, item.get("note", "")),
-        ))
+        sources.append(
+            HospitalUrlProbe(
+                source_id=_text(item.get("source_id"), "source_id"),
+                url=_text(item.get("url"), "url"),
+                url_state=cast(UrlState, item.get("url_state", "unverified")),
+                probe_state=cast(ProbeState, item.get("probe_state", "pending")),
+                final_url=cast(str, item.get("final_url", "")),
+                http_status=cast(int | None, item.get("http_status")),
+                content_sha256=cast(str, item.get("content_sha256", "")),
+                note=cast(str, item.get("note", "")),
+            )
+        )
     evidence = []
     for item in raw_evidence:
         if not isinstance(item, Mapping) or set(item) - evidence_allowed:
             raise HospitalDiscoveryError("evidence entry has unknown fields")
-        evidence.append(HospitalEvidenceRegistration(
-            evidence_id=_text(item.get("evidence_id"), "evidence_id"), source_id=_text(item.get("source_id"), "source_id"),
-            receipt_id=_text(item.get("receipt_id"), "receipt_id"), receipt_sha256=_text(item.get("receipt_sha256"), "receipt_sha256"),
-            entity_ref=_text(item.get("entity_ref"), "entity_ref"), field=_text(item.get("field"), "field"),
-            observed_value=_text(item.get("observed_value"), "observed_value"),
-            candidate_state=cast(CandidateState, item.get("candidate_state", "not_evaluated")),
-            authority_state=cast(Literal["non_authoritative"], item.get("authority_state", "non_authoritative")),
-            owner_promotion_state=cast(Literal["outstanding"], item.get("owner_promotion_state", "outstanding")),
-            caveat=cast(str, item.get("caveat", "")),
-        ))
+        evidence.append(
+            HospitalEvidenceRegistration(
+                evidence_id=_text(item.get("evidence_id"), "evidence_id"),
+                source_id=_text(item.get("source_id"), "source_id"),
+                receipt_id=_text(item.get("receipt_id"), "receipt_id"),
+                receipt_sha256=_text(item.get("receipt_sha256"), "receipt_sha256"),
+                entity_ref=_text(item.get("entity_ref"), "entity_ref"),
+                field=_text(item.get("field"), "field"),
+                observed_value=_text(item.get("observed_value"), "observed_value"),
+                candidate_state=cast(CandidateState, item.get("candidate_state", "not_evaluated")),
+                authority_state=cast(Literal["non_authoritative"], item.get("authority_state", "non_authoritative")),
+                owner_promotion_state=cast(Literal["outstanding"], item.get("owner_promotion_state", "outstanding")),
+                caveat=cast(str, item.get("caveat", "")),
+            )
+        )
     supplied_digest = value.get("manifest_sha256")
     if not isinstance(supplied_digest, str):
         raise HospitalDiscoveryError("manifest_sha256 is required")
@@ -280,7 +338,8 @@ def validate_manifest(value: Mapping[str, object]) -> HospitalDiscoveryManifest:
     return HospitalDiscoveryManifest(
         manifest_id=_text(value.get("manifest_id"), "manifest_id"),
         generated_at=_text(value.get("generated_at"), "generated_at"),
-        sources=tuple(sources), evidence=tuple(evidence),
+        sources=tuple(sources),
+        evidence=tuple(evidence),
         schema_version=cast(SchemaVersion, value.get("schema_version")),
         lane=cast(Literal["hospital"], value.get("lane")),
         seal=cast(Literal["sealed"], value.get("seal")),
