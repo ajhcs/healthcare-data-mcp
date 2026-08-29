@@ -378,7 +378,7 @@ def build_payer_observation_envelope(
             "receipt_schema": "hdp.receipt.v1",
             "source_release_ref": release_id,
             "artifact_ref": artifact_id,
-            "source_release_sha256": digest,
+            "source_release_sha256": release_digest,
             "artifact_sha256": digest,
             "receipt_sha256": "sha256:" + "0" * 64,
             "state": "succeeded",
@@ -505,16 +505,12 @@ def build_payer_observation_envelope(
                 "promotion_state": "unpromoted_observation",
             }
         )
-    for observation, candidate in zip(envelope["observations"], parsed, strict=True):
+    conflict_rows = candidates if candidates else [{}]
+    for observation, row, candidate in zip(envelope["observations"], conflict_rows, parsed, strict=True):
         if candidate.missingness == "blocked_source_conflict":
             observation["conflict"]["state"] = "source_conflict"
             observation["conflict"]["resolution"] = "unresolved"
-            competing = (
-                candidates[parsed.index(candidate)].get("competing_observation_ref")
-                if parsed.index(candidate) < len(candidates)
-                else None
-            )
-            observation["conflict"]["competing_observation_refs"] = [str(competing)]
+            observation["conflict"]["competing_observation_refs"] = [str(row.get("competing_observation_ref"))]
             observation["value_state"] = "blocked_source_conflict"
             observation["value"] = None
     return validate_observation_envelope(envelope)

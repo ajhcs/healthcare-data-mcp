@@ -22,6 +22,14 @@ never supply a payer denominator. Such rows are marked for review with
 `census_not_payer_denominator` and block the pack with
 `blocked_source_conflict`; they are not silently converted into payer shares.
 
+The payer value schema is producer-private because the generic bundle is frozen:
+`contracts/healthcare-data-platform/payer/v1/payer-value.schema.json` (version
+1.0.0, SHA-256
+`83ed34cbcbe2a67f5339623fa157f0982b50e47ea6feca0aa208eea6a66a0900`).
+Blocked-conflict references are caller-attested. The authority map must name
+the exact observation ID, mark `authority_state=source_scoped`, bind source and
+release, and include artifact and receipt references.
+
 ## Coverage boundary
 
 Coverage is complete only when every requested TOC has a supported official
