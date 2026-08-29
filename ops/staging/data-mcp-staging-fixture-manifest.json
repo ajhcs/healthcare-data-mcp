@@ -3,20 +3,20 @@
   "record_type": "staging_fixture_release_manifest",
   "release_id": "r3-data-mcp-fixture-20260829",
   "baseline_sha": "63539f8412831ee62b067c76c3b5c395108481cc",
-  "reviewed_candidate_sha": "ca0f54d6fa054399f708b480102aee7adb5ab5e0",
+  "reviewed_candidate_sha": "2f2dca2f3e22238942dee14c808a13f6024c77d5",
   "entrypoint": "scripts/run_data_mcp_staging_fixture.py",
   "command": [
     "python3",
     "scripts/run_data_mcp_staging_fixture.py",
     "--candidate-sha",
-    "ca0f54d6fa054399f708b480102aee7adb5ab5e0",
+    "2f2dca2f3e22238942dee14c808a13f6024c77d5",
     "--root",
     "<empty-absolute-caller-owned-fixture-root>"
   ],
   "artifacts": [
     {
       "path": "scripts/run_data_mcp_staging_fixture.py",
-      "sha256": "sha256:855e7e55b16f0dc41066c2105055a1c03c51d03753e442039e31a56009c726ba"
+      "sha256": "sha256:4ff3c268c3e985362469b0ecccf2e2a6f8866dc1effdee3af2c9358c0b6be1ab"
     },
     {
       "path": "contracts/healthcare-data-platform/staging/v1/fixtures/deterministic-source-input.json",
@@ -32,15 +32,15 @@
     },
     {
       "path": "requirements/staging-fixture.lock",
-      "sha256": "sha256:95764ed13d18d19b922c4ca9b07eda2cbadefe4b15a5cfa7bcd7dc967657bea4"
+      "sha256": "sha256:015444671a3f480fbe694b53b8ae00e85c48de3538058a5be538ed9d357dfc29"
     },
     {
       "path": "tests/test_data_mcp_staging_fixture_runner.py",
-      "sha256": "sha256:e4bbef34e194391cf6a77a48cb6844647bcb7a0ce2cda153722558003ffa20e0"
+      "sha256": "sha256:32bd67efc690e9b66eccd60d3b7c8d8cc01f335d94aecf181e9f42cb3c91c4ef"
     },
     {
       "path": "tests/test_data_mcp_staging_lock.py",
-      "sha256": "sha256:ef3203e8623d8d8d966227a705693fe8890ec24360aa5e57f71f3ae3510a2e6d"
+      "sha256": "sha256:cd9889e5c385458a1f1b11fb13809ef4d77abb17ed85a224936bc72ec2d4cf81"
     },
     {
       "path": "contracts/healthcare-data-platform/catalog/v1/fixtures/valid-source-catalog.json",
@@ -73,11 +73,63 @@
     {
       "path": "shared/storage/raw_custody.py",
       "sha256": "sha256:32b8f38e3ae054aabccb3762ca9892e0753e8fad07b5665629f04d2456b3bcd1"
+    },
+    {
+      "path": "shared/__init__.py",
+      "sha256": "sha256:3f5c417a5d14286919a3ec52b2596ede85650ce586fc8e7b7864d935b26ab8ca"
+    },
+    {
+      "path": "shared/queue/__init__.py",
+      "sha256": "sha256:727b96f6c90efd940562971d80ea1c14f7e8c647db4feafe78885d636f030fc0"
+    },
+    {
+      "path": "shared/storage/__init__.py",
+      "sha256": "sha256:f7a5c00e7d79d97876ab7309253d073ea8e6e9cbf77d5b44378ac5293d0f5eef"
+    },
+    {
+      "path": "shared/storage/lifecycle.py",
+      "sha256": "sha256:ec44d80f8cb96d6c3c90e384fb34c07b150e88d16129c302dd226ff94c6e93f8"
+    },
+    {
+      "path": "shared/utils/__init__.py",
+      "sha256": "sha256:f5d24c29978844a0507c3eed461b5c317b76a9c0f361014b0e8f8dfdb7f76ced"
+    },
+    {
+      "path": "shared/utils/cache.py",
+      "sha256": "sha256:6235169ec113f86c2c4fc3893f85a1c4313974e3ddad91bd0b75b6ab298178aa"
+    },
+    {
+      "path": "shared/utils/cms_url_resolver.py",
+      "sha256": "sha256:f6f49f222d6a7934f33da84ab31a190bf8c7ba00cb2b862f5bda4504075e0922"
+    },
+    {
+      "path": "shared/utils/column_detection.py",
+      "sha256": "sha256:d9f8e847e5d8b0ca490c26acb38970d98470e959ea87de3218643690dca350b2"
+    },
+    {
+      "path": "shared/utils/cost_report.py",
+      "sha256": "sha256:1058b9e502b8b14a1ad7eb951a09cff3654748feb27b4410f3a55559be833746"
+    },
+    {
+      "path": "shared/utils/duckdb_helpers.py",
+      "sha256": "sha256:6d9a48dbff9135cb2fd69a5dcb30360e99a9c227101dc2358cccb08df2c11b16"
+    },
+    {
+      "path": "shared/utils/extraction.py",
+      "sha256": "sha256:d76c0e37d4679e3dbc46b941f25c87a6fe4cacb93f7734d36bcf5dbefb4fd424"
+    },
+    {
+      "path": "contracts/healthcare-data-platform/catalog/v1/source-catalog.schema.json",
+      "sha256": "sha256:25389569ebc6940d36c6a266d1d3087e962bbf77a7caedc6a0706e1cc61c8775"
+    },
+    {
+      "path": "contracts/healthcare-data-platform/catalog/v1/poll-state.schema.json",
+      "sha256": "sha256:51a08fc3a9193df754e8c5fa099636e26802c20823eb8b10f05978e94fe4484f"
     }
   ],
   "expected_receipt": {
     "path": "control/staging-fixture-receipt.json",
-    "sha256": "sha256:40ce19ddad2c1a7d20abe1ed88226fc6eabc490f0f5024a6a6ab30c7928f429f",
+    "sha256": "sha256:280c0dc3d5c9d8ba42b0fa0b31fa9cf7e9dca26f85d8d7dfac3d098628b0dcff",
     "run_at": "2026-08-29T00:00:00Z",
     "runs": 3,
     "exit_code": 0,
@@ -107,7 +159,8 @@
     "egress": "deny",
     "source_probes": "disabled",
     "bind_host": "127.0.0.1",
-    "listeners": []
+    "listeners": [],
+    "socketpair_sendmsg_guard": true
   },
   "application_migrations": {
     "applied": false,
