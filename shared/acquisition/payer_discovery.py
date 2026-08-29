@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from hashlib import sha256
-from typing import Literal, Mapping
+from typing import Literal, Mapping, cast
 
 from shared.contracts.healthcare_data_platform import validate_observation_envelope
 from shared.storage.raw_custody import RawArtifactMetadata, RawArtifactStore, RawCustodyError
@@ -13,9 +13,10 @@ PayerType = Literal["medicare_advantage", "medicare_part_d", "marketplace"]
 Missingness = Literal["not_yet_researched", "unavailable_public", "not_applicable", "blocked_source_conflict"]
 
 SOURCE_CATALOG = {
-    "cms_ma_state_county_enrollment": {"source_id": "source:cms:ma-state-county-enrollment", "payer_type": "medicare_advantage", "source_url": "https://data.cms.gov/summary-statistics-on-beneficiary-enrollment/medicare-advantage-enrollment", "release_locator": "https://data.cms.gov/summary-statistics-on-beneficiary-enrollment/medicare-advantage-enrollment"},
-    "cms_part_d_state_county_enrollment": {"source_id": "source:cms:part-d-state-county-enrollment", "payer_type": "medicare_part_d", "source_url": "https://data.cms.gov/summary-statistics-on-beneficiary-enrollment/part-d-enrollment", "release_locator": "https://data.cms.gov/summary-statistics-on-beneficiary-enrollment/part-d-enrollment"},
-    "cms_marketplace_effectuated_enrollment": {"source_id": "source:cms:marketplace-effectuated-enrollment", "payer_type": "marketplace", "source_url": "https://www.cms.gov/data-research/statistics-trends-and-reports/marketplace-products/marketplace-enrollment", "release_locator": "https://www.cms.gov/data-research/statistics-trends-and-reports/marketplace-products/marketplace-enrollment"},
+    "cms_ma_state_county_enrollment": {"source_id": "source:cms:ma-state-county-enrollment", "payer_type": "medicare_advantage", "source_url": "https://data.cms.gov/summary-statistics-on-beneficiary-enrollment/medicare-advantage-enrollment", "release_locator": "https://data.cms.gov/summary-statistics-on-beneficiary-enrollment/medicare-advantage-enrollment", "owner": "CMS", "rights_status": "approved_public", "cadence": "monthly", "artifact_identity": "state/county/contract enrollment release"},
+    "cms_part_d_state_county_enrollment": {"source_id": "source:cms:part-d-state-county-enrollment", "payer_type": "medicare_part_d", "source_url": "https://data.cms.gov/summary-statistics-on-beneficiary-enrollment/part-d-enrollment", "release_locator": "https://data.cms.gov/summary-statistics-on-beneficiary-enrollment/part-d-enrollment", "owner": "CMS", "rights_status": "approved_public", "cadence": "monthly", "artifact_identity": "state/county/contract enrollment release"},
+    "cms_marketplace_effectuated_enrollment": {"source_id": "source:cms:marketplace-effectuated-enrollment", "payer_type": "marketplace", "source_url": "https://www.cms.gov/data-research/statistics-trends-and-reports/marketplace-products/marketplace-enrollment", "release_locator": "https://www.cms.gov/data-research/statistics-trends-and-reports/marketplace-products/marketplace-enrollment", "owner": "CMS", "rights_status": "approved_public", "cadence": "annual", "artifact_identity": "plan/geography effectuated enrollment release"},
+    "f7_payer_toc_reference": {"source_id": "source:cms:payer-toc-reference", "payer_type": "marketplace", "source_url": "https://www.cms.gov/marketplace", "release_locator": "https://www.cms.gov/marketplace", "owner": "CMS", "rights_status": "approved_public", "cadence": "release", "artifact_identity": "F7 TOC/reference candidate registry"},
 }
 REJECTED_FAMILIES = frozenset({"census_population", "acs_population", "census_insurance", "modeled_population"})
 
@@ -58,7 +59,10 @@ class PayerCandidate:
         numerator = value.get("numerator")
         if numerator is not None and (not isinstance(numerator, int) or numerator < 0 or (isinstance(denominator, int) and numerator > denominator)):
             raise ValueError("numerator must be a non-negative integer no greater than denominator")
-        return cls(payer, family, str(value["source_period"]), str(value.get("geography") or value["state"]), str(value.get("plan_or_contract_id") or value.get("plan_id") or value.get("contract_id") or ""), value.get("numerator") if isinstance(value.get("numerator"), int) else None, denominator if isinstance(denominator, int) else None, str(value.get("denominator_scope") or configured["payer_type"] + " enrollment"), str(value.get("source_url") or configured["source_url"]), str(value.get("artifact_id") or ""), str(value.get("content_sha256") or ""), "approved_public", "frozen_verified_external" if value.get("content_sha256") else "unverified_external", value.get("missingness") if value.get("missingness") in {"not_yet_researched", "unavailable_public", "not_applicable", "blocked_source_conflict"} else None)  # type: ignore[arg-type]
+        missingness = value.get("missingness")
+        if missingness is not None and missingness not in {"not_yet_researched", "unavailable_public", "not_applicable", "blocked_source_conflict"}:
+            raise ValueError("unknown missingness state")
+        return cls(payer, family, str(value["source_period"]), str(value.get("geography") or value["state"]), str(value.get("plan_or_contract_id") or value.get("plan_id") or value.get("contract_id") or ""), value.get("numerator") if isinstance(value.get("numerator"), int) else None, denominator if isinstance(denominator, int) else None, str(value.get("denominator_scope") or configured["payer_type"] + " enrollment"), str(value.get("source_url") or configured["source_url"]), str(value.get("artifact_id") or ""), str(value.get("content_sha256") or ""), "approved_public", "unverified_external", cast(Missingness | None, missingness))
 
 
 def build_payer_observation_envelope(*, tracking_bead: str, source_family: str, source_period: str, candidates: list[Mapping[str, object]], retrieved_at: str, artifact_store: RawArtifactStore, artifact_id: str) -> dict[str, object]:
@@ -85,8 +89,8 @@ def build_payer_observation_envelope(*, tracking_bead: str, source_family: str, 
     release_id = custody.release_id
     raw_artifact_id = custody.artifact_id
     seed = sha256((source_family + "|" + source_period + "|" + digest + "|" + tracking_bead).encode()).hexdigest()[:32]
-    normalized_id = "artifact:raw:" + seed
-    artifact_id = normalized_id
+    artifact_id = custody.artifact_id
+    normalized_id = artifact_id  # source-native pass-through; canonical contract requires same artifact lineage
     activity_id = "activity:payer:normalize:" + seed
     receipt_id = "receipt:payer:" + seed[:24]
     observation_ids = ["observation:payer:" + seed + ":" + str(index) for index in range(1, max(1, len(parsed)) + 1)]
