@@ -1,0 +1,84 @@
+{
+  "schema_version": "hdp.staging-fixture-manifest.v1",
+  "record_type": "staging_fixture_release_manifest",
+  "release_id": "r3-data-mcp-fixture-20260829",
+  "baseline_sha": "63539f8412831ee62b067c76c3b5c395108481cc",
+  "reviewed_candidate_sha": "4651da8caf528d2bd1278463d81f44d7fb84dd66",
+  "entrypoint": "scripts/run_data_mcp_staging_fixture.py",
+  "command": [
+    "python3",
+    "scripts/run_data_mcp_staging_fixture.py",
+    "--candidate-sha",
+    "4651da8caf528d2bd1278463d81f44d7fb84dd66",
+    "--root",
+    "<empty-absolute-caller-owned-fixture-root>"
+  ],
+  "artifacts": [
+    {
+      "path": "scripts/run_data_mcp_staging_fixture.py",
+      "sha256": "sha256:d193d3dcad603c7c40d4178838b1e8de52ba2e9628746be38e60639a20d8f9d7"
+    },
+    {
+      "path": "contracts/healthcare-data-platform/staging/v1/fixtures/deterministic-source-input.json",
+      "sha256": "sha256:8c3b3ef42219298cbc81593fc10c50fc2979817fc8817ae274b892746f53fb4d"
+    },
+    {
+      "path": "contracts/healthcare-data-platform/staging/v1/fixtures/deterministic-source-input.schema.json",
+      "sha256": "sha256:ec9168a6834031618fc29fa64d355c29096dd146241df9e7e50e5e3b2a235e87"
+    },
+    {
+      "path": "ops/staging/data-mcp-staging-bundle.yaml",
+      "sha256": "sha256:1214aaf72850187bbd26b30450b888e1082d59fbc144da8fa4d1db51489fe17e"
+    },
+    {
+      "path": "requirements/staging-fixture.lock",
+      "sha256": "sha256:95764ed13d18d19b922c4ca9b07eda2cbadefe4b15a5cfa7bcd7dc967657bea4"
+    },
+    {
+      "path": "tests/test_data_mcp_staging_fixture_runner.py",
+      "sha256": "sha256:6ebc88f01aa848c73b3e89bc530cd3e25214f61954d88cb03cd8809f4e28305a"
+    },
+    {
+      "path": "tests/test_data_mcp_staging_lock.py",
+      "sha256": "sha256:ef3203e8623d8d8d966227a705693fe8890ec24360aa5e57f71f3ae3510a2e6d"
+    }
+  ],
+  "expected_receipt": {
+    "path": "control/staging-fixture-receipt.json",
+    "sha256": "sha256:b76255e44f8e6adb52eca6e3c39e2ab906ffca3aa88e5bfeda79b25f8d46e03b",
+    "run_at": "2026-08-29T00:00:00Z",
+    "runs": 3,
+    "exit_code": 0,
+    "listener_ports": [],
+    "source_egress": false,
+    "production_state_written": false
+  },
+  "frozen_paths": {
+    "control_store": "control/control.sqlite3",
+    "scheduler_checkpoint": "control/scheduler.json",
+    "acknowledgement_checkpoint": "control/acknowledgement-checkpoint.json",
+    "current_pointer": "control/current.json",
+    "projections": "control/projections.json",
+    "raw_custody": "raw-custody/"
+  },
+  "bounds": {
+    "max_active_items": 4,
+    "max_active_bytes": 1048576,
+    "max_stream_bytes": 131072,
+    "max_stream_chunks": 128,
+    "max_chunk_bytes": 65536,
+    "max_stream_seconds": 60,
+    "lease_ttl_seconds": 300,
+    "max_attempts": 3
+  },
+  "network": {
+    "egress": "deny",
+    "source_probes": "disabled",
+    "bind_host": "127.0.0.1",
+    "listeners": []
+  },
+  "application_migrations": {
+    "applied": false,
+    "required_in_fixture": false
+  }
+}
