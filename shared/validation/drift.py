@@ -150,6 +150,45 @@ def _safe_summary(value: object) -> SafeSummary:
     return {"type": type(value).__name__}
 
 
+def _preserve_safe_summary(value: object) -> SafeSummary:
+    """Keep an already-redacted summary stable when reading a receipt."""
+
+    if isinstance(value, Mapping) and _is_safe_summary(value):
+        kind = value.get("type")
+        if kind == "string":
+            return {"type": "string", "length": value["length"], "sha256": value["sha256"]}
+        if kind == "object":
+            return {"type": "object", "key_count": value["key_count"], "keys_sha256": value["keys_sha256"]}
+        if kind == "array":
+            return {"type": "array", "length": value["length"], "sha256": value["sha256"]}
+        return {"type": "number", "finite": False}
+    return _safe_summary(value)
+
+
+def _is_safe_summary(value: Mapping[object, object]) -> bool:
+    kind = value.get("type")
+    if kind == "string":
+        digest = value.get("sha256")
+        return (
+            isinstance(value.get("length"), int) and isinstance(digest, str) and _SHA256.fullmatch(digest) is not None
+        )
+    if kind == "object":
+        digest = value.get("keys_sha256")
+        return (
+            isinstance(value.get("key_count"), int)
+            and isinstance(digest, str)
+            and _SHA256.fullmatch(digest) is not None
+        )
+    if kind == "array":
+        digest = value.get("sha256")
+        return (
+            isinstance(value.get("length"), int) and isinstance(digest, str) and _SHA256.fullmatch(digest) is not None
+        )
+    if kind == "number":
+        return value.get("finite") is False
+    return False
+
+
 def _safe_key(value: object) -> str:
     """Create a deterministic category key without putting it in evidence."""
 
@@ -372,7 +411,10 @@ class QuarantineSample:
             raise QuarantineError("quarantine sample path exceeds its bound")
         if not isinstance(self.summary, Mapping):
             raise QuarantineError("quarantine sample summary must be an object")
-        safe = {str(key): _safe_summary(value) for key, value in self.summary.items()}
+        safe = {
+            str(key): _preserve_safe_summary(value) if key == "value" else _safe_summary(value)
+            for key, value in self.summary.items()
+        }
         object.__setattr__(self, "path", path)
         object.__setattr__(self, "summary", MappingProxyType(safe))
 
@@ -609,7 +651,7 @@ def validate_observation_candidate(
     schema_version = candidate.get("schema_version")
     if expected.schema_version is not None and schema_version != expected.schema_version:
         issues.append(
-            _issue("schema.version_drift", "schema_version", "schema_version", expected.schema_version, schema_version)
+            _issue("schema.version_drift", "schema_version", "schema", expected.schema_version, schema_version)
         )
 
     looks_like_envelope = "observations" in candidate or schema_version == "hdp.observation-envelope.v1"
@@ -979,21 +1021,21 @@ def _envelope_metadata(candidate: Mapping[str, object]) -> tuple[str | None, str
     source_release = _mapping(candidate.get("source_release"))
     artifact = _mapping(candidate.get("artifact"))
     return (
-        _text(source_release.get("source_id")),
-        _text(source_release.get("release_id")),
-        _text(artifact.get("artifact_id")),
+        _text(source_release.get("source_id")) or _text(candidate.get("source_id")),
+        _text(source_release.get("release_id")) or _text(candidate.get("release_id")),
+        _text(artifact.get("artifact_id")) or _text(candidate.get("artifact_id")),
     )
 
 
 def _envelope_custody_locator(candidate: Mapping[str, object]) -> str | None:
     artifact = _mapping(candidate.get("artifact"))
     custody = _mapping(artifact.get("custody"))
-    return _text(custody.get("locator"))
+    return _text(custody.get("locator")) or _text(candidate.get("custody_locator"))
 
 
 def _artifact_hash(candidate: Mapping[str, object]) -> str | None:
     artifact = _mapping(candidate.get("artifact"))
-    value = artifact.get("content_sha256")
+    value = artifact.get("content_sha256") or candidate.get("artifact_sha256")
     return value if isinstance(value, str) and _SHA256.fullmatch(value) else None
 
 
@@ -1004,11 +1046,11 @@ def _candidate_key_digest(candidate: Mapping[str, object]) -> str | None:
     replay = _mapping(lineage.get("replay"))
     values = {
         "record_id": candidate.get("record_id"),
-        "source_id": source_release.get("source_id"),
-        "release_id": source_release.get("release_id"),
-        "artifact_id": artifact.get("artifact_id"),
+        "source_id": source_release.get("source_id") or candidate.get("source_id"),
+        "release_id": source_release.get("release_id") or candidate.get("release_id"),
+        "artifact_id": artifact.get("artifact_id") or candidate.get("artifact_id"),
         "lineage_id": lineage.get("lineage_id"),
-        "idempotency_key": replay.get("idempotency_key"),
+        "idempotency_key": replay.get("idempotency_key") or candidate.get("idempotency_key"),
     }
     if all(value is None for value in values.values()):
         return None
