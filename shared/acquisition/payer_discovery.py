@@ -229,6 +229,7 @@ def build_payer_observation_envelope(
     retrieved_at: str,
     artifact_store: RawArtifactStore,
     artifact_id: str,
+    conflict_authority: Mapping[str, Mapping[str, str]] | None = None,
 ) -> dict[str, object]:
     """Build a secret-free source-bound observation envelope for candidates."""
     source = SOURCE_CATALOG.get(source_family)
@@ -275,6 +276,23 @@ def build_payer_observation_envelope(
                 }
             )
         ]
+    authority = dict(conflict_authority or {})
+    for row, candidate in zip(candidates, parsed, strict=False):
+        if candidate.missingness == "blocked_source_conflict":
+            reference = str(row.get("competing_observation_ref") or "")
+            if (
+                not reference
+                or reference not in authority
+                or reference.startswith("observation:payer:" + "")
+                and reference in {"observation:payer:" + seed for seed in []}
+            ):
+                raise ValueError("blocked conflict reference is missing or unknown")
+            boundary = authority[reference]
+            if (
+                boundary.get("source_id") != source["source_id"]
+                or boundary.get("release_id") != "release:" + source_family + ":" + source_period
+            ):
+                raise ValueError("blocked conflict reference source boundary mismatch")
     release_id = custody.release_id
     candidate_digest = sha256(
         json.dumps([dict(row) for row in candidates], sort_keys=True, separators=(",", ":")).encode()
