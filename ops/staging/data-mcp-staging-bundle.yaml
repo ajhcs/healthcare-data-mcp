@@ -1,0 +1,243 @@
+schema_version: hdp.data-mcp-staging-bundle.v1
+record_type: staging_release_bundle
+apiVersion: hdp.staging/v1
+kind: DataMcpStagingBundle
+
+metadata:
+  name: data-mcp-staging
+  release_id: p1-31-data-mcp-staging-20260829
+  source_commit: 0fbf779d00e41920f14ad6950a60c6cf818c6164
+  owner: luna-max
+
+# This descriptor is intentionally staging-only.  It is never a production
+# deployment manifest and contains no source payloads or credential values.
+environment: staging
+activation:
+  enabled: false
+  production: false
+  deployment_mutations: false
+
+spec:
+  mode: isolated_fixture
+  network:
+    egress: deny
+    bind_host: 127.0.0.1
+    allowed_hosts: []
+    source_probes: disabled
+
+  topology:
+    data_flow:
+      - id: catalog-to-scheduler
+        from: source_catalog
+        to: scheduler
+        payloads: forbidden
+      - id: scheduler-to-queue
+        from: scheduler
+        to: control_store.queue
+        payloads: metadata_only
+      - id: queue-to-worker
+        from: control_store.queue
+        to: worker_pool
+        payloads: opaque_reference_only
+      - id: worker-to-raw-custody
+        from: worker_pool
+        to: raw_custody
+        payloads: source_bytes_to_content_addressed_store
+      - id: worker-to-control-store
+        from: worker_pool
+        to: control_store
+        payloads: metadata_only
+
+    scheduler:
+      component: scheduler
+      implementation_ref: shared/utils/source_scheduler.py
+      schema_ref: contracts/healthcare-data-platform/scheduler/v1/scheduler-state.schema.json
+      replicas: 1
+      leader_mode: single_leader
+      state_ref: control_store.scheduler_state
+      source_catalog_ref: contracts/healthcare-data-platform/catalog/v1/fixtures/valid-source-catalog.json
+      limits:
+        poll_interval_seconds: 60
+        max_intents_per_tick: 1024
+      permissions:
+        network_egress: false
+        queue_write: true
+        control_store_write: true
+        raw_custody_read: false
+        raw_custody_write: false
+        source_payload_access: false
+
+    worker_pool:
+      component: source_worker
+      implementation_ref: shared/queue/durable.py
+      replicas: 2
+      queue_ref: control_store.queue
+      custody_ref: raw_custody
+      lease:
+        ttl_seconds: 300
+        heartbeat_extension_seconds: 300
+        retry_delay_seconds: 30
+        max_attempts: 3
+      limits:
+        max_active_items: 4
+        max_active_bytes: 1048576
+        stream:
+          max_bytes: 131072
+          max_chunks: 128
+          max_chunk_bytes: 65536
+          max_seconds: 60
+      permissions:
+        network_egress: false
+        queue_read: true
+        queue_write: true
+        control_store_write: true
+        raw_custody_read: true
+        raw_custody_write: true
+        source_payload_access: fixture_only
+
+    control_store:
+      component: control_store
+      backend: sqlite
+      journal_mode: WAL
+      path_ref:
+        env_var: HDP_STAGING_CONTROL_STORE_PATH
+        required: false
+        fixture_relative_path: control/control.sqlite3
+      queue:
+        implementation_ref: shared/queue/durable.py
+        schema_ref: contracts/healthcare-data-platform/queue/v1/queue.schema.json
+        table: queue_work_items
+        payload_storage: forbidden
+        stored_fields: [identifiers, hashes, counters, leases, bounded_state]
+      scheduler_state:
+        implementation_ref: shared/utils/source_scheduler.py
+        schema_ref: contracts/healthcare-data-platform/scheduler/v1/scheduler-state.schema.json
+        payload_storage: forbidden
+      restart_policy:
+        lock_timeout_seconds: 30
+        backup_before_migration: true
+
+    raw_custody:
+      component: raw_custody
+      implementation_ref: shared/storage/raw_custody.py
+      schema_ref: contracts/healthcare-data-platform/storage/v1/raw-artifact.schema.json
+      backend: filesystem
+      root_ref:
+        env_var: HDP_STAGING_RAW_CUSTODY_ROOT
+        required: false
+        fixture_relative_path: raw-custody
+      layout: objects/sha256/{prefix}/{digest}
+      manifest_layout: metadata/{prefix}/{digest}.json
+      immutable: true
+      append_only: true
+      delete_api: false
+      permissions:
+        scheduler_read: false
+        scheduler_write: false
+        worker_read: true
+        worker_write: true
+        control_store_read: false
+        control_store_write: false
+
+  source_refs:
+    catalog: contracts/healthcare-data-platform/catalog/v1/fixtures/valid-source-catalog.json
+    scheduler_schema: contracts/healthcare-data-platform/scheduler/v1/scheduler-state.schema.json
+    queue_schema: contracts/healthcare-data-platform/queue/v1/queue.schema.json
+    raw_artifact_schema: contracts/healthcare-data-platform/storage/v1/raw-artifact.schema.json
+    scheduler_implementation: shared/utils/source_scheduler.py
+    queue_implementation: shared/queue/durable.py
+    raw_custody_implementation: shared/storage/raw_custody.py
+
+  migrations:
+    strategy: forward_only
+    owner: control_store_application
+    required_in_fixture: false
+    schema_refs:
+      - contracts/healthcare-data-platform/queue/v1/queue.schema.json
+      - contracts/healthcare-data-platform/scheduler/v1/scheduler-state.schema.json
+      - contracts/healthcare-data-platform/storage/v1/raw-artifact.schema.json
+    preflight:
+      action_ref: staging.control_store.verify_contract_refs
+      read_only: true
+    snapshot:
+      required_before_apply: true
+      reference_env_var: HDP_STAGING_CONTROL_STORE_SNAPSHOT_REF
+    apply:
+      action_ref: staging.control_store.apply_reviewed_revision
+      requires_approval: true
+      production_allowed: false
+    rollback:
+      action_ref: staging.control_store.restore_snapshot
+      requires_approval: true
+      destructive: false
+
+  secrets:
+    policy:
+      inline_values: false
+      log_values: false
+      environment_scope: staging
+    references:
+      - name: control_store_dsn
+        env_var: HDP_STAGING_CONTROL_STORE_DSN
+        provider_ref: secret://staging/data-mcp/control-store-dsn
+        required: false
+        used_by: control_store
+      - name: raw_custody_credentials
+        env_var: HDP_STAGING_RAW_CUSTODY_CREDENTIALS
+        provider_ref: secret://staging/data-mcp/raw-custody
+        required: false
+        used_by: raw_custody
+
+  verification:
+    fixture:
+      name: isolated-local-staging
+      source_mode: deterministic_fixture
+      network_egress: deny
+      root_env_var: HDP_STAGING_FIXTURE_ROOT
+      control_store_relative_path: control/control.sqlite3
+      raw_custody_relative_path: raw-custody
+      scheduler_catalog_ref: contracts/healthcare-data-platform/catalog/v1/fixtures/valid-source-catalog.json
+      expected:
+        scheduler_replicas: 1
+        worker_replicas: 2
+        control_store_contains_payloads: false
+        raw_objects_content_addressed: true
+        production_activation: false
+    checks:
+      - scheduler_catalog_is_readable
+      - topology_references_are_local
+      - control_store_and_raw_custody_roots_are_distinct
+      - no_secret_values_are_inline
+      - rollback_is_non_destructive
+
+  rollback:
+    automated: true
+    approval_required: true
+    destructive: false
+    preserve_queue_and_receipts: true
+    preserve_raw_objects: true
+    steps:
+      - id: pause-scheduler
+        action_ref: staging.scheduler.pause
+        after: []
+      - id: drain-workers
+        action_ref: staging.worker_pool.drain
+        after: [pause-scheduler]
+      - id: snapshot-control-store
+        action_ref: staging.control_store.snapshot
+        after: [drain-workers]
+      - id: restore-control-store
+        action_ref: staging.control_store.restore_snapshot
+        after: [snapshot-control-store]
+      - id: verify-raw-custody
+        action_ref: staging.raw_custody.verify_manifests
+        after: [restore-control-store]
+      - id: verify-bundle
+        action_ref: staging.bundle.verify_fixture
+        after: [verify-raw-custody]
+      - id: resume-workers
+        action_ref: staging.worker_pool.resume
+        after: [verify-bundle]
+      - id: resume-scheduler
+        action_ref: staging.scheduler.resume
+        after: [resume-workers]
