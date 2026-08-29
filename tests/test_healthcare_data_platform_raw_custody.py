@@ -146,6 +146,21 @@ def test_prior_generation_is_required_and_bound_to_same_source(tmp_path: Path) -
     assert store.read_metadata(second.artifact_id).prior_artifact_id == first.artifact_id
 
 
+def test_prior_generation_bytes_must_still_exist_and_match(tmp_path: Path) -> None:
+    first = _metadata()
+    second = replace(
+        _metadata(release_id="release:ahrq:2026-08-29", body=BODY + b" "),
+        prior_artifact_id=first.artifact_id,
+    )
+    store = RawArtifactStore(tmp_path)
+    store.put(first, _chunks())
+    prior_object = tmp_path / store._object_key(first.content_sha256)  # noqa: SLF001
+    prior_object.unlink()
+
+    with pytest.raises(RawCustodyError, match="verified durable custody"):
+        store.put(second, _chunks(BODY + b" "))
+
+
 def test_missing_or_foreign_prior_generation_is_rejected(tmp_path: Path) -> None:
     metadata = _metadata()
     missing = replace(metadata, prior_artifact_id="artifact:raw:" + "a" * 32)
@@ -211,3 +226,41 @@ def test_tampered_object_and_manifest_fail_verification(tmp_path: Path) -> None:
     manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
     with pytest.raises(ArtifactCollisionError, match="metadata hash"):
         store.read_metadata(metadata.artifact_id)
+
+
+def test_finalized_object_symlink_is_rejected(tmp_path: Path) -> None:
+    metadata = _metadata()
+    store = RawArtifactStore(tmp_path)
+    receipt = store.put(metadata, _chunks())
+    object_path = tmp_path / receipt.object_key
+    object_path.unlink()
+    outside = tmp_path / "outside-object"
+    outside.write_bytes(BODY)
+    object_path.symlink_to(outside)
+
+    with pytest.raises(ArtifactCollisionError, match="symlink"):
+        store.read_bytes(metadata.artifact_id)
+
+
+def test_crash_after_object_promotion_is_recovered_without_rewrite(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    metadata = _metadata()
+    store = RawArtifactStore(tmp_path)
+    original = store._write_manifest  # noqa: SLF001
+
+    def fail_after_promotion(*args: object, **kwargs: object) -> None:
+        raise RuntimeError("simulated manifest crash")
+
+    monkeypatch.setattr(store, "_write_manifest", fail_after_promotion)
+    with pytest.raises(RuntimeError, match="manifest crash"):
+        store.put(metadata, _chunks())
+    object_path = tmp_path / "objects" / "sha256" / metadata.content_sha256[7:9] / metadata.content_sha256[7:]
+    assert object_path.read_bytes() == BODY
+    assert not list((tmp_path / "partials").rglob("*.part"))
+
+    monkeypatch.setattr(store, "_write_manifest", original)
+    recovered = store.put(metadata, _chunks())
+    assert recovered.state == "stored"
+    assert recovered.resumed is True
+    assert store.read_bytes(metadata.artifact_id) == BODY

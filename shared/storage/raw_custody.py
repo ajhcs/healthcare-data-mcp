@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from hashlib import sha256
 import json
+import os
 from pathlib import Path
 import re
 import tempfile
@@ -240,12 +241,22 @@ class RawArtifactStore:
         manifest_path = self._manifest_path(item.artifact_id)
         object_key = self._object_key(item.content_sha256)
         metadata_key = self._metadata_key(item.artifact_id)
+        partial_path, partial_state_path = self._partial_paths(item.idempotency_key)
+        for path in (object_path, manifest_path, partial_path, partial_state_path):
+            self._assert_no_symlink(path)
         if manifest_path.exists():
             return self._duplicate_or_collision(item, manifest_path, object_path, object_key, metadata_key, chunks)
-        if object_path.exists() and object_path.is_symlink():
-            raise ArtifactCollisionError("content-addressed object path is a symlink")
-
-        partial_path, partial_state_path = self._partial_paths(item.idempotency_key)
+        if object_path.exists():
+            return self._recover_existing_object(
+                item,
+                object_path,
+                manifest_path,
+                partial_path,
+                partial_state_path,
+                object_key,
+                metadata_key,
+                chunks,
+            )
         self._ensure_parent_dirs(object_path, manifest_path, partial_path, partial_state_path)
         existing_count, existing_bytes = self._load_partial(item, partial_path, partial_state_path)
         resumed = existing_count > 0
@@ -296,14 +307,7 @@ class RawArtifactStore:
         if _sha256_bytes(partial_path.read_bytes()) != item.content_sha256:
             raise ArtifactCollisionError("received bytes do not match content_sha256")
 
-        if object_path.exists():
-            if _sha256_bytes(object_path.read_bytes()) != item.content_sha256:
-                raise ArtifactCollisionError("existing object bytes do not match content_sha256")
-            partial_path.unlink(missing_ok=True)
-        else:
-            if object_path.is_symlink():
-                raise ArtifactCollisionError("content-addressed object path is a symlink")
-            partial_path.replace(object_path)
+        self._promote_object(partial_path, object_path, item.content_sha256)
         self._write_manifest(item, manifest_path, object_key)
         partial_state_path.unlink(missing_ok=True)
         return self._receipt(
@@ -323,6 +327,7 @@ class RawArtifactStore:
         if _ARTIFACT_ID.fullmatch(artifact_id) is None:
             raise RawCustodyError("artifact_id is malformed")
         manifest_path = self._manifest_path(artifact_id)
+        self._assert_no_symlink(manifest_path)
         try:
             value = json.loads(manifest_path.read_text(encoding="utf-8"))
         except (OSError, UnicodeError, json.JSONDecodeError) as exc:
@@ -349,6 +354,7 @@ class RawArtifactStore:
 
         item = self.read_metadata(artifact_id)
         path = self._object_path(item.content_sha256)
+        self._assert_no_symlink(path)
         try:
             payload = path.read_bytes()
         except OSError as exc:
@@ -389,10 +395,57 @@ class RawArtifactStore:
             raise RawCustodyError("prior_artifact_id must reference a different generation")
         try:
             prior = self.read_metadata(item.prior_artifact_id)
+            self.read_bytes(item.prior_artifact_id)
         except RawCustodyError as exc:
-            raise RawCustodyError("prior_artifact_id does not reference durable custody") from exc
+            raise RawCustodyError("prior_artifact_id does not reference verified durable custody") from exc
         if prior.source_id != item.source_id:
             raise RawCustodyError("prior artifact source_id does not match current artifact")
+
+    def _recover_existing_object(
+        self,
+        item: RawArtifactMetadata,
+        object_path: Path,
+        manifest_path: Path,
+        partial_path: Path,
+        partial_state_path: Path,
+        object_key: str,
+        metadata_key: str,
+        chunks: Iterable[bytes],
+    ) -> CustodyReceipt:
+        """Finish a crash window where object promotion preceded manifest creation."""
+
+        if _sha256_bytes(object_path.read_bytes()) != item.content_sha256:
+            raise ArtifactCollisionError("existing object bytes do not match content_sha256")
+        payload = _consume_chunks(chunks, item, self.max_bytes, self.max_chunks)
+        if _sha256_bytes(payload) != item.content_sha256:
+            raise ArtifactCollisionError("recovery bytes differ from content_sha256")
+        resumed = partial_path.exists() or partial_state_path.exists()
+        self._write_manifest(item, manifest_path, object_key)
+        partial_path.unlink(missing_ok=True)
+        partial_state_path.unlink(missing_ok=True)
+        return self._receipt(
+            item,
+            "stored",
+            object_key,
+            metadata_key,
+            item.chunk_count,
+            item.chunk_size,
+            resumed,
+            item.byte_length,
+        )
+
+    def _promote_object(self, partial_path: Path, object_path: Path, content_sha256: str) -> None:
+        """Atomically publish a partial object without replacing an existing inode."""
+
+        try:
+            os.link(partial_path, object_path)
+        except FileExistsError:
+            self._assert_no_symlink(object_path)
+            if _sha256_bytes(object_path.read_bytes()) != content_sha256:
+                raise ArtifactCollisionError("existing object bytes do not match content_sha256")
+        else:
+            _fsync_directory(object_path.parent)
+        partial_path.unlink(missing_ok=True)
 
     def _duplicate_or_collision(
         self,
@@ -423,6 +476,8 @@ class RawArtifactStore:
         )
 
     def _load_partial(self, item: RawArtifactMetadata, partial_path: Path, state_path: Path) -> tuple[int, int]:
+        self._assert_no_symlink(partial_path)
+        self._assert_no_symlink(state_path)
         if partial_path.exists() != state_path.exists():
             raise RawCustodyError("partial object and partial state must exist together")
         if not partial_path.exists():
@@ -443,10 +498,12 @@ class RawArtifactStore:
         ):
             raise RawCustodyError("partial custody state has invalid counters")
         actual_length = partial_path.stat().st_size
-        if count < 1 or count >= item.chunk_count or byte_length != actual_length:
+        if count < 1 or count > item.chunk_count or byte_length != actual_length:
             raise RawCustodyError("partial custody state counters are inconsistent")
-        if byte_length != count * item.chunk_size:
+        if count < item.chunk_count and byte_length != count * item.chunk_size:
             raise RawCustodyError("partial custody state must end on a full chunk")
+        if count == item.chunk_count and byte_length != item.byte_length:
+            raise RawCustodyError("complete partial custody state has an invalid byte length")
         return count, byte_length
 
     def _write_partial_state(self, path: Path, item: RawArtifactMetadata, count: int, byte_length: int) -> None:
@@ -463,6 +520,7 @@ class RawArtifactStore:
         )
 
     def _write_manifest(self, item: RawArtifactMetadata, path: Path, object_key: str) -> None:
+        self._assert_no_symlink(path)
         if path.exists():
             existing = self.read_metadata(item.artifact_id)
             if existing.as_dict() != item.as_dict():
@@ -471,6 +529,21 @@ class RawArtifactStore:
         if path.is_symlink():
             raise ArtifactCollisionError("artifact manifest path is a symlink")
         _atomic_write_json(path, self._manifest_value(item, object_key), overwrite=False)
+
+    def _assert_no_symlink(self, path: Path) -> None:
+        """Reject symlinked roots, parents, and leaves before filesystem access."""
+
+        if self.root.is_symlink():
+            raise ArtifactCollisionError("configured custody root is a symlink")
+        try:
+            relative = path.relative_to(self.root)
+        except ValueError as exc:
+            raise RawCustodyError("custody path escapes configured root") from exc
+        current = self.root
+        for part in relative.parts:
+            current /= part
+            if current.is_symlink():
+                raise ArtifactCollisionError(f"custody path contains a symlink: {current.name}")
 
     def _manifest_value(self, item: RawArtifactMetadata, object_key: str) -> dict[str, object]:
         return {
@@ -592,6 +665,8 @@ def _canonical_json(value: object) -> bytes:
 
 def _atomic_write_json(path: Path, value: object, *, overwrite: bool) -> None:
     payload = _canonical_json(value)
+    if path.is_symlink():
+        raise ArtifactCollisionError(f"refusing to follow symlinked path: {path.name}")
     if path.exists() and not overwrite:
         raise ArtifactCollisionError(f"refusing to overwrite immutable path: {path.name}")
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -601,7 +676,15 @@ def _atomic_write_json(path: Path, value: object, *, overwrite: bool) -> None:
         handle.flush()
         _fsync(handle)
     try:
-        temp_path.replace(path)
+        if overwrite:
+            temp_path.replace(path)
+        else:
+            os.link(temp_path, path)
+            temp_path.unlink(missing_ok=True)
+        _fsync_directory(path.parent)
+    except FileExistsError as exc:
+        temp_path.unlink(missing_ok=True)
+        raise ArtifactCollisionError(f"refusing to overwrite immutable path: {path.name}") from exc
     except OSError:
         temp_path.unlink(missing_ok=True)
         raise
@@ -610,9 +693,20 @@ def _atomic_write_json(path: Path, value: object, *, overwrite: bool) -> None:
 def _fsync(handle: object) -> None:
     fileno = getattr(handle, "fileno", None)
     if callable(fileno):
-        import os
-
         os.fsync(cast(int, fileno()))
+
+
+def _fsync_directory(path: Path) -> None:
+    """Persist a directory entry after an atomic object or manifest operation."""
+
+    try:
+        fd = os.open(path, os.O_RDONLY)
+    except OSError:
+        return
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
 
 
 def _validate_schema(value: Mapping[str, object]) -> None:
