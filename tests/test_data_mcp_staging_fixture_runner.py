@@ -150,9 +150,7 @@ def test_shared_package_imports_do_not_create_home_cache(tmp_path: Path) -> None
     environment["HOME"] = str(home)
     environment["PYTHONNOUSERSITE"] = "1"
     user_site = site.getusersitepackages()
-    environment["PYTHONPATH"] = os.pathsep.join(
-        part for part in (user_site, environment.get("PYTHONPATH", "")) if part
-    )
+    environment["PYTHONPATH"] = os.pathsep.join(part for part in (user_site, environment.get("PYTHONPATH", "")) if part)
     result = subprocess.run(
         [
             sys.executable,
