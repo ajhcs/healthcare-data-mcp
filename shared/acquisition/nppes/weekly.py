@@ -434,7 +434,7 @@ class NppesWeeklyObservation:
             source_file_name=_text(value.get("source_file_name"), "source_file_name", maximum=256),
             npi=_text(value.get("npi"), "npi", maximum=10),
             source_row_id=_text(value.get("source_row_id"), "source_row_id", maximum=200),
-            row_number=_integer(value.get("row_number"), "row_number", minimum=1),
+            row_number=_integer(value.get("row_number"), "row_number", minimum=2),
             operation=cast(NppesWeeklyOperation, value.get("operation")),
             effective_date=_date_value(value.get("effective_date"), "effective_date"),
             release_sequence=_integer(value.get("release_sequence"), "release_sequence", maximum=_MAX_SEQUENCE),
