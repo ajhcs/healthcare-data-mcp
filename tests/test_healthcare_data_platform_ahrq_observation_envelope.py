@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from concurrent.futures import ProcessPoolExecutor
 from copy import deepcopy
 from datetime import datetime, timezone
 import hashlib
 import json
+import multiprocessing
 from pathlib import Path
 from typing import Literal, Mapping, cast
 
@@ -13,6 +15,7 @@ import pytest
 
 from shared.acquisition.ahrq_detector import AhrqChangeDetector, DetectionReceipt
 from shared.acquisition.ahrq_observation_envelope import (
+    AHRQ_OFFLINE_ARTIFACT_PREFIX,
     AHRQ_SOURCE_ID,
     AhrqAcknowledgement,
     AhrqAcknowledgementError,
@@ -31,6 +34,7 @@ from shared.acquisition.ahrq_observation_envelope import (
     InMemoryAhrqCheckpointStore,
     SYSTEM_REQUIRED_COLUMNS,
     build_ahrq_observation_envelope,
+    parse_ahrq_facility_rows,
     parse_ahrq_system_rows,
     parse_ahrq_source_rows,
     write_ahrq_observation_envelope,
@@ -95,15 +99,22 @@ def _csv_bytes(headers: tuple[str, ...], values: tuple[str, ...]) -> bytes:
     return (",".join(headers) + "\n" + ",".join(values) + "\n").encode("cp1252")
 
 
-def _source_files(tmp_path: Path, release: DetectionReceipt) -> tuple[Path, Path, AhrqParsedRows]:
+def _source_files(
+    tmp_path: Path,
+    release: DetectionReceipt,
+    *,
+    system_id: str = "SYS-1",
+    hospital_id: str = "H-1",
+) -> tuple[Path, Path, AhrqParsedRows]:
+    tmp_path.mkdir(parents=True, exist_ok=True)
     system_content = _csv_bytes(
         SYSTEM_HEADERS,
-        ("SYS-1", "Café Health", "Harrisburg", "PA", "2", "2"),
+        (system_id, "Café Health", "Harrisburg", "PA", "2", "2"),
     )
     facility_content = _csv_bytes(
         FACILITY_HEADERS,
         (
-            "H-1",
+            hospital_id,
             "123456",
             "Café Hospital",
             "1 Main St",
@@ -111,7 +122,7 @@ def _source_files(tmp_path: Path, release: DetectionReceipt) -> tuple[Path, Path
             "PA",
             "17101",
             "Y",
-            "SYS-1",
+            system_id,
             "Café Health",
             "Harrisburg",
             "PA",
@@ -135,7 +146,25 @@ def _source_files(tmp_path: Path, release: DetectionReceipt) -> tuple[Path, Path
     return system_path, facility_path, parsed
 
 
-def _envelope(tmp_path: Path, release: DetectionReceipt | None = None) -> dict[str, object]:
+def _envelope(
+    tmp_path: Path,
+    release: DetectionReceipt | None = None,
+    *,
+    system_id: str = "SYS-1",
+    hospital_id: str = "H-1",
+) -> dict[str, object]:
+    current_release = release or _release()
+    _, _, parsed = _source_files(tmp_path, current_release, system_id=system_id, hospital_id=hospital_id)
+    return build_ahrq_observation_envelope(
+        parsed,
+        current_release,
+        normalized_store=RawArtifactStore(tmp_path / "normalized"),
+        source_url="https://example.gov/ahrq/release.json",
+        recorded_at=datetime(2026, 8, 29, tzinfo=timezone.utc),
+    )
+
+
+def _offline_envelope(tmp_path: Path, release: DetectionReceipt | None = None) -> dict[str, object]:
     current_release = release or _release()
     _, _, parsed = _source_files(tmp_path, current_release)
     return build_ahrq_observation_envelope(
@@ -144,6 +173,17 @@ def _envelope(tmp_path: Path, release: DetectionReceipt | None = None) -> dict[s
         source_url="https://example.gov/ahrq/release.json",
         recorded_at=datetime(2026, 8, 29, tzinfo=timezone.utc),
     )
+
+
+def _acknowledge_in_process(arguments: tuple[str, dict[str, object]]) -> tuple[str, str]:
+    """Run one file-store acknowledgement in a separate OS process."""
+
+    path, envelope = arguments
+    try:
+        acknowledgement = FileAhrqAcknowledgementStore(path).acknowledge(envelope)
+    except AhrqReplayConflictError:
+        return ("conflict", "")
+    return ("ok", acknowledgement.acknowledgement_id)
 
 
 def test_parser_preserves_source_native_strings_and_custody_claims(tmp_path: Path) -> None:
@@ -182,6 +222,23 @@ def test_parser_accepts_mixed_case_headers_and_rejects_missing_or_duplicate_head
     )
     with pytest.raises(AhrqRowParseError, match="duplicate header"):
         parse_ahrq_system_rows(duplicate_path)
+
+
+def test_public_parsers_verify_exact_claimed_bytes_and_reject_malformed_csv(tmp_path: Path) -> None:
+    release = _release()
+    system_path, facility_path, _ = _source_files(tmp_path / "valid", release)
+    wrong_system = _artifact("system", system_path.read_bytes() + b"tampered", release)
+    wrong_facility = _artifact("facility", facility_path.read_bytes() + b"tampered", release)
+
+    with pytest.raises(AhrqProducerError, match="system raw artifact hash or length"):
+        parse_ahrq_system_rows(system_path, artifact=wrong_system)
+    with pytest.raises(AhrqProducerError, match="facility raw artifact hash or length"):
+        parse_ahrq_facility_rows(facility_path, artifact=wrong_facility)
+
+    malformed_path = tmp_path / "malformed.csv"
+    malformed_path.write_text(",".join(SYSTEM_HEADERS) + '\n"unterminated,Name,City,PA,1,1\n', encoding="cp1252")
+    with pytest.raises(AhrqRowParseError, match="malformed"):
+        parse_ahrq_system_rows(malformed_path)
 
 
 def test_parser_rejects_orphan_link_and_raw_hash_mismatch(tmp_path: Path) -> None:
@@ -256,6 +313,35 @@ def test_parser_rejects_orphan_link_and_raw_hash_mismatch(tmp_path: Path) -> Non
             facility_artifact=_artifact("facility", valid_facility, release),
         )
 
+    blank_link = list(
+        (
+            "H-1",
+            "123456",
+            "Hospital",
+            "1 Main",
+            "City",
+            "PA",
+            "17101",
+            "Y",
+            "",
+            "",
+            "City",
+            "PA",
+            "P-1",
+            "Parent",
+            "system",
+            "10",
+            "nonprofit",
+        )
+    )
+    blank_facility = _csv_bytes(FACILITY_HEADERS, tuple(blank_link))
+    facility_path.write_bytes(blank_facility)
+    with pytest.raises(AhrqRowParseError, match="no health_sys_id"):
+        parse_ahrq_facility_rows(
+            facility_path,
+            artifact=_artifact("facility", blank_facility, release),
+        )
+
 
 def test_envelope_is_pinned_source_scoped_and_deterministic(tmp_path: Path) -> None:
     release = _release()
@@ -293,6 +379,59 @@ def test_normalized_rows_can_be_committed_to_p1_04_custody(tmp_path: Path) -> No
     assert artifact["content_sha256"] == "sha256:" + hashlib.sha256(content).hexdigest()
     custody = cast(Mapping[str, object], artifact["custody"])
     assert cast(str, custody["locator"]).startswith("object://objects/")
+
+
+def test_normalized_artifact_binding_requires_ahrq_release_role_and_verified_custody(tmp_path: Path) -> None:
+    release = _release()
+    offline = _offline_envelope(tmp_path, release)
+    expected = cast(Mapping[str, object], offline["artifact"])
+    expected_hash = cast(str, expected["content_sha256"])
+    expected_length = cast(int, expected["byte_length"])
+
+    def locator(
+        *,
+        role: Literal["system", "facility"] = "system",
+        source_id: str = AHRQ_SOURCE_ID,
+        release_id: str | None = release.release_id,
+        verified: bool = True,
+    ) -> AhrqArtifactLocator:
+        return AhrqArtifactLocator(
+            role=role,
+            artifact_id="artifact:raw:" + "a" * 32,
+            custody_locator="object://objects/normalized",
+            content_sha256=expected_hash,
+            byte_length=expected_length,
+            source_id=source_id,
+            release_id=release_id,
+            verified=verified,
+        )
+
+    _, _, parsed = _source_files(tmp_path / "binding", release)
+    with pytest.raises(AhrqProducerError, match="source_id does not match"):
+        build_ahrq_observation_envelope(parsed, release, normalized_artifact=locator(source_id="source:other"))
+    with pytest.raises(AhrqProducerError, match="release_id does not match"):
+        build_ahrq_observation_envelope(parsed, release, normalized_artifact=locator(release_id="release:other"))
+    with pytest.raises(AhrqProducerError, match="role must be system"):
+        build_ahrq_observation_envelope(parsed, release, normalized_artifact=locator(role="facility"))
+    with pytest.raises(AhrqProducerError, match="requires verified custody"):
+        build_ahrq_observation_envelope(parsed, release, normalized_artifact=locator(verified=False))
+
+
+def test_offline_normalized_envelope_cannot_be_acknowledged_or_checkpointed(tmp_path: Path) -> None:
+    offline = _offline_envelope(tmp_path)
+    artifact = cast(Mapping[str, object], offline["artifact"])
+    assert cast(str, artifact["artifact_id"]).startswith(AHRQ_OFFLINE_ARTIFACT_PREFIX)
+    acknowledgements = InMemoryAhrqAcknowledgementStore()
+    checkpoints = InMemoryAhrqCheckpointStore()
+    with pytest.raises(AhrqAcknowledgementError, match="offline normalized artifact"):
+        acknowledgements.acknowledge(offline)
+    producer = AhrqObservationProducer(acknowledger=acknowledgements, checkpoint_store=checkpoints)
+    with pytest.raises(AhrqAcknowledgementError, match="offline normalized artifact"):
+        producer.acknowledge_and_checkpoint(
+            offline,
+            checkpoint=AhrqCheckpointPrecondition(AHRQ_SOURCE_ID, 0, None, "release:ahrq:2026-08-22"),
+        )
+    assert checkpoints.current() is None
 
 
 def test_acknowledgement_replay_is_idempotent_and_conflicting_bytes_fail(tmp_path: Path) -> None:
@@ -394,6 +533,40 @@ def test_file_acknowledgement_and_checkpoint_stores_replay_without_duplicate_gen
     assert checkpoint.generation == 1
     persisted = json.loads((tmp_path / "ack.json").read_text(encoding="utf-8"))
     assert len(persisted) == 1
+
+
+def test_file_acknowledgement_store_is_cross_process_conflict_safe(tmp_path: Path) -> None:
+    release = _release()
+    first = _envelope(tmp_path / "first", release, system_id="SYS-1", hospital_id="H-1")
+    second = _envelope(tmp_path / "second", release, system_id="SYS-2", hospital_id="H-2")
+    acknowledgement_path = tmp_path / "parallel" / "ack.json"
+    context = multiprocessing.get_context("spawn")
+    with ProcessPoolExecutor(max_workers=2, mp_context=context) as executor:
+        results = list(
+            executor.map(
+                _acknowledge_in_process,
+                ((str(acknowledgement_path), first), (str(acknowledgement_path), second)),
+            )
+        )
+    assert {status for status, _ in results} == {"ok"}
+    persisted = json.loads(acknowledgement_path.read_text(encoding="utf-8"))
+    first_key = cast(Mapping[str, object], cast(Mapping[str, object], first["lineage"])["replay"])["idempotency_key"]
+    second_key = cast(Mapping[str, object], cast(Mapping[str, object], second["lineage"])["replay"])["idempotency_key"]
+    assert set(persisted) == {first_key, second_key}
+
+    conflicting = deepcopy(first)
+    cast(dict[str, object], conflicting["receipt"])["producer"] = "healthcare-data-mcp:ahrq-conflict"
+    conflict_path = tmp_path / "conflict" / "ack.json"
+    with ProcessPoolExecutor(max_workers=2, mp_context=context) as executor:
+        conflict_results = list(
+            executor.map(
+                _acknowledge_in_process,
+                ((str(conflict_path), first), (str(conflict_path), conflicting)),
+            )
+        )
+    assert {status for status, _ in conflict_results} == {"ok", "conflict"}
+    conflict_persisted = json.loads(conflict_path.read_text(encoding="utf-8"))
+    assert len(conflict_persisted) == 1
 
 
 def test_write_envelope_revalidates_unknown_fields(tmp_path: Path) -> None:

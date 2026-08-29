@@ -12,6 +12,10 @@ activation occurred.
 - `7b534af` — `test(ahrq): cover rejection replay and checkpoint CAS`.
 - Final docs commit: this receipt plus the mission packet, with the exact
   final SHA recorded by the handoff command after commit.
+- A post-review correction commit follows the planned three-commit chain. It
+  closes parser custody verification, normalized-artifact binding, offline
+  delivery, malformed-CSV handling, blank facility linkage, and cross-process
+  acknowledgement races; its exact SHA is recorded by the handoff command.
 
 The branch is
 `codex/healthcare-toolkit-rrna.p1-07-ahrq-envelope-20260829` in the isolated
@@ -39,6 +43,17 @@ Luna because Grok Build repository egress was unavailable.
 - Checkpoint publication is a separate generation/cursor CAS after durable
   acknowledgement. Rejected acknowledgements and stale CASs leave the
   checkpoint unchanged. This is deliberately not a distributed transaction.
+- Public system/facility parsers verify and then parse the exact bytes returned
+  by the custody claim check. Strict CSV mode rejects malformed records before
+  row emission, and blank facility `health_sys_id` values fail before orphan
+  comparison.
+- Caller-supplied normalized artifacts are required to be verified, `system`
+  role, and bound to the exact AHRQ source and detector release. A builder with
+  no normalized store emits an explicitly marked offline locator for contract
+  construction only; acknowledgement and checkpoint paths reject it.
+- The file acknowledgement adapter uses a sidecar OS lock around read,
+  idempotency comparison, and atomic write, preserving records and rejecting
+  cross-process conflicts safely.
 
 ## Verification evidence
 
@@ -46,7 +61,7 @@ Run from the isolated worktree:
 
 ```text
 pytest -q tests/test_healthcare_data_platform_ahrq_observation_envelope.py --tb=short
-# 11 passed
+# 15 passed
 ruff check shared/acquisition/ahrq_observation_envelope.py tests/test_healthcare_data_platform_ahrq_observation_envelope.py
 # All checks passed!
 pyright --level error shared/acquisition/ahrq_observation_envelope.py tests/test_healthcare_data_platform_ahrq_observation_envelope.py
@@ -58,8 +73,12 @@ git diff --check
 The focused tests exercise the pinned JSON Schema through
 `validate_observation_envelope`, including unknown-field rejection. The
 normalized-custody test also reads the finalized bytes back through P1-04 and
-checks the emitted content hash. The repository has no `scripts/check-fast.sh`
-in this base, so no unavailable fast-gate command is claimed here.
+checks the emitted content hash. The review-regression tests cover exact-byte
+public parser verification, blank facility linkage, strict malformed CSV,
+normalized source/release/role/custody binding, offline delivery rejection,
+and two-process acknowledgement preservation/conflict behavior. The repository
+has no `scripts/check-fast.sh` in this base, so no unavailable fast-gate
+command is claimed here.
 
 ## Self-review checklist
 
@@ -77,6 +96,11 @@ in this base, so no unavailable fast-gate command is claimed here.
 - [x] Duplicate replay, conflicting replay, acknowledgement failure, stale
   CAS, source mismatch, malformed rows, orphan links, and hash mismatch have
   focused coverage.
+- [x] Public parser custody claims cover the exact parsed bytes; normalized
+  custody is source/release/role-bound and verified; offline-only envelopes
+  cannot be delivered, acknowledged, or checkpointed.
+- [x] The file acknowledgement store is protected by an OS-level sidecar lock
+  and has cross-process preservation and conflict regression coverage.
 - [x] Focused pytest, Ruff, Pyright, compile, schema, and diff checks were run
   on the candidate tree.
 - [x] No push, deploy, database migration, queue publication, or Beads export
@@ -90,11 +114,14 @@ outbox event, or coordinate a distributed checkpoint. Callers must provide
 already verified P1-04 raw artifacts and a durable acknowledgement adapter.
 The optional normalized artifact store is subject to P1-04's 131,072-byte,
 128-chunk bound. Without a store or supplied normalized locator, the builder
-can emit only an explicitly `verified: false` derived locator for offline
-contract tests; delivery still rejects unverified raw input artifacts.
+can emit only an explicitly marked `verified: false` derived locator for
+offline contract tests; delivery rejects that locator. A caller-supplied
+normalized locator must already be P1-04-verified and exact-match the
+deterministic bytes, source, release, and `system` role.
 
-The safe rollback is to stop invoking this producer and revert the three P1-07
-commits in reverse order on a branch-local copy. No raw object, checkpoint,
+The safe rollback is to stop invoking this producer and revert the post-review
+correction followed by the three planned P1-07 commits in reverse order on a
+branch-local copy. No raw object, checkpoint,
 queue, database, scheduler, runtime, or production state is changed by these
 commits. Preserve any already issued external acknowledgement and reconcile its
 checkpoint separately; do not force a stale CAS.
@@ -107,6 +134,7 @@ git status --short --branch
 git rev-parse HEAD
 git log --oneline --decorate -4
 pytest -q tests/test_healthcare_data_platform_ahrq_observation_envelope.py --tb=short
+pytest -q tests/test_healthcare_data_platform_ahrq_observation_envelope.py tests/test_healthcare_data_platform_ahrq_detector.py tests/test_healthcare_data_platform_raw_custody.py tests/test_healthcare_data_platform_contract_adoption.py --tb=short
 ```
 
 Beads/Dolt was unavailable, and `.beads` exports were not edited. A reviewer

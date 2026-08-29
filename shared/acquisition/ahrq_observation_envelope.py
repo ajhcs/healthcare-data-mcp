@@ -14,15 +14,17 @@ production authority is performed here.
 from __future__ import annotations
 
 import csv
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
+import fcntl
 from hashlib import sha256
 import io
 import json
 from pathlib import Path
 import re
 import threading
-from typing import Callable, Literal, Mapping, Protocol, Sequence, cast
+from typing import Callable, Iterator, Literal, Mapping, Protocol, Sequence, cast
 
 from shared.acquisition.ahrq_detector import DetectionReceipt
 from shared.storage.raw_custody import MAX_ARTIFACT_BYTES, RawArtifactMetadata, RawArtifactStore
@@ -42,6 +44,7 @@ AHRQ_ENVELOPE_SCHEMA_VERSION = "hdp.observation-envelope.v1"
 AHRQ_ENVELOPE_RECORD_TYPE = "observation_envelope"
 AHRQ_RECEIPT_SCHEMA = "hdp.ahrq-producer-receipt.v1"
 AHRQ_PRODUCER_NAME = "healthcare-data-mcp:ahrq-observation-producer"
+AHRQ_OFFLINE_ARTIFACT_PREFIX = "artifact:ahrq:offline:"
 
 _SOURCE_ID = re.compile(r"^source:[a-z0-9][a-z0-9._:-]*$")
 _RELEASE_ID = re.compile(r"^release:[a-z0-9][a-z0-9._:-]*$")
@@ -161,6 +164,9 @@ class AhrqArtifactLocator:
     def from_mapping(cls, role: ArtifactRole, value: Mapping[str, object]) -> "AhrqArtifactLocator":
         """Parse a small public-safe locator mapping without accepting secrets."""
 
+        declared_role = value.get("role")
+        if declared_role is not None and declared_role != role:
+            raise AhrqProducerError("artifact role does not match source file")
         artifact_id = value.get("artifact_id")
         custody_locator = value.get("custody_locator", value.get("locator"))
         content_sha256 = value.get(
@@ -442,9 +448,16 @@ def parse_ahrq_system_rows(
 ) -> tuple[AhrqSourceRow, ...]:
     """Parse and validate source-native AHRQ system rows without coercion."""
 
+    source_path = Path(path)
     locator = _coerce_artifact("system", artifact)
+    raw = _verify_file_claim(source_path, locator, "system")
     return _parse_rows(
-        Path(path), role="system", required_columns=SYSTEM_REQUIRED_COLUMNS, artifact=locator, encoding=encoding
+        source_path,
+        role="system",
+        required_columns=SYSTEM_REQUIRED_COLUMNS,
+        artifact=locator,
+        encoding=encoding,
+        raw=raw,
     )
 
 
@@ -456,13 +469,16 @@ def parse_ahrq_facility_rows(
 ) -> tuple[AhrqSourceRow, ...]:
     """Parse and validate source-native AHRQ hospital-linkage rows."""
 
+    source_path = Path(path)
     locator = _coerce_artifact("facility", artifact)
+    raw = _verify_file_claim(source_path, locator, "facility")
     return _parse_rows(
-        Path(path),
+        source_path,
         role="facility",
         required_columns=FACILITY_REQUIRED_COLUMNS,
         artifact=locator,
         encoding=encoding,
+        raw=raw,
     )
 
 
@@ -478,24 +494,28 @@ def parse_ahrq_source_rows(
 
     system_locator = _coerce_artifact("system", system_artifact)
     facility_locator = _coerce_artifact("facility", facility_artifact)
-    _verify_file_claim(Path(system_path), system_locator, "system")
-    _verify_file_claim(Path(facility_path), facility_locator, "facility")
+    system_path_value = Path(system_path)
+    facility_path_value = Path(facility_path)
+    system_raw = _verify_file_claim(system_path_value, system_locator, "system")
+    facility_raw = _verify_file_claim(facility_path_value, facility_locator, "facility")
     systems = _parse_rows(
-        Path(system_path),
+        system_path_value,
         role="system",
         required_columns=SYSTEM_REQUIRED_COLUMNS,
         artifact=system_locator,
         encoding=encoding,
+        raw=system_raw,
     )
     facilities = _parse_rows(
-        Path(facility_path),
+        facility_path_value,
         role="facility",
         required_columns=FACILITY_REQUIRED_COLUMNS,
         artifact=facility_locator,
         encoding=encoding,
+        raw=facility_raw,
     )
     system_ids = {row.fields["health_sys_id"] for row in systems}
-    linked_ids = {row.fields["health_sys_id"] for row in facilities if row.fields.get("health_sys_id", "")}
+    linked_ids = {row.fields["health_sys_id"] for row in facilities}
     orphaned = sorted(linked_ids - system_ids)
     if orphaned:
         raise AhrqRowParseError("facility rows reference unknown health_sys_id: " + ", ".join(orphaned))
@@ -534,7 +554,13 @@ def build_ahrq_observation_envelope(
     raw_rows = parsed.rows
     normalized_bytes = _normalized_rows_bytes(parsed, release, source_period)
     normalized_hash = _sha256(normalized_bytes)
-    normalized = _coerce_normalized_artifact(normalized_artifact, normalized_hash, len(normalized_bytes))
+    normalized = _coerce_normalized_artifact(
+        normalized_artifact,
+        normalized_hash,
+        len(normalized_bytes),
+        source_id=release.source_id,
+        release_id=cast(str, release.release_id),
+    )
     if normalized is None:
         if normalized_store is not None:
             normalized = _store_normalized_artifact(
@@ -548,7 +574,7 @@ def build_ahrq_observation_envelope(
             digest = normalized_hash.removeprefix("sha256:")
             normalized = AhrqArtifactLocator(
                 role="system",
-                artifact_id=f"artifact:ahrq:normalized:{digest[:32]}",
+                artifact_id=f"{AHRQ_OFFLINE_ARTIFACT_PREFIX}{digest[:32]}",
                 custody_locator=f"object://ahrq/normalized/{digest}",
                 content_sha256=normalized_hash,
                 byte_length=len(normalized_bytes),
@@ -733,7 +759,7 @@ class FileAhrqAcknowledgementStore:
         """Persist or replay acknowledgement evidence without retaining payloads."""
 
         values = _envelope_identity(envelope)
-        with self._lock:
+        with self._lock, self._file_lock():
             records = self._read()
             existing = records.get(values["idempotency_key"])
             if existing is not None:
@@ -755,6 +781,28 @@ class FileAhrqAcknowledgementStore:
             records[acknowledgement.idempotency_key] = acknowledgement
             write_atomic_json(self.path, {key: value.as_dict() for key, value in sorted(records.items())})
             return acknowledgement
+
+    @contextmanager
+    def _file_lock(self) -> Iterator[None]:
+        """Hold an advisory OS lock shared by every process using this store."""
+
+        lock_path = self.path.with_name(self.path.name + ".lock")
+        try:
+            lock_path.parent.mkdir(parents=True, exist_ok=True)
+            handle = lock_path.open("a+", encoding="utf-8")
+        except OSError as exc:
+            raise AhrqAcknowledgementError("unable to open acknowledgement store lock") from exc
+        try:
+            try:
+                fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+            except OSError as exc:
+                raise AhrqAcknowledgementError("unable to acquire acknowledgement store lock") from exc
+            yield
+        finally:
+            try:
+                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+            finally:
+                handle.close()
 
     def _read(self) -> dict[str, AhrqAcknowledgement]:
         if not self.path.exists():
@@ -1076,13 +1124,14 @@ def _parse_rows(
     required_columns: frozenset[str],
     artifact: AhrqArtifactLocator,
     encoding: str,
+    raw: bytes | None = None,
 ) -> tuple[AhrqSourceRow, ...]:
     try:
-        raw = path.read_bytes()
-        text = raw.decode(encoding, errors="strict")
+        source_bytes = path.read_bytes() if raw is None else raw
+        text = source_bytes.decode(encoding, errors="strict")
     except (OSError, UnicodeError) as exc:
         raise AhrqRowParseError(f"unable to read {role} AHRQ CSV: {path.name}") from exc
-    reader = csv.DictReader(io.StringIO(text, newline=""))
+    reader = csv.DictReader(io.StringIO(text, newline=""), strict=True)
     original_headers = reader.fieldnames
     if not original_headers:
         raise AhrqRowParseError(f"{role} AHRQ CSV has no header: {path.name}")
@@ -1102,37 +1151,42 @@ def _parse_rows(
         raise AhrqRowParseError(f"{role} AHRQ CSV is missing required columns: {', '.join(missing)}")
     rows: list[AhrqSourceRow] = []
     seen_ids: set[str] = set()
-    for row_number, raw_row in enumerate(reader, start=2):
-        if None in raw_row:
-            raise AhrqRowParseError(f"{role} AHRQ CSV row {row_number} has too many fields")
-        if not any(value not in (None, "") for value in raw_row.values()):
-            continue
-        fields: dict[str, str] = {}
-        for original_header, header in canonical_by_original.items():
-            value = raw_row.get(original_header)
-            if value is None:
-                value = ""
-            fields[header] = value.strip()
-        id_column = "health_sys_id" if role == "system" else "compendium_hospital_id"
-        source_native_id = fields.get(id_column, "")
-        if not source_native_id:
-            raise AhrqRowParseError(f"{role} AHRQ CSV row {row_number} has no {id_column}")
-        normalized_id = _slug(source_native_id)
-        if normalized_id in seen_ids:
-            raise AhrqRowParseError(f"duplicate {id_column} in {role} AHRQ CSV: {source_native_id}")
-        seen_ids.add(normalized_id)
-        row_id = f"{role}:{normalized_id}"
-        row_bytes = _canonical_json_bytes({"headers": headers, "fields": fields})
-        rows.append(
-            AhrqSourceRow(
-                role=role,
-                row_number=row_number,
-                source_row_id=row_id,
-                fields=fields,
-                row_sha256=_sha256(row_bytes),
-                artifact=artifact,
+    try:
+        for row_number, raw_row in enumerate(reader, start=2):
+            if None in raw_row:
+                raise AhrqRowParseError(f"{role} AHRQ CSV row {row_number} has too many fields")
+            if not any(value not in (None, "") for value in raw_row.values()):
+                continue
+            fields: dict[str, str] = {}
+            for original_header, header in canonical_by_original.items():
+                value = raw_row.get(original_header)
+                if value is None:
+                    value = ""
+                fields[header] = value.strip()
+            id_column = "health_sys_id" if role == "system" else "compendium_hospital_id"
+            source_native_id = fields.get(id_column, "")
+            if not source_native_id:
+                raise AhrqRowParseError(f"{role} AHRQ CSV row {row_number} has no {id_column}")
+            if role == "facility" and not fields.get("health_sys_id", ""):
+                raise AhrqRowParseError(f"facility AHRQ CSV row {row_number} has no health_sys_id")
+            normalized_id = _slug(source_native_id)
+            if normalized_id in seen_ids:
+                raise AhrqRowParseError(f"duplicate {id_column} in {role} AHRQ CSV: {source_native_id}")
+            seen_ids.add(normalized_id)
+            row_id = f"{role}:{normalized_id}"
+            row_bytes = _canonical_json_bytes({"headers": headers, "fields": fields})
+            rows.append(
+                AhrqSourceRow(
+                    role=role,
+                    row_number=row_number,
+                    source_row_id=row_id,
+                    fields=fields,
+                    row_sha256=_sha256(row_bytes),
+                    artifact=artifact,
+                )
             )
-        )
+    except csv.Error as exc:
+        raise AhrqRowParseError(f"{role} AHRQ CSV is malformed: {path.name}") from exc
     if not rows:
         raise AhrqRowParseError(f"{role} AHRQ CSV has no data rows")
     return tuple(rows)
@@ -1161,16 +1215,27 @@ def _coerce_normalized_artifact(
     value: AhrqArtifactLocator | Mapping[str, object] | None,
     content_sha256: str,
     byte_length: int,
+    *,
+    source_id: str,
+    release_id: str,
 ) -> AhrqArtifactLocator | None:
     if value is None:
         return None
     locator = value if isinstance(value, AhrqArtifactLocator) else AhrqArtifactLocator.from_mapping("system", value)
+    if locator.role != "system":
+        raise AhrqProducerError("normalized artifact role must be system")
+    if locator.source_id != AHRQ_SOURCE_ID or locator.source_id != source_id:
+        raise AhrqProducerError("normalized artifact source_id does not match AHRQ")
+    if locator.release_id != release_id:
+        raise AhrqProducerError("normalized artifact release_id does not match detector receipt")
+    if not locator.verified:
+        raise AhrqProducerError("normalized artifact requires verified custody")
     if locator.content_sha256 != content_sha256 or locator.byte_length != byte_length:
         raise AhrqProducerError("normalized artifact hash or length does not match parsed rows")
     return locator
 
 
-def _verify_file_claim(path: Path, artifact: AhrqArtifactLocator, role: str) -> None:
+def _verify_file_claim(path: Path, artifact: AhrqArtifactLocator, role: str) -> bytes:
     if not path.is_file():
         raise AhrqRowParseError(f"{role} AHRQ artifact is missing: {path.name}")
     try:
@@ -1180,6 +1245,7 @@ def _verify_file_claim(path: Path, artifact: AhrqArtifactLocator, role: str) -> 
     actual_hash = _sha256(content)
     if artifact.verified and (actual_hash != artifact.content_sha256 or len(content) != artifact.byte_length):
         raise AhrqProducerError(f"{role} raw artifact hash or length does not match custody claim")
+    return content
 
 
 def _validate_release(release: DetectionReceipt) -> None:
@@ -1332,6 +1398,9 @@ def _envelope_identity(envelope: Mapping[str, object]) -> dict[str, str]:
     replay = _mapping(lineage.get("replay"), "lineage.replay")
     idempotency_key = _required_text(replay, "idempotency_key")
     artifact = _mapping(envelope.get("artifact"), "artifact")
+    artifact_id = _required_text(artifact, "artifact_id")
+    if artifact_id.startswith(AHRQ_OFFLINE_ARTIFACT_PREFIX):
+        raise AhrqAcknowledgementError("offline normalized artifact cannot be delivered")
     return {
         "envelope_id": envelope_id,
         "source_id": _required_text(source_release, "source_id"),
@@ -1422,6 +1491,7 @@ __all__ = [
     "AHRQ_ENVELOPE_RECORD_TYPE",
     "AHRQ_ENVELOPE_SCHEMA_VERSION",
     "AHRQ_FROZEN_DISPATCH_BASE",
+    "AHRQ_OFFLINE_ARTIFACT_PREFIX",
     "AHRQ_PACKET_ID",
     "AHRQ_PRODUCER_NAME",
     "AHRQ_RECEIPT_SCHEMA",
