@@ -1,0 +1,83 @@
+{
+  "schema_version": "hdp.staging-activation-blocked-host-custody.v2",
+  "record_type": "staging_activation_blocked_host_custody",
+  "receipt_id": "receipt:staging-activation-blocked:p1-33-host-custody-20260829",
+  "environment": "staging",
+  "state": "blocked_host_custody",
+  "status": "pending",
+  "activation_performed": false,
+  "approval": {
+    "state": "pending",
+    "scope": "staging-activation",
+    "required_before": "activation",
+    "approved_by": null,
+    "approved_at": null
+  },
+  "targets": {
+    "data_mcp_commit": "7b11b83268c72634dbfe36f4fe5f61b447975770",
+    "paired_toolkit_commit": "d21074bf9eae5bcf793186a2e003f64a7d543e27"
+  },
+  "port_preflight": {
+    "command": "ss -H -ltnp '( sport = :8110 or sport = :3020 )'",
+    "observed_at": "2026-08-29T16:08:11Z",
+    "ports": [
+      {"port": 8110, "state": "free", "listeners": []},
+      {"port": 3020, "state": "free", "listeners": []}
+    ]
+  },
+  "fixture_verification": {
+    "state": "blocked_host_custody",
+    "execution": "not_run",
+    "temporary_root": {
+      "ownership": "caller_owned_tmp_path",
+      "path_template": "{tmp_path}",
+      "provided_by_caller": true,
+      "source_bytes_written": false
+    },
+    "artifacts": {
+      "scheduler": {
+        "path_template": "{tmp_path}/control/scheduler.json",
+        "ownership": "caller_owned_tmp_path",
+        "provided_by_caller": true,
+        "evidence_state": "pending",
+        "content_present": false,
+        "source_bytes_written": false
+      },
+      "queue": {
+        "path_template": "{tmp_path}/control/control.sqlite3",
+        "ownership": "caller_owned_tmp_path",
+        "provided_by_caller": true,
+        "evidence_state": "pending",
+        "content_present": false,
+        "source_bytes_written": false
+      },
+      "raw_custody": {
+        "path_template": "{tmp_path}/raw-custody",
+        "ownership": "caller_owned_tmp_path",
+        "provided_by_caller": true,
+        "evidence_state": "pending",
+        "content_present": false,
+        "source_bytes_written": false
+      }
+    }
+  },
+  "host_custody": {
+    "state": "blocked_host_custody",
+    "reason_code": "staging_root_absent_parent_world_writable",
+    "staging_root": "/mnt/d/services/healthcare-toolkit-staging",
+    "staging_root_present": false,
+    "parent_custody_verified": false,
+    "mutations_performed": false
+  },
+  "prohibitions": {
+    "services_started": false,
+    "ports_bound": false,
+    "migrations_applied": false,
+    "credentials_resolved": false,
+    "sources_probed": false,
+    "runtime_state_written": false
+  },
+  "hash_algorithm": "sha256",
+  "hash_scope": "canonical_json_without_receipt_hash",
+  "receipt_hash": "sha256:25ced696da349c54b262e1909bc450c80618049bf1c7c8ff39617b1a1892d5da"
+}
