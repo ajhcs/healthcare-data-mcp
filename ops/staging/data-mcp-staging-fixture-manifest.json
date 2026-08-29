@@ -3,20 +3,20 @@
   "record_type": "staging_fixture_release_manifest",
   "release_id": "r3-data-mcp-fixture-20260829",
   "baseline_sha": "63539f8412831ee62b067c76c3b5c395108481cc",
-  "reviewed_candidate_sha": "4651da8caf528d2bd1278463d81f44d7fb84dd66",
+  "reviewed_candidate_sha": "26108f9f580c96f54eb4ccc9026d0307503a2a0f",
   "entrypoint": "scripts/run_data_mcp_staging_fixture.py",
   "command": [
     "python3",
     "scripts/run_data_mcp_staging_fixture.py",
     "--candidate-sha",
-    "4651da8caf528d2bd1278463d81f44d7fb84dd66",
+    "26108f9f580c96f54eb4ccc9026d0307503a2a0f",
     "--root",
     "<empty-absolute-caller-owned-fixture-root>"
   ],
   "artifacts": [
     {
       "path": "scripts/run_data_mcp_staging_fixture.py",
-      "sha256": "sha256:d193d3dcad603c7c40d4178838b1e8de52ba2e9628746be38e60639a20d8f9d7"
+      "sha256": "sha256:d98cae4549f255674b37d2eee37b593f17c38650ae04032c7a0a84cdc5b79865"
     },
     {
       "path": "contracts/healthcare-data-platform/staging/v1/fixtures/deterministic-source-input.json",
@@ -36,16 +36,48 @@
     },
     {
       "path": "tests/test_data_mcp_staging_fixture_runner.py",
-      "sha256": "sha256:6ebc88f01aa848c73b3e89bc530cd3e25214f61954d88cb03cd8809f4e28305a"
+      "sha256": "sha256:e4bbef34e194391cf6a77a48cb6844647bcb7a0ce2cda153722558003ffa20e0"
     },
     {
       "path": "tests/test_data_mcp_staging_lock.py",
       "sha256": "sha256:ef3203e8623d8d8d966227a705693fe8890ec24360aa5e57f71f3ae3510a2e6d"
+    },
+    {
+      "path": "contracts/healthcare-data-platform/catalog/v1/fixtures/valid-source-catalog.json",
+      "sha256": "sha256:f1996c744a1947ac05a34c501f6608fff7db814e25127bf93e52f187163d5bcc"
+    },
+    {
+      "path": "contracts/healthcare-data-platform/scheduler/v1/scheduler-state.schema.json",
+      "sha256": "sha256:4532e47acab0688c0268b08e8af958f8f70c6889ad2da894466eccf8ceed9351"
+    },
+    {
+      "path": "contracts/healthcare-data-platform/queue/v1/queue.schema.json",
+      "sha256": "sha256:d604dc36d2cc2fd1c20dc4814c2a3a8804dcaf9b0025cb000d68f2edc3ce60d4"
+    },
+    {
+      "path": "contracts/healthcare-data-platform/storage/v1/raw-artifact.schema.json",
+      "sha256": "sha256:b211632032147a388319b089671b27be207ab05e50d86335e83499a9c38dd682"
+    },
+    {
+      "path": "shared/utils/source_cadence.py",
+      "sha256": "sha256:1340f7149687f628ddbc84af808a39925aaf82056653b50c9d2ec78d8eceee49"
+    },
+    {
+      "path": "shared/utils/source_scheduler.py",
+      "sha256": "sha256:86b25a90e1b0e9970aa65a5a12780e3ca6aea51d66c604f75698366d960bcfb7"
+    },
+    {
+      "path": "shared/queue/durable.py",
+      "sha256": "sha256:26ce47c9deab4c25c03d6663ef8bd6c06cb383c67e6d192db9c1578134202d63"
+    },
+    {
+      "path": "shared/storage/raw_custody.py",
+      "sha256": "sha256:32b8f38e3ae054aabccb3762ca9892e0753e8fad07b5665629f04d2456b3bcd1"
     }
   ],
   "expected_receipt": {
     "path": "control/staging-fixture-receipt.json",
-    "sha256": "sha256:b76255e44f8e6adb52eca6e3c39e2ab906ffca3aa88e5bfeda79b25f8d46e03b",
+    "sha256": "sha256:fcc5c9ad00f304519a22e9318fae1e66384d09d3f406a6d7aa215932d013ca17",
     "run_at": "2026-08-29T00:00:00Z",
     "runs": 3,
     "exit_code": 0,
