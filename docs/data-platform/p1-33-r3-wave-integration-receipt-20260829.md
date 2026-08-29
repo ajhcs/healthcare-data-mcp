@@ -18,8 +18,8 @@ destructive action occurred.
 The implementation candidate remains `2f2dca2f...c77d5` because the runner
 binds its manifest to an executable commit; the later integration-head commits
 are additive receipts/documentation and are verified as descendants. Runtime
-activation must use the manifest-bound candidate, not the historical
-`7b11b832...` preparation SHA.
+activation must use the manifest-bound candidate, not the superseded
+preparation candidate.
 
 ## Evidence and review
 
