@@ -237,6 +237,18 @@ def test_idempotency_reuse_with_changed_observation_content_is_rejected() -> Non
     assert "key.identity_drift" in report.issue_codes
 
 
+def test_contract_valid_replay_bookkeeping_does_not_change_content_identity() -> None:
+    candidate = _envelope()
+    baseline = DriftBaseline.from_envelope(candidate)
+    replay = deepcopy(candidate)
+    replay["lineage"]["replay"]["state"] = "replayed"
+    replay["lineage"]["replay"]["replay_of"] = "lineage:fixture:prior"
+
+    report = validate_drift(replay, baseline)
+
+    assert report.accepted
+
+
 def test_rejected_candidate_is_quarantined_and_never_projected(tmp_path: Path) -> None:
     candidate = _batch()
     candidate["rows"] = [{"row_id": "row:1", "scope": "system", "secret": "do-not-store"}]

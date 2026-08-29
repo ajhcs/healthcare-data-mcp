@@ -1201,7 +1201,7 @@ def _candidate_key_digest(candidate: Mapping[str, object]) -> str | None:
     replay = _mapping(lineage.get("replay"))
     checkpoint_id, cursor = _candidate_checkpoint_cursor(candidate)
     try:
-        content_sha256 = _fingerprint(candidate)
+        content_sha256 = _fingerprint(_immutable_content(candidate))
     except DriftValidationError:
         content_sha256 = None
     values = {
@@ -1221,6 +1221,25 @@ def _candidate_key_digest(candidate: Mapping[str, object]) -> str | None:
         return _fingerprint(values)
     except DriftValidationError:
         return None
+
+
+def _immutable_content(candidate: Mapping[str, object]) -> Mapping[str, object]:
+    """Remove replay bookkeeping before comparing immutable candidate content."""
+
+    lineage = candidate.get("lineage")
+    if not isinstance(lineage, Mapping):
+        return candidate
+    replay = lineage.get("replay")
+    if not isinstance(replay, Mapping):
+        return candidate
+    normalized = dict(candidate)
+    normalized_lineage = dict(lineage)
+    normalized_replay = dict(replay)
+    normalized_replay.pop("state", None)
+    normalized_replay.pop("replay_of", None)
+    normalized_lineage["replay"] = normalized_replay
+    normalized["lineage"] = normalized_lineage
+    return normalized
 
 
 def _candidate_checkpoint_cursor(candidate: Mapping[str, object]) -> tuple[str | None, str | None]:
