@@ -1,0 +1,16 @@
+{
+  "schema_version": "hdp.queue.v1",
+  "record_type": "queue_policy",
+  "max_active_items": 4,
+  "max_active_bytes": 1048576,
+  "lease_ttl_seconds": 60,
+  "heartbeat_extension_seconds": 60,
+  "retry_delay_seconds": 15,
+  "max_attempts": 3,
+  "source_budgets": {
+    "source:ahrq:lighthouse": {
+      "max_active_items": 2,
+      "max_active_bytes": 524288
+    }
+  }
+}
