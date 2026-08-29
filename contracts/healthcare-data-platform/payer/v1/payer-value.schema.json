@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.ushso.org/healthcare-data-platform/payer/v1/payer-value.schema.json",
+  "type": "object",
+  "oneOf": [
+    {
+      "required": ["type_of_coverage", "plan_or_contract_id", "denominator", "denominator_scope"],
+      "properties": {
+        "type_of_coverage": {"enum": ["medicare_advantage", "medicare_part_d", "marketplace"]},
+        "plan_or_contract_id": {"type": "string", "minLength": 1},
+        "numerator": {"type": ["integer", "null"], "minimum": 0},
+        "denominator": {"type": "integer", "minimum": 0},
+        "denominator_scope": {"type": "string", "minLength": 1},
+        "reference_id": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    {
+      "required": ["type_of_coverage", "reference_id"],
+      "properties": {
+        "type_of_coverage": {"const": "f7_reference"},
+        "reference_id": {"type": "string", "minLength": 1},
+        "plan_or_contract_id": {"type": "string"},
+        "numerator": {"type": ["integer", "null"], "minimum": 0},
+        "denominator": {"type": ["integer", "null"], "minimum": 0},
+        "denominator_scope": {"type": "string"}
+      },
+      "additionalProperties": false
+    }
+  ]
+}

@@ -7,8 +7,9 @@ from hashlib import sha256
 import json
 from typing import Literal, Mapping, cast
 from types import MappingProxyType
+from pathlib import Path
 
-from shared.contracts.healthcare_data_platform import validate_observation_envelope
+from shared.contracts.healthcare_data_platform import JsonParameter, validate_observation_envelope
 from shared.storage.raw_custody import RawArtifactStore, RawCustodyError
 
 PayerType = Literal["medicare_advantage", "medicare_part_d", "marketplace", "f7_reference"]
@@ -99,6 +100,21 @@ SOURCE_CATALOG = MappingProxyType(
     }
 )
 REJECTED_FAMILIES = frozenset({"census_population", "acs_population", "census_insurance", "modeled_population"})
+
+
+def _validate_payer_value(value: dict[str, object]) -> None:
+    try:
+        from jsonschema import Draft202012Validator
+
+        schema_path = (
+            Path(__file__).resolve().parents[2] / "contracts/healthcare-data-platform/payer/v1/payer-value.schema.json"
+        )
+        schema = json.loads(schema_path.read_text(encoding="utf-8"))
+        errors = list(Draft202012Validator(schema).iter_errors(cast(JsonParameter, value)))
+    except (ImportError, OSError, json.JSONDecodeError) as exc:
+        raise ValueError("payer value schema unavailable") from exc
+    if errors:
+        raise ValueError(f"payer value schema invalid: {errors[0].message}")
 
 
 @dataclass(frozen=True, slots=True)
@@ -199,26 +215,46 @@ def validate_payer_catalog() -> dict[str, object]:
         not registration.source_url.startswith("https://") for registration in SOURCE_CATALOG.values()
     ):
         raise ValueError("payer catalog registration is incomplete")
-    return {
-        key: {
-            "source_id": value.source_id,
-            "title": value.title,
-            "family": value.family,
-            "source_url": value.source_url,
-            "release_locator": value.release_locator,
-            "change_mode": value.change_mode,
-            "owner": value.owner,
-            "rights_status": value.rights_status,
-            "cadence": {
-                "interval_seconds": value.cadence.interval_seconds,
-                "jitter_seconds": value.cadence.jitter_seconds,
-            },
-            "enabled_fields": list(value.enabled_fields),
-            "enabled": value.enabled,
-            "missed_run_grace_seconds": value.missed_run_grace_seconds,
-        }
-        for key, value in SOURCE_CATALOG.items()
+    catalog: dict[str, object] = {
+        "schema_version": "hdp.source-catalog.v1",
+        "record_type": "source_catalog",
+        "catalog_id": "catalog:healthcare-data-platform:payer:v1",
+        "sources": [
+            {
+                "source_id": value.source_id,
+                "title": value.title,
+                "family": value.family,
+                "source_url": value.source_url,
+                "release_locator": value.release_locator,
+                "change_mode": value.change_mode,
+                "owner": value.owner,
+                "rights_status": value.rights_status,
+                "cadence": {
+                    "interval_seconds": value.cadence.interval_seconds,
+                    "jitter_seconds": value.cadence.jitter_seconds,
+                    "missed_run_grace_seconds": value.missed_run_grace_seconds,
+                },
+                "enabled": value.enabled,
+            }
+            for value in SOURCE_CATALOG.values()
+        ],
     }
+    try:
+        from jsonschema import Draft202012Validator, FormatChecker
+
+        schema_path = (
+            Path(__file__).resolve().parents[2]
+            / "contracts/healthcare-data-platform/catalog/v1/source-catalog.schema.json"
+        )
+        schema = json.loads(schema_path.read_text(encoding="utf-8"))
+        errors = list(
+            Draft202012Validator(schema, format_checker=FormatChecker()).iter_errors(cast(JsonParameter, catalog))
+        )
+    except (ImportError, OSError, json.JSONDecodeError) as exc:
+        raise ValueError("payer catalog schema unavailable") from exc
+    if errors:
+        raise ValueError(f"payer catalog schema invalid: {errors[0].message}")
+    return catalog
 
 
 def build_payer_observation_envelope(
@@ -277,23 +313,6 @@ def build_payer_observation_envelope(
                 }
             )
         ]
-    authority = dict(conflict_authority or {})
-    for row, candidate in zip(candidates, parsed, strict=False):
-        if candidate.missingness == "blocked_source_conflict":
-            reference = str(row.get("competing_observation_ref") or "")
-            if (
-                not reference
-                or reference not in authority
-                or reference.startswith("observation:payer:" + "")
-                and reference in {"observation:payer:" + seed for seed in []}
-            ):
-                raise ValueError("blocked conflict reference is missing or unknown")
-            boundary = authority[reference]
-            if (
-                boundary.get("source_id") != source.source_id
-                or boundary.get("release_id") != "release:" + source_family + ":" + source_period
-            ):
-                raise ValueError("blocked conflict reference source boundary mismatch")
     release_id = custody.release_id
     candidate_digest = sha256(
         json.dumps([dict(row) for row in candidates], sort_keys=True, separators=(",", ":")).encode()
@@ -316,23 +335,6 @@ def build_payer_observation_envelope(
                     "release_locator": source.release_locator,
                     "rights_status": custody.rights_status,
                     "cadence": source.cadence.interval_seconds,
-                },
-                sort_keys=True,
-                separators=(",", ":"),
-            ).encode()
-        ).hexdigest()
-    )
-    receipt_digest = (
-        "sha256:"
-        + sha256(
-            json.dumps(
-                {
-                    "receipt_id": receipt_id,
-                    "producer": "healthcare-data-mcp:payer-observation-producer:bead=healthcare-toolkit-rrna.p1-28-payer-discovery-20260829",
-                    "source_release_ref": release_id,
-                    "artifact_ref": artifact_id,
-                    "state": "succeeded",
-                    "recorded_at": retrieved_at,
                 },
                 sort_keys=True,
                 separators=(",", ":"),
@@ -378,7 +380,7 @@ def build_payer_observation_envelope(
             "artifact_ref": artifact_id,
             "source_release_sha256": digest,
             "artifact_sha256": digest,
-            "receipt_sha256": receipt_digest,
+            "receipt_sha256": "sha256:" + "0" * 64,
             "state": "succeeded",
             "recorded_at": retrieved_at,
             "evidence_locator": custody.source_url,
@@ -425,25 +427,54 @@ def build_payer_observation_envelope(
             "identity_promotion_allowed": False,
         },
     }
+    receipt_payload = dict(cast(dict[str, object], envelope["receipt"]))
+    receipt_payload.pop("receipt_sha256", None)
+    envelope["receipt"]["receipt_sha256"] = (
+        "sha256:" + sha256(json.dumps(receipt_payload, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    )
+    authority = dict(conflict_authority or {})
+    generated_ids = set(observation_ids)
+    for row, candidate in zip(candidates, parsed, strict=False):
+        if candidate.missingness != "blocked_source_conflict":
+            continue
+        reference = str(row.get("competing_observation_ref") or "")
+        boundary = authority.get(reference)
+        if (
+            not reference.startswith("observation:payer:")
+            or reference in generated_ids
+            or boundary is None
+            or boundary.get("observation_id") != reference
+            or boundary.get("authority_state") != "source_scoped"
+            or boundary.get("source_id") != source.source_id
+            or boundary.get("release_id") != release_id
+            or not boundary.get("artifact_ref")
+            or not boundary.get("receipt_ref")
+        ):
+            raise ValueError("blocked conflict reference lacks caller source-scoped authority")
     for index, candidate in enumerate(parsed, 1):
         state = "observed" if candidate.missingness is None else candidate.missingness
         subject_key = candidate.geography.lower().replace(" ", "-")
+        observation_value: dict[str, object] | None = (
+            {
+                "type_of_coverage": candidate.payer_type,
+                "plan_or_contract_id": candidate.plan_or_contract_id,
+                "numerator": candidate.numerator,
+                "denominator": candidate.denominator,
+                "denominator_scope": candidate.denominator_scope,
+                "reference_id": candidate.reference_id,
+            }
+            if state == "observed"
+            else None
+        )
+        if observation_value is not None:
+            _validate_payer_value(observation_value)
         envelope["observations"].append(
             {
                 "observation_id": observation_ids[index - 1],
                 "identity_key": "identity:payer:" + subject_key,
                 "subject_ref": "entity:payer:" + subject_key,
                 "attribute_term_ref": "term:payer-coverage",
-                "value": {
-                    "type_of_coverage": candidate.payer_type,
-                    "plan_or_contract_id": candidate.plan_or_contract_id,
-                    "numerator": candidate.numerator,
-                    "denominator": candidate.denominator,
-                    "denominator_scope": candidate.denominator_scope,
-                    "reference_id": candidate.reference_id,
-                }
-                if state == "observed"
-                else None,
+                "value": observation_value,
                 "value_state": state,
                 "source_scope": {
                     "scope_id": "scope:payer:" + source_period,

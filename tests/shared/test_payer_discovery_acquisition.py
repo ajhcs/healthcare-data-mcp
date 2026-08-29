@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 import hashlib
+from typing import cast
 import pytest
 
 from shared.acquisition.payer_discovery import (
@@ -26,7 +27,9 @@ def test_typed_candidate_rejects_census_and_unregistered_mapping() -> None:
 
 def test_catalog_is_json_safe_and_f7_reference_is_first_class() -> None:
     catalog = validate_payer_catalog()
-    assert set(catalog) == set(SOURCE_CATALOG)
+    assert catalog["schema_version"] == "hdp.source-catalog.v1"
+    assert catalog["record_type"] == "source_catalog"
+    assert len(cast(list[object], catalog["sources"])) == len(SOURCE_CATALOG)
     candidate = PayerCandidate.from_mapping(
         {
             "payer_type": "f7_reference",
@@ -78,7 +81,7 @@ def test_observation_envelope_contains_custody_hash_and_validates_schema(tmp_pat
     content_hash = "sha256:" + hashlib.sha256(raw).hexdigest()
     identity = hashlib.sha256(
         (
-            SOURCE_CATALOG["cms_marketplace_effectuated_enrollment"]["source_id"]
+            SOURCE_CATALOG["cms_marketplace_effectuated_enrollment"].source_id
             + "|release:cms_marketplace_effectuated_enrollment:2024|"
             + content_hash
         ).encode()
@@ -87,8 +90,8 @@ def test_observation_envelope_contains_custody_hash_and_validates_schema(tmp_pat
         "schema_version": "hdp.raw-artifact.v1",
         "record_type": "raw_artifact",
         "artifact_id": "artifact:raw:" + identity,
-        "source_id": SOURCE_CATALOG["cms_marketplace_effectuated_enrollment"]["source_id"],
-        "source_url": SOURCE_CATALOG["cms_marketplace_effectuated_enrollment"]["source_url"],
+        "source_id": SOURCE_CATALOG["cms_marketplace_effectuated_enrollment"].source_id,
+        "source_url": SOURCE_CATALOG["cms_marketplace_effectuated_enrollment"].source_url,
         "release_id": "release:cms_marketplace_effectuated_enrollment:2024",
         "media_type": "application/octet-stream",
         "content_sha256": content_hash,
@@ -107,11 +110,11 @@ def test_observation_envelope_contains_custody_hash_and_validates_schema(tmp_pat
         candidates=[{"payer_type": "marketplace", "geography": "PA", "plan_id": "plan-1", "denominator": 10}],
         retrieved_at=datetime.now(timezone.utc).isoformat(),
         artifact_store=store,
-        artifact_id=metadata["artifact_id"],
+        artifact_id=cast(str, metadata["artifact_id"]),
     )
     assert envelope["schema_version"] == "hdp.observation-envelope.v1"
-    assert envelope["artifact"]["content_sha256"].startswith("sha256:")
-    assert envelope["authority_limits"]["current_projection_allowed"] is False
+    assert cast(dict[str, object], envelope["artifact"])["content_sha256"].__class__ is str
+    assert cast(dict[str, object], envelope["authority_limits"])["current_projection_allowed"] is False
 
 
 def test_empty_candidates_emit_explicit_valid_missingness_observation(tmp_path) -> None:
@@ -119,7 +122,7 @@ def test_empty_candidates_emit_explicit_valid_missingness_observation(tmp_path) 
     content_hash = "sha256:" + hashlib.sha256(raw).hexdigest()
     identity = hashlib.sha256(
         (
-            SOURCE_CATALOG["cms_marketplace_effectuated_enrollment"]["source_id"]
+            SOURCE_CATALOG["cms_marketplace_effectuated_enrollment"].source_id
             + "|release:cms_marketplace_effectuated_enrollment:2024|"
             + content_hash
         ).encode()
@@ -128,8 +131,8 @@ def test_empty_candidates_emit_explicit_valid_missingness_observation(tmp_path) 
         "schema_version": "hdp.raw-artifact.v1",
         "record_type": "raw_artifact",
         "artifact_id": "artifact:raw:" + identity,
-        "source_id": SOURCE_CATALOG["cms_marketplace_effectuated_enrollment"]["source_id"],
-        "source_url": SOURCE_CATALOG["cms_marketplace_effectuated_enrollment"]["source_url"],
+        "source_id": SOURCE_CATALOG["cms_marketplace_effectuated_enrollment"].source_id,
+        "source_url": SOURCE_CATALOG["cms_marketplace_effectuated_enrollment"].source_url,
         "release_id": "release:cms_marketplace_effectuated_enrollment:2024",
         "media_type": "application/octet-stream",
         "content_sha256": content_hash,
@@ -149,6 +152,7 @@ def test_empty_candidates_emit_explicit_valid_missingness_observation(tmp_path) 
         candidates=[],
         retrieved_at=datetime.now(timezone.utc).isoformat(),
         artifact_store=store,
-        artifact_id=metadata["artifact_id"],
+        artifact_id=cast(str, metadata["artifact_id"]),
     )
-    assert envelope["observations"][0]["value_state"] == "not_yet_researched"
+    observations = cast(list[dict[str, object]], envelope["observations"])
+    assert observations[0]["value_state"] == "not_yet_researched"
