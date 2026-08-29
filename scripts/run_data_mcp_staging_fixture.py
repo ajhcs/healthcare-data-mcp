@@ -20,7 +20,7 @@ import sqlite3
 import subprocess
 import sys
 import time
-from typing import Callable, Mapping, TypeAlias, cast
+from typing import TYPE_CHECKING, Callable, Mapping, TypeAlias, cast
 
 # Executing ``python scripts/...`` puts scripts/, rather than the checkout,
 # first on sys.path.  Make the exact reviewed checkout the import root.
@@ -35,6 +35,7 @@ BLOCKED_NETWORK_EVENTS = frozenset(
         "socket.listen",
         "socket.accept",
         "socket.sendto",
+        "socket.sendmsg",
         "socket.getaddrinfo",
         "socket.getnameinfo",
         "socket.gethostbyname",
@@ -64,21 +65,6 @@ def _deny_network_audit(event: str, _arguments: object) -> None:
 # future import cannot accidentally resolve a source or open a listener.
 sys.addaudithook(_deny_network_audit)
 
-import yaml  # noqa: E402
-from jsonschema import Draft202012Validator, FormatChecker  # noqa: E402
-from yaml.constructor import ConstructorError  # noqa: E402
-from yaml.nodes import MappingNode  # noqa: E402
-
-from shared.queue.durable import DurableQueue, QueuePolicy  # noqa: E402
-from shared.storage.raw_custody import (  # noqa: E402
-    ArtifactCollisionError,
-    RawArtifactMetadata,
-    RawArtifactStore,
-)
-from shared.utils.source_cadence import PollState, load_catalog  # noqa: E402
-from shared.utils.source_scheduler import DurableScheduler  # noqa: E402
-
-
 BUNDLE_PATH = REPO_ROOT / "ops/staging/data-mcp-staging-bundle.yaml"
 CATALOG_PATH = REPO_ROOT / "contracts/healthcare-data-platform/catalog/v1/fixtures/valid-source-catalog.json"
 INPUT_PATH = REPO_ROOT / "contracts/healthcare-data-platform/staging/v1/fixtures/deterministic-source-input.json"
@@ -98,28 +84,47 @@ FIXTURE_VERSION = "r3-data-mcp-fixture.v1"
 JsonValue: TypeAlias = None | bool | int | float | str | list["JsonValue"] | dict[str, "JsonValue"]
 
 
-class _StrictLoader(yaml.SafeLoader):
-    """YAML loader that rejects duplicate keys instead of silently merging."""
+if TYPE_CHECKING:
+    from shared.queue.durable import DurableQueue, QueuePolicy
+    from shared.storage.raw_custody import ArtifactCollisionError, RawArtifactMetadata, RawArtifactStore
+    from shared.utils.source_cadence import PollState, load_catalog
+    from shared.utils.source_scheduler import DurableScheduler
 
 
-def _strict_mapping(loader: yaml.SafeLoader, node: MappingNode, deep: bool = False) -> dict[object, object]:
-    if not isinstance(node, MappingNode):
-        raise ConstructorError(None, None, "expected a mapping", node.start_mark)
-    result: dict[object, object] = {}
-    for key_node, value_node in node.value:
-        key = loader.construct_object(key_node, deep=deep)
-        if key in result:
-            raise ConstructorError(
-                "while constructing a mapping",
-                node.start_mark,
-                f"duplicate key: {key!r}",
-                key_node.start_mark,
-            )
-        result[key] = loader.construct_object(value_node, deep=deep)
-    return result
+def _load_runtime_dependencies() -> None:
+    """Import repository modules only after the candidate tree is verified."""
+
+    global ArtifactCollisionError, DurableQueue, DurableScheduler, PollState, QueuePolicy
+    global RawArtifactMetadata, RawArtifactStore, load_catalog
+    from shared.queue.durable import DurableQueue, QueuePolicy
+    from shared.storage.raw_custody import ArtifactCollisionError, RawArtifactMetadata, RawArtifactStore
+    from shared.utils.source_cadence import PollState, load_catalog
+    from shared.utils.source_scheduler import DurableScheduler
 
 
-_StrictLoader.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, _strict_mapping)
+def _probe_socketpair() -> bool:
+    """Prove a local socketpair send is rejected by the process guard."""
+
+    import socket
+
+    left, right = socket.socketpair()
+    start = len(_NETWORK_ATTEMPTS)
+    try:
+        sendmsg = getattr(left, "sendmsg", None)
+        if not callable(sendmsg):
+            raise FixtureError("socketpair sendmsg is unavailable on this platform")
+        try:
+            sendmsg([b"staging-fixture-guard-probe"])
+        except FixtureError as exc:
+            observed = _NETWORK_ATTEMPTS[start:]
+            if observed != ["socket.sendmsg"]:
+                raise FixtureError(f"socketpair probe observed unexpected audit events: {observed}") from exc
+            del _NETWORK_ATTEMPTS[start:]
+            return True
+        raise FixtureError("socket.sendmsg guard did not reject the socketpair probe")
+    finally:
+        left.close()
+        right.close()
 
 
 def _mapping(value: object, label: str) -> dict[str, object]:
@@ -268,6 +273,10 @@ _CONTROL_SCHEMAS: dict[str, dict[str, object]] = {
 
 
 def _validate_schema(value: object, schema: Mapping[str, object], label: str) -> None:
+    try:
+        from jsonschema import Draft202012Validator, FormatChecker
+    except ImportError as exc:
+        raise FixtureError("jsonschema is required for fixture validation") from exc
     errors = Draft202012Validator(schema, format_checker=FormatChecker()).iter_errors(cast(JsonValue, value))
     first = next(errors, None)
     if first is not None:
@@ -342,6 +351,33 @@ def _verify_candidate(candidate_sha: str) -> dict[str, object]:
 
 
 def _load_bundle() -> tuple[dict[str, object], dict[str, int]]:
+    try:
+        import yaml
+        from yaml.constructor import ConstructorError
+        from yaml.nodes import MappingNode
+    except ImportError as exc:
+        raise FixtureError("PyYAML is required for fixture validation") from exc
+
+    class _StrictLoader(yaml.SafeLoader):
+        """YAML loader that rejects duplicate keys instead of silently merging."""
+
+    def _strict_mapping(loader: yaml.SafeLoader, node: MappingNode, deep: bool = False) -> dict[object, object]:
+        if not isinstance(node, MappingNode):
+            raise ConstructorError(None, None, "expected a mapping", node.start_mark)
+        result: dict[object, object] = {}
+        for key_node, value_node in node.value:
+            key = loader.construct_object(key_node, deep=deep)
+            if key in result:
+                raise ConstructorError(
+                    "while constructing a mapping",
+                    node.start_mark,
+                    f"duplicate key: {key!r}",
+                    key_node.start_mark,
+                )
+            result[key] = loader.construct_object(value_node, deep=deep)
+        return result
+
+    _StrictLoader.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, _strict_mapping)
     try:
         value = yaml.load(BUNDLE_PATH.read_text(encoding="utf-8"), Loader=_StrictLoader)
     except (OSError, UnicodeError, yaml.YAMLError) as exc:
@@ -618,6 +654,8 @@ def run(candidate_sha: str, root_value: str) -> dict[str, object]:
     if _NETWORK_ATTEMPTS:
         raise FixtureError(f"network operation occurred before candidate verification: {_NETWORK_ATTEMPTS}")
     manifest = _verify_candidate(candidate_sha)
+    socketpair_probe_ok = _probe_socketpair()
+    _load_runtime_dependencies()
     network_attempts = _NETWORK_ATTEMPTS
     bundle, bounds = _load_bundle()
     fixture = _load_fixture_input()
@@ -957,6 +995,7 @@ def run(candidate_sha: str, root_value: str) -> dict[str, object]:
             "three complete ingestion/replay runs",
         ),
         "bounded_network_and_ports": _check(not network_attempts, "zero listeners and denied egress"),
+        "network_guard_probe": _check(socketpair_probe_ok, "socketpair sendmsg denied by audit guard"),
         "stream_bounds": _check(
             len(baseline_payload) <= bounds["max_stream_bytes"]
             and len(changed_payload) <= bounds["max_stream_bytes"]
@@ -1029,6 +1068,7 @@ def run(candidate_sha: str, root_value: str) -> dict[str, object]:
             "listener_ports": [],
             "binds": [],
             "audit_events": network_attempts,
+            "socketpair_sendmsg_guard": socketpair_probe_ok,
         },
         "ordering": {
             "durable_ack_before_scheduler_checkpoint": durable_ack_before_scheduler_checkpoint,
@@ -1093,7 +1133,7 @@ def main(argv: list[str] | None = None) -> int:
     except FixtureError as exc:
         print(f"fixture contract failure: {exc}", file=sys.stderr)
         return 4
-    except (OSError, sqlite3.Error, ValueError, yaml.YAMLError) as exc:
+    except (ImportError, OSError, sqlite3.Error, ValueError) as exc:
         print(f"fixture execution failure: {exc}", file=sys.stderr)
         return 4
     print(json.dumps(receipt, ensure_ascii=False, sort_keys=True, separators=(",", ":")))
