@@ -200,7 +200,12 @@ def build_hcu_observation_envelope(
     run_id = f"run:hcu:{digest[:32]}"
     lineage_id = f"lineage:hcu:{digest[:32]}"
     idempotency_key = f"idempotency:hcu:{digest[:32]}"
-    observation_ids = [f"observation:hcu:{_slug(str(item['source_record_id']))}" for item in records]
+    # Opaque upstream IDs can collide after human-readable slugging (e.g.
+    # ``A-B`` and ``A B``), so retain a digest suffix for deterministic keys.
+    observation_ids = [
+        f"observation:hcu:{_slug(str(item['source_record_id']))}:{sha256(str(item['source_record_id']).encode()).hexdigest()[:12]}"
+        for item in records
+    ]
     replay_state = "replayed" if prior_lineage_id is not None else "first_seen"
     if prior_lineage_id is not None and (not isinstance(prior_lineage_id, str) or not prior_lineage_id.startswith("lineage:")):
         raise HcuSnapshotError("prior_lineage_id is invalid")
@@ -211,7 +216,7 @@ def build_hcu_observation_envelope(
         missing = record["source_value"] is None
         observations.append({
             "observation_id": observation_id,
-            "identity_key": f"identity:hcu:{_slug(source_record_id)}:{digest[:16]}",
+            "identity_key": f"identity:hcu:{sha256(source_record_id.encode()).hexdigest()[:24]}",
             "subject_ref": f"source-record:{_slug(source_record_id)}",
             "attribute_term_ref": "term:hcu-source-record",
             "value": None if missing else {**record, "ontology_layers": layers, "checkpoint": checkpoint},
