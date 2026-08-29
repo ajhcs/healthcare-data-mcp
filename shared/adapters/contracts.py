@@ -13,7 +13,8 @@ from hashlib import sha256
 import json
 import re
 import threading
-from typing import Literal, Mapping, Protocol, TypeAlias, runtime_checkable
+from types import MappingProxyType
+from typing import Iterable, Literal, Mapping, Protocol, TypeAlias, runtime_checkable
 
 
 JsonValue: TypeAlias = None | bool | int | float | str | list["JsonValue"] | dict[str, "JsonValue"]
@@ -271,6 +272,39 @@ class AdapterCatalog(Protocol):
     def registration(self, source_id: str) -> AdapterCatalogEntry | None:
         """Return a source registration or ``None`` when it is unknown."""
 
+    def get(self, source_id: str) -> AdapterCatalogEntry | None:
+        """Alias for registration used by mapping-like adapter callers."""
+
+
+class InMemoryAdapterCatalog:
+    """Read-only catalog implementation for tests and local adapter runs."""
+
+    def __init__(self, entries: Iterable[AdapterCatalogEntry]) -> None:
+        registrations: dict[str, AdapterCatalogEntry] = {}
+        for entry in entries:
+            if not isinstance(entry, AdapterCatalogEntry):
+                raise AdapterContractError("catalog entries must be AdapterCatalogEntry values")
+            if entry.source_id in registrations:
+                raise AdapterContractError(f"duplicate source_id: {entry.source_id}")
+            registrations[entry.source_id] = entry
+        self._registrations = registrations
+
+    @property
+    def entries(self) -> Mapping[str, AdapterCatalogEntry]:
+        """Return an immutable view of the registered source entries."""
+
+        return MappingProxyType(self._registrations)
+
+    def registration(self, source_id: str) -> AdapterCatalogEntry | None:
+        """Return an entry by validated source identity."""
+
+        return self._registrations.get(_required_source_id(source_id))
+
+    def get(self, source_id: str) -> AdapterCatalogEntry | None:
+        """Return an entry by validated source identity."""
+
+        return self.registration(source_id)
+
 
 @dataclass(frozen=True, slots=True)
 class SourceCursor:
@@ -372,6 +406,7 @@ __all__ = [
     "CursorPrecondition",
     "CursorStore",
     "Fingerprint",
+    "InMemoryAdapterCatalog",
     "InMemoryCursorStore",
     "ProbeState",
     "SourceCursor",
