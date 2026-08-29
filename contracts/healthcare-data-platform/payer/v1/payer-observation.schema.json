@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.ushso.org/healthcare-data-platform/payer/v1/payer-observation.schema.json",
+  "title": "Payer observation envelope v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "record_type", "tracking_bead", "source_release", "artifact", "receipt", "observations", "authority_limits"],
+  "properties": {
+    "schema_version": {"const": "hdp.payer-observation.v1"},
+    "record_type": {"const": "payer_observation_envelope"},
+    "tracking_bead": {"type": "string", "minLength": 1},
+    "source_release": {"$ref": "#/$defs/sourceRelease"},
+    "artifact": {"$ref": "#/$defs/artifact"},
+    "receipt": {"type": "object", "required": ["retrieved_at", "source_url", "content_sha256"], "additionalProperties": false, "properties": {"retrieved_at": {"type": "string", "format": "date-time"}, "source_url": {"type": "string", "pattern": "^https://"}, "content_sha256": {"$ref": "#/$defs/sha"}}},
+    "observations": {"type": "array", "minItems": 1, "items": {"type": "object", "required": ["observation_id", "type_of_coverage", "geography", "denominator_scope"], "additionalProperties": false, "properties": {"observation_id": {"type": "string"}, "type_of_coverage": {"enum": ["medicare_advantage", "medicare_part_d", "marketplace"]}, "geography": {"type": "string", "minLength": 1}, "plan_or_contract_id": {"type": "string"}, "numerator": {"type": ["integer", "null"], "minimum": 0}, "denominator": {"type": ["integer", "null"], "minimum": 0}, "denominator_scope": {"type": "string", "minLength": 1}, "missingness": {"type": ["string", "null"]}}}},
+    "authority_limits": {"type": "object", "required": ["read_only", "promotion_allowed", "projection_write_allowed"], "additionalProperties": false, "properties": {"read_only": {"const": true}, "promotion_allowed": {"const": false}, "projection_write_allowed": {"const": false}}}
+  },
+  "$defs": {
+    "sha": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "sourceRelease": {"type": "object", "required": ["source_id", "release_id", "release_label", "source_url", "release_sha256", "rights_status"], "additionalProperties": false, "properties": {"source_id": {"type": "string", "pattern": "^source:cms:"}, "release_id": {"type": "string", "pattern": "^release:"}, "release_label": {"type": "string", "minLength": 1}, "source_url": {"type": "string", "pattern": "^https://"}, "release_sha256": {"$ref": "#/$defs/sha"}, "rights_status": {"enum": ["approved_public", "pending_review", "blocked"]}}},
+    "artifact": {"type": "object", "required": ["artifact_id", "source_url", "content_sha256", "content_length", "custody_state"], "additionalProperties": false, "properties": {"artifact_id": {"type": "string", "minLength": 1}, "source_url": {"type": "string", "pattern": "^https://"}, "content_sha256": {"$ref": "#/$defs/sha"}, "content_length": {"type": "integer", "minimum": 0}, "custody_state": {"enum": ["frozen_verified_external", "unverified_external", "rejected"]}}}
+  }
+}
