@@ -106,12 +106,6 @@ def _mapping(value: object, label: str) -> dict[str, object]:
     return cast(dict[str, object], value)
 
 
-def _list(value: object, label: str) -> list[object]:
-    if not isinstance(value, list):
-        raise FixtureError(f"{label} must be an array")
-    return value
-
-
 def _required_int(value: object, label: str) -> int:
     if isinstance(value, bool) or not isinstance(value, int):
         raise FixtureError(f"{label} must be an integer")
@@ -227,6 +221,8 @@ def _load_bundle() -> tuple[dict[str, object], dict[str, object]]:
     }.items():
         if lease.get(field) != expected:
             raise FixtureError(f"worker lease {field} is not frozen at {expected}")
+    bounds["lease_ttl_seconds"] = _required_int(lease.get("ttl_seconds"), "lease_ttl_seconds")
+    bounds["max_attempts"] = _required_int(lease.get("max_attempts"), "max_attempts")
     control = _mapping(topology.get("control_store"), "control store")
     if control.get("journal_mode") != "WAL":
         raise FixtureError("control store must use WAL")
@@ -413,7 +409,7 @@ def run(candidate_sha: str, root_value: str) -> dict[str, object]:
         lease_ttl_seconds=cast(float, lease["ttl_seconds"]),
         heartbeat_extension_seconds=cast(float, lease["heartbeat_extension_seconds"]),
         retry_delay_seconds=cast(float, lease["retry_delay_seconds"]),
-        max_attempts=bounds["max_attempts"] if "max_attempts" in bounds else cast(int, lease["max_attempts"]),
+        max_attempts=bounds["max_attempts"],
     )
     # Keep the frozen max-attempt value explicit even though it is also present
     # in the worker lease map above.
@@ -595,6 +591,7 @@ def run(candidate_sha: str, root_value: str) -> dict[str, object]:
                 changed_meta.release_id: {"artifact_id": changed_meta.artifact_id},
             },
             "missingness": {"source:cms:pdc": "not_yet_researched"},
+            "denominator_states": {"source:cms:pdc": "not_yet_researched"},
         }
         _write_json(root, projections_path, projections)
 
@@ -690,6 +687,29 @@ def run(candidate_sha: str, root_value: str) -> dict[str, object]:
         },
         "runs": 3,
         "bounds": bounds | {"lease_ttl_seconds": lease["ttl_seconds"], "max_attempts": lease["max_attempts"]},
+        "lineage": {
+            "source_id": source_id,
+            "source_url": fixture["source_url"],
+            "runs": [
+                {
+                    "run_id": "run:fixture:baseline",
+                    "observation_id": "observation:fixture:baseline",
+                    "receipt": "queue_enqueue_receipt+raw_custody_receipt",
+                },
+                {
+                    "run_id": "run:fixture:replay",
+                    "observation_id": "observation:fixture:baseline-replay",
+                    "receipt": "queue_duplicate_receipt+raw_custody_receipt",
+                },
+                {
+                    "run_id": "run:fixture:changed",
+                    "observation_id": "observation:fixture:changed",
+                    "receipt": "queue_enqueue_receipt+raw_custody_receipt",
+                },
+            ],
+            "current_pointer": _relative(root, current_path),
+            "as_of_projection": _relative(root, projections_path),
+        },
         "paths": {
             "control_store": _relative(root, queue_path),
             "scheduler_checkpoint": _relative(root, scheduler_path),
