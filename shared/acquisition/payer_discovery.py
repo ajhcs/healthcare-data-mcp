@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from hashlib import sha256
+import json
 from typing import Literal, Mapping, cast
 
 from shared.contracts.healthcare_data_platform import validate_observation_envelope
@@ -52,6 +53,9 @@ class PayerCandidate:
         if not str(value.get("plan_or_contract_id") or value.get("plan_id") or value.get("contract_id") or "") and not value.get("missingness"):
             raise ValueError("plan or contract identity is required")
         denominator = value.get("denominator")
+        denominator_scope = str(value.get("denominator_scope") or configured["payer_type"] + " enrollment").lower()
+        if any(token in denominator_scope for token in ("census", "acs", "population", "insurance")):
+            raise ValueError("semantic population/insurance denominator is not a payer denominator")
         if denominator is None and not value.get("missingness"):
             raise ValueError("denominator is required for a supported payer candidate")
         if denominator is not None and (not isinstance(denominator, int) or denominator < 0):
@@ -88,10 +92,11 @@ def build_payer_observation_envelope(*, tracking_bead: str, source_family: str, 
         parsed = [PayerCandidate.from_mapping({"payer_type": source["payer_type"], "source_family": source_family, "source_period": source_period, "geography": "unresolved", "missingness": "not_yet_researched"})]
     release_id = custody.release_id
     raw_artifact_id = custody.artifact_id
-    seed = sha256((source_family + "|" + source_period + "|" + digest + "|" + tracking_bead).encode()).hexdigest()[:32]
+    candidate_digest = sha256(json.dumps([dict(row) for row in candidates], sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    seed = sha256((source_family + "|" + source_period + "|" + digest + "|" + tracking_bead + "|" + candidate_digest).encode()).hexdigest()[:32]
     artifact_id = custody.artifact_id
-    normalized_id = artifact_id  # source-native pass-through; canonical contract requires same artifact lineage
-    activity_id = "activity:payer:normalize:" + seed
+    normalized_id = artifact_id
+    activity_id = "activity:payer:observation:" + seed
     receipt_id = "receipt:payer:" + seed[:24]
     observation_ids = ["observation:payer:" + seed + ":" + str(index) for index in range(1, max(1, len(parsed)) + 1)]
     envelope = {"schema_version": "hdp.observation-envelope.v1", "record_type": "observation_envelope", "record_id": "hdp:observation-envelope:payer:" + seed, "packet_id": "p0-09-observation-provenance-delta-v1", "tracking_bead": tracking_bead, "frozen_dispatch_base": "11d16f8303226619161f9bef03cb312f693b2d49", "source_release": {"source_id": custody.source_id, "release_id": release_id, "release_label": source_period, "source_kind": "official_dataset", "release_sha256": digest, "evidence_locator": source["release_locator"], "coverage_state": "present"}, "artifact": {"artifact_id": artifact_id, "release_ref": release_id, "artifact_kind": "raw_source", "media_type": custody.media_type, "content_sha256": digest, "byte_length": len(artifact_bytes), "custody": {"locator": custody_locator, "storage_plane": "object_storage", "immutable": True, "retention": "append_only"}}, "receipt": {"receipt_id": receipt_id, "producer": "healthcare-data-mcp:payer-observation-producer", "receipt_schema": "hdp.receipt.v1", "source_release_ref": release_id, "artifact_ref": artifact_id, "source_release_sha256": digest, "artifact_sha256": digest, "receipt_sha256": digest, "state": "succeeded", "recorded_at": retrieved_at, "evidence_locator": custody.source_url}, "activity": {"activity_id": activity_id, "run_id": "run:payer:" + seed, "activity_type": "normalization", "actor": {"actor_type": "deterministic_transform", "actor_id": "healthcare-data-mcp:payer-observation-producer"}, "started_at": retrieved_at, "ended_at": retrieved_at, "status": "succeeded", "input_artifact_refs": [artifact_id], "output_artifact_refs": [normalized_id]}, "observations": [], "lineage": {"lineage_id": "lineage:payer:" + seed, "source_release_ref": release_id, "artifact_ref": artifact_id, "receipt_ref": receipt_id, "activity_ref": activity_id, "observation_ids": observation_ids, "deterministic_order": observation_ids, "replay": {"idempotency_key": "idempotency:payer:" + seed, "state": "first_seen", "replay_of": None, "deterministic": True}}, "authority_limits": {"acquisition_allowed": False, "mutation_allowed": False, "deletion_allowed": False, "publication_allowed": False, "release_allowed": False, "production_allowed": False, "runtime_allowed": False, "current_projection_allowed": False, "identity_promotion_allowed": False}}
@@ -99,4 +104,10 @@ def build_payer_observation_envelope(*, tracking_bead: str, source_family: str, 
         state = "observed" if candidate.missingness is None else candidate.missingness
         subject_key = candidate.geography.lower().replace(" ", "-")
         envelope["observations"].append({"observation_id": observation_ids[index - 1], "identity_key": "identity:payer:" + subject_key, "subject_ref": "entity:payer:" + subject_key, "attribute_term_ref": "term:payer-coverage", "value": {"type_of_coverage": candidate.payer_type, "plan_or_contract_id": candidate.plan_or_contract_id, "numerator": candidate.numerator, "denominator": candidate.denominator, "denominator_scope": candidate.denominator_scope} if state == "observed" else None, "value_state": state, "source_scope": {"scope_id": "scope:payer:" + source_period, "source_id": source["source_id"], "release_ref": release_id, "artifact_ref": artifact_id, "custody_locator": custody_locator, "selector": "record:" + str(index), "authority_state": "source_scoped" if state == "observed" else "abstained"}, "activity_ref": activity_id, "receipt_ref": receipt_id, "valid_time": {"precision": "year", "as_of": source_period + "-12-31", "valid_from": source_period + "-01-01", "valid_to": source_period + "-12-31"}, "transaction_time": {"recorded_from": retrieved_at, "recorded_to": None}, "conflict": {"state": "none" if state == "observed" else "missingness", "reason": "Official payer enrollment candidate." if state == "observed" else "Candidate is explicitly missing or unresolved.", "resolution": "not_required" if state == "observed" else "abstained", "competing_observation_refs": []}, "promotion_state": "unpromoted_observation"})
+    for observation, candidate in zip(envelope["observations"], parsed, strict=True):
+        if candidate.missingness == "blocked_source_conflict":
+            observation["conflict"]["state"] = "source_conflict"
+            observation["conflict"]["resolution"] = "unresolved"
+            observation["value_state"] = "blocked_source_conflict"
+            observation["value"] = None
     return validate_observation_envelope(envelope)
