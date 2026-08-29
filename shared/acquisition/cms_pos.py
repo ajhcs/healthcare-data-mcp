@@ -190,12 +190,13 @@ class CmsPosRelease:
     published_at: str
 
     def __post_init__(self) -> None:
-        if self.source_id != CMS_POS_SOURCE_ID:
-            raise CmsPosError(f"unsupported CMS POS source_id: {self.source_id}")
-        _id(self.source_id, "source_id")
+        source_id = _id(self.source_id, "source_id")
+        if source_id != CMS_POS_SOURCE_ID:
+            raise CmsPosError(f"unsupported CMS POS source_id: {source_id}")
         _id(self.release_id, "release_id", _RELEASE_ID)
         _text(self.release_label, "release_label", maximum=200)
-        if _PERIOD.fullmatch(self.source_period) is None:
+        source_period = _text(self.source_period, "source_period", maximum=64)
+        if _PERIOD.fullmatch(source_period) is None:
             raise CmsPosError("source_period has an invalid format")
         _url(self.source_url, "source_url")
         _url(self.release_locator, "release_locator")
@@ -260,7 +261,8 @@ class CmsPosDistribution:
     def __post_init__(self) -> None:
         _id(self.distribution_id, "distribution_id", _DISTRIBUTION_ID)
         _url(self.url, "distribution.url")
-        if self.media_type != CMS_POS_MEDIA_TYPE:
+        media_type = _text(self.media_type, "distribution.media_type", maximum=100)
+        if media_type != CMS_POS_MEDIA_TYPE:
             raise CmsPosError("distribution.media_type must be text/csv")
         # ConditionalResponse performs the shared ETag/Last-Modified syntax
         # checks while remaining transport-neutral.
@@ -340,13 +342,15 @@ class CmsPosSourceRow:
 
     def __post_init__(self) -> None:
         _id(self.source_record_id, "source_record_id", _RECORD_ID)
-        if _SOURCE_IDENTIFIER.fullmatch(self.source_identifier) is None:
+        source_identifier = _text(self.source_identifier, "source_identifier", maximum=128)
+        if _SOURCE_IDENTIFIER.fullmatch(source_identifier) is None:
             raise CmsPosError("source_identifier has an invalid format")
         if isinstance(self.row_number, bool) or not isinstance(self.row_number, int) or self.row_number < 2:
             raise CmsPosError("row_number must be an integer at least 2")
-        if _SELECTOR.fullmatch(self.source_selector) is None:
+        source_selector = _text(self.source_selector, "source_selector", maximum=200)
+        if _SELECTOR.fullmatch(source_selector) is None:
             raise CmsPosError("source_selector has an invalid format")
-        if self.source_selector != f"csv:{CMS_POS_IDENTIFIER_COLUMN}={self.source_identifier}":
+        if source_selector != f"csv:{CMS_POS_IDENTIFIER_COLUMN}={source_identifier}":
             raise CmsPosError("source_selector does not match source_identifier")
         if not isinstance(self.fields, Mapping) or not self.fields:
             raise CmsPosError("source row fields must be a non-empty object")
@@ -366,12 +370,12 @@ class CmsPosSourceRow:
             if len(value) > 16_384:
                 raise CmsPosError("source row field value exceeds the 16384-character bound")
             fields[key] = value
-        if fields.get(CMS_POS_IDENTIFIER_COLUMN) != self.source_identifier:
+        if fields.get(CMS_POS_IDENTIFIER_COLUMN) != source_identifier:
             raise CmsPosError("source_identifier must equal the PRVDR_NUM field")
         if CMS_POS_IDENTIFIER_COLUMN not in fields:
             raise CmsPosError("source row must preserve PRVDR_NUM")
         object.__setattr__(self, "fields", MappingProxyType(fields))
-        expected_record = _digest_id("record:cms:pos:", self.source_identifier)
+        expected_record = _digest_id("record:cms:pos:", source_identifier)
         if self.source_record_id != expected_record:
             raise CmsPosError("source_record_id does not match source identifier")
         object.__setattr__(self, "row_sha256", _fingerprint(cast(JsonValue, fields), "source row"))
@@ -601,6 +605,8 @@ class CmsPosProducer:
             # Protocol runtime checks do not guarantee methods are callable,
             # but this catches accidental ``None``/mapping use early.
             raise CmsPosError("catalog must implement the adapter catalog protocol")
+        if budget is not None and not isinstance(budget, StreamBudget):
+            raise CmsPosError("budget must be a StreamBudget")
         self._catalog = catalog
         self._budget = budget or StreamBudget()
 
@@ -987,6 +993,12 @@ def _failure_code(message: str) -> str:
     """Convert parser detail into a stable, payload-free failure code."""
 
     normalized = message.lower()
+    if "duplicate source identifier" in normalized:
+        return "duplicate_source_identifier"
+    if "reserved canonical" in normalized:
+        return "reserved_canonical_field"
+    if "row width" in normalized or "csv row" in normalized:
+        return "malformed_csv_row"
     if "header" in normalized:
         return "malformed_csv_header"
     if "identifier" in normalized or "prvdr_num" in normalized:
