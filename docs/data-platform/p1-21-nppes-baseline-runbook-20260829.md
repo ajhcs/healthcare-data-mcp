@@ -18,7 +18,8 @@ publish a queue message, or promote an NPI to a Toolkit provider/facility.
    evidence locator. A changed release must declare a present provider file;
    optional location, endpoint, reference, and deactivation files use an
    explicit `unavailable_public` or `not_applicable` state when they cannot be
-   supplied.
+   supplied. If an optional descriptor is omitted, the producer materializes
+   an `unavailable_public` file receipt instead of silently dropping that kind.
 3. Supply each present file as an iterable of non-empty UTF-8 byte chunks. The
    producer accepts CSV headers containing `NPI` (or `NPI Number`) and optional
    source row, reference, and deactivation-date columns. It retains only
@@ -59,10 +60,12 @@ authority.
 - A `probe_state=not_modified` descriptor must carry HTTP 304 and no file
   descriptors. The producer returns `state=no_op` without iterating any file
   stream.
-- Passing a prior receipt for the same semantic release suppresses the row
-  sink while the streams are checked. Matching file digests and counters
-  return `state=replayed`; a changed file identity raises
-  `NppesReplayConflictError` and must be quarantined by the caller.
+- Passing a prior successful (`changed` or `replayed`) receipt for the same
+  semantic release suppresses the row sink while the streams are checked.
+  Failed (`schema_drift` or `blocked`) receipts remain retryable and do not
+  suppress a corrected retry. Matching file digests and counters return
+  `state=replayed`; a changed file identity raises `NppesReplayConflictError`
+  and must be quarantined by the caller.
 - A failed probe returns `state=failed_probe` and never consumes a file.
 - A malformed header, duplicate source row ID, malformed NPI, invalid
   deactivation date, content-hash mismatch, or row-shape change returns
@@ -80,7 +83,9 @@ replace a prior good receipt with a hand-edited JSON file.
 ## Evidence and privacy checks
 
 The receipt is safe to pass to a review or admission queue only after the
-caller verifies the source catalog rights and release locator. Check that:
+caller verifies the source catalog rights and release locator. The producer
+also rejects release, final, file, and HTTPS evidence URLs outside the hosts
+approved by the catalog. Check that:
 
 - `source_url`, `final_url`, file URLs, and evidence locators are HTTPS or
   approved locator forms and contain no credentials;

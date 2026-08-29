@@ -18,6 +18,7 @@ import json
 import re
 import time
 from typing import Callable, Iterable, Literal, Mapping, Protocol, cast
+from urllib.parse import urlsplit
 
 from shared.acquisition.nppes.contracts import (
     MAX_DEACTIVATION_SAMPLES,
@@ -394,6 +395,62 @@ def _unavailable_receipt(descriptor: NppesFileDescriptor) -> NppesFileReceipt:
     )
 
 
+def _omitted_receipt(kind: NppesFileKind, release: NppesReleaseDescriptor) -> NppesFileReceipt:
+    """Materialize an undeclared optional file as explicit public missingness."""
+
+    return NppesFileReceipt(
+        file_kind=kind,
+        source_file_name=f"omitted_{kind}.csv",
+        source_url=release.source_url,
+        evidence_locator=release.evidence_locator,
+        state="unavailable_public",
+        content_sha256=None,
+        byte_length=0,
+        chunk_count=0,
+        row_count=0,
+        identifier_count=0,
+        row_sha256=None,
+        error_code="file_descriptor_omitted",
+    )
+
+
+def _url_host(value: str, name: str) -> str:
+    """Return a normalized HTTPS hostname from an already validated URL."""
+
+    try:
+        parsed = urlsplit(value)
+        hostname = parsed.hostname
+        parsed.port
+    except ValueError as exc:
+        raise NppesProducerError(f"{name} has a malformed authority") from exc
+    if parsed.scheme != "https" or hostname is None:
+        raise NppesProducerError(f"{name} must be an HTTPS URL")
+    return hostname.casefold().rstrip(".")
+
+
+def _validate_catalog_url_binding(catalog: NppesCatalogEntry, release: NppesReleaseDescriptor) -> None:
+    """Reject release URLs that leave the catalog-approved NPPES hosts."""
+
+    approved_hosts = {
+        _url_host(catalog.source_url, "catalog source_url"),
+        _url_host(catalog.release_locator, "catalog release_locator"),
+    }
+    urls: list[tuple[str, str]] = [
+        ("release source_url", release.source_url),
+    ]
+    if release.final_url is not None:
+        urls.append(("release final_url", release.final_url))
+    if release.evidence_locator.startswith("https://"):
+        urls.append(("release evidence_locator", release.evidence_locator))
+    for descriptor in release.files:
+        urls.append((f"{descriptor.file_kind} file source_url", descriptor.source_url))
+        if descriptor.evidence_locator.startswith("https://"):
+            urls.append((f"{descriptor.file_kind} file evidence_locator", descriptor.evidence_locator))
+    for name, url in urls:
+        if _url_host(url, name) not in approved_hosts:
+            raise NppesProducerError(f"{name} host is not approved by the NPPES catalog")
+
+
 def _consume_file(
     descriptor: NppesFileDescriptor,
     chunks: FileChunks,
@@ -578,8 +635,7 @@ class NppesBaselineProducer:
         descriptor = _coerce_release(release)
         if descriptor.source_id != self.catalog.source_id:
             raise NppesProducerError("release source_id does not match catalog source_id")
-        if not self.catalog.source_url.startswith("https://"):
-            raise NppesProducerError("catalog source URL is not HTTPS")
+        _validate_catalog_url_binding(self.catalog, descriptor)
         prior = _coerce_previous(previous)
         timestamp = _timestamp(recorded_at)
         if descriptor.probe_state == "failed_probe":
@@ -596,8 +652,12 @@ class NppesBaselineProducer:
         undeclared = set(files).difference(descriptors.keys())
         if undeclared:
             raise NppesProducerError(f"NPPES file stream lacks a release descriptor: {sorted(undeclared)}")
-        prior_same_release = prior is not None and prior.release_sha256 == descriptor.release_sha256
-        sinks_disabled = prior_same_release
+        prior_successful_same_release = (
+            prior is not None
+            and prior.state in {"changed", "replayed"}
+            and prior.release_sha256 == descriptor.release_sha256
+        )
+        sinks_disabled = prior_successful_same_release
         receipts: list[NppesFileReceipt] = []
         opportunities: list[NppesDeactivationOpportunity] = []
         first_failure: str | None = None
@@ -624,6 +684,8 @@ class NppesBaselineProducer:
                             error_code="provider_file_missing_from_release",
                         )
                     )
+                else:
+                    receipts.append(_omitted_receipt(kind, descriptor))
                 continue
             if file_descriptor.availability != "present":
                 if stream is not None:
@@ -678,7 +740,7 @@ class NppesBaselineProducer:
                 failure_code=first_failure,
             )
 
-        if prior_same_release and prior is not None:
+        if prior_successful_same_release and prior is not None:
             if not _same_file_identity(prior.files, file_receipts):
                 raise NppesReplayConflictError("replayed NPPES release has different file identity")
             return self._receipt(

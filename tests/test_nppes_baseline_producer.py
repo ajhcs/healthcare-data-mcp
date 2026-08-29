@@ -141,6 +141,94 @@ def test_optional_files_require_explicit_unavailable_state() -> None:
     }
 
 
+def test_optional_file_descriptor_omissions_materialize_explicit_missingness() -> None:
+    release = replace(_release(all_present=False), files=(_descriptors(all_present=False)[0],), release_sha256=None)
+    receipt = produce_nppes_baseline(
+        _catalog(),
+        release,
+        {cast(NppesFileKind, "provider"): _streams()["provider"]},
+        recorded_at=RECORDED_AT,
+    )
+
+    omitted = {item.file_kind: item for item in receipt.files if item.file_kind != "provider"}
+    assert receipt.state == "changed"
+    assert set(omitted) == {"location", "endpoint", "reference", "deactivation"}
+    assert all(item.state == "unavailable_public" for item in omitted.values())
+    assert all(item.error_code == "file_descriptor_omitted" for item in omitted.values())
+
+
+@pytest.mark.parametrize(
+    ("bad_stream", "expected_state"),
+    (
+        ([b"NPI,SOURCE_ROW_ID\n123,bad-row\n"], "schema_drift"),
+        (
+            [b"NPI,SOURCE_ROW_ID\n", b"0123456789,provider-1\n", b"0123456789,provider-2\n"],
+            "blocked",
+        ),
+    ),
+)
+def test_failed_prior_receipt_does_not_suppress_a_same_release_retry(
+    bad_stream: Iterable[bytes], expected_state: str
+) -> None:
+    release = _release(all_present=False)
+    catalog = _catalog(max_bytes=50, max_chunk_bytes=50) if expected_state == "blocked" else _catalog()
+    prior = produce_nppes_baseline(
+        catalog,
+        release,
+        {cast(NppesFileKind, "provider"): bad_stream},
+        recorded_at=RECORDED_AT,
+    )
+    captured = []
+    retry = produce_nppes_baseline(
+        catalog,
+        release,
+        {cast(NppesFileKind, "provider"): _streams()["provider"]},
+        previous=prior,
+        recorded_at=RECORDED_AT,
+        row_sink=captured.append,
+    )
+
+    assert prior.state == expected_state
+    assert retry.state == "changed"
+    assert [row.source_row_id for row in captured] == ["provider-1"]
+
+
+def test_release_source_and_final_urls_must_stay_on_catalog_approved_host() -> None:
+    release = replace(
+        _release(all_present=False),
+        source_url="https://evil.example/nppes/release.csv",
+        final_url="https://evil.example/nppes/release.csv",
+        evidence_locator="https://evil.example/nppes/release.csv",
+        release_sha256=None,
+    )
+    captured = []
+    with pytest.raises(NppesProducerError, match="approved by the NPPES catalog"):
+        produce_nppes_baseline(
+            _catalog(),
+            release,
+            {cast(NppesFileKind, "provider"): _streams()["provider"]},
+            recorded_at=RECORDED_AT,
+            row_sink=captured.append,
+        )
+    assert captured == []
+
+
+def test_file_source_url_must_stay_on_catalog_approved_host() -> None:
+    bad_provider = replace(
+        _descriptors(all_present=False)[0],
+        source_url="https://evil.example/nppes/provider.csv",
+        evidence_locator="https://evil.example/nppes/provider.csv",
+    )
+    release = replace(_release(all_present=False), files=(bad_provider,), release_sha256=None)
+    with pytest.raises(NppesProducerError, match="approved by the NPPES catalog"):
+        produce_nppes_baseline(
+            _catalog(),
+            release,
+            {cast(NppesFileKind, "provider"): _streams()["provider"]},
+            recorded_at=RECORDED_AT,
+        )
+
+
 def test_stream_without_a_declared_file_descriptor_is_rejected() -> None:
     release = replace(_release(), files=(_descriptors()[0],), release_sha256=None)
     with pytest.raises(NppesProducerError, match="lacks a release descriptor"):
