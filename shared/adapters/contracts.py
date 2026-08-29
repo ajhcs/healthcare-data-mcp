@@ -9,12 +9,15 @@ fingerprint identity consistent across sources.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from email.utils import parsedate_to_datetime
 from hashlib import sha256
 import json
+import math
 import re
 import threading
 from types import MappingProxyType
 from typing import Iterable, Literal, Mapping, Protocol, TypeAlias, runtime_checkable
+from urllib.parse import urlsplit
 
 
 JsonValue: TypeAlias = None | bool | int | float | str | list["JsonValue"] | dict[str, "JsonValue"]
@@ -25,6 +28,15 @@ RightsStatus: TypeAlias = Literal["approved_public", "pending_review", "blocked"
 _SOURCE_ID = re.compile(r"^source:[a-z0-9][a-z0-9._:-]*$")
 _SHA256 = re.compile(r"^sha256:[0-9a-f]{64}$")
 _HTTPS = re.compile(r"^https://[A-Za-z0-9._:/-]+$")
+_HOST = re.compile(
+    r"^(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)*[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$"
+)
+_ETAG = re.compile(r'^(?:W/)?"[\x21\x23-\x7e]*"$')
+_IMF_FIXDATE = re.compile(
+    r"^(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun), [0-9]{2} "
+    r"(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) [0-9]{4} "
+    r"[0-9]{2}:[0-9]{2}:[0-9]{2} GMT$"
+)
 _MAX_SOURCE_ID = 200
 _MAX_URL = 2048
 _MAX_HEADER_VALUE = 512
@@ -64,6 +76,16 @@ def _required_https(value: object, label: str) -> str:
     text = _required_text(value, label, maximum=_MAX_URL)
     if _HTTPS.fullmatch(text) is None:
         raise AdapterContractError(f"{label} must be an HTTPS URL")
+    try:
+        parsed = urlsplit(text)
+        hostname = parsed.hostname
+        parsed.port
+    except ValueError as exc:
+        raise AdapterContractError(f"{label} has a malformed authority") from exc
+    if parsed.scheme != "https" or not parsed.netloc or hostname is None or _HOST.fullmatch(hostname) is None:
+        raise AdapterContractError(f"{label} has a malformed authority")
+    if parsed.username is not None or parsed.password is not None:
+        raise AdapterContractError(f"{label} must not contain user information")
     return text
 
 
@@ -73,6 +95,34 @@ def _optional_header(value: object, label: str) -> str | None:
     text = _required_text(value, label, maximum=_MAX_HEADER_VALUE)
     if not text.strip():
         raise AdapterContractError(f"{label} must not be blank")
+    return text
+
+
+def _optional_etag(value: object, label: str, *, allow_wildcard: bool) -> str | None:
+    text = _optional_header(value, label)
+    if text is None:
+        return None
+    if allow_wildcard and text == "*":
+        return text
+    if _ETAG.fullmatch(text) is None:
+        raise AdapterContractError(f"{label} must be an HTTP entity-tag")
+    return text
+
+
+def _optional_last_modified(value: object, label: str) -> str | None:
+    text = _optional_header(value, label)
+    if text is None:
+        return None
+    if _IMF_FIXDATE.fullmatch(text) is None:
+        raise AdapterContractError(f"{label} must be an IMF-fixdate")
+    try:
+        parsed = parsedate_to_datetime(text)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise AdapterContractError(f"{label} must be an IMF-fixdate") from exc
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise AdapterContractError(f"{label} must be an IMF-fixdate")
+    if parsed.strftime("%a, %d %b %Y %H:%M:%S GMT") != text:
+        raise AdapterContractError(f"{label} must be an IMF-fixdate")
     return text
 
 
@@ -153,8 +203,8 @@ class ConditionalRequest:
 
     def __post_init__(self) -> None:
         _required_https(self.url, "url")
-        object.__setattr__(self, "etag", _optional_header(self.etag, "etag"))
-        object.__setattr__(self, "last_modified", _optional_header(self.last_modified, "last_modified"))
+        object.__setattr__(self, "etag", _optional_etag(self.etag, "etag", allow_wildcard=True))
+        object.__setattr__(self, "last_modified", _optional_last_modified(self.last_modified, "last_modified"))
 
     @property
     def headers(self) -> Mapping[str, str]:
@@ -186,8 +236,8 @@ class ConditionalResponse:
             raise AdapterContractError("status_code must be an integer")
         if not 100 <= self.status_code <= 599:
             raise AdapterContractError("status_code must be between 100 and 599")
-        object.__setattr__(self, "etag", _optional_header(self.etag, "etag"))
-        object.__setattr__(self, "last_modified", _optional_header(self.last_modified, "last_modified"))
+        object.__setattr__(self, "etag", _optional_etag(self.etag, "etag", allow_wildcard=False))
+        object.__setattr__(self, "last_modified", _optional_last_modified(self.last_modified, "last_modified"))
         object.__setattr__(
             self,
             "response_fingerprint",
@@ -249,7 +299,7 @@ class AdapterCatalogEntry:
             raise AdapterContractError("max_chunks must be an integer between 1 and 1000000")
         if isinstance(self.max_seconds, bool) or not isinstance(self.max_seconds, (int, float)):
             raise AdapterContractError("max_seconds must be a number")
-        if not 0 < self.max_seconds <= 86_400:
+        if not math.isfinite(self.max_seconds) or not 0 < self.max_seconds <= 86_400:
             raise AdapterContractError("max_seconds must be greater than 0 and at most 86400")
         if self.enabled and self.rights_status != "approved_public":
             raise AdapterContractError("enabled source lacks approved public rights")

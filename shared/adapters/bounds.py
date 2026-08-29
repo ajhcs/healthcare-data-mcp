@@ -11,6 +11,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from hashlib import sha256
 from collections import deque
+import math
+import threading
 import time
 from typing import Callable, Iterable, Literal
 
@@ -31,32 +33,52 @@ class RateLimitError(BoundsError):
 
 StreamState = Literal["completed", "interrupted"]
 
+MAX_STREAM_BYTES = 131_072
+MAX_STREAM_CHUNKS = 128
+MAX_STREAM_SECONDS = 60.0
+MAX_STREAM_CHUNK_BYTES = 65_536
+MAX_RATE_REQUESTS = 1_000_000
+MAX_RATE_SECONDS = 86_400.0
+
 
 @dataclass(frozen=True, slots=True)
 class StreamBudget:
     """Explicit byte, chunk, and monotonic-clock limits for one stream."""
 
-    max_bytes: int = 131_072
-    max_chunks: int = 128
-    max_seconds: float = 60.0
+    max_bytes: int = MAX_STREAM_BYTES
+    max_chunks: int = MAX_STREAM_CHUNKS
+    max_seconds: float = MAX_STREAM_SECONDS
     max_chunk_bytes: int | None = None
 
     def __post_init__(self) -> None:
-        if isinstance(self.max_bytes, bool) or not isinstance(self.max_bytes, int) or self.max_bytes < 1:
-            raise BoundsError("max_bytes must be a positive integer")
-        if isinstance(self.max_chunks, bool) or not isinstance(self.max_chunks, int) or self.max_chunks < 1:
-            raise BoundsError("max_chunks must be a positive integer")
-        if isinstance(self.max_seconds, bool) or not isinstance(self.max_seconds, (int, float)):
-            raise BoundsError("max_seconds must be a number")
-        if self.max_seconds <= 0:
-            raise BoundsError("max_seconds must be greater than zero")
+        if (
+            isinstance(self.max_bytes, bool)
+            or not isinstance(self.max_bytes, int)
+            or not 1 <= self.max_bytes <= MAX_STREAM_BYTES
+        ):
+            raise BoundsError(f"max_bytes must be an integer between 1 and {MAX_STREAM_BYTES}")
+        if (
+            isinstance(self.max_chunks, bool)
+            or not isinstance(self.max_chunks, int)
+            or not 1 <= self.max_chunks <= MAX_STREAM_CHUNKS
+        ):
+            raise BoundsError(f"max_chunks must be an integer between 1 and {MAX_STREAM_CHUNKS}")
+        if (
+            isinstance(self.max_seconds, bool)
+            or not isinstance(self.max_seconds, (int, float))
+            or not math.isfinite(self.max_seconds)
+            or not 0 < self.max_seconds <= MAX_STREAM_SECONDS
+        ):
+            raise BoundsError(f"max_seconds must be finite and between 0 and {MAX_STREAM_SECONDS}")
         if self.max_chunk_bytes is not None:
             if (
                 isinstance(self.max_chunk_bytes, bool)
                 or not isinstance(self.max_chunk_bytes, int)
-                or self.max_chunk_bytes < 1
+                or not 1 <= self.max_chunk_bytes <= MAX_STREAM_CHUNK_BYTES
             ):
-                raise BoundsError("max_chunk_bytes must be a positive integer when supplied")
+                raise BoundsError(
+                    f"max_chunk_bytes must be an integer between 1 and {MAX_STREAM_CHUNK_BYTES} when supplied"
+                )
             if self.max_chunk_bytes > self.max_bytes:
                 raise BoundsError("max_chunk_bytes cannot exceed max_bytes")
 
@@ -181,19 +203,27 @@ class RateLimitPolicy:
     max_wait_seconds: float = 60.0
 
     def __post_init__(self) -> None:
-        if isinstance(self.max_requests, bool) or not isinstance(self.max_requests, int) or self.max_requests < 1:
-            raise BoundsError("max_requests must be a positive integer")
+        if (
+            isinstance(self.max_requests, bool)
+            or not isinstance(self.max_requests, int)
+            or not 1 <= self.max_requests <= MAX_RATE_REQUESTS
+        ):
+            raise BoundsError(f"max_requests must be an integer between 1 and {MAX_RATE_REQUESTS}")
         for label, value in (
             ("window_seconds", self.window_seconds),
             ("min_interval_seconds", self.min_interval_seconds),
             ("max_wait_seconds", self.max_wait_seconds),
         ):
-            if isinstance(value, bool) or not isinstance(value, (int, float)) or value < 0:
-                raise BoundsError(f"{label} must be a non-negative number")
+            if (
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or not math.isfinite(value)
+                or value < 0
+                or value > MAX_RATE_SECONDS
+            ):
+                raise BoundsError(f"{label} must be finite and between 0 and {MAX_RATE_SECONDS}")
         if self.window_seconds <= 0:
             raise BoundsError("window_seconds must be greater than zero")
-        if self.max_wait_seconds > 86_400:
-            raise BoundsError("max_wait_seconds must be at most 86400 seconds")
 
 
 @dataclass(frozen=True, slots=True)
@@ -221,28 +251,37 @@ class RateLimiter:
         self._clock = clock
         self._sleeper = sleeper
         self._grants: deque[float] = deque()
+        self._lock = threading.Lock()
 
     def acquire(self) -> RateLimitLease:
         """Wait for and grant one slot, failing if the wait exceeds its bound."""
 
-        started = float(self._clock())
-        waited = 0.0
-        while True:
-            now = float(self._clock())
-            self._discard_expired(now)
-            wait_for = self._required_wait(now)
-            if wait_for <= 0:
-                self._grants.append(now)
-                remaining = max(0, self.policy.max_requests - len(self._grants))
-                return RateLimitLease(now, waited, remaining)
-            if waited + wait_for > self.policy.max_wait_seconds:
-                raise RateLimitError(
-                    "rate-limit wait exceeds configured bound",
-                    retry_after_seconds=wait_for,
-                )
-            self._sleeper(wait_for)
-            waited += wait_for
-            waited = max(waited, float(self._clock()) - started)
+        with self._lock:
+            started = float(self._clock())
+            if not math.isfinite(started):
+                raise BoundsError("clock must return a finite number")
+            waited = 0.0
+            while True:
+                now = float(self._clock())
+                if not math.isfinite(now):
+                    raise BoundsError("clock must return a finite number")
+                self._discard_expired(now)
+                wait_for = self._required_wait(now)
+                if wait_for <= 0:
+                    self._grants.append(now)
+                    remaining = max(0, self.policy.max_requests - len(self._grants))
+                    return RateLimitLease(now, waited, remaining)
+                if waited + wait_for > self.policy.max_wait_seconds:
+                    raise RateLimitError(
+                        "rate-limit wait exceeds configured bound",
+                        retry_after_seconds=wait_for,
+                    )
+                self._sleeper(wait_for)
+                waited += wait_for
+                current = float(self._clock())
+                if not math.isfinite(current):
+                    raise BoundsError("clock must return a finite number")
+                waited = max(waited, current - started)
 
     def _discard_expired(self, now: float) -> None:
         cutoff = now - self.policy.window_seconds
@@ -270,6 +309,12 @@ __all__ = [
     "BoundedStreamBudget",
     "BoundedStreamReceipt",
     "BoundsError",
+    "MAX_RATE_REQUESTS",
+    "MAX_RATE_SECONDS",
+    "MAX_STREAM_BYTES",
+    "MAX_STREAM_CHUNK_BYTES",
+    "MAX_STREAM_CHUNKS",
+    "MAX_STREAM_SECONDS",
     "RateLimitError",
     "RateLimitLease",
     "RateLimitPolicy",

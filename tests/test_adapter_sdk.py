@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import replace
+import math
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 
@@ -18,6 +20,11 @@ from shared.adapters import (
     InMemoryAdapterCatalog,
     InMemoryCursorStore,
     JsonValue,
+    MAX_RATE_REQUESTS,
+    MAX_RATE_SECONDS,
+    MAX_STREAM_BYTES,
+    MAX_STREAM_CHUNKS,
+    MAX_STREAM_SECONDS,
     RateLimitError,
     RateLimitPolicy,
     RateLimiter,
@@ -72,6 +79,43 @@ def test_conditional_request_is_https_and_only_emits_validators() -> None:
         ConditionalRequest("http://example.test/releases/latest.json")
     with pytest.raises(AdapterContractError, match="control"):
         ConditionalRequest("https://example.test/releases/latest.json", etag="ok\r\nX-Leak: value")
+
+
+@pytest.mark.parametrize("etag", ["release-1", '"unterminated', '"contains\nnewline"', "W/abc"])
+def test_conditional_validators_reject_malformed_etags(etag: str) -> None:
+    with pytest.raises(AdapterContractError, match="entity-tag|control"):
+        ConditionalRequest("https://example.test/releases/latest.json", etag=etag)
+    with pytest.raises(AdapterContractError, match="entity-tag|control"):
+        ConditionalResponse(200, etag=etag)
+
+
+@pytest.mark.parametrize(
+    "last_modified",
+    [
+        "Wed, 22 Apr 2026 00:00:00 UTC",
+        "Wed, 2 Apr 2026 00:00:00 GMT",
+        "Wed, 99 Apr 2026 00:00:00 GMT",
+        "Tue, 22 Apr 2026 00:00:00 GMT",
+        "2026-04-22T00:00:00Z",
+    ],
+)
+def test_conditional_validators_reject_non_imf_fixdate(last_modified: str) -> None:
+    with pytest.raises(AdapterContractError, match="IMF-fixdate"):
+        ConditionalRequest("https://example.test/releases/latest.json", last_modified=last_modified)
+    with pytest.raises(AdapterContractError, match="IMF-fixdate"):
+        ConditionalResponse(200, last_modified=last_modified)
+
+
+def test_conditional_wildcard_is_request_only() -> None:
+    assert ConditionalRequest("https://example.test/releases/latest.json", etag="*").headers == {"If-None-Match": "*"}
+    with pytest.raises(AdapterContractError, match="entity-tag"):
+        ConditionalResponse(200, etag="*")
+
+
+@pytest.mark.parametrize("url", ["https:///path", "https://:443/path", "https://example.com:invalid/path"])
+def test_conditional_url_rejects_malformed_authorities(url: str) -> None:
+    with pytest.raises(AdapterContractError, match="authority"):
+        ConditionalRequest(url)
 
 
 def test_conditional_response_classification_preserves_noop_semantics() -> None:
@@ -200,6 +244,19 @@ def test_streaming_deadline_is_clock_bounded() -> None:
     assert receipt.content_sha256 == fingerprint_bytes(b"one")
 
 
+@pytest.mark.parametrize("seconds", [math.nan, math.inf, -math.inf, MAX_STREAM_SECONDS + 1])
+def test_stream_budget_rejects_non_finite_or_unsafe_deadlines(seconds: float) -> None:
+    with pytest.raises(AdapterContractError, match="finite"):
+        StreamBudget(max_seconds=seconds)
+
+
+def test_stream_budget_has_explicit_byte_and_chunk_ceilings() -> None:
+    with pytest.raises(AdapterContractError, match="max_bytes"):
+        StreamBudget(max_bytes=MAX_STREAM_BYTES + 1)
+    with pytest.raises(AdapterContractError, match="max_chunks"):
+        StreamBudget(max_chunks=MAX_STREAM_CHUNKS + 1)
+
+
 def test_rate_limiter_enforces_window_and_bounded_wait_without_payload_state() -> None:
     current = [0.0]
     sleeps: list[float] = []
@@ -230,3 +287,35 @@ def test_rate_limiter_enforces_window_and_bounded_wait_without_payload_state() -
     with pytest.raises(RateLimitError, match="exceeds configured bound") as error:
         stuck.acquire()
     assert error.value.retry_after_seconds == 10
+
+
+@pytest.mark.parametrize("field", ["window_seconds", "min_interval_seconds", "max_wait_seconds"])
+def test_rate_limit_policy_rejects_non_finite_or_unsafe_values(field: str) -> None:
+    with pytest.raises(AdapterContractError, match="finite"):
+        RateLimitPolicy(max_requests=1, **{"window_seconds": 1, field: math.inf})
+    with pytest.raises(AdapterContractError, match="finite"):
+        RateLimitPolicy(max_requests=1, **{"window_seconds": 1, field: math.nan})
+    with pytest.raises(AdapterContractError, match="finite"):
+        RateLimitPolicy(max_requests=1, **{"window_seconds": 1, field: MAX_RATE_SECONDS + 1})
+    with pytest.raises(AdapterContractError, match="max_requests"):
+        RateLimitPolicy(max_requests=MAX_RATE_REQUESTS + 1, window_seconds=1)
+
+
+def test_rate_limiter_serializes_check_and_append_for_concurrent_callers() -> None:
+    limiter = RateLimiter(
+        RateLimitPolicy(max_requests=1, window_seconds=60, max_wait_seconds=0),
+        clock=lambda: 0.0,
+        sleeper=lambda _seconds: None,
+    )
+
+    def acquire() -> str:
+        try:
+            limiter.acquire()
+        except RateLimitError:
+            return "rejected"
+        return "granted"
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        outcomes = list(executor.map(lambda _index: acquire(), range(2)))
+    assert outcomes.count("granted") == 1
+    assert outcomes.count("rejected") == 1
