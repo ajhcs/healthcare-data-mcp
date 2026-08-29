@@ -8,9 +8,14 @@ import subprocess
 import sys
 from typing import cast
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts/run_data_mcp_staging_fixture.py"
-CANDIDATE_SHA = "63539f8412831ee62b067c76c3b5c395108481cc"
+MANIFEST = ROOT / "ops/staging/data-mcp-staging-fixture-manifest.json"
+BASE_SHA = "63539f8412831ee62b067c76c3b5c395108481cc"
+MANIFEST_VALUE = cast(dict[str, object], json.loads(MANIFEST.read_text(encoding="utf-8")))
+CANDIDATE_SHA = cast(str, MANIFEST_VALUE["reviewed_candidate_sha"])
 
 
 def _run(root: Path) -> dict[str, object]:
@@ -28,15 +33,23 @@ def _run(root: Path) -> dict[str, object]:
 
 
 def test_fixture_runner_proves_all_required_boundaries(tmp_path: Path) -> None:
-    receipt = _run(tmp_path / "run")
+    root = tmp_path / "run"
+    receipt = _run(root)
     checks = receipt["checks"]
     assert isinstance(checks, dict)
     assert checks
     assert all(isinstance(value, dict) and value.get("state") == "passed" for value in checks.values())
 
     assert receipt["candidate_sha"] == CANDIDATE_SHA
-    assert receipt["base_sha"] == CANDIDATE_SHA
+    assert receipt["base_sha"] == BASE_SHA
     assert receipt["runs"] == 3
+    binding = receipt["manifest_binding"]
+    assert isinstance(binding, dict)
+    assert binding["reviewed_candidate_sha"] == CANDIDATE_SHA
+    assert binding["artifact_count"] >= 10
+    queue = receipt["queue"]
+    assert isinstance(queue, dict)
+    assert queue["journal_mode"] == "wal"
     assert receipt["network"] == {
         "audit_events": [],
         "binds": [],
@@ -55,9 +68,61 @@ def test_fixture_runner_proves_all_required_boundaries(tmp_path: Path) -> None:
     paths = receipt["paths"]
     assert isinstance(paths, dict)
     assert all(isinstance(value, str) and not Path(value).is_absolute() for value in paths.values())
-    receipt_path = tmp_path / "run" / cast(str, receipt["receipt_path"])
+    receipt_path = root / cast(str, receipt["receipt_path"])
     assert receipt_path.is_file()
-    assert str(tmp_path / "run") not in receipt_path.read_text(encoding="utf-8")
+    assert str(root) not in receipt_path.read_text(encoding="utf-8")
+    assert not list((root / "control").glob(".*.tmp"))
+
+    changed = cast(dict[str, object], cast(dict[str, object], receipt["custody"])["changed"])["artifact_id"]
+    projections = cast(dict[str, object], json.loads((root / "control/projections.json").read_text(encoding="utf-8")))
+    current = cast(dict[str, object], projections["current"])
+    assert current["artifact_id"] != changed
+    as_of = cast(dict[str, object], projections["as_of"])
+    assert cast(dict[str, object], as_of["release:ahrq.fixture.20260830"])["artifact_id"] == changed
+
+
+def test_fixture_runner_rejects_candidate_mismatch_and_all_zero_before_root_creation(tmp_path: Path) -> None:
+    for candidate in (BASE_SHA, "0" * 40):
+        root = tmp_path / candidate[:4]
+        result = subprocess.run(
+            [sys.executable, str(SCRIPT), "--candidate-sha", candidate, "--root", str(root)],
+            cwd=ROOT,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode == 4
+        assert not root.exists()
+        assert "candidate" in result.stderr
+
+
+def test_fixture_runner_declares_all_resolution_and_socket_events_denied() -> None:
+    from scripts import run_data_mcp_staging_fixture as runner
+
+    assert {
+        "socket.getaddrinfo",
+        "socket.getnameinfo",
+        "socket.gethostbyname",
+        "socket.gethostbyname_ex",
+        "socket.gethostbyaddr",
+        "socket.getfqdn",
+    } <= runner.BLOCKED_NETWORK_EVENTS
+
+
+def test_fixture_runner_enforces_stream_bytes_chunks_and_deadline() -> None:
+    from scripts import run_data_mcp_staging_fixture as runner
+
+    bounds = {
+        "max_stream_bytes": 10,
+        "max_stream_chunks": 2,
+        "max_chunk_bytes": 5,
+        "max_stream_seconds": 60,
+    }
+    assert runner._bounded_chunks(b"1234567890", bounds) == (b"12345", b"67890")
+    with pytest.raises(runner.FixtureError, match="max_stream_bytes"):
+        runner._bounded_chunks(b"12345678901", bounds)
+    with pytest.raises(runner.FixtureError, match="max_stream_chunks"):
+        runner._bounded_chunks(b"123456789", {**bounds, "max_stream_bytes": 100, "max_chunk_bytes": 4})
 
 
 def test_fixture_runner_is_byte_deterministic_across_isolated_roots(tmp_path: Path) -> None:
