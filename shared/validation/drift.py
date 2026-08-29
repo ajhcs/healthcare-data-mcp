@@ -37,8 +37,10 @@ MAX_QUARANTINE_SAMPLES = 32
 MAX_SAMPLE_PATH = 300
 MAX_QUARANTINE_BYTES = 256 * 1024
 MAX_DISTRIBUTION_CATEGORIES = 256
+MAX_CANDIDATE_ROWS = 1_000_000
 _SHA256 = re.compile(r"^sha256:[0-9a-f]{64}$")
 _ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/-]{0,299}$")
+_LOCATOR = re.compile(r"^(?:https://|object://|parquet://|docs/|contracts/)[A-Za-z0-9._:/-]+$")
 _PATH = re.compile(r"^[A-Za-z0-9_$.-]+(?:\[\])?(?:\.[A-Za-z0-9_$.-]+(?:\[\])?)*$")
 
 
@@ -94,6 +96,15 @@ def _optional_sha256(value: object, label: str) -> str | None:
     if not isinstance(value, str) or _SHA256.fullmatch(value) is None:
         raise DriftValidationError(f"{label} must be a sha256 fingerprint")
     return value
+
+
+def _optional_locator(value: object, label: str) -> str | None:
+    if value is None:
+        return None
+    text = _required_text(value, label, maximum=500)
+    if _LOCATOR.fullmatch(text) is None or ".." in text:
+        raise QuarantineError(f"{label} must be a safe custody locator")
+    return text
 
 
 def _bounded_int(value: object, label: str, *, minimum: int = 0, maximum: int = 2**31 - 1) -> int:
@@ -254,7 +265,7 @@ class DriftBaseline:
     """Explicit expectations used to evaluate one adapter or source batch."""
 
     source_id: str | None = None
-    schema_version: str | None = "hdp.observation-envelope.v1"
+    schema_version: str | None = None
     expected_release_id: str | None = None
     expected_artifact_id: str | None = None
     expected_row_count: int | None = None
@@ -446,7 +457,7 @@ class QuarantineRecord:
         release_id = _optional_id(self.release_id, "quarantine release_id")
         artifact_id = _optional_id(self.artifact_id, "quarantine artifact_id")
         artifact_sha256 = _optional_sha256(self.artifact_sha256, "quarantine artifact_sha256")
-        custody_locator = _optional_id(self.custody_locator, "quarantine custody_locator")
+        custody_locator = _optional_locator(self.custody_locator, "quarantine custody_locator")
         envelope_sha256 = _optional_sha256(self.envelope_sha256, "quarantine envelope_sha256")
         if not self.reason_codes or len(self.reason_codes) > MAX_REASON_CODES:
             raise QuarantineError("quarantine reason_codes must be bounded and non-empty")
@@ -662,6 +673,9 @@ def validate_observation_candidate(
 
     rows, collection_path = _candidate_rows(candidate)
     row_count = len(rows)
+    if row_count > MAX_CANDIDATE_ROWS:
+        issues.append(_issue("row.too_many", collection_path, "row", MAX_CANDIDATE_ROWS, row_count))
+        rows = rows[:MAX_CANDIDATE_ROWS]
     issues.extend(_row_issues(rows, collection_path, expected))
     issues.extend(_key_issues(candidate, expected, source_id, release_id, artifact_id))
     issues.extend(_distribution_issues(candidate, rows, collection_path, expected.distribution_rules))
@@ -704,7 +718,7 @@ def build_quarantine_record(
     artifact_sha256 = _optional_sha256(artifact_sha256, "artifact_sha256")
     if artifact_sha256 is None:
         artifact_sha256 = _artifact_hash(candidate)
-    custody_locator = _optional_id(custody_locator, "custody_locator") or _envelope_custody_locator(candidate)
+    custody_locator = _optional_locator(custody_locator, "custody_locator") or _envelope_custody_locator(candidate)
     identity = {
         "source_id": source_id,
         "release_id": release_id,

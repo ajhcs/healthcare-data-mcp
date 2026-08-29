@@ -67,6 +67,14 @@ def test_valid_adapter_batch_is_accepted_with_explicit_distribution_baseline() -
     assert "patient-name" not in json.dumps(report.as_dict(), sort_keys=True)
 
 
+def test_generic_adapter_batch_does_not_require_observation_schema_pin() -> None:
+    baseline = DriftBaseline(expected_row_count=2, row_id_field="row_id")
+
+    report = validate_drift(_batch(), baseline)
+
+    assert report.accepted
+
+
 def test_schema_drift_is_fail_closed_and_report_is_redacted() -> None:
     candidate = _envelope()
     candidate["unexpected"] = "secret source payload"
@@ -178,6 +186,15 @@ def test_quarantine_rejects_record_path_symlink(tmp_path: Path) -> None:
 
     with pytest.raises(QuarantineError, match="symlink"):
         store.put(record)
+
+
+def test_quarantine_rejects_unsafe_custody_locator() -> None:
+    candidate = _batch()
+    candidate["rows"] = []
+    report = validate_drift(candidate, _batch_baseline())
+
+    with pytest.raises(QuarantineError, match="safe custody locator"):
+        build_quarantine_record(candidate, report, custody_locator="../../source.csv")
 
 
 def test_accepted_candidate_can_be_projected_after_validation() -> None:
