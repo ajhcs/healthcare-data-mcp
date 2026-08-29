@@ -264,3 +264,14 @@ def test_crash_after_object_promotion_is_recovered_without_rewrite(
     assert recovered.state == "stored"
     assert recovered.resumed is True
     assert store.read_bytes(metadata.artifact_id) == BODY
+
+
+def test_unmarked_orphan_object_cannot_recreate_altered_metadata(tmp_path: Path) -> None:
+    metadata = _metadata()
+    store = RawArtifactStore(tmp_path)
+    receipt = store.put(metadata, _chunks())
+    (tmp_path / receipt.metadata_key).unlink()
+    altered = replace(metadata, source_url="https://evil.example/altered.json")
+
+    with pytest.raises(ArtifactCollisionError, match="recovery state marker"):
+        store.put(altered, _chunks())

@@ -414,6 +414,9 @@ class RawArtifactStore:
     ) -> CustodyReceipt:
         """Finish a crash window where object promotion preceded manifest creation."""
 
+        if not partial_state_path.exists():
+            raise ArtifactCollisionError("orphaned object is missing its recovery state marker")
+        self._validate_complete_recovery_state(item, partial_state_path)
         if _sha256_bytes(object_path.read_bytes()) != item.content_sha256:
             raise ArtifactCollisionError("existing object bytes do not match content_sha256")
         payload = _consume_chunks(chunks, item, self.max_bytes, self.max_chunks)
@@ -433,6 +436,20 @@ class RawArtifactStore:
             resumed,
             item.byte_length,
         )
+
+    def _validate_complete_recovery_state(self, item: RawArtifactMetadata, state_path: Path) -> None:
+        """Require the crash marker to bind the complete object to its metadata."""
+
+        try:
+            value = json.loads(state_path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+            raise RawCustodyError("unable to read complete recovery state") from exc
+        if not isinstance(value, dict) or value.get("metadata") != item.as_dict():
+            raise ArtifactCollisionError("complete recovery state does not match artifact metadata")
+        if value.get("schema_version") != _SCHEMA_VERSION or value.get("record_type") != "raw_artifact_partial":
+            raise RawCustodyError("complete recovery state has an unsupported contract")
+        if value.get("chunk_count") != item.chunk_count or value.get("byte_length") != item.byte_length:
+            raise RawCustodyError("complete recovery state counters are inconsistent")
 
     def _promote_object(self, partial_path: Path, object_path: Path, content_sha256: str) -> None:
         """Atomically publish a partial object without replacing an existing inode."""
