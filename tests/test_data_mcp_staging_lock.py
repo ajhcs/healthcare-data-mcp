@@ -10,11 +10,16 @@ ROOT = Path(__file__).resolve().parents[1]
 LOCK = ROOT / "requirements/staging-fixture.lock"
 EXPECTED = {
     "attrs": "26.1.0",
+    "duckdb": "1.4.4",
     "jsonschema": "4.26.0",
     "jsonschema-specifications": "2025.9.1",
+    "numpy": "2.4.4",
+    "pandas": "3.0.2",
     "pyyaml": "6.0.3",
+    "python-dateutil": "2.9.0.post0",
     "referencing": "0.37.0",
     "rpds-py": "0.30.0",
+    "six": "1.17.0",
     "typing-extensions": "4.15.0",
 }
 

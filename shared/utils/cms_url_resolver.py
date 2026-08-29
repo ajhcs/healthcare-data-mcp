@@ -42,7 +42,6 @@ _REGISTRY_CACHE_TTL_DAYS = 7
 _REGISTRY_CACHE_PATH = (
     Path.home() / ".healthcare-data-mcp" / "cache" / "url_registry.json"
 )
-_REGISTRY_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 # ---------------------------------------------------------------------------
 # Dataset registry
@@ -243,6 +242,7 @@ def _load_registry() -> dict:
 def _save_registry(registry: dict) -> None:
     """Persist the URL registry to disk."""
     try:
+        _REGISTRY_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
         write_atomic_json(_REGISTRY_CACHE_PATH, registry)
     except Exception:
         logger.debug("Could not write URL registry cache", exc_info=True)

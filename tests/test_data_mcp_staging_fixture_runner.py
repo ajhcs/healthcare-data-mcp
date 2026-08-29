@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
+import site
 import subprocess
 import sys
 from typing import cast
@@ -75,6 +77,7 @@ def test_fixture_runner_proves_all_required_boundaries(tmp_path: Path) -> None:
         "egress": "deny",
         "listener_ports": [],
         "source_probes": "disabled",
+        "socketpair_sendmsg_guard": True,
     }
     assert receipt["prohibitions"] == {
         "credentials_resolved": False,
@@ -103,6 +106,8 @@ def test_fixture_runner_proves_all_required_boundaries(tmp_path: Path) -> None:
 
 
 def test_fixture_runner_rejects_candidate_mismatch_and_all_zero_before_root_creation(tmp_path: Path) -> None:
+    environment = os.environ.copy()
+    environment["PYTHONNOUSERSITE"] = "1"
     for candidate in (BASE_SHA, "0" * 40):
         root = tmp_path / candidate[:4]
         result = subprocess.run(
@@ -111,6 +116,7 @@ def test_fixture_runner_rejects_candidate_mismatch_and_all_zero_before_root_crea
             check=False,
             capture_output=True,
             text=True,
+            env=environment,
         )
         assert result.returncode == 4
         assert not root.exists()
@@ -127,7 +133,40 @@ def test_fixture_runner_declares_all_resolution_and_socket_events_denied() -> No
         "socket.gethostbyname_ex",
         "socket.gethostbyaddr",
         "socket.getfqdn",
+        "socket.sendmsg",
     } <= runner.BLOCKED_NETWORK_EVENTS
+
+
+def test_fixture_runner_socketpair_sendmsg_probe_is_denied() -> None:
+    from scripts import run_data_mcp_staging_fixture as runner
+
+    assert runner._probe_socketpair() is True
+    assert runner._NETWORK_ATTEMPTS == []
+
+
+def test_shared_package_imports_do_not_create_home_cache(tmp_path: Path) -> None:
+    home = tmp_path / "home"
+    environment = os.environ.copy()
+    environment["HOME"] = str(home)
+    environment["PYTHONNOUSERSITE"] = "1"
+    user_site = site.getusersitepackages()
+    environment["PYTHONPATH"] = os.pathsep.join(
+        part for part in (user_site, environment.get("PYTHONPATH", "")) if part
+    )
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import shared.storage.raw_custody; import shared.utils.source_cadence",
+        ],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+        env=environment,
+    )
+    assert result.returncode == 0, result.stderr
+    assert not (home / ".healthcare-data-mcp" / "cache").exists()
 
 
 def test_fixture_runner_enforces_stream_bytes_chunks_and_deadline() -> None:
