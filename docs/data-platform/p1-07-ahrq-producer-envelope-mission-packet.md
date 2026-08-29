@@ -27,7 +27,10 @@ receipt that can be replayed after a crash.
   emitted envelope uses a deterministic normalized-row artifact whose bytes,
   length, and content hash are calculated from the parsed source rows. Its
   locator is either supplied by the caller or the content-addressed locator
-  returned by an optional local `RawArtifactStore`.
+  returned by an optional local `RawArtifactStore`. Delivery additionally
+  requires the builder-held trusted capability created by independently
+  re-verifying that normalized artifact through the store; an offline or
+  JSON-only envelope is construction-only.
 
 ## Delivery protocol
 
@@ -66,11 +69,12 @@ and does not advance the checkpoint again.
 ## Verification and rollback
 
 Focused tests cover valid system/facility parsing, malformed/duplicate rows,
-orphan links, envelope hash and locator lineage, strict schema rejection,
-byte-identical replay, conflicting replay, acknowledgement rejection, and
-checkpoint CAS ordering. Required checks are the focused pytest suite, Ruff
-check/format, Python compileall, JSON Schema validation, `git diff --check`,
-and a final self-review on the exact committed tree.
+strict malformed headers, immutable source-row fields, orphan links, envelope
+hash and locator lineage, strict schema rejection, byte-identical replay,
+conflicting replay, acknowledgement rejection, trusted-custody relabel
+rejection, and checkpoint CAS ordering. Required checks are the focused pytest
+suite, Ruff check/format, Python compileall, JSON Schema validation,
+`git diff --check`, and a final self-review on the exact committed tree.
 
 Rollback is additive: revert the docs, tests, and implementation commits in
 reverse order. No raw object, queue, database, scheduler, runtime, or

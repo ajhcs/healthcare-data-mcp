@@ -16,6 +16,10 @@ activation occurred.
   closes parser custody verification, normalized-artifact binding, offline
   delivery, malformed-CSV handling, blank facility linkage, and cross-process
   acknowledgement races; its exact SHA is recorded by the handoff command.
+- A second review correction follows that commit. It replaces the relabelable
+  offline-prefix delivery guard with a builder-held capability backed by
+  independently re-verified P1-04 custody, closes malformed-header error
+  leakage, and freezes source-row fields so row hashes cannot become stale.
 
 The branch is
 `codex/healthcare-toolkit-rrna.p1-07-ahrq-envelope-20260829` in the isolated
@@ -50,7 +54,13 @@ Luna because Grok Build repository egress was unavailable.
 - Caller-supplied normalized artifacts are required to be verified, `system`
   role, and bound to the exact AHRQ source and detector release. A builder with
   no normalized store emits an explicitly marked offline locator for contract
-  construction only; acknowledgement and checkpoint paths reject it.
+  construction only; acknowledgement and checkpoint paths require a trusted
+  capability and reject it even if mutable artifact or lineage labels change.
+- A trusted capability is created only for normalized bytes checked through the
+  bounded `RawArtifactStore`; delivery re-reads the immutable manifest and
+  object bytes and matches source, release, role, hash, length, custody, and
+  lineage references. Serialization to JSON intentionally drops the capability
+  and must be rebuilt or rehydrated through trusted custody before delivery.
 - The file acknowledgement adapter uses a sidecar OS lock around read,
   idempotency comparison, and atomic write, preserving records and rejecting
   cross-process conflicts safely.
@@ -61,7 +71,7 @@ Run from the isolated worktree:
 
 ```text
 pytest -q tests/test_healthcare_data_platform_ahrq_observation_envelope.py --tb=short
-# 15 passed
+# 17 passed
 ruff check shared/acquisition/ahrq_observation_envelope.py tests/test_healthcare_data_platform_ahrq_observation_envelope.py
 # All checks passed!
 pyright --level error shared/acquisition/ahrq_observation_envelope.py tests/test_healthcare_data_platform_ahrq_observation_envelope.py
@@ -99,6 +109,11 @@ command is claimed here.
 - [x] Public parser custody claims cover the exact parsed bytes; normalized
   custody is source/release/role-bound and verified; offline-only envelopes
   cannot be delivered, acknowledged, or checkpointed.
+- [x] Delivery requires an independently checked normalized-custody capability,
+  so relabeling mutable artifact or lineage fields cannot promote offline or
+  JSON-only envelope data.
+- [x] Malformed CSV headers are normalized to `AhrqRowParseError`, and source
+  row fields are copied/frozen so their row hashes remain valid.
 - [x] The file acknowledgement store is protected by an OS-level sidecar lock
   and has cross-process preservation and conflict regression coverage.
 - [x] Focused pytest, Ruff, Pyright, compile, schema, and diff checks were run
@@ -113,11 +128,13 @@ bytes, call the Toolkit admission API, own a database transaction, publish an
 outbox event, or coordinate a distributed checkpoint. Callers must provide
 already verified P1-04 raw artifacts and a durable acknowledgement adapter.
 The optional normalized artifact store is subject to P1-04's 131,072-byte,
-128-chunk bound. Without a store or supplied normalized locator, the builder
-can emit only an explicitly marked `verified: false` derived locator for
-offline contract tests; delivery rejects that locator. A caller-supplied
-normalized locator must already be P1-04-verified and exact-match the
-deterministic bytes, source, release, and `system` role.
+128-chunk bound. Without a store, the builder can emit only an explicitly
+marked `verified: false` derived locator for offline contract tests; delivery
+rejects it because no trusted capability exists. A caller-supplied normalized
+locator must already be P1-04-verified and exact-match the deterministic bytes,
+source, release, and `system` role; delivery additionally requires the caller
+to provide the corresponding `RawArtifactStore` so custody can be checked
+independently.
 
 The safe rollback is to stop invoking this producer and revert the post-review
 correction followed by the three planned P1-07 commits in reverse order on a

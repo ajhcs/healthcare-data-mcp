@@ -27,6 +27,7 @@ from shared.acquisition.ahrq_observation_envelope import (
     AhrqProducerError,
     AhrqReplayConflictError,
     AhrqRowParseError,
+    AhrqSourceRow,
     FACILITY_REQUIRED_COLUMNS,
     FileAhrqAcknowledgementStore,
     FileAhrqCheckpointStore,
@@ -240,6 +241,13 @@ def test_public_parsers_verify_exact_claimed_bytes_and_reject_malformed_csv(tmp_
     with pytest.raises(AhrqRowParseError, match="malformed"):
         parse_ahrq_system_rows(malformed_path)
 
+    malformed_header_path = tmp_path / "malformed-header.csv"
+    malformed_header_path.write_text(
+        '"health_sys_id,health_sys_name,health_sys_city,health_sys_state,hosp_cnt,acutehosp_cnt\n', encoding="cp1252"
+    )
+    with pytest.raises(AhrqRowParseError, match="malformed"):
+        parse_ahrq_system_rows(malformed_header_path)
+
 
 def test_parser_rejects_orphan_link_and_raw_hash_mismatch(tmp_path: Path) -> None:
     release = _release()
@@ -343,6 +351,29 @@ def test_parser_rejects_orphan_link_and_raw_hash_mismatch(tmp_path: Path) -> Non
         )
 
 
+def test_source_row_fields_are_copied_and_immutable(tmp_path: Path) -> None:
+    release = _release()
+    _, _, parsed = _source_files(tmp_path, release)
+    row = parsed.system_rows[0]
+    original_fields = dict(row.fields)
+    with pytest.raises(TypeError):
+        cast(dict[str, str], row.fields)["health_sys_name"] = "Mutated"
+    assert dict(row.fields) == original_fields
+
+    supplied_fields = dict(row.fields)
+    copied = AhrqSourceRow(
+        role=row.role,
+        row_number=row.row_number,
+        source_row_id=row.source_row_id,
+        fields=supplied_fields,
+        row_sha256=row.row_sha256,
+        artifact=row.artifact,
+    )
+    supplied_fields["health_sys_name"] = "Mutated after construction"
+    assert copied.fields["health_sys_name"] == original_fields["health_sys_name"]
+    assert copied.as_dict()["row_sha256"] == row.as_dict()["row_sha256"]
+
+
 def test_envelope_is_pinned_source_scoped_and_deterministic(tmp_path: Path) -> None:
     release = _release()
     first = _envelope(tmp_path, release)
@@ -423,15 +454,33 @@ def test_offline_normalized_envelope_cannot_be_acknowledged_or_checkpointed(tmp_
     assert cast(str, artifact["artifact_id"]).startswith(AHRQ_OFFLINE_ARTIFACT_PREFIX)
     acknowledgements = InMemoryAhrqAcknowledgementStore()
     checkpoints = InMemoryAhrqCheckpointStore()
-    with pytest.raises(AhrqAcknowledgementError, match="offline normalized artifact"):
+    with pytest.raises(AhrqAcknowledgementError, match="trusted custody capability"):
         acknowledgements.acknowledge(offline)
+    relabeled = deepcopy(offline)
+    relabeled_artifact = cast(dict[str, object], relabeled["artifact"])
+    relabeled_id = "artifact:raw:" + "b" * 32
+    relabeled_artifact["artifact_id"] = relabeled_id
+    cast(dict[str, object], relabeled["lineage"])["artifact_ref"] = relabeled_id
+    with pytest.raises(AhrqAcknowledgementError, match="trusted custody capability"):
+        acknowledgements.acknowledge(relabeled)
     producer = AhrqObservationProducer(acknowledger=acknowledgements, checkpoint_store=checkpoints)
-    with pytest.raises(AhrqAcknowledgementError, match="offline normalized artifact"):
+    with pytest.raises(AhrqAcknowledgementError, match="trusted custody capability"):
         producer.acknowledge_and_checkpoint(
             offline,
             checkpoint=AhrqCheckpointPrecondition(AHRQ_SOURCE_ID, 0, None, "release:ahrq:2026-08-22"),
         )
     assert checkpoints.current() is None
+
+
+def test_trusted_normalized_custody_rejects_relabelled_artifact(tmp_path: Path) -> None:
+    envelope = _envelope(tmp_path)
+    relabeled = deepcopy(envelope)
+    artifact = cast(dict[str, object], relabeled["artifact"])
+    relabeled_id = "artifact:raw:" + "c" * 32
+    artifact["artifact_id"] = relabeled_id
+    cast(dict[str, object], relabeled["lineage"])["artifact_ref"] = relabeled_id
+    with pytest.raises(AhrqAcknowledgementError, match="trusted custody capability"):
+        InMemoryAhrqAcknowledgementStore().acknowledge(relabeled)
 
 
 def test_acknowledgement_replay_is_idempotent_and_conflicting_bytes_fail(tmp_path: Path) -> None:

@@ -24,10 +24,11 @@ import json
 from pathlib import Path
 import re
 import threading
+from types import MappingProxyType
 from typing import Callable, Iterator, Literal, Mapping, Protocol, Sequence, cast
 
 from shared.acquisition.ahrq_detector import DetectionReceipt
-from shared.storage.raw_custody import MAX_ARTIFACT_BYTES, RawArtifactMetadata, RawArtifactStore
+from shared.storage.raw_custody import MAX_ARTIFACT_BYTES, RawArtifactMetadata, RawArtifactStore, RawCustodyError
 from shared.utils.cache import write_atomic_json
 
 
@@ -238,6 +239,15 @@ class AhrqSourceRow:
         if not self.source_row_id or _SOURCE_ROW_ID.fullmatch(self.source_row_id) is None:
             raise AhrqRowParseError("source row id is malformed")
         _require_hash(self.row_sha256, "row_sha256")
+        if not isinstance(self.fields, Mapping):
+            raise AhrqRowParseError("source row fields must be a mapping")
+        copied_fields = dict(self.fields)
+        if any(
+            not isinstance(field_name, str) or not isinstance(field_value, str)
+            for field_name, field_value in copied_fields.items()
+        ):
+            raise AhrqRowParseError("source row fields must contain only strings")
+        object.__setattr__(self, "fields", MappingProxyType(copied_fields))
         if self.artifact.role != self.role:
             raise AhrqRowParseError("source row artifact role does not match row")
 
@@ -274,6 +284,72 @@ class AhrqParsedRows:
         """Return deterministic system-then-facility source row order."""
 
         return self.system_rows + self.facility_rows
+
+
+@dataclass(frozen=True, slots=True)
+class _NormalizedCustodyCapability:
+    """Opaque delivery capability backed by independently checked P1-04 bytes."""
+
+    store: RawArtifactStore
+    locator: AhrqArtifactLocator
+
+    def verify_store(self) -> None:
+        """Verify the immutable manifest and bytes represented by this capability."""
+
+        try:
+            metadata = self.store.read_metadata(self.locator.artifact_id)
+            self.store.read_bytes(self.locator.artifact_id)
+        except RawCustodyError as exc:
+            raise AhrqProducerError("normalized artifact custody could not be independently verified") from exc
+        expected_locator = _normalized_store_locator(self.locator.content_sha256)
+        if self.locator.custody_locator != expected_locator:
+            raise AhrqProducerError("normalized artifact custody locator is not the P1-04 object")
+        if (
+            metadata.artifact_id != self.locator.artifact_id
+            or metadata.source_id != AHRQ_SOURCE_ID
+            or metadata.release_id != self.locator.release_id
+            or metadata.content_sha256 != self.locator.content_sha256
+            or metadata.byte_length != self.locator.byte_length
+        ):
+            raise AhrqProducerError("normalized artifact custody metadata does not match its locator")
+
+    def verify_envelope(self, envelope: Mapping[str, object]) -> None:
+        """Verify custody and every mutable envelope reference to the artifact."""
+
+        try:
+            self.verify_store()
+        except AhrqProducerError as exc:
+            raise AhrqAcknowledgementError(str(exc)) from exc
+        source_release = _mapping(envelope.get("source_release"), "source_release")
+        artifact = _mapping(envelope.get("artifact"), "artifact")
+        custody = _mapping(artifact.get("custody"), "artifact.custody")
+        lineage = _mapping(envelope.get("lineage"), "lineage")
+        checks = (
+            (source_release.get("source_id"), self.locator.source_id, "normalized source_id"),
+            (source_release.get("release_id"), self.locator.release_id, "normalized release_id"),
+            (artifact.get("artifact_id"), self.locator.artifact_id, "normalized artifact_id"),
+            (artifact.get("release_ref"), self.locator.release_id, "normalized release_ref"),
+            (artifact.get("content_sha256"), self.locator.content_sha256, "normalized content_sha256"),
+            (artifact.get("byte_length"), self.locator.byte_length, "normalized byte_length"),
+            (custody.get("locator"), self.locator.custody_locator, "normalized custody locator"),
+            (lineage.get("artifact_ref"), self.locator.artifact_id, "normalized lineage artifact_ref"),
+        )
+        for actual, expected, label in checks:
+            if actual != expected:
+                raise AhrqAcknowledgementError(f"{label} does not match trusted custody capability")
+
+
+class _AhrqObservationEnvelope(dict[str, object]):
+    """Mapping carrying a non-serializable normalized-custody capability."""
+
+    def __init__(
+        self,
+        payload: Mapping[str, object],
+        *,
+        normalized_custody: _NormalizedCustodyCapability | None,
+    ) -> None:
+        super().__init__(payload)
+        self._normalized_custody = normalized_custody
 
 
 @dataclass(frozen=True, slots=True)
@@ -538,8 +614,10 @@ def build_ahrq_observation_envelope(
     ``release`` must be a successful detector receipt.  A normalized artifact
     locator may be supplied when the caller already persisted the normalized
     row bytes; otherwise an optional :class:`RawArtifactStore` receives those
-    bytes before the envelope is emitted.  Supplying neither is useful for
-    offline contract tests only and marks the derived locator as unverified.
+    bytes before the envelope is emitted.  Delivery requires a builder-created
+    trusted capability backed by independently verified P1-04 custody.
+    Supplying neither is useful for offline contract tests only and marks the
+    derived locator as unverified.
     """
 
     _validate_release(release)
@@ -561,6 +639,7 @@ def build_ahrq_observation_envelope(
         source_id=release.source_id,
         release_id=cast(str, release.release_id),
     )
+    normalized_capability: _NormalizedCustodyCapability | None = None
     if normalized is None:
         if normalized_store is not None:
             normalized = _store_normalized_artifact(
@@ -570,6 +649,8 @@ def build_ahrq_observation_envelope(
                 content=normalized_bytes,
                 captured_at=observed_at,
             )
+            normalized_capability = _NormalizedCustodyCapability(normalized_store, normalized)
+            normalized_capability.verify_store()
         else:
             digest = normalized_hash.removeprefix("sha256:")
             normalized = AhrqArtifactLocator(
@@ -582,8 +663,14 @@ def build_ahrq_observation_envelope(
                 release_id=release.release_id,
                 verified=False,
             )
-    elif normalized.content_sha256 != normalized_hash or normalized.byte_length != len(normalized_bytes):
-        raise AhrqProducerError("normalized artifact hash or length does not match parsed rows")
+    else:
+        if normalized.content_sha256 != normalized_hash or normalized.byte_length != len(normalized_bytes):
+            raise AhrqProducerError("normalized artifact hash or length does not match parsed rows")
+        if normalized_store is not None:
+            normalized_capability = _NormalizedCustodyCapability(normalized_store, normalized)
+            normalized_capability.verify_store()
+    if normalized is None:  # pragma: no cover - guarded by the branches above
+        raise AhrqProducerError("normalized artifact was not constructed")
     if not normalized.verified and normalized_store is not None:
         raise AhrqProducerError("normalized artifact is not verified after local custody")
     _validate_raw_artifact_lineage(raw_rows, release)
@@ -696,8 +783,9 @@ def build_ahrq_observation_envelope(
         },
         "authority_limits": _authority_limits(),
     }
-    _validate_envelope(envelope)
-    return envelope
+    result = _AhrqObservationEnvelope(envelope, normalized_custody=normalized_capability)
+    _validate_envelope(result)
+    return result
 
 
 def write_ahrq_observation_envelope(path: str | Path, envelope: Mapping[str, object]) -> Path:
@@ -1132,23 +1220,26 @@ def _parse_rows(
     except (OSError, UnicodeError) as exc:
         raise AhrqRowParseError(f"unable to read {role} AHRQ CSV: {path.name}") from exc
     reader = csv.DictReader(io.StringIO(text, newline=""), strict=True)
-    original_headers = reader.fieldnames
-    if not original_headers:
-        raise AhrqRowParseError(f"{role} AHRQ CSV has no header: {path.name}")
-    headers: list[str] = []
-    seen: set[str] = set()
-    for index, header in enumerate(original_headers):
-        canonical = (header or "").lstrip("\ufeff").strip().lower()
-        if not canonical:
-            raise AhrqRowParseError(f"{role} AHRQ CSV has a blank header at column {index + 1}")
-        if canonical in seen:
-            raise AhrqRowParseError(f"{role} AHRQ CSV has duplicate header: {canonical}")
-        seen.add(canonical)
-        headers.append(canonical)
-    canonical_by_original = {original: canonical for original, canonical in zip(original_headers, headers)}
-    missing = sorted(required_columns - set(headers))
-    if missing:
-        raise AhrqRowParseError(f"{role} AHRQ CSV is missing required columns: {', '.join(missing)}")
+    try:
+        original_headers = reader.fieldnames
+        if not original_headers:
+            raise AhrqRowParseError(f"{role} AHRQ CSV has no header: {path.name}")
+        headers: list[str] = []
+        seen: set[str] = set()
+        for index, header in enumerate(original_headers):
+            canonical = (header or "").lstrip("\ufeff").strip().lower()
+            if not canonical:
+                raise AhrqRowParseError(f"{role} AHRQ CSV has a blank header at column {index + 1}")
+            if canonical in seen:
+                raise AhrqRowParseError(f"{role} AHRQ CSV has duplicate header: {canonical}")
+            seen.add(canonical)
+            headers.append(canonical)
+        canonical_by_original = {original: canonical for original, canonical in zip(original_headers, headers)}
+        missing = sorted(required_columns - set(headers))
+        if missing:
+            raise AhrqRowParseError(f"{role} AHRQ CSV is missing required columns: {', '.join(missing)}")
+    except csv.Error as exc:
+        raise AhrqRowParseError(f"{role} AHRQ CSV is malformed: {path.name}") from exc
     rows: list[AhrqSourceRow] = []
     seen_ids: set[str] = set()
     try:
@@ -1322,13 +1413,20 @@ def _store_normalized_artifact(
     return AhrqArtifactLocator(
         role="system",
         artifact_id=receipt.artifact_id,
-        custody_locator=f"object://{receipt.object_key}",
+        custody_locator=_normalized_store_locator(receipt.content_sha256),
         content_sha256=receipt.content_sha256,
         byte_length=receipt.byte_length,
         source_id=release.source_id,
         release_id=release.release_id,
         verified=True,
     )
+
+
+def _normalized_store_locator(content_sha256: str) -> str:
+    """Return the canonical object locator emitted by ``RawArtifactStore``."""
+
+    digest = content_sha256.removeprefix("sha256:")
+    return f"object://objects/sha256/{digest[:2]}/{digest}"
 
 
 def _observation_payload(
@@ -1392,15 +1490,15 @@ def _validate_envelope(envelope: Mapping[str, object]) -> None:
 
 
 def _envelope_identity(envelope: Mapping[str, object]) -> dict[str, str]:
+    if not isinstance(envelope, _AhrqObservationEnvelope) or envelope._normalized_custody is None:
+        raise AhrqAcknowledgementError("normalized artifact requires trusted custody capability")
     envelope_id = _required_text(envelope, "record_id")
     source_release = _mapping(envelope.get("source_release"), "source_release")
     lineage = _mapping(envelope.get("lineage"), "lineage")
     replay = _mapping(lineage.get("replay"), "lineage.replay")
     idempotency_key = _required_text(replay, "idempotency_key")
     artifact = _mapping(envelope.get("artifact"), "artifact")
-    artifact_id = _required_text(artifact, "artifact_id")
-    if artifact_id.startswith(AHRQ_OFFLINE_ARTIFACT_PREFIX):
-        raise AhrqAcknowledgementError("offline normalized artifact cannot be delivered")
+    envelope._normalized_custody.verify_envelope(envelope)
     return {
         "envelope_id": envelope_id,
         "source_id": _required_text(source_release, "source_id"),
