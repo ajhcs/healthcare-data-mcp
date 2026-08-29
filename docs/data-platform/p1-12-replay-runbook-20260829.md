@@ -12,6 +12,10 @@ item/byte limits.  Numeric and ISO-date ranges are expanded inclusively.  An
 opaque range must provide the ordered `versions` list so the controller cannot
 silently skip a release it cannot enumerate offline.
 
+Numeric suffixes are compared numerically (`version:9` through `version:11`)
+and fixed-width padding is preserved (`version:009` through `version:011`).
+Mixed zero-padding is rejected rather than silently changing a version ID.
+
 ```python
 from shared.replay import ReplayController
 
@@ -67,6 +71,11 @@ bounded stop.  If an item is active, it finishes its current boundary; the
 plan then becomes `cancelled`.  `resume(plan_id, runner, ...)` is required to
 continue a cancelled plan and preserves the original plan identity and
 limits.
+
+Each in-progress item also carries a finite claim lease and random owner
+fence.  A second executor cannot steal a live claim.  A restart may reclaim
+only an expired claim; a stale owner cannot complete or fail the replacement
+claim.
 
 ## Bounds and privacy
 

@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from hashlib import sha256
 import json
+import math
 from pathlib import Path
 import re
 import secrets
@@ -35,9 +36,11 @@ MAX_ITEM_BYTES = 1_073_741_824
 MAX_ATTEMPTS = 3
 MAX_ERROR_LENGTH = 512
 MAX_REFERENCE_LENGTH = 512
+MAX_CLAIM_LEASE_SECONDS = 86_400.0
 DEFAULT_MAX_ITEMS = 1_024
 DEFAULT_MAX_BYTES = 64 * 1024 * 1024
 DEFAULT_ITEM_BYTES = 1
+DEFAULT_CLAIM_LEASE_SECONDS = 300.0
 
 ReplayState: TypeAlias = Literal["planned", "running", "cancel_requested", "cancelled", "completed", "failed"]
 ReplayItemState: TypeAlias = Literal["pending", "in_progress", "completed", "failed"]
@@ -140,6 +143,15 @@ def _bounded_int(value: object, label: str, minimum: int, maximum: int) -> int:
     if isinstance(value, bool) or not isinstance(value, int) or not minimum <= value <= maximum:
         raise ReplayValidationError(f"{label} must be an integer between {minimum} and {maximum}")
     return value
+
+
+def _bounded_seconds(value: object, label: str, maximum: float) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ReplayValidationError(f"{label} must be a finite number")
+    result = float(value)
+    if not math.isfinite(result) or result <= 0 or result > maximum:
+        raise ReplayValidationError(f"{label} must be finite, greater than 0, and at most {maximum}")
+    return result
 
 
 def _utc(value: datetime, label: str = "timestamp") -> datetime:
@@ -622,8 +634,6 @@ class ReplayExecution:
 
 
 def _range_versions(from_version: str, to_version: str) -> tuple[str, ...]:
-    if from_version > to_version:
-        raise ReplayValidationError("from_version must not be after to_version")
     if from_version == to_version:
         return (from_version,)
     start_match = _TRAILING_NUMBER.fullmatch(from_version)
@@ -633,8 +643,17 @@ def _range_versions(from_version: str, to_version: str) -> tuple[str, ...]:
         end = int(end_match.group("number"))
         if end < start or end - start + 1 > MAX_PLAN_ITEMS:
             raise ReplayValidationError("version range exceeds the item bound")
-        width = max(len(start_match.group("number")), len(end_match.group("number")))
-        return tuple(f"{start_match.group('prefix')}{index:0{width}d}" for index in range(start, end + 1))
+        start_digits = start_match.group("number")
+        end_digits = end_match.group("number")
+        if len(start_digits) == len(end_digits):
+            width = len(start_digits)
+        elif start_digits.startswith("0") or end_digits.startswith("0"):
+            raise ReplayValidationError("numeric version range uses inconsistent zero padding")
+        else:
+            width = 0
+        if width:
+            return tuple(f"{start_match.group('prefix')}{index:0{width}d}" for index in range(start, end + 1))
+        return tuple(f"{start_match.group('prefix')}{index}" for index in range(start, end + 1))
     start_date = _DATE_VERSION.fullmatch(from_version)
     end_date = _DATE_VERSION.fullmatch(to_version)
     if start_date and end_date and start_date.group("prefix") == end_date.group("prefix"):
@@ -649,6 +668,8 @@ def _range_versions(from_version: str, to_version: str) -> tuple[str, ...]:
         return tuple(
             f"{start_date.group('prefix')}{(first + timedelta(days=offset)).isoformat()}" for offset in range(days + 1)
         )
+    if from_version > to_version:
+        raise ReplayValidationError("from_version must not be after to_version")
     raise ReplayValidationError("non-contiguous ranges require an explicit versions list")
 
 
@@ -790,9 +811,11 @@ class ReplayController:
         database: str | Path | sqlite3.Connection,
         *,
         clock: Callable[[], datetime] | None = None,
+        claim_lease_seconds: float = DEFAULT_CLAIM_LEASE_SECONDS,
     ) -> None:
         if clock is not None and not callable(clock):
             raise ReplayValidationError("clock must be callable")
+        self.claim_lease_seconds = _bounded_seconds(claim_lease_seconds, "claim_lease_seconds", MAX_CLAIM_LEASE_SECONDS)
         self._clock = clock or (lambda: datetime.now(timezone.utc))
         self._lock = threading.RLock()
         self._owns_connection = not isinstance(database, sqlite3.Connection)
@@ -895,8 +918,8 @@ class ReplayController:
                         INSERT INTO replay_items (
                             plan_id, ordinal, item_id, work_identity, source_id, version,
                             estimated_bytes, state, attempts, result_sha256, result_ref,
-                            result_bytes, error, started_at, completed_at, claim_owner
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL)
+                            result_bytes, error, started_at, completed_at, claim_owner, claim_expires_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)
                         """,
                         (
                             plan.plan_id,
@@ -1087,13 +1110,16 @@ class ReplayController:
                 raise ReplayError(f"unknown plan_id: {identifier}")
             if str(row["state"]) == "completed":
                 return self._read_plan_locked(identifier)
+            self._recover_expired_claims_locked(identifier, stamp)
+            active = self._connection.execute(
+                "SELECT 1 FROM replay_items WHERE plan_id = ? AND state = 'in_progress' AND claim_expires_at > ? LIMIT 1",
+                (identifier, stamp),
+            ).fetchone()
+            if active is not None:
+                raise ReplayStateError("active replay claim has not expired")
             self._connection.execute(
                 "UPDATE replay_plans SET state = 'planned', cancel_requested = 0, updated_at = ?, error = NULL WHERE plan_id = ?",
                 (stamp, identifier),
-            )
-            self._connection.execute(
-                "UPDATE replay_items SET state = 'pending', claim_owner = NULL WHERE plan_id = ? AND state = 'in_progress'",
-                (identifier,),
             )
             return self._read_plan_locked(identifier)
 
@@ -1140,7 +1166,11 @@ class ReplayController:
                 self._complete_item(identifier, claimed, owner, result)
             except Exception as exc:
                 last_error = _safe_error(exc)
-                self._fail_item(identifier, claimed, owner, last_error)
+                try:
+                    self._fail_item(identifier, claimed, owner, last_error)
+                except ReplayStateError:
+                    # A stale owner must not overwrite the newer fenced claim.
+                    pass
                 break
             if self._cancel_signal_set(cancellation_signal):
                 self.cancel(identifier)
@@ -1162,13 +1192,16 @@ class ReplayController:
             if state in {"cancelled", "cancel_requested"}:
                 if not resume:
                     raise ReplayStateError("cancelled replay requires resume=True")
+                self._recover_expired_claims_locked(plan_id, stamp)
+                active = self._connection.execute(
+                    "SELECT 1 FROM replay_items WHERE plan_id = ? AND state = 'in_progress' AND claim_expires_at > ? LIMIT 1",
+                    (plan_id, stamp),
+                ).fetchone()
+                if active is not None:
+                    raise ReplayStateError("active replay claim has not expired")
                 self._connection.execute(
                     "UPDATE replay_plans SET state = 'planned', cancel_requested = 0, updated_at = ?, error = NULL WHERE plan_id = ?",
                     (stamp, plan_id),
-                )
-                self._connection.execute(
-                    "UPDATE replay_items SET state = 'pending', claim_owner = NULL WHERE plan_id = ? AND state = 'in_progress'",
-                    (plan_id,),
                 )
             self._connection.execute(
                 "UPDATE replay_plans SET state = 'running', updated_at = ? WHERE plan_id = ? AND cancel_requested = 0",
@@ -1186,10 +1219,15 @@ class ReplayController:
             if plan_row is None:
                 raise ReplayError(f"unknown plan_id: {plan_id}")
             if int(plan_row["cancel_requested"]) != 0:
-                self._connection.execute(
-                    "UPDATE replay_plans SET state = 'cancelled', updated_at = ? WHERE plan_id = ? AND state != 'completed'",
-                    (stamp, plan_id),
-                )
+                active = self._connection.execute(
+                    "SELECT 1 FROM replay_items WHERE plan_id = ? AND state = 'in_progress' AND claim_expires_at > ? LIMIT 1",
+                    (plan_id, stamp),
+                ).fetchone()
+                if active is None:
+                    self._connection.execute(
+                        "UPDATE replay_plans SET state = 'cancelled', updated_at = ? WHERE plan_id = ? AND state != 'completed'",
+                        (stamp, plan_id),
+                    )
                 return None
             row = self._connection.execute(
                 """
@@ -1203,10 +1241,14 @@ class ReplayController:
             if row is None:
                 self._rebuild_checkpoint_locked(plan_id, current)
                 return None
+            if str(row["state"]) == "in_progress":
+                expires = row["claim_expires_at"]
+                if expires is not None and _parse_timestamp(expires, "claim_expires_at") > current:
+                    return None
             attempts = int(row["attempts"])
             if attempts >= MAX_ATTEMPTS:
                 self._connection.execute(
-                    "UPDATE replay_items SET state = 'failed', error = ?, updated_at = ? WHERE plan_id = ? AND item_id = ?",
+                    "UPDATE replay_items SET state = 'failed', error = ?, claim_owner = NULL, claim_expires_at = NULL WHERE plan_id = ? AND item_id = ?",
                     ("maximum replay attempts reached", stamp, plan_id, row["item_id"]),
                 )
                 self._connection.execute(
@@ -1217,10 +1259,19 @@ class ReplayController:
             updated = self._connection.execute(
                 """
                 UPDATE replay_items SET state = 'in_progress', attempts = ?, started_at = ?,
-                    completed_at = NULL, error = NULL, claim_owner = ?
-                WHERE plan_id = ? AND item_id = ? AND state IN ('pending', 'failed', 'in_progress')
+                    completed_at = NULL, error = NULL, claim_owner = ?, claim_expires_at = ?
+                WHERE plan_id = ? AND item_id = ?
+                  AND (state IN ('pending', 'failed') OR (state = 'in_progress' AND (claim_expires_at IS NULL OR claim_expires_at <= ?)))
                 """,
-                (attempts + 1, stamp, owner, plan_id, row["item_id"]),
+                (
+                    attempts + 1,
+                    stamp,
+                    owner,
+                    _format_timestamp(current + timedelta(seconds=self.claim_lease_seconds)),
+                    plan_id,
+                    row["item_id"],
+                    stamp,
+                ),
             )
             if updated.rowcount != 1:
                 return None
@@ -1234,7 +1285,7 @@ class ReplayController:
     def _release_claim(self, plan_id: str, item_id: str, owner: str) -> None:
         with self._transaction():
             self._connection.execute(
-                "UPDATE replay_items SET state = 'pending', attempts = attempts - 1, claim_owner = NULL, started_at = NULL WHERE plan_id = ? AND item_id = ? AND state = 'in_progress' AND claim_owner = ?",
+                "UPDATE replay_items SET state = 'pending', attempts = attempts - 1, claim_owner = NULL, claim_expires_at = NULL, started_at = NULL WHERE plan_id = ? AND item_id = ? AND state = 'in_progress' AND claim_owner = ?",
                 (plan_id, item_id, owner),
             )
 
@@ -1243,16 +1294,20 @@ class ReplayController:
         stamp = _format_timestamp(current)
         with self._transaction():
             row = self._connection.execute(
-                "SELECT state, claim_owner FROM replay_items WHERE plan_id = ? AND item_id = ?", (plan_id, item.item_id)
+                "SELECT state, claim_owner, claim_expires_at FROM replay_items WHERE plan_id = ? AND item_id = ?",
+                (plan_id, item.item_id),
             ).fetchone()
             if row is None:
                 raise ReplayError("replay item disappeared before completion")
             if row["state"] != "in_progress" or row["claim_owner"] != owner:
                 raise ReplayStateError("replay item is not owned by this execution")
+            expires = _parse_timestamp(row["claim_expires_at"], "claim_expires_at")
+            if expires <= current:
+                raise ReplayStateError("replay item claim has expired")
             self._connection.execute(
                 """
                 UPDATE replay_items SET state = 'completed', result_sha256 = ?, result_ref = ?, result_bytes = ?,
-                    error = NULL, completed_at = ?, claim_owner = NULL
+                    error = NULL, completed_at = ?, claim_owner = NULL, claim_expires_at = NULL
                 WHERE plan_id = ? AND item_id = ? AND state = 'in_progress' AND claim_owner = ?
                 """,
                 (result.result_sha256, result.result_ref, result.result_bytes, stamp, plan_id, item.item_id, owner),
@@ -1264,14 +1319,18 @@ class ReplayController:
         stamp = _format_timestamp(current)
         with self._transaction():
             row = self._connection.execute(
-                "SELECT state, claim_owner FROM replay_items WHERE plan_id = ? AND item_id = ?", (plan_id, item.item_id)
+                "SELECT state, claim_owner, claim_expires_at FROM replay_items WHERE plan_id = ? AND item_id = ?",
+                (plan_id, item.item_id),
             ).fetchone()
             if row is None:
                 raise ReplayError("replay item disappeared before failure update")
             if row["state"] != "in_progress" or row["claim_owner"] != owner:
                 raise ReplayStateError("replay item is not owned by this execution")
+            expires = _parse_timestamp(row["claim_expires_at"], "claim_expires_at")
+            if expires <= current:
+                raise ReplayStateError("replay item claim has expired")
             self._connection.execute(
-                "UPDATE replay_items SET state = 'failed', error = ?, claim_owner = NULL WHERE plan_id = ? AND item_id = ? AND state = 'in_progress' AND claim_owner = ?",
+                "UPDATE replay_items SET state = 'failed', error = ?, claim_owner = NULL, claim_expires_at = NULL WHERE plan_id = ? AND item_id = ? AND state = 'in_progress' AND claim_owner = ?",
                 (error[:MAX_ERROR_LENGTH], plan_id, item.item_id, owner),
             )
             self._connection.execute(
@@ -1337,6 +1396,19 @@ class ReplayController:
                         row["item_id"],
                     ),
                 )
+
+    def _recover_expired_claims_locked(self, plan_id: str, stamp: str) -> None:
+        """Make only stale claims resumable; live owners retain their fence."""
+
+        self._connection.execute(
+            """
+            UPDATE replay_items
+            SET state = 'pending', claim_owner = NULL, claim_expires_at = NULL
+            WHERE plan_id = ? AND state = 'in_progress'
+              AND (claim_expires_at IS NULL OR claim_expires_at <= ?)
+            """,
+            (plan_id, stamp),
+        )
 
     def _rebuild_checkpoint_locked(self, plan_id: str, current: datetime) -> ReplayCheckpoint:
         rows = self._connection.execute(
@@ -1495,6 +1567,7 @@ class ReplayController:
                 started_at TEXT,
                 completed_at TEXT,
                 claim_owner TEXT,
+                claim_expires_at TEXT,
                 PRIMARY KEY (plan_id, ordinal),
                 UNIQUE (plan_id, item_id)
             );
@@ -1511,6 +1584,12 @@ class ReplayController:
             CREATE INDEX IF NOT EXISTS replay_plans_source_idx ON replay_plans (source_id, state, created_at);
             """
         )
+        columns = {str(row[1]) for row in self._connection.execute("PRAGMA table_info(replay_items)").fetchall()}
+        if "claim_expires_at" not in columns:
+            self._connection.execute("ALTER TABLE replay_items ADD COLUMN claim_expires_at TEXT")
+            self._connection.execute(
+                "UPDATE replay_items SET claim_expires_at = started_at WHERE state = 'in_progress' AND claim_expires_at IS NULL"
+            )
 
     @contextmanager
     def _transaction(self) -> Iterator[None]:
@@ -1599,12 +1678,14 @@ ExecutionReceipt = ReplayExecution
 
 
 __all__ = [
+    "DEFAULT_CLAIM_LEASE_SECONDS",
     "DEFAULT_ITEM_BYTES",
     "DEFAULT_MAX_BYTES",
     "DEFAULT_MAX_ITEMS",
     "DryRunDiff",
     "ExecutionReceipt",
     "MAX_ATTEMPTS",
+    "MAX_CLAIM_LEASE_SECONDS",
     "MAX_ITEM_BYTES",
     "MAX_PLAN_BYTES",
     "MAX_PLAN_ITEMS",

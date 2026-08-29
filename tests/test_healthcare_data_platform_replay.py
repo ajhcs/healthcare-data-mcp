@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 import json
 from pathlib import Path
 import sqlite3
-from threading import Event
+from threading import Event, Thread
 from typing import TypeAlias, cast
 
 import pytest
@@ -16,6 +16,7 @@ from shared.replay import (
     ReplayCollisionError,
     ReplayController,
     ReplayPlan,
+    ReplayResult,
     ReplayStateError,
     ReplayValidationError,
     build_replay_plan,
@@ -53,6 +54,23 @@ def test_range_builder_is_deterministic_and_inclusive() -> None:
     assert first == second
     assert [item.version for item in first.items] == ["version:001", "version:002", "version:003"]
     assert first.plan_id == "replay:plan:" + first.plan_sha256.removeprefix("sha256:")
+
+
+def test_unpadded_numeric_range_compares_numbers_and_preserves_boundaries() -> None:
+    plan = build_replay_plan("source:test", "version:9", "version:11", max_items=3, max_bytes=3)
+
+    assert [item.version for item in plan.items] == ["version:9", "version:10", "version:11"]
+
+
+def test_padded_numeric_range_preserves_fixed_width() -> None:
+    plan = build_replay_plan("source:test", "version:009", "version:011", max_items=3, max_bytes=3)
+
+    assert [item.version for item in plan.items] == ["version:009", "version:010", "version:011"]
+
+
+def test_numeric_range_rejects_inconsistent_padding() -> None:
+    with pytest.raises(ReplayValidationError, match="padding"):
+        build_replay_plan("source:test", "version:09", "version:111", max_items=103, max_bytes=103)
 
 
 def test_date_range_expands_inclusively() -> None:
@@ -140,6 +158,71 @@ def test_checkpoint_resume_after_restart_never_replays_completed_item(tmp_path: 
     assert second.state == "completed"
     assert seen == ["version:001", "version:002", "version:003"]
     assert checkpoint.next_ordinal == 3
+
+
+def test_live_claim_is_fenced_from_concurrent_execution(tmp_path: Path) -> None:
+    database = tmp_path / "replay.sqlite"
+    plan = _plan(count=2)
+    first_started = Event()
+    release_first = Event()
+    seen: list[str] = []
+    first_result = []
+
+    with (
+        ReplayController(database, clock=lambda: T0, claim_lease_seconds=60) as first,
+        ReplayController(database, clock=lambda: T0, claim_lease_seconds=60) as second,
+    ):
+        first.submit(plan)
+
+        def first_runner(item):
+            seen.append(f"first:{item.version}")
+            first_started.set()
+            assert release_first.wait(2)
+            return _result(item)
+
+        thread = Thread(target=lambda: first_result.append(first.execute(plan.plan_id, first_runner, max_items=1)))
+        thread.start()
+        assert first_started.wait(2)
+
+        second_seen: list[str] = []
+        second_receipt = second.execute(
+            plan.plan_id,
+            lambda item: second_seen.append(item.version) or _result(item),
+            max_items=1,
+        )
+        assert second_receipt.state == "running"
+        assert second_seen == []
+        assert second.get_plan(plan.plan_id).items[0].state == "in_progress"
+
+        release_first.set()
+        thread.join(timeout=2)
+        assert not thread.is_alive()
+        assert first_result[0].completed_items == 1
+        assert seen == ["first:version:001"]
+
+
+def test_expired_claim_can_resume_but_stale_owner_cannot_complete(tmp_path: Path) -> None:
+    database = tmp_path / "replay.sqlite"
+    plan = _plan(count=1)
+    now = [T0]
+    with (
+        ReplayController(database, clock=lambda: now[0], claim_lease_seconds=10) as crashed,
+        ReplayController(database, clock=lambda: now[0], claim_lease_seconds=10) as resumed,
+    ):
+        crashed.submit(plan)
+        claimed = crashed._claim_next(plan.plan_id, "replay-runner:old")  # pyright: ignore[reportPrivateUsage]
+        assert claimed is not None
+        now[0] = T0.replace(hour=1)
+        receipt = resumed.execute(plan.plan_id, _result)
+        assert receipt.state == "completed"
+        with pytest.raises(ReplayStateError):
+            crashed._complete_item(  # pyright: ignore[reportPrivateUsage]
+                plan.plan_id,
+                claimed,
+                "replay-runner:old",
+                # The newer owner has already fenced the old claim.
+                ReplayResult.from_value(_result(claimed), claimed.item_id),
+            )
 
 
 def test_cancellation_is_bounded_to_item_boundary_and_resume_is_explicit(tmp_path: Path) -> None:

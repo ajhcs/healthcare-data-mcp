@@ -2,12 +2,14 @@
 
 from shared.replay.controller import (
     DEFAULT_ITEM_BYTES,
+    DEFAULT_CLAIM_LEASE_SECONDS,
     DEFAULT_MAX_BYTES,
     DEFAULT_MAX_ITEMS,
     DryRunDiff,
     DurableReplayController,
     ExecutionReceipt,
     MAX_ATTEMPTS,
+    MAX_CLAIM_LEASE_SECONDS,
     MAX_ITEM_BYTES,
     MAX_PLAN_BYTES,
     MAX_PLAN_ITEMS,
@@ -33,12 +35,14 @@ from shared.replay.controller import (
 
 __all__ = [
     "DEFAULT_ITEM_BYTES",
+    "DEFAULT_CLAIM_LEASE_SECONDS",
     "DEFAULT_MAX_BYTES",
     "DEFAULT_MAX_ITEMS",
     "DryRunDiff",
     "DurableReplayController",
     "ExecutionReceipt",
     "MAX_ATTEMPTS",
+    "MAX_CLAIM_LEASE_SECONDS",
     "MAX_ITEM_BYTES",
     "MAX_PLAN_BYTES",
     "MAX_PLAN_ITEMS",
