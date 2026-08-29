@@ -13,7 +13,7 @@ Phase 1 runtime evidence or a promotion decision.
 | Worktree | `/tmp/healthcare-data-mcp-r3-fixture-20260829-v2` |
 | Branch | `codex/r3-data-mcp-fixture-20260829-v2` |
 | Correction base | `ec3c0375d0f752e7bcbe5746c0ab9bd184d0d2c4` |
-| Reviewed code/test candidate | `26108f9f580c96f54eb4ccc9026d0307503a2a0f` |
+| Reviewed code/test candidate | `ca0f54d6fa054399f708b480102aee7adb5ab5e0` |
 | Baseline | `63539f8412831ee62b067c76c3b5c395108481cc` |
 | Manifest | `ops/staging/data-mcp-staging-fixture-manifest.json` |
 
@@ -22,6 +22,7 @@ The focused correction commit is:
 ```text
 77caefe fix(staging): close fixture safety review findings
 26108f9 test(staging): assert fixture correction receipts
+ca0f54d fix(staging): type fixture control bounds
 ```
 
 The candidate runner rejects an all-zero or malformed SHA, requires the
@@ -34,7 +35,7 @@ The manifest closes the reviewed tree over the runner, fixture contracts,
 catalog, scheduler/queue/raw-artifact schemas, and the shared cadence,
 scheduler, queue, and raw-custody imports.  It records 15 artifacts and the
 expected deterministic receipt file hash
-`sha256:fcc5c9ad00f304519a22e9318fae1e66384d09d3f406a6d7aa215932d013ca17`.
+`sha256:40ce19ddad2c1a7d20abe1ed88226fc6eabc490f0f5024a6a6ab30c7928f429f`.
 
 ## Safety corrections
 
@@ -74,7 +75,7 @@ receipt reports every check as `passed`, with ordering
 `acknowledgement_checkpoint`, `raw_custody`, `scheduler_checkpoint`, no
 listeners, no source egress, no credentials, and no migrations.
 
-The writer self-review inspected the exact `ec3c0375..26108f9` correction diff
+The writer self-review inspected the exact `ec3c0375..ca0f54d` correction diff
 and found no architecture change, scope expansion, production mutation,
 remote reconciliation, or historical receipt rewrite.  No bounded correction
 findings remain for this lane.

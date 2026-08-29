@@ -3,20 +3,20 @@
   "record_type": "staging_fixture_release_manifest",
   "release_id": "r3-data-mcp-fixture-20260829",
   "baseline_sha": "63539f8412831ee62b067c76c3b5c395108481cc",
-  "reviewed_candidate_sha": "26108f9f580c96f54eb4ccc9026d0307503a2a0f",
+  "reviewed_candidate_sha": "ca0f54d6fa054399f708b480102aee7adb5ab5e0",
   "entrypoint": "scripts/run_data_mcp_staging_fixture.py",
   "command": [
     "python3",
     "scripts/run_data_mcp_staging_fixture.py",
     "--candidate-sha",
-    "26108f9f580c96f54eb4ccc9026d0307503a2a0f",
+    "ca0f54d6fa054399f708b480102aee7adb5ab5e0",
     "--root",
     "<empty-absolute-caller-owned-fixture-root>"
   ],
   "artifacts": [
     {
       "path": "scripts/run_data_mcp_staging_fixture.py",
-      "sha256": "sha256:d98cae4549f255674b37d2eee37b593f17c38650ae04032c7a0a84cdc5b79865"
+      "sha256": "sha256:855e7e55b16f0dc41066c2105055a1c03c51d03753e442039e31a56009c726ba"
     },
     {
       "path": "contracts/healthcare-data-platform/staging/v1/fixtures/deterministic-source-input.json",
@@ -77,7 +77,7 @@
   ],
   "expected_receipt": {
     "path": "control/staging-fixture-receipt.json",
-    "sha256": "sha256:fcc5c9ad00f304519a22e9318fae1e66384d09d3f406a6d7aa215932d013ca17",
+    "sha256": "sha256:40ce19ddad2c1a7d20abe1ed88226fc6eabc490f0f5024a6a6ab30c7928f429f",
     "run_at": "2026-08-29T00:00:00Z",
     "runs": 3,
     "exit_code": 0,
