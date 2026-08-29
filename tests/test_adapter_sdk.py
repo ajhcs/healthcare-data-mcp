@@ -257,6 +257,27 @@ def test_stream_budget_has_explicit_byte_and_chunk_ceilings() -> None:
         StreamBudget(max_chunks=MAX_STREAM_CHUNKS + 1)
 
 
+def test_duration_contracts_reject_huge_integers_without_overflow() -> None:
+    huge_duration = 10**1000
+    with pytest.raises(AdapterContractError):
+        StreamBudget(max_seconds=huge_duration)
+    with pytest.raises(AdapterContractError):
+        RateLimitPolicy(max_requests=1, window_seconds=huge_duration)
+    with pytest.raises(AdapterContractError):
+        RateLimitPolicy(max_requests=1, window_seconds=1, min_interval_seconds=huge_duration)
+    with pytest.raises(AdapterContractError):
+        RateLimitPolicy(max_requests=1, window_seconds=1, max_wait_seconds=huge_duration)
+    with pytest.raises(AdapterContractError):
+        AdapterCatalogEntry(
+            source_id="source:ahrq:lighthouse",
+            source_url="https://www.ahrq.gov/chsp/data-resources/compendium-2023.html",
+            change_mode="release_metadata",
+            release_locator="https://www.ahrq.gov/chsp/data-resources/compendium-2023.html",
+            rights_status="approved_public",
+            max_seconds=huge_duration,
+        )
+
+
 def test_rate_limiter_enforces_window_and_bounded_wait_without_payload_state() -> None:
     current = [0.0]
     sleeps: list[float] = []

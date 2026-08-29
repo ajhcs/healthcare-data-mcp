@@ -299,7 +299,7 @@ class AdapterCatalogEntry:
             raise AdapterContractError("max_chunks must be an integer between 1 and 1000000")
         if isinstance(self.max_seconds, bool) or not isinstance(self.max_seconds, (int, float)):
             raise AdapterContractError("max_seconds must be a number")
-        if not math.isfinite(self.max_seconds) or not 0 < self.max_seconds <= 86_400:
+        if not 0 < self.max_seconds <= 86_400 or not math.isfinite(self.max_seconds):
             raise AdapterContractError("max_seconds must be greater than 0 and at most 86400")
         if self.enabled and self.rights_status != "approved_public":
             raise AdapterContractError("enabled source lacks approved public rights")

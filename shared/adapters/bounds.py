@@ -66,8 +66,8 @@ class StreamBudget:
         if (
             isinstance(self.max_seconds, bool)
             or not isinstance(self.max_seconds, (int, float))
-            or not math.isfinite(self.max_seconds)
             or not 0 < self.max_seconds <= MAX_STREAM_SECONDS
+            or not math.isfinite(self.max_seconds)
         ):
             raise BoundsError(f"max_seconds must be finite and between 0 and {MAX_STREAM_SECONDS}")
         if self.max_chunk_bytes is not None:
@@ -217,9 +217,9 @@ class RateLimitPolicy:
             if (
                 isinstance(value, bool)
                 or not isinstance(value, (int, float))
-                or not math.isfinite(value)
                 or value < 0
                 or value > MAX_RATE_SECONDS
+                or not math.isfinite(value)
             ):
                 raise BoundsError(f"{label} must be finite and between 0 and {MAX_RATE_SECONDS}")
         if self.window_seconds <= 0:
