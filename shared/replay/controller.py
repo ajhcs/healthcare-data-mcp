@@ -148,7 +148,10 @@ def _bounded_int(value: object, label: str, minimum: int, maximum: int) -> int:
 def _bounded_seconds(value: object, label: str, maximum: float) -> float:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise ReplayValidationError(f"{label} must be a finite number")
-    result = float(value)
+    try:
+        result = float(value)
+    except (OverflowError, TypeError, ValueError) as exc:
+        raise ReplayValidationError(f"{label} must be a finite number") from exc
     if not math.isfinite(result) or result <= 0 or result > maximum:
         raise ReplayValidationError(f"{label} must be finite, greater than 0, and at most {maximum}")
     return result
@@ -633,6 +636,37 @@ class ReplayExecution:
         }
 
 
+def _compare_version_ids(left: str, right: str) -> int:
+    """Compare version identities using numeric suffixes when possible."""
+
+    if left == right:
+        return 0
+    left_number = _TRAILING_NUMBER.fullmatch(left)
+    right_number = _TRAILING_NUMBER.fullmatch(right)
+    if left_number and right_number and left_number.group("prefix") == right_number.group("prefix"):
+        left_digits = left_number.group("number")
+        right_digits = right_number.group("number")
+        if len(left_digits) != len(right_digits) and (left_digits.startswith("0") or right_digits.startswith("0")):
+            raise ReplayValidationError("numeric version range uses inconsistent zero padding")
+        left_value = int(left_digits)
+        right_value = int(right_digits)
+        return (left_value > right_value) - (left_value < right_value)
+
+    left_date = _DATE_VERSION.fullmatch(left)
+    right_date = _DATE_VERSION.fullmatch(right)
+    if left_date and right_date and left_date.group("prefix") == right_date.group("prefix"):
+        try:
+            left_value = date(int(left_date.group("year")), int(left_date.group("month")), int(left_date.group("day")))
+            right_value = date(
+                int(right_date.group("year")), int(right_date.group("month")), int(right_date.group("day"))
+            )
+        except ValueError as exc:
+            raise ReplayValidationError("version range contains an invalid date") from exc
+        return (left_value > right_value) - (left_value < right_value)
+
+    return (left > right) - (left < right)
+
+
 def _range_versions(from_version: str, to_version: str) -> tuple[str, ...]:
     if from_version == to_version:
         return (from_version,)
@@ -728,8 +762,12 @@ def build_replay_plan(
     else:
         if expanded[0] != first or expanded[-1] != last:
             raise ReplayValidationError("versions must include the inclusive range boundaries")
-        if any(version < first or version > last for version in expanded):
+        if any(
+            _compare_version_ids(version, first) < 0 or _compare_version_ids(version, last) > 0 for version in expanded
+        ):
             raise ReplayValidationError("versions must fall inside the requested range")
+        if any(_compare_version_ids(previous, current) >= 0 for previous, current in zip(expanded, expanded[1:])):
+            raise ReplayValidationError("versions must be strictly ordered")
     maximum_items = _bounded_int(max_items, "max_items", 1, MAX_PLAN_ITEMS)
     maximum_bytes = _bounded_int(max_bytes, "max_bytes", 1, MAX_PLAN_BYTES)
     if item_bytes is not None and item_bytes != estimated_bytes:

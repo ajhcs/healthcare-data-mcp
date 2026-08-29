@@ -62,6 +62,19 @@ def test_unpadded_numeric_range_compares_numbers_and_preserves_boundaries() -> N
     assert [item.version for item in plan.items] == ["version:9", "version:10", "version:11"]
 
 
+def test_explicit_numeric_versions_use_numeric_ordering() -> None:
+    plan = build_replay_plan(
+        "source:test",
+        "version:9",
+        "version:11",
+        versions=("version:9", "version:10", "version:11"),
+        max_items=3,
+        max_bytes=3,
+    )
+
+    assert [item.version for item in plan.items] == ["version:9", "version:10", "version:11"]
+
+
 def test_padded_numeric_range_preserves_fixed_width() -> None:
     plan = build_replay_plan("source:test", "version:009", "version:011", max_items=3, max_bytes=3)
 
@@ -299,6 +312,11 @@ def test_execution_byte_and_item_limits_are_bounded(tmp_path: Path) -> None:
     assert receipt.attempted_items == 1
     assert receipt.completed_items == 1
     assert receipt.remaining_items == 2
+
+
+def test_claim_lease_overflow_is_a_validation_error() -> None:
+    with pytest.raises(ReplayValidationError, match="finite"):
+        ReplayController(":memory:", claim_lease_seconds=10**1000)
 
 
 def test_plan_and_fixture_validate_against_schema() -> None:
