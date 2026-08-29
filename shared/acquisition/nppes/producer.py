@@ -50,7 +50,13 @@ RowSink = Callable[[NppesSourceRow], None]
 _NPI = re.compile(r"^[0-9]{10}$")
 _HEADER = re.compile(r"[^a-z0-9]+")
 _MAX_ROW_BYTES = 1_048_576
-_FILE_KINDS = ("provider", "location", "endpoint", "reference", "deactivation")
+_FILE_KINDS: tuple[NppesFileKind, ...] = (
+    "provider",
+    "location",
+    "endpoint",
+    "reference",
+    "deactivation",
+)
 
 
 class NppesProducerError(NppesContractError):
@@ -586,7 +592,10 @@ class NppesBaselineProducer:
         if unknown:
             raise NppesProducerError(f"unknown NPPES file stream kinds: {sorted(unknown)}")
 
-        descriptors = {item.file_kind: item for item in descriptor.files}
+        descriptors: dict[NppesFileKind, NppesFileDescriptor] = {item.file_kind: item for item in descriptor.files}
+        undeclared = set(files).difference(descriptors.keys())
+        if undeclared:
+            raise NppesProducerError(f"NPPES file stream lacks a release descriptor: {sorted(undeclared)}")
         prior_same_release = prior is not None and prior.release_sha256 == descriptor.release_sha256
         sinks_disabled = prior_same_release
         receipts: list[NppesFileReceipt] = []
