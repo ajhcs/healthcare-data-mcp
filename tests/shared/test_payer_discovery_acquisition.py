@@ -11,6 +11,10 @@ def test_typed_candidate_rejects_census_and_unregistered_mapping() -> None:
         PayerCandidate.from_mapping({"payer_type": "marketplace", "source_family": "census_population", "source_period": "2024", "geography": "PA", "denominator": 4})
     with pytest.raises(ValueError, match="registered"):
         PayerCandidate.from_mapping({"payer_type": "marketplace", "source_family": "bad", "source_period": "2024", "geography": "PA", "denominator": 4})
+    with pytest.raises(ValueError, match="unknown missingness"):
+        PayerCandidate.from_mapping({"payer_type": "marketplace", "source_family": "cms_marketplace_effectuated_enrollment", "source_period": "2024", "geography": "PA", "missingness": "unknown"})
+    with pytest.raises(ValueError, match="semantic population"):
+        PayerCandidate.from_mapping({"payer_type": "marketplace", "source_family": "cms_marketplace_effectuated_enrollment", "source_period": "2024", "geography": "PA", "plan_id": "p", "denominator": 4, "denominator_scope": "ACS population"})
 
 
 def test_observation_envelope_contains_custody_hash_and_validates_schema(tmp_path) -> None:

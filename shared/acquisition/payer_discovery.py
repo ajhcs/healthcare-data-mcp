@@ -108,6 +108,7 @@ def build_payer_observation_envelope(*, tracking_bead: str, source_family: str, 
         if candidate.missingness == "blocked_source_conflict":
             observation["conflict"]["state"] = "source_conflict"
             observation["conflict"]["resolution"] = "unresolved"
+            observation["conflict"]["competing_observation_refs"] = [observation["observation_id"]]
             observation["value_state"] = "blocked_source_conflict"
             observation["value"] = None
     return validate_observation_envelope(envelope)
