@@ -42,10 +42,8 @@
       "maxLength": 2048,
       "pattern": "^https://[A-Za-z0-9._:/-]+$"
     },
-    "boundedError": {
-      "type": ["string", "null"],
-      "maxLength": 512,
-      "pattern": "^[^\\u0000-\\u001f\\u007f]*$"
+    "safeError": {
+      "enum": [null, "schema_drift", "probe_failed", "stream_interrupted"]
     },
     "receipt": {
       "type": "object",
@@ -110,7 +108,7 @@
         "observed_at": {"$ref": "#/$defs/timestamp"},
         "source_url": {"$ref": "#/$defs/httpsUrl"},
         "distribution_url": {"$ref": "#/$defs/httpsUrl"},
-        "error": {"$ref": "#/$defs/boundedError"}
+        "error": {"$ref": "#/$defs/safeError"}
       },
       "allOf": [
         {
@@ -144,6 +142,38 @@
               "stream_state": {"const": "not_started"},
               "acknowledged": {"const": false},
               "current_projection_preserved": {"const": true}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"state": {"const": "no_op"}}},
+          "then": {
+            "properties": {
+              "change_kind": {"const": "none"},
+              "content_sha256": {"$ref": "#/$defs/sha256"},
+              "schema_state": {"const": "valid"},
+              "stream_state": {"const": "not_started"},
+              "acknowledged": {"const": true},
+              "received_bytes": {"const": 0},
+              "chunk_count": {"const": 0},
+              "current_projection_preserved": {"const": true},
+              "error": {"const": null}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"state": {"const": "replayed"}}},
+          "then": {
+            "properties": {
+              "change_kind": {"const": "replay"},
+              "content_sha256": {"$ref": "#/$defs/sha256"},
+              "schema_state": {"const": "valid"},
+              "stream_state": {"const": "not_started"},
+              "acknowledged": {"const": true},
+              "received_bytes": {"const": 0},
+              "chunk_count": {"const": 0},
+              "current_projection_preserved": {"const": true},
+              "error": {"const": null}
             }
           }
         }

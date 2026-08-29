@@ -115,11 +115,14 @@ class CmsPdcProducer:
             raise CmsPdcError("CMS PDC catalog entry lacks approved public rights")
         if not catalog.enabled:
             raise CmsPdcError("CMS PDC catalog entry is disabled")
-        selected = budget or StreamBudget(
-            max_bytes=catalog.max_bytes,
-            max_chunks=catalog.max_chunks,
-            max_seconds=catalog.max_seconds,
-        )
+        try:
+            selected = budget or StreamBudget(
+                max_bytes=catalog.max_bytes,
+                max_chunks=catalog.max_chunks,
+                max_seconds=catalog.max_seconds,
+            )
+        except BoundsError as exc:
+            raise CmsPdcError(f"catalog stream bounds exceed the adapter SDK ceilings: {exc}") from exc
         if not isinstance(selected, StreamBudget):
             raise CmsPdcError("budget must be a StreamBudget")
         if selected.max_bytes > catalog.max_bytes:
@@ -206,7 +209,7 @@ class CmsPdcProducer:
                 chunk_count=0,
                 current_projection_preserved=True,
                 schema_state="drift",
-                error="schema fingerprint differs from the catalog baseline",
+                error="schema_drift",
             )
 
         if release_value.probe_state == "failed_probe":
@@ -224,12 +227,22 @@ class CmsPdcProducer:
                 chunk_count=0,
                 current_projection_preserved=True,
                 schema_state="not_checked",
-                error="CMS PDC conditional probe failed",
+                error="probe_failed",
             )
 
         if release_value.probe_state == "not_modified":
-            if prior_value is None or prior_value.content_sha256 is None or not prior_value.acknowledged:
-                raise CmsPdcError("not_modified probe requires an acknowledged prior receipt")
+            if (
+                prior_value is None
+                or prior_value.content_sha256 is None
+                or not prior_value.acknowledged
+                or prior_value.stream_state != "completed"
+            ):
+                raise CmsPdcError("not_modified probe requires an acknowledged completed prior receipt")
+            if (
+                release_value.declared_content_sha256 is not None
+                and release_value.declared_content_sha256 != prior_value.content_sha256
+            ):
+                raise CmsPdcError("declared content fingerprint conflicts with the not_modified receipt")
             return self._receipt(
                 release=release_value,
                 release_fingerprint=release_fingerprint,
@@ -266,13 +279,22 @@ class CmsPdcProducer:
                 chunk_count=stream.chunk_count,
                 current_projection_preserved=True,
                 schema_state="valid",
-                error="bounded stream interrupted before completion",
+                error="stream_interrupted",
             )
         if release_value.declared_content_sha256 is not None and (
             release_value.declared_content_sha256 != stream.content_sha256
         ):
             raise CmsPdcError("declared content fingerprint does not match the bounded stream")
         state, change_kind, preserved = self._classify_complete(release_fingerprint, stream, prior_value)
+        if state in {"no_op", "replayed"}:
+            stream_state: CmsPdcStreamState = "not_started"
+            received_bytes = 0
+            chunk_count = 0
+            preserved = True
+        else:
+            stream_state = "completed"
+            received_bytes = stream.received_bytes
+            chunk_count = stream.chunk_count
         return self._receipt(
             release=release_value,
             release_fingerprint=release_fingerprint,
@@ -281,10 +303,10 @@ class CmsPdcProducer:
             state=state,
             change_kind=change_kind,
             content_sha256=stream.content_sha256,
-            stream_state="completed",
+            stream_state=stream_state,
             acknowledged=True,
-            received_bytes=stream.received_bytes,
-            chunk_count=stream.chunk_count,
+            received_bytes=received_bytes,
+            chunk_count=chunk_count,
             current_projection_preserved=preserved,
             schema_state="valid",
             error=None,
@@ -298,9 +320,10 @@ class CmsPdcProducer:
     ) -> tuple[CmsPdcState, CmsPdcChangeKind, bool]:
         if prior is None:
             return "changed", "release", False
+        prior_accepted = prior.acknowledged and prior.stream_state == "completed"
         same_release = prior.release_fingerprint == release_fingerprint
         same_content = prior.content_sha256 == stream.content_sha256
-        if same_content and prior.content_sha256 is not None:
+        if prior_accepted and same_content and prior.content_sha256 is not None:
             if same_release and prior.state in {"changed", "replayed"}:
                 return "replayed", "replay", True
             if same_release and prior.state == "no_op":

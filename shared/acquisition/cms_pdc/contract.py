@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from hashlib import sha256
 import json
+import math
 from pathlib import Path
 import re
 from typing import Literal, Mapping, TypeAlias, cast
@@ -26,9 +27,9 @@ CMS_PDC_SCHEMA_VERSION = "hdp.cms-pdc.v1"
 CMS_PDC_RECORD_TYPE = "cms_pdc_receipt"
 MAX_ID_LENGTH = 200
 MAX_TITLE_LENGTH = 200
-MAX_ERROR_LENGTH = 512
 MAX_BYTES = 1_073_741_824
 MAX_CHUNKS = 1_000_000
+SAFE_ERROR_CATEGORIES = frozenset({"schema_drift", "probe_failed", "stream_interrupted"})
 
 CmsPdcState: TypeAlias = Literal["changed", "no_op", "schema_drift", "replayed", "interrupted", "failed_probe"]
 CmsPdcChangeKind: TypeAlias = Literal["release", "content", "none", "schema_drift", "replay", "interrupted", "failed"]
@@ -36,6 +37,7 @@ CmsPdcSchemaState: TypeAlias = Literal["valid", "drift", "not_checked"]
 CmsPdcStreamState: TypeAlias = Literal["completed", "interrupted", "not_started"]
 ProbeState: TypeAlias = Literal["changed", "not_modified", "failed_probe"]
 DistributionFormat: TypeAlias = Literal["csv", "json", "parquet"]
+CmsPdcErrorCategory: TypeAlias = Literal["schema_drift", "probe_failed", "stream_interrupted"]
 JsonValue: TypeAlias = None | bool | int | float | str | list["JsonValue"] | dict[str, "JsonValue"]
 
 _ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]*$")
@@ -203,19 +205,24 @@ class CmsPdcCatalogEntry:
         object.__setattr__(self, "distribution_url", _https(self.distribution_url, "distribution_url"))
         object.__setattr__(self, "release_locator", _https(self.release_locator, "release_locator"))
         object.__setattr__(self, "schema_fingerprint", _sha256(self.schema_fingerprint, "schema_fingerprint"))
-        _bounded_int(self.max_bytes, "max_bytes", MAX_BYTES)
-        if self.max_bytes < 1 or self.max_bytes > MAX_BYTES:
-            raise CmsPdcError(f"max_bytes must be between 1 and {MAX_BYTES}")
-        _bounded_int(self.max_chunks, "max_chunks", MAX_CHUNKS)
+        _bounded_int(self.max_bytes, "max_bytes", MAX_STREAM_BYTES)
+        if self.max_bytes < 1 or self.max_bytes > MAX_STREAM_BYTES:
+            raise CmsPdcError(f"max_bytes must be between 1 and {MAX_STREAM_BYTES}")
+        _bounded_int(self.max_chunks, "max_chunks", MAX_STREAM_CHUNKS)
         if self.max_chunks < 1:
             raise CmsPdcError("max_chunks must be positive")
+        try:
+            finite_seconds = math.isfinite(self.max_seconds)
+        except (OverflowError, TypeError):
+            finite_seconds = False
         if (
             isinstance(self.max_seconds, bool)
             or not isinstance(self.max_seconds, (int, float))
             or self.max_seconds <= 0
-            or self.max_seconds > 86_400
+            or self.max_seconds > MAX_STREAM_SECONDS
+            or not finite_seconds
         ):
-            raise CmsPdcError("max_seconds must be finite and greater than zero")
+            raise CmsPdcError(f"max_seconds must be finite and between 0 and {MAX_STREAM_SECONDS}")
         try:
             adapter = AdapterCatalogEntry(
                 source_id=self.source_id,
@@ -461,7 +468,10 @@ class CmsPdcReceipt:
         object.__setattr__(self, "source_url", _https(self.source_url, "source_url"))
         object.__setattr__(self, "distribution_url", _https(self.distribution_url, "distribution_url"))
         if self.error is not None:
-            object.__setattr__(self, "error", _text(self.error, "error", MAX_ERROR_LENGTH))
+            error = _text(self.error, "error", 32)
+            if error not in SAFE_ERROR_CATEGORIES:
+                raise CmsPdcError("error must be a safe CMS PDC category")
+            object.__setattr__(self, "error", cast(CmsPdcErrorCategory, error))
         if self.state == "schema_drift" and (
             self.change_kind != "schema_drift"
             or self.schema_state != "drift"
@@ -484,6 +494,30 @@ class CmsPdcReceipt:
             or not self.current_projection_preserved
         ):
             raise CmsPdcError("failed probe receipt must preserve projection and remain unacknowledged")
+        if self.state == "no_op" and (
+            self.change_kind != "none"
+            or self.content_sha256 is None
+            or self.schema_state != "valid"
+            or self.stream_state != "not_started"
+            or not self.acknowledged
+            or self.received_bytes != 0
+            or self.chunk_count != 0
+            or not self.current_projection_preserved
+            or self.error is not None
+        ):
+            raise CmsPdcError("no-op receipt must preserve projection with zero stream counters")
+        if self.state == "replayed" and (
+            self.change_kind != "replay"
+            or self.content_sha256 is None
+            or self.schema_state != "valid"
+            or self.stream_state != "not_started"
+            or not self.acknowledged
+            or self.received_bytes != 0
+            or self.chunk_count != 0
+            or not self.current_projection_preserved
+            or self.error is not None
+        ):
+            raise CmsPdcError("replay receipt must preserve projection with zero stream counters")
 
     def as_dict(self) -> dict[str, object]:
         payload = {
@@ -585,10 +619,12 @@ __all__ = [
     "CMS_PDC_SOURCE_ID",
     "CmsPdcCatalogEntry",
     "CmsPdcChangeKind",
+    "CmsPdcErrorCategory",
     "CmsPdcError",
     "CmsPdcReceipt",
     "CmsPdcRelease",
     "CmsPdcState",
+    "SAFE_ERROR_CATEGORIES",
     "canonical_release_fingerprint",
     "validate_cms_pdc_receipt",
 ]

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 import json
 from pathlib import Path
@@ -11,7 +12,14 @@ from typing import cast
 import pytest
 from jsonschema import Draft202012Validator, FormatChecker
 
-from shared.adapters import AdapterCatalogEntry, InMemoryAdapterCatalog, StreamBudget
+from shared.adapters import (
+    MAX_STREAM_BYTES,
+    MAX_STREAM_CHUNKS,
+    MAX_STREAM_SECONDS,
+    AdapterCatalogEntry,
+    InMemoryAdapterCatalog,
+    StreamBudget,
+)
 from shared.acquisition.cms_pdc import (
     CMS_PDC_SOURCE_ID,
     CmsPdcCatalogEntry,
@@ -84,6 +92,19 @@ def test_catalog_binding_requires_stable_ids_and_public_rights() -> None:
         CmsPdcProducer(_catalog(enabled=False, rights_status="pending_review"))
     with pytest.raises(CmsPdcError, match="disabled"):
         CmsPdcProducer(_catalog(enabled=False))
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("max_bytes", MAX_STREAM_BYTES + 1),
+        ("max_chunks", MAX_STREAM_CHUNKS + 1),
+        ("max_seconds", MAX_STREAM_SECONDS + 1),
+    ],
+)
+def test_catalog_bounds_cannot_exceed_adapter_sdk_ceilings(field: str, value: object) -> None:
+    with pytest.raises(CmsPdcError, match=field):
+        _catalog_entry_with(**{field: value})
 
 
 def _catalog_entry_with(**changes: object) -> CmsPdcCatalogEntry:
@@ -167,6 +188,9 @@ def test_same_release_and_content_is_replayed_without_changing_identity() -> Non
     assert replay.prior_receipt_id == first.receipt_id
     assert replay.current_projection_preserved is True
     assert replay.acknowledged is True
+    assert replay.stream_state == "not_started"
+    assert replay.received_bytes == 0
+    assert replay.chunk_count == 0
 
 
 def test_release_metadata_noop_and_content_change_are_distinct() -> None:
@@ -188,6 +212,9 @@ def test_release_metadata_noop_and_content_change_are_distinct() -> None:
     assert metadata_only.state == "no_op"
     assert metadata_only.change_kind == "none"
     assert metadata_only.current_projection_preserved is True
+    assert metadata_only.stream_state == "not_started"
+    assert metadata_only.received_bytes == 0
+    assert metadata_only.chunk_count == 0
     assert content_changed.state == "changed"
     assert content_changed.change_kind == "content"
     assert content_changed.current_projection_preserved is False
@@ -215,6 +242,18 @@ def test_not_modified_probe_is_noop_without_consuming_chunks() -> None:
     assert receipt.stream_state == "not_started"
     assert receipt.received_bytes == 0
     assert receipt.content_sha256 == prior.content_sha256
+
+    with pytest.raises(CmsPdcError, match="conflicts"):
+        producer.produce(
+            _release(
+                release_id="release:cms:pdc:2026-08-30",
+                modified_at=T0 + timedelta(days=1),
+                probe_state="not_modified",
+                declared_content_sha256="sha256:" + "c" * 64,
+            ),
+            (),
+            prior=prior,
+        )
 
 
 def test_schema_drift_preserves_projection_and_does_not_consume_chunks() -> None:
@@ -247,6 +286,27 @@ def test_bounded_stream_interruption_is_unacknowledged_and_recoverable() -> None
     assert receipt.received_bytes == 2
     assert receipt.chunk_count == 1
 
+    with pytest.raises(CmsPdcError, match="completed prior receipt"):
+        producer.produce(
+            _release(
+                release_id="release:cms:pdc:2026-08-30",
+                modified_at=T0 + timedelta(days=1),
+                probe_state="not_modified",
+            ),
+            (),
+            prior=receipt,
+        )
+
+    resumed = producer.produce(
+        _release(release_id="release:cms:pdc:2026-08-30", modified_at=T0 + timedelta(days=1)),
+        [b"ab"],
+        prior=receipt,
+    )
+    assert resumed.state == "changed"
+    assert resumed.change_kind == "release"
+    assert resumed.acknowledged is True
+    assert resumed.current_projection_preserved is False
+
 
 def test_probe_failure_and_content_claim_mismatch_fail_closed() -> None:
     producer = CmsPdcProducer(_catalog())
@@ -255,6 +315,7 @@ def test_probe_failure_and_content_claim_mismatch_fail_closed() -> None:
     assert failed.change_kind == "failed"
     assert failed.stream_state == "not_started"
     assert failed.current_projection_preserved is True
+    assert failed.error == "probe_failed"
 
     with pytest.raises(CmsPdcError, match="content fingerprint"):
         producer.produce(_release(declared_content_sha256="sha256:" + "c" * 64), [b"content"])
@@ -278,6 +339,23 @@ def test_schema_and_checked_in_outcome_fixtures_validate() -> None:
         receipt = CmsPdcReceipt.from_mapping(cast(Mapping[str, object], raw))
         assert receipt.as_dict() == raw
         assert validate_cms_pdc_receipt(cast(Mapping[str, object], raw)) == raw
+        if raw["state"] in {"no_op", "replayed"}:
+            assert raw["received_bytes"] == 0
+            assert raw["chunk_count"] == 0
+            assert raw["current_projection_preserved"] is True
+
+
+def test_receipt_error_is_restricted_to_safe_categories() -> None:
+    receipt = CmsPdcProducer(_catalog()).produce(_release(schema_fingerprint=DRIFT_SHA), [])
+    assert receipt.error == "schema_drift"
+
+    with pytest.raises(CmsPdcError, match="safe CMS PDC category"):
+        replace(receipt, error="Authorization: Bearer secret")
+
+    payload = receipt.as_dict()
+    payload["error"] = "arbitrary source response text"
+    with pytest.raises(CmsPdcError, match="schema validation"):
+        CmsPdcReceipt.from_mapping(payload)
 
 
 def test_receipt_mapping_rejects_unknown_fields_and_invalid_schema_state() -> None:
@@ -314,3 +392,17 @@ def test_receipt_mapping_rejects_unknown_fields_and_invalid_schema_state() -> No
             distribution_url=receipt.distribution_url,
             error=receipt.error,
         )
+
+
+def test_dataclass_enforces_noop_and_replay_projection_invariants() -> None:
+    producer = CmsPdcProducer(_catalog())
+    first = producer.produce(_release(), [b"one"])
+    replay = producer.produce(_release(), [b"one"], prior=first)
+
+    with pytest.raises(CmsPdcError, match="replay receipt"):
+        replace(replay, received_bytes=1)
+
+    with pytest.raises(CmsPdcError, match="schema validation"):
+        payload = replay.as_dict()
+        payload["chunk_count"] = 1
+        CmsPdcReceipt.from_mapping(payload)
