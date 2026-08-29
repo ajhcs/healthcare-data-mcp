@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 import pytest
 
-from shared.acquisition.payer_discovery import PayerCandidate, build_payer_observation_envelope
+from shared.acquisition.payer_discovery import PayerCandidate, SOURCE_CATALOG, build_payer_observation_envelope
 
 
 def test_typed_candidate_rejects_census_and_unregistered_mapping() -> None:
@@ -12,7 +12,15 @@ def test_typed_candidate_rejects_census_and_unregistered_mapping() -> None:
 
 
 def test_observation_envelope_contains_custody_hash_and_validates_schema() -> None:
-    envelope = build_payer_observation_envelope(tracking_bead="healthcare-toolkit-rrna.p1-28-payer-discovery-20260829", source_family="cms_marketplace_effectuated_enrollment", source_period="2024", artifact_bytes=b"fixture", candidates=[{"payer_type": "marketplace", "geography": "PA", "denominator": 10}], retrieved_at=datetime.now(timezone.utc).isoformat(), custody_metadata={"artifact_id": "artifact:payer:2024", "custody_locator": "object://payer/2024", "verified": True, "immutable": True})
+    raw = b"fixture"
+    envelope = build_payer_observation_envelope(tracking_bead="healthcare-toolkit-rrna.9", source_family="cms_marketplace_effectuated_enrollment", source_period="2024", artifact_bytes=raw, candidates=[{"payer_type": "marketplace", "geography": "PA", "plan_id": "plan-1", "denominator": 10}], retrieved_at=datetime.now(timezone.utc).isoformat(), custody_metadata={"schema_version": "hdp.raw-artifact.v1", "record_type": "raw_artifact", "artifact_id": "artifact:raw:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "source_id": SOURCE_CATALOG["cms_marketplace_effectuated_enrollment"]["source_id"], "source_url": SOURCE_CATALOG["cms_marketplace_effectuated_enrollment"]["source_url"], "release_id": "release:cms_marketplace_effectuated_enrollment:2024", "media_type": "application/octet-stream", "content_sha256": "sha256:" + __import__("hashlib").sha256(raw).hexdigest(), "byte_length": len(raw), "chunk_count": 1, "chunk_size": len(raw), "idempotency_key": "idempotency:raw:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "captured_at": datetime.now(timezone.utc).isoformat(), "rights_status": "approved_public"})
     assert envelope["schema_version"] == "hdp.observation-envelope.v1"
     assert envelope["artifact"]["content_sha256"].startswith("sha256:")
     assert envelope["authority_limits"]["current_projection_allowed"] is False
+
+
+def test_empty_candidates_emit_explicit_valid_missingness_observation() -> None:
+    raw = b"fixture"
+    metadata = {"schema_version": "hdp.raw-artifact.v1", "record_type": "raw_artifact", "artifact_id": "artifact:raw:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "source_id": SOURCE_CATALOG["cms_marketplace_effectuated_enrollment"]["source_id"], "source_url": SOURCE_CATALOG["cms_marketplace_effectuated_enrollment"]["source_url"], "release_id": "release:cms_marketplace_effectuated_enrollment:2024", "media_type": "application/octet-stream", "content_sha256": "sha256:" + __import__("hashlib").sha256(raw).hexdigest(), "byte_length": len(raw), "chunk_count": 1, "chunk_size": len(raw), "idempotency_key": "idempotency:raw:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "captured_at": datetime.now(timezone.utc).isoformat(), "rights_status": "approved_public"}
+    envelope = build_payer_observation_envelope(tracking_bead="healthcare-toolkit-rrna.9", source_family="cms_marketplace_effectuated_enrollment", source_period="2024", artifact_bytes=raw, candidates=[], retrieved_at=datetime.now(timezone.utc).isoformat(), custody_metadata=metadata)
+    assert envelope["observations"][0]["value_state"] == "not_yet_researched"

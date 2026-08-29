@@ -7,6 +7,7 @@ from hashlib import sha256
 from typing import Literal, Mapping
 
 from shared.contracts.healthcare_data_platform import validate_observation_envelope
+from shared.storage.raw_custody import RawArtifactMetadata, RawCustodyError
 
 PayerType = Literal["medicare_advantage", "medicare_part_d", "marketplace"]
 Missingness = Literal["not_yet_researched", "unavailable_public", "not_applicable", "blocked_source_conflict"]
@@ -47,35 +48,47 @@ class PayerCandidate:
             raise ValueError("payer type is not registered for source family")
         if not str(value.get("source_period") or "") or not str(value.get("geography") or value.get("state") or ""):
             raise ValueError("source period and geography are required")
+        if not str(value.get("plan_or_contract_id") or value.get("plan_id") or value.get("contract_id") or "") and not value.get("missingness"):
+            raise ValueError("plan or contract identity is required")
         denominator = value.get("denominator")
         if denominator is None and not value.get("missingness"):
             raise ValueError("denominator is required for a supported payer candidate")
         if denominator is not None and (not isinstance(denominator, int) or denominator < 0):
             raise ValueError("denominator must be a non-negative integer")
+        numerator = value.get("numerator")
+        if numerator is not None and (not isinstance(numerator, int) or numerator < 0 or (isinstance(denominator, int) and numerator > denominator)):
+            raise ValueError("numerator must be a non-negative integer no greater than denominator")
         return cls(payer, family, str(value["source_period"]), str(value.get("geography") or value["state"]), str(value.get("plan_or_contract_id") or value.get("plan_id") or value.get("contract_id") or ""), value.get("numerator") if isinstance(value.get("numerator"), int) else None, denominator if isinstance(denominator, int) else None, str(value.get("denominator_scope") or configured["payer_type"] + " enrollment"), str(value.get("source_url") or configured["source_url"]), str(value.get("artifact_id") or ""), str(value.get("content_sha256") or ""), "approved_public", "frozen_verified_external" if value.get("content_sha256") else "unverified_external", value.get("missingness") if value.get("missingness") in {"not_yet_researched", "unavailable_public", "not_applicable", "blocked_source_conflict"} else None)  # type: ignore[arg-type]
 
 
-def build_payer_observation_envelope(*, tracking_bead: str, source_family: str, source_period: str, artifact_bytes: bytes, candidates: list[Mapping[str, object]], retrieved_at: str, custody_metadata: Mapping[str, object] | None = None) -> dict[str, object]:
+def build_payer_observation_envelope(*, tracking_bead: str, source_family: str, source_period: str, artifact_bytes: bytes, candidates: list[Mapping[str, object]], retrieved_at: str, custody_metadata: RawArtifactMetadata | Mapping[str, object]) -> dict[str, object]:
     """Build a secret-free source-bound observation envelope for candidates."""
     source = SOURCE_CATALOG.get(source_family)
     if source is None:
         raise ValueError("unregistered payer source family")
-    custody = dict(custody_metadata or {})
-    custody_locator = custody.get("custody_locator") or custody.get("locator")
-    if not isinstance(custody_locator, str) or not custody_locator.startswith(("object://", "parquet://")):
-        raise ValueError("caller custody metadata must provide an object:// or parquet:// locator")
-    if not isinstance(custody.get("artifact_id"), str) or not isinstance(custody.get("verified"), bool):
-        raise ValueError("caller custody metadata must provide artifact_id and verified")
-    if custody["verified"] is not True:
-        raise ValueError("payer observations require verified caller custody")
-    parsed = [PayerCandidate.from_mapping({**row, "source_family": source_family, "source_period": source_period, "content_sha256": "sha256:" + sha256(artifact_bytes).hexdigest()}) for row in candidates]
+    try:
+        custody = custody_metadata if isinstance(custody_metadata, RawArtifactMetadata) else RawArtifactMetadata.from_mapping(custody_metadata)
+    except RawCustodyError as exc:
+        raise ValueError("invalid P1-04 custody metadata") from exc
     digest = "sha256:" + sha256(artifact_bytes).hexdigest()
-    release_id = "release:" + source_family + ":" + source_period
-    artifact_id = str(custody["artifact_id"])
-    activity_id = "activity:payer:normalize:" + source_period
-    receipt_id = "receipt:payer:" + source_period
-    observation_ids = ["observation:payer:" + str(index) for index in range(1, len(parsed) + 1)]
-    envelope = {"schema_version": "hdp.observation-envelope.v1", "record_type": "observation_envelope", "record_id": "hdp:observation-envelope:payer:" + source_period, "packet_id": "p0-09-observation-provenance-delta-v1", "tracking_bead": "healthcare-toolkit-rrna.9", "frozen_dispatch_base": "11d16f8303226619161f9bef03cb312f693b2d49", "source_release": {"source_id": source["source_id"], "release_id": release_id, "release_label": source_period, "source_kind": "official_dataset", "release_sha256": digest, "evidence_locator": source["release_locator"], "coverage_state": "present"}, "artifact": {"artifact_id": artifact_id, "release_ref": release_id, "artifact_kind": "raw_source", "media_type": "application/octet-stream", "content_sha256": digest, "byte_length": len(artifact_bytes), "custody": {"locator": custody_locator, "storage_plane": str(custody.get("storage_plane") or "object_storage"), "immutable": bool(custody.get("immutable", False)), "retention": str(custody.get("retention") or "append_only")}}, "receipt": {"receipt_id": receipt_id, "producer": "healthcare-data-mcp:payer-observation-producer", "receipt_schema": "hdp.receipt.v1", "source_release_ref": release_id, "artifact_ref": artifact_id, "source_release_sha256": digest, "artifact_sha256": digest, "receipt_sha256": digest, "state": "succeeded", "recorded_at": retrieved_at, "evidence_locator": source["source_url"]}, "activity": {"activity_id": activity_id, "run_id": "run:payer:" + source_period, "activity_type": "normalization", "actor": {"actor_type": "deterministic_transform", "actor_id": "healthcare-data-mcp:payer-observation-producer"}, "started_at": retrieved_at, "ended_at": retrieved_at, "status": "succeeded", "input_artifact_refs": [artifact_id], "output_artifact_refs": [artifact_id]}, "observations": [], "lineage": {"lineage_id": "lineage:payer:" + source_period, "source_release_ref": release_id, "artifact_ref": artifact_id, "receipt_ref": receipt_id, "activity_ref": activity_id, "observation_ids": observation_ids, "deterministic_order": observation_ids, "replay": {"idempotency_key": "idempotency:payer:" + source_period, "state": "first_seen", "replay_of": None, "deterministic": True}}, "authority_limits": {"acquisition_allowed": False, "mutation_allowed": False, "deletion_allowed": False, "publication_allowed": False, "release_allowed": False, "production_allowed": False, "runtime_allowed": False, "current_projection_allowed": False, "identity_promotion_allowed": False}}
+    if custody.content_sha256 != digest or custody.byte_length != len(artifact_bytes):
+        raise ValueError("custody metadata does not match artifact bytes")
+    if custody.source_id != source["source_id"] or custody.source_url != source["source_url"] or custody.release_id != "release:" + source_family + ":" + source_period:
+        raise ValueError("custody metadata source or period identity mismatch")
+    if custody.rights_status != "approved_public":
+        raise ValueError("payer source rights are not approved_public")
+    custody_locator = "object://objects/sha256/" + digest[7:9] + "/" + digest[7:]
+    parsed = [PayerCandidate.from_mapping({**row, "source_family": source_family, "source_period": source_period, "content_sha256": "sha256:" + sha256(artifact_bytes).hexdigest()}) for row in candidates]
+    if not parsed:
+        parsed = [PayerCandidate.from_mapping({"payer_type": source["payer_type"], "source_family": source_family, "source_period": source_period, "geography": "unresolved", "missingness": "not_yet_researched"})]
+    release_id = custody.release_id
+    artifact_id = custody.artifact_id
+    seed = sha256((source_family + "|" + source_period + "|" + digest + "|" + tracking_bead).encode()).hexdigest()[:32]
+    normalized_id = artifact_id
+    activity_id = "activity:payer:normalize:" + seed
+    receipt_id = "receipt:payer:" + seed[:24]
+    observation_ids = ["observation:payer:" + seed + ":" + str(index) for index in range(1, max(1, len(parsed)) + 1)]
+    envelope = {"schema_version": "hdp.observation-envelope.v1", "record_type": "observation_envelope", "record_id": "hdp:observation-envelope:payer:" + seed, "packet_id": "p0-09-observation-provenance-delta-v1", "tracking_bead": tracking_bead, "frozen_dispatch_base": "11d16f8303226619161f9bef03cb312f693b2d49", "source_release": {"source_id": custody.source_id, "release_id": release_id, "release_label": source_period, "source_kind": "official_dataset", "release_sha256": digest, "evidence_locator": source["release_locator"], "coverage_state": "present"}, "artifact": {"artifact_id": artifact_id, "release_ref": release_id, "artifact_kind": "raw_source", "media_type": custody.media_type, "content_sha256": digest, "byte_length": len(artifact_bytes), "custody": {"locator": custody_locator, "storage_plane": "object_storage", "immutable": True, "retention": "append_only"}}, "receipt": {"receipt_id": receipt_id, "producer": "healthcare-data-mcp:payer-observation-producer", "receipt_schema": "hdp.receipt.v1", "source_release_ref": release_id, "artifact_ref": artifact_id, "source_release_sha256": digest, "artifact_sha256": digest, "receipt_sha256": digest, "state": "succeeded", "recorded_at": retrieved_at, "evidence_locator": custody.source_url}, "activity": {"activity_id": activity_id, "run_id": "run:payer:" + seed, "activity_type": "normalization", "actor": {"actor_type": "deterministic_transform", "actor_id": "healthcare-data-mcp:payer-observation-producer"}, "started_at": retrieved_at, "ended_at": retrieved_at, "status": "succeeded", "input_artifact_refs": [artifact_id], "output_artifact_refs": [normalized_id]}, "observations": [], "lineage": {"lineage_id": "lineage:payer:" + seed, "source_release_ref": release_id, "artifact_ref": artifact_id, "receipt_ref": receipt_id, "activity_ref": activity_id, "observation_ids": observation_ids, "deterministic_order": observation_ids, "replay": {"idempotency_key": "idempotency:payer:" + seed, "state": "first_seen", "replay_of": None, "deterministic": True}}, "authority_limits": {"acquisition_allowed": False, "mutation_allowed": False, "deletion_allowed": False, "publication_allowed": False, "release_allowed": False, "production_allowed": False, "runtime_allowed": False, "current_projection_allowed": False, "identity_promotion_allowed": False}}
     for index, candidate in enumerate(parsed, 1):
         state = "observed" if candidate.missingness is None else candidate.missingness
         subject_key = candidate.geography.lower().replace(" ", "-")
