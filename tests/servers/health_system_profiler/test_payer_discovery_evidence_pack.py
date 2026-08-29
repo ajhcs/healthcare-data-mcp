@@ -28,6 +28,18 @@ def test_census_population_is_blocked_as_payer_denominator() -> None:
     assert "census_not_payer_denominator" in result["payer_coverage_evidence_rows"][0]["value"]["missing_reasons"]
 
 
+def test_acs_insurance_is_also_rejected_and_never_reported_as_supported() -> None:
+    result = build_payer_discovery_evidence_pack(
+        system_slug="example-health", system_name="Example Health",
+        source_rows=[_row("medicare_part_d", "acs_population")],
+    )
+    row = result["payer_coverage_evidence_rows"][0]
+    assert result["status"] == "blocked_source_conflict"
+    assert row["status"] == "needs_review"
+    assert row["value"]["denominator_value"] == 100
+    assert "census_not_payer_denominator" in row["value"]["missing_reasons"]
+
+
 def test_empty_rows_are_not_yet_researched_and_missing_types_are_unresolved() -> None:
     result = build_payer_discovery_evidence_pack(system_slug="example-health", system_name="Example Health", required_payer_types=["medicare_advantage"])
     assert result["status"] == "not_yet_researched"
