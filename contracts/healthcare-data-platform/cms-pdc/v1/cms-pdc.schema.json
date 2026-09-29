@@ -1,0 +1,184 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.ushso.org/healthcare-data-platform/cms-pdc/v1/cms-pdc.schema.json",
+  "title": "Healthcare Data Platform CMS Provider Data Catalog producer receipt v1",
+  "description": "Bounded, source-safe CMS PDC release and stream outcome.",
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "maxLength": 71
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+    },
+    "releaseId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "pattern": "^release:cms:pdc:[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+    },
+    "receiptId": {
+      "type": "string",
+      "pattern": "^receipt:cms:pdc:[0-9a-f]{64}$",
+      "maxLength": 80
+    },
+    "idempotencyKey": {
+      "type": "string",
+      "pattern": "^replay:cms:pdc:[0-9a-f]{64}$",
+      "maxLength": 80
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "maxLength": 40
+    },
+    "httpsUrl": {
+      "type": "string",
+      "minLength": 12,
+      "maxLength": 2048,
+      "pattern": "^https://[A-Za-z0-9._:/-]+$"
+    },
+    "safeError": {
+      "enum": [null, "schema_drift", "probe_failed", "stream_interrupted"]
+    },
+    "receipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "record_type",
+        "receipt_id",
+        "idempotency_key",
+        "state",
+        "change_kind",
+        "source_id",
+        "dataset_id",
+        "distribution_id",
+        "release_id",
+        "release_fingerprint",
+        "content_sha256",
+        "prior_release_fingerprint",
+        "prior_content_sha256",
+        "prior_receipt_id",
+        "probe_state",
+        "schema_state",
+        "stream_state",
+        "acknowledged",
+        "received_bytes",
+        "chunk_count",
+        "current_projection_preserved",
+        "observed_at",
+        "source_url",
+        "distribution_url",
+        "error"
+      ],
+      "properties": {
+        "schema_version": {"const": "hdp.cms-pdc.v1", "type": "string"},
+        "record_type": {"const": "cms_pdc_receipt", "type": "string"},
+        "receipt_id": {"$ref": "#/$defs/receiptId"},
+        "idempotency_key": {"$ref": "#/$defs/idempotencyKey"},
+        "state": {
+          "type": "string",
+          "enum": ["changed", "no_op", "schema_drift", "replayed", "interrupted", "failed_probe"]
+        },
+        "change_kind": {
+          "type": "string",
+          "enum": ["release", "content", "none", "schema_drift", "replay", "interrupted", "failed"]
+        },
+        "source_id": {"const": "source:cms:pdc", "type": "string"},
+        "dataset_id": {"$ref": "#/$defs/id"},
+        "distribution_id": {"$ref": "#/$defs/id"},
+        "release_id": {"$ref": "#/$defs/releaseId"},
+        "release_fingerprint": {"$ref": "#/$defs/sha256"},
+        "content_sha256": {"anyOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]},
+        "prior_release_fingerprint": {"anyOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]},
+        "prior_content_sha256": {"anyOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]},
+        "prior_receipt_id": {"anyOf": [{"$ref": "#/$defs/receiptId"}, {"type": "null"}]},
+        "probe_state": {"type": "string", "enum": ["changed", "not_modified", "failed_probe"]},
+        "schema_state": {"type": "string", "enum": ["valid", "drift", "not_checked"]},
+        "stream_state": {"type": "string", "enum": ["completed", "interrupted", "not_started"]},
+        "acknowledged": {"type": "boolean"},
+        "received_bytes": {"type": "integer", "minimum": 0, "maximum": 1073741824},
+        "chunk_count": {"type": "integer", "minimum": 0, "maximum": 1000000},
+        "current_projection_preserved": {"type": "boolean"},
+        "observed_at": {"$ref": "#/$defs/timestamp"},
+        "source_url": {"$ref": "#/$defs/httpsUrl"},
+        "distribution_url": {"$ref": "#/$defs/httpsUrl"},
+        "error": {"$ref": "#/$defs/safeError"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"state": {"const": "schema_drift"}}},
+          "then": {
+            "properties": {
+              "change_kind": {"const": "schema_drift"},
+              "schema_state": {"const": "drift"},
+              "stream_state": {"const": "not_started"},
+              "acknowledged": {"const": false},
+              "current_projection_preserved": {"const": true}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"state": {"const": "interrupted"}}},
+          "then": {
+            "properties": {
+              "change_kind": {"const": "interrupted"},
+              "stream_state": {"const": "interrupted"},
+              "acknowledged": {"const": false},
+              "current_projection_preserved": {"const": true}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"state": {"const": "failed_probe"}}},
+          "then": {
+            "properties": {
+              "change_kind": {"const": "failed"},
+              "stream_state": {"const": "not_started"},
+              "acknowledged": {"const": false},
+              "current_projection_preserved": {"const": true}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"state": {"const": "no_op"}}},
+          "then": {
+            "properties": {
+              "change_kind": {"const": "none"},
+              "content_sha256": {"$ref": "#/$defs/sha256"},
+              "schema_state": {"const": "valid"},
+              "stream_state": {"const": "not_started"},
+              "acknowledged": {"const": true},
+              "received_bytes": {"const": 0},
+              "chunk_count": {"const": 0},
+              "current_projection_preserved": {"const": true},
+              "error": {"const": null}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"state": {"const": "replayed"}}},
+          "then": {
+            "properties": {
+              "change_kind": {"const": "replay"},
+              "content_sha256": {"$ref": "#/$defs/sha256"},
+              "schema_state": {"const": "valid"},
+              "stream_state": {"const": "not_started"},
+              "acknowledged": {"const": true},
+              "received_bytes": {"const": 0},
+              "chunk_count": {"const": 0},
+              "current_projection_preserved": {"const": true},
+              "error": {"const": null}
+            }
+          }
+        }
+      ]
+    }
+  },
+  "$ref": "#/$defs/receipt"
+}

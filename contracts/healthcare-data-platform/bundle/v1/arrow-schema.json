@@ -1,0 +1,351 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.ushso.org/healthcare-data-platform/bundle/v1/arrow-schema.json",
+  "title": "Healthcare Data Platform conformance Arrow logical schema v1",
+  "description": "A transport-neutral Arrow logical schema for shared source, identity, time, unit, and value conformance columns. It is not a runtime table or migration.",
+  "format": "arrow-logical-schema-v1",
+  "bundle_id": "bundle:healthcare-data-platform:v1",
+  "bundle_semver": "1.0.0",
+  "generator": "p0-13-arrow-view-v1",
+  "source_of_truth": "json_schema_source_artifacts",
+  "source_artifact_ids": [
+    "artifact:hdp-bundle-v1:ontology-schema",
+    "artifact:hdp-bundle-v1:observation-schema",
+    "artifact:hdp-bundle-v1:fact-coverage-schema",
+    "artifact:hdp-bundle-v1:storage-workload-schema",
+    "artifact:hdp-bundle-v1:storage-benchmark-schema"
+  ],
+  "source_artifact_sha256": {
+    "artifact:hdp-bundle-v1:ontology-schema": "sha256:5d4c9187421b232afad9fad31240396f1fcadf6acbcd30bfa5ae5572a3ec5eb5",
+    "artifact:hdp-bundle-v1:observation-schema": "sha256:75f3f28f6682cb1ab665aff7a036722ce0bd3cb4ed083c03101bffd53b951d6c",
+    "artifact:hdp-bundle-v1:fact-coverage-schema": "sha256:6ec20e6694b2b58dbf0cacdde086a540b9496c49adb8e722f5968461231a7250",
+    "artifact:hdp-bundle-v1:storage-workload-schema": "sha256:e5ace5ba95186712ff43ad33f3571098982c863cd4a4931726daa6b650dc98b4",
+    "artifact:hdp-bundle-v1:storage-benchmark-schema": "sha256:b647136b040f56f8cb98b410358b78b83e931477c8930bfb6cc9a6cf43606143"
+  },
+  "source_hashes_required": true,
+  "fields": [
+    {
+      "name": "contract_family",
+      "type": "utf8",
+      "nullable": false,
+      "source_contracts": ["ontology", "observation", "fact_coverage", "storage_workload", "storage_benchmark"],
+      "source_fields": {
+        "ontology": ["record_type"],
+        "observation": ["record_type"],
+        "fact_coverage": ["record_type"],
+        "storage_workload": ["record_type"],
+        "storage_benchmark": ["record_type"]
+      },
+      "semantic_role": "contract discriminator from source record_type"
+    },
+    {
+      "name": "schema_version",
+      "type": "utf8",
+      "nullable": false,
+      "source_contracts": ["ontology", "observation", "fact_coverage", "storage_workload", "storage_benchmark"],
+      "source_fields": {
+        "ontology": ["schema_version"],
+        "observation": ["schema_version"],
+        "fact_coverage": ["schema_version"],
+        "storage_workload": ["schema_version"],
+        "storage_benchmark": ["schema_version"]
+      },
+      "semantic_role": "schema identity"
+    },
+    {
+      "name": "record_id",
+      "type": "utf8",
+      "nullable": false,
+      "source_contracts": ["ontology", "observation", "fact_coverage", "storage_workload", "storage_benchmark"],
+      "source_fields": {
+        "ontology": ["record_id"],
+        "observation": ["record_id"],
+        "fact_coverage": ["record_id"],
+        "storage_workload": ["record_id"],
+        "storage_benchmark": ["record_id"]
+      },
+      "semantic_role": "stable record identity"
+    },
+    {
+      "name": "source_id",
+      "type": "utf8",
+      "nullable": true,
+      "source_contracts": ["observation", "fact_coverage"],
+      "source_fields": {
+        "observation": ["source_release.source_id"],
+        "fact_coverage": [
+          "source_release.source_id",
+          "facts[].source_binding.source_id",
+          "profile_metric_values[].source_binding.source_id",
+          "profile_sources[].source_id"
+        ]
+      },
+      "semantic_role": "source scope"
+    },
+    {
+      "name": "release_id",
+      "type": "utf8",
+      "nullable": true,
+      "source_contracts": ["observation", "fact_coverage"],
+      "source_fields": {
+        "observation": ["source_release.release_id"],
+        "fact_coverage": [
+          "source_release.release_id",
+          "facts[].source_binding.release_ref",
+          "profile_metric_values[].source_binding.release_ref"
+        ]
+      },
+      "semantic_role": "source release scope"
+    },
+    {
+      "name": "artifact_id",
+      "type": "utf8",
+      "nullable": false,
+      "source_contracts": ["observation", "fact_coverage"],
+      "source_fields": {
+        "observation": ["artifact.artifact_id"],
+        "fact_coverage": [
+          "artifact.artifact_id",
+          "facts[].source_binding.artifact_ref",
+          "profile_metric_values[].source_binding.artifact_ref",
+          "profile_sources[].artifact_ref"
+        ]
+      },
+      "semantic_role": "immutable artifact identity"
+    },
+    {
+      "name": "scope_id",
+      "type": "utf8",
+      "nullable": true,
+      "source_contracts": ["ontology", "observation", "fact_coverage"],
+      "source_fields": {
+        "ontology": ["entity_examples[].source_scopes[].scope_id"],
+        "observation": ["observations[].source_scope.scope_id"],
+        "fact_coverage": ["identity_scopes[].identity_scope_id"]
+      },
+      "semantic_role": "source or identity scope identifier"
+    },
+    {
+      "name": "identity_scope",
+      "type": "utf8",
+      "nullable": true,
+      "source_contracts": ["observation", "fact_coverage"],
+      "source_fields": {
+        "observation": ["observations[].identity_key"],
+        "fact_coverage": [
+          "identity_scopes[].identity_scope_id",
+          "facts[].identity_scope_ref",
+          "profile_metric_values[].identity_scope_ref",
+          "projections[].identity_scope_ref"
+        ]
+      },
+      "semantic_role": "reviewed identity boundary"
+    },
+    {
+      "name": "temporal_precision",
+      "type": "utf8",
+      "nullable": false,
+      "source_contracts": ["ontology", "observation", "fact_coverage"],
+      "source_fields": {
+        "ontology": ["entity_examples[].temporal_scope.precision"],
+        "observation": ["observations[].valid_time.precision"],
+        "fact_coverage": [
+          "observations[].period.precision",
+          "facts[].period.precision",
+          "coverage_records[].period.precision",
+          "projections[].period.precision"
+        ]
+      },
+      "semantic_role": "time precision; no implicit upgrade"
+    },
+    {
+      "name": "valid_from",
+      "type": "date32",
+      "nullable": true,
+      "source_contracts": ["ontology", "observation", "fact_coverage"],
+      "source_fields": {
+        "ontology": ["entity_examples[].temporal_scope.valid_from"],
+        "observation": ["observations[].valid_time.valid_from"],
+        "fact_coverage": [
+          "observations[].period.start",
+          "facts[].period.start",
+          "coverage_records[].period.start",
+          "projections[].period.start"
+        ]
+      },
+      "semantic_role": "inclusive valid-time lower bound"
+    },
+    {
+      "name": "valid_to",
+      "type": "date32",
+      "nullable": true,
+      "source_contracts": ["ontology", "observation", "fact_coverage"],
+      "source_fields": {
+        "ontology": ["entity_examples[].temporal_scope.valid_to"],
+        "observation": ["observations[].valid_time.valid_to"],
+        "fact_coverage": [
+          "observations[].period.end",
+          "facts[].period.end",
+          "coverage_records[].period.end",
+          "projections[].period.end"
+        ]
+      },
+      "semantic_role": "inclusive valid-time upper bound"
+    },
+    {
+      "name": "as_of",
+      "type": "date32",
+      "nullable": true,
+      "source_contracts": ["ontology", "observation", "fact_coverage"],
+      "source_fields": {
+        "ontology": ["entity_examples[].temporal_scope.as_of"],
+        "observation": ["observations[].valid_time.as_of"],
+        "fact_coverage": [
+          "observations[].period.as_of",
+          "facts[].period.as_of",
+          "coverage_records[].period.as_of",
+          "projections[].period.as_of"
+        ]
+      },
+      "semantic_role": "source as-of date"
+    },
+    {
+      "name": "recorded_from",
+      "type": "timestamp[us,UTC]",
+      "nullable": true,
+      "source_contracts": ["observation", "fact_coverage", "storage_workload", "storage_benchmark"],
+      "source_fields": {
+        "observation": ["observations[].transaction_time.recorded_from"],
+        "fact_coverage": ["evidence[].captured_at"],
+        "storage_workload": ["captured_at"],
+        "storage_benchmark": ["captured_at"]
+      },
+      "semantic_role": "platform transaction/capture time"
+    },
+    {
+      "name": "recorded_to",
+      "type": "timestamp[us,UTC]",
+      "nullable": true,
+      "source_contracts": ["observation"],
+      "source_fields": {
+        "observation": ["observations[].transaction_time.recorded_to"]
+      },
+      "semantic_role": "platform transaction end; not source validity"
+    },
+    {
+      "name": "metric_key",
+      "type": "utf8",
+      "nullable": true,
+      "source_contracts": ["fact_coverage"],
+      "source_fields": {
+        "fact_coverage": [
+          "observations[].metric_key",
+          "facts[].metric_key",
+          "profile_metric_values[].metric_key",
+          "projections[].metric_key"
+        ]
+      },
+      "semantic_role": "catalog-backed measure identity"
+    },
+    {
+      "name": "unit",
+      "type": "utf8",
+      "nullable": true,
+      "source_contracts": ["fact_coverage"],
+      "source_fields": {
+        "fact_coverage": [
+          "observations[].unit",
+          "facts[].unit",
+          "profile_metric_values[].unit",
+          "projections[].unit"
+        ]
+      },
+      "semantic_role": "explicit catalog unit; no implicit conversion"
+    },
+    {
+      "name": "value_state",
+      "type": "utf8",
+      "nullable": true,
+      "source_contracts": ["ontology", "observation", "fact_coverage"],
+      "source_fields": {
+        "ontology": ["observation_examples[].value_state"],
+        "observation": ["observations[].value_state"],
+        "fact_coverage": [
+          "observations[].value_state",
+          "facts[].missingness_state",
+          "profile_metric_values[].missingness_state",
+          "coverage_records[].missingness_state",
+          "projections[].missingness_state"
+        ]
+      },
+      "semantic_role": "observed or explicit missingness"
+    },
+    {
+      "name": "value",
+      "type": "dense_union",
+      "nullable": true,
+      "source_contracts": ["ontology", "observation", "fact_coverage"],
+      "source_fields": {
+        "ontology": ["observation_examples[].value"],
+        "observation": ["observations[].value"],
+        "fact_coverage": [
+          "observations[].value",
+          "facts[].value",
+          "profile_metric_values[].value",
+          "projections[].value"
+        ]
+      },
+      "semantic_role": "typed value; null when missingness is explicit"
+    },
+    {
+      "name": "evidence_locator",
+      "type": "utf8",
+      "nullable": true,
+      "source_contracts": ["ontology", "observation", "fact_coverage"],
+      "source_fields": {
+        "ontology": ["entity_examples[].source_scopes[].evidence_locator"],
+        "observation": [
+          "source_release.evidence_locator",
+          "receipt.evidence_locator",
+          "observations[].source_scope.custody_locator"
+        ],
+        "fact_coverage": [
+          "source_release.evidence_locator",
+          "evidence[].locator",
+          "facts[].source_binding.selector",
+          "profile_sources[].locator"
+        ]
+      },
+      "semantic_role": "safe source-bound provenance locator"
+    },
+    {
+      "name": "content_sha256",
+      "type": "fixed_size_binary[32]",
+      "nullable": true,
+      "source_contracts": ["observation", "fact_coverage"],
+      "source_fields": {
+        "observation": ["artifact.content_sha256"],
+        "fact_coverage": ["artifact.content_sha256", "evidence[].content_sha256"]
+      },
+      "semantic_role": "immutable content digest"
+    },
+    {
+      "name": "byte_length",
+      "type": "int64",
+      "nullable": true,
+      "source_contracts": ["observation", "fact_coverage"],
+      "source_fields": {
+        "observation": ["artifact.byte_length"],
+        "fact_coverage": ["artifact.byte_length"]
+      },
+      "semantic_role": "artifact size"
+    }
+  ],
+  "metadata": {
+    "source_scope": "source/release/artifact/selector retained where family declares it",
+    "temporal_semantics": "valid time remains distinct from transaction or capture time",
+    "unit_semantics": "explicit source or catalog unit; no implicit conversion",
+    "missingness_semantics": "null plus explicit state; missing is never zero",
+    "unknown_fields": "reject"
+  }
+}

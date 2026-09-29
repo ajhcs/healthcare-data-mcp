@@ -1,0 +1,31 @@
+{
+  "schema_version": "hdp.scheduler-state.v1",
+  "record_type": "scheduler_state",
+  "state_id": "scheduler:healthcare-data-platform",
+  "states": [
+    {
+      "schema_version": "hdp.source-poll-state.v1",
+      "record_type": "source_poll_state",
+      "source_id": "source:ahrq:lighthouse",
+      "state": "succeeded",
+      "generation": 3,
+      "consecutive_failures": 0,
+      "next_due_at": "2026-08-29T01:00:00Z",
+      "last_attempt_at": "2026-08-29T00:00:00Z",
+      "last_success_at": "2026-08-29T00:00:00Z",
+      "last_release_id": "release:ahrq:2026-08-22",
+      "last_release_fingerprint": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "backfill_from": null,
+      "backfill_to": null
+    }
+  ],
+  "intents": [
+    {
+      "intent_id": "intent:poll:0123456789abcdef01234567",
+      "source_id": "source:ahrq:lighthouse",
+      "scheduled_at": "2026-08-29T00:00:00Z",
+      "reason": "cadence",
+      "generation": 2
+    }
+  ]
+}

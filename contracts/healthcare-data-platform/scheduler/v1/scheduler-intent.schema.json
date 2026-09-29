@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.ushso.org/healthcare-data-platform/scheduler/v1/scheduler-intent.schema.json",
+  "title": "Healthcare Data Platform durable poll intent v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["intent_id", "source_id", "scheduled_at", "reason", "generation"],
+  "properties": {
+    "intent_id": {"type": "string", "pattern": "^intent:poll:[a-f0-9]{24}$"},
+    "source_id": {"type": "string", "pattern": "^source:[a-z0-9][a-z0-9._:-]*$"},
+    "scheduled_at": {"type": "string", "format": "date-time"},
+    "reason": {"type": "string", "enum": ["cadence", "retry", "operator_replay", "backfill"]},
+    "generation": {"type": "integer", "minimum": 0, "maximum": 1000000}
+  }
+}

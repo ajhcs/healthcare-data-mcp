@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Return xmlns="http://www.irs.gov/efile" returnVersion="2024v5.0">
+  <ReturnHeader binaryAttachmentCnt="0">
+    <ReturnTs>2025-05-15T12:00:00-05:00</ReturnTs>
+    <TaxPeriodEndDt>2024-12-31</TaxPeriodEndDt>
+    <ReturnTypeCd>990</ReturnTypeCd>
+    <Filer>
+      <EIN>811244422</EIN>
+      <BusinessName>
+        <BusinessNameLine1Txt>PROVIDENCE ST JOSEPH HEALTH</BusinessNameLine1Txt>
+      </BusinessName>
+    </Filer>
+  </ReturnHeader>
+  <ReturnData documentCnt="1">
+    <IRS990 documentId="IRS990" referenceDocumentId="IRS990">
+      <CYTotalRevenueAmt>32100123456</CYTotalRevenueAmt>
+      <CYTotalExpensesAmt>30987654321</CYTotalExpensesAmt>
+      <NetAssetsOrFundBalancesEOYAmt>9876543210</NetAssetsOrFundBalancesEOYAmt>
+      <Form990PartVIISectionAGrp>
+        <PersonNm>JORDAN EXECUTIVE</PersonNm>
+        <TitleTxt>PRESIDENT AND CEO</TitleTxt>
+        <OfficerInd>X</OfficerInd>
+        <ReportableCompFromOrgAmt>1250000</ReportableCompFromOrgAmt>
+        <ReportableCompFromRltdOrgAmt>250000</ReportableCompFromRltdOrgAmt>
+        <OtherCompensationAmt>175000</OtherCompensationAmt>
+      </Form990PartVIISectionAGrp>
+      <Form990PartVIISectionAGrp>
+        <PersonNm>TAYLOR EXECUTIVE</PersonNm>
+        <TitleTxt>REGIONAL CEO</TitleTxt>
+        <KeyEmployeeInd>X</KeyEmployeeInd>
+        <ReportableCompFromOrgAmt>1100000</ReportableCompFromOrgAmt>
+        <ReportableCompFromRltdOrgAmt>700000</ReportableCompFromRltdOrgAmt>
+        <OtherCompensationAmt>100000</OtherCompensationAmt>
+      </Form990PartVIISectionAGrp>
+      <Form990PartVIISectionAGrp>
+        <PersonNm>CASEY TRUSTEE</PersonNm>
+        <TitleTxt>TRUSTEE</TitleTxt>
+        <IndividualTrusteeOrDirectorInd>X</IndividualTrusteeOrDirectorInd>
+        <ReportableCompFromOrgAmt>2500000</ReportableCompFromOrgAmt>
+        <ReportableCompFromRltdOrgAmt>0</ReportableCompFromRltdOrgAmt>
+        <OtherCompensationAmt>0</OtherCompensationAmt>
+      </Form990PartVIISectionAGrp>
+    </IRS990>
+  </ReturnData>
+</Return>

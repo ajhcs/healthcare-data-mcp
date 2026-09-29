@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.ushso.org/healthcare-data-platform/lighthouse/v1/lighthouse-envelope.schema.json",
+  "title": "Healthcare Data Platform lighthouse observation envelope v1",
+  "description": "A bounded source-native envelope emitted only after changed lighthouse bytes are durably received.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "record_type",
+    "envelope_id",
+    "source_id",
+    "source_url",
+    "release_id",
+    "release_fingerprint",
+    "response_fingerprint",
+    "artifact",
+    "records",
+    "delivery",
+    "authority_limits"
+  ],
+  "properties": {
+    "schema_version": {"const": "hdp.lighthouse-envelope.v1", "type": "string"},
+    "record_type": {"const": "lighthouse_observation_envelope", "type": "string"},
+    "envelope_id": {
+      "type": "string",
+      "pattern": "^envelope:lighthouse:[a-z0-9][a-z0-9._:-]*$"
+    },
+    "source_id": {
+      "type": "string",
+      "pattern": "^source:[a-z0-9][a-z0-9._:-]*$"
+    },
+    "source_url": {
+      "type": "string",
+      "pattern": "^https://[A-Za-z0-9._:/-]+$"
+    },
+    "release_id": {
+      "type": "string",
+      "pattern": "^release:[a-z0-9][a-z0-9._:-]*$"
+    },
+    "release_fingerprint": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "response_fingerprint": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_id",
+        "release_ref",
+        "content_sha256",
+        "byte_length",
+        "custody_locator",
+        "immutable"
+      ],
+      "properties": {
+        "artifact_id": {
+          "type": "string",
+          "pattern": "^artifact:lighthouse:[a-z0-9][a-z0-9._:-]*$"
+        },
+        "release_ref": {
+          "type": "string",
+          "pattern": "^release:[a-z0-9][a-z0-9._:-]*$"
+        },
+        "content_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "byte_length": {"type": "integer", "minimum": 1, "maximum": 131072},
+        "custody_locator": {
+          "type": "string",
+          "pattern": "^receiver://lighthouse/[A-Za-z0-9._:-]+$"
+        },
+        "immutable": {"const": true, "type": "boolean"}
+      }
+    },
+    "records": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 128,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["source_row_id", "fields"],
+        "properties": {
+          "source_row_id": {
+            "type": "string",
+            "pattern": "^row:[a-z0-9][a-z0-9._:-]*$"
+          },
+          "fields": {
+            "type": "object",
+            "additionalProperties": {"type": ["string", "number", "boolean", "null"]},
+            "maxProperties": 64
+          }
+        }
+      }
+    },
+    "delivery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["idempotency_key", "chunk_count", "chunk_size", "acknowledged"],
+      "properties": {
+        "idempotency_key": {
+          "type": "string",
+          "pattern": "^idempotency:lighthouse:[a-z0-9][a-z0-9._:-]*$"
+        },
+        "chunk_count": {"type": "integer", "minimum": 1, "maximum": 128},
+        "chunk_size": {"type": "integer", "minimum": 1, "maximum": 65536},
+        "acknowledged": {"const": true, "type": "boolean"}
+      }
+    },
+    "authority_limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["publication_allowed", "current_projection_allowed", "production_allowed"],
+      "properties": {
+        "publication_allowed": {"const": false, "type": "boolean"},
+        "current_projection_allowed": {"const": false, "type": "boolean"},
+        "production_allowed": {"const": false, "type": "boolean"}
+      }
+    }
+  }
+}

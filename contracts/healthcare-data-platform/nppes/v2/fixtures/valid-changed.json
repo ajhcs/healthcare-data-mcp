@@ -1,0 +1,30 @@
+{
+  "schema_version": "hdp.nppes-baseline.v2",
+  "record_type": "nppes_baseline_receipt",
+  "receipt_id": "receipt:nppes:0764091a3a9b087297a43d122f0dc0ca",
+  "producer": "healthcare-data-mcp:nppes-baseline-producer",
+  "receipt_schema": "hdp.nppes-baseline-receipt.v2",
+  "source_id": "source:nppes:registry",
+  "source_url": "https://download.cms.gov/nppes/NPPES_Data_Dissemination.html",
+  "release_id": "release:nppes:2026-08",
+  "release_label": "NPPES August 2026",
+  "release_sha256": "sha256:b37054ddb8678f0b0a8cb5310be3c7563c378cdffbc169e3c02cc15f79a28cbd",
+  "probe_state": "changed",
+  "state": "changed",
+  "final_url": "https://download.cms.gov/nppes/NPPES_Data_Dissemination.html",
+  "http_status": 200,
+  "recorded_at": "2026-08-29T00:00:00Z",
+  "evidence_locator": "https://download.cms.gov/nppes/NPPES_Data_Dissemination.html",
+  "files": [
+    {"file_kind": "provider", "source_file_name": "nppes_provider.csv", "source_url": "https://download.cms.gov/nppes/NPPES_Data_Dissemination.html", "evidence_locator": "https://download.cms.gov/nppes/NPPES_Data_Dissemination.html", "state": "accepted", "content_sha256": "sha256:a9f78a03f667d7d41201b06bbbc6dc4286c2aa8a9e9e70d5abf8b5d218c29463", "byte_length": 40, "chunk_count": 1, "row_count": 1, "identifier_count": 1, "row_sha256": "sha256:f38c978f6ecdcae7d8ec4a0889fadb899b177a0c86d10bb49045c3eaafaad2d8", "identifier_samples": ["0123456789"], "deactivation_count": 0, "error_code": null},
+    {"file_kind": "location", "source_file_name": "nppes_location.csv", "source_url": "https://download.cms.gov/nppes/NPPES_Data_Dissemination.html", "evidence_locator": "https://download.cms.gov/nppes/NPPES_Data_Dissemination.html", "state": "accepted", "content_sha256": "sha256:772ad1fd38c12f58149d412f7dc39876f7f4e2ca4cf206ad2b1492e4fbad18ad", "byte_length": 58, "chunk_count": 1, "row_count": 1, "identifier_count": 1, "row_sha256": "sha256:416bec72a45b0c27f84a659a0ad4768ad7323b3bf5790ef7921b3cd82b61da69", "identifier_samples": ["0123456789"], "deactivation_count": 0, "error_code": null},
+    {"file_kind": "endpoint", "source_file_name": "nppes_endpoint.csv", "source_url": "https://download.cms.gov/nppes/NPPES_Data_Dissemination.html", "evidence_locator": "https://download.cms.gov/nppes/NPPES_Data_Dissemination.html", "state": "accepted", "content_sha256": "sha256:92814f9c5790f8fc8e5fc7f313f90ebfcca4a2313f56a8895474ef132fffbba3", "byte_length": 58, "chunk_count": 1, "row_count": 1, "identifier_count": 1, "row_sha256": "sha256:99cf63f3a4311146a6da4e27a4b32f2d045e5e27661b2e320d8c152ef7b9ea0c", "identifier_samples": ["0123456789"], "deactivation_count": 0, "error_code": null},
+    {"file_kind": "reference", "source_file_name": "nppes_reference.csv", "source_url": "https://download.cms.gov/nppes/NPPES_Data_Dissemination.html", "evidence_locator": "https://download.cms.gov/nppes/NPPES_Data_Dissemination.html", "state": "accepted", "content_sha256": "sha256:5e9a0252964204342e2e378381e3fc5e88c719bfe626d7a5e99bba9a8aa0a7e1", "byte_length": 60, "chunk_count": 1, "row_count": 1, "identifier_count": 1, "row_sha256": "sha256:33844f2d6fa2a84790e14a6d22548c8968e4bf97a0e03ceffc6449650dbffcfe", "identifier_samples": ["0123456789"], "deactivation_count": 0, "error_code": null},
+    {"file_kind": "deactivation", "source_file_name": "nppes_deactivation.csv", "source_url": "https://download.cms.gov/nppes/NPPES_Data_Dissemination.html", "evidence_locator": "https://download.cms.gov/nppes/NPPES_Data_Dissemination.html", "state": "accepted", "content_sha256": "sha256:3be6968f7ec8ca035db90501be29f27ebac209340f94d525183b31da0417727d", "byte_length": 73, "chunk_count": 1, "row_count": 1, "identifier_count": 1, "row_sha256": "sha256:b2d60ac7034d646e604a89fabca18d910ecb26a0517ad378289cd142f04efa65", "identifier_samples": ["0123456789"], "deactivation_count": 1, "error_code": null}
+  ],
+  "deactivation_opportunities": [{"npi": "0123456789", "source_row_id": "deactivation-1", "deactivation_date": "2026-07-31", "evidence_locator": "https://download.cms.gov/nppes/NPPES_Data_Dissemination.html", "review_state": "review_required"}],
+  "deactivation_count": 1,
+  "current_projection_preserved": true,
+  "failure_code": null,
+  "receipt_sha256": "sha256:4472df849a93d9352f1fd94b89aea51c7f0a374ee1bfac99115d1a825614a5ad"
+}

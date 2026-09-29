@@ -1,0 +1,350 @@
+{
+  "aggregate": {
+    "native": {
+      "call_totals": {},
+      "coverage_correct": 0,
+      "coverage_total": 0,
+      "fact_correct": 0,
+      "fact_total": 0,
+      "median_latency_ms": 37.38,
+      "native_web_retrieved_bytes": null,
+      "observable_mcp_result_bytes": 0,
+      "provenance_correct": 0,
+      "provenance_total": 0,
+      "runs": 4,
+      "scope_honest_runs": 0,
+      "token_totals": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "reasoning_output_tokens": 0
+      },
+      "valid_runs": 0
+    },
+    "plugin": {
+      "call_totals": {},
+      "coverage_correct": 0,
+      "coverage_total": 0,
+      "fact_correct": 0,
+      "fact_total": 0,
+      "median_latency_ms": 40.94,
+      "native_web_retrieved_bytes": null,
+      "observable_mcp_result_bytes": 0,
+      "provenance_correct": 0,
+      "provenance_total": 0,
+      "runs": 4,
+      "scope_honest_runs": 0,
+      "token_totals": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "reasoning_output_tokens": 0
+      },
+      "valid_runs": 0
+    }
+  },
+  "benchmark": "sealed plugin-enabled versus plugin-disabled native research",
+  "cases": [
+    {
+      "case_id": "houston-methodist-2024",
+      "ein": "741180155",
+      "legal_filer": "THE METHODIST HOSPITAL",
+      "tax_year": 2024
+    },
+    {
+      "case_id": "jefferson-2025",
+      "ein": "232829095",
+      "legal_filer": "THOMAS JEFFERSON UNIVERSITY HOSPITALS INC",
+      "tax_year": 2025
+    },
+    {
+      "case_id": "mainehealth-2024",
+      "ein": "010238552",
+      "legal_filer": "MaineHealth",
+      "tax_year": 2024
+    },
+    {
+      "case_id": "rush-2025",
+      "ein": "362174823",
+      "legal_filer": "Rush University Medical Center",
+      "tax_year": 2025
+    }
+  ],
+  "codex_version": "codex-cli 0.145.0",
+  "cold_ingestion_included": false,
+  "condition_order": "deterministic alternating AB/BA",
+  "config_restored_sha256": "910e499d16a4b65ff9812c6f1db19693f8c743bfd861708b71d0ab49b75fcf73",
+  "generated_at_utc": "2026-07-24T15:48:38Z",
+  "gold_exposed_to_model": false,
+  "matched_prompt_and_output_schema": true,
+  "model": "gpt-5.6-sol",
+  "plugin_finished_enabled": true,
+  "reasoning": "xhigh",
+  "repetitions": 1,
+  "retrieved_bytes_limit": "MCP result bytes are observable; native web response bytes are not exposed by Codex JSONL and are reported as null.",
+  "runs": [
+    {
+      "answer": null,
+      "case_id": "houston-methodist-2024",
+      "condition": "plugin",
+      "failures": [
+        "codex_exit_2",
+        "plugin_tool_not_used",
+        "invalid_final_json:JSONDecodeError"
+      ],
+      "latency_ms": 44.008,
+      "native_web_retrieved_bytes": null,
+      "native_web_retrieved_bytes_note": "Codex JSONL does not expose native web response byte counts.",
+      "repetition": 0,
+      "returncode": 2,
+      "sequence": 0,
+      "stderr_tail": "error: unexpected argument '-a' found\n\n  tip: to pass '-a' as a value, use '-- -a'\n\nUsage: codex exec [OPTIONS] [PROMPT]\n       codex exec [OPTIONS] <COMMAND> [ARGS]\n\nFor more information, try '--help'.\n",
+      "telemetry": {
+        "calls": {},
+        "events": 0,
+        "final_response_bytes": 0,
+        "jsonl_bytes": 0,
+        "mcp_result_bytes": 0,
+        "tokens": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "reasoning_output_tokens": 0
+        }
+      },
+      "timed_out": false,
+      "valid": false
+    },
+    {
+      "answer": null,
+      "case_id": "houston-methodist-2024",
+      "condition": "native",
+      "failures": [
+        "codex_exit_2",
+        "invalid_final_json:JSONDecodeError"
+      ],
+      "latency_ms": 37.85,
+      "native_web_retrieved_bytes": null,
+      "native_web_retrieved_bytes_note": "Codex JSONL does not expose native web response byte counts.",
+      "repetition": 0,
+      "returncode": 2,
+      "sequence": 1,
+      "stderr_tail": "error: unexpected argument '-a' found\n\n  tip: to pass '-a' as a value, use '-- -a'\n\nUsage: codex exec [OPTIONS] [PROMPT]\n       codex exec [OPTIONS] <COMMAND> [ARGS]\n\nFor more information, try '--help'.\n",
+      "telemetry": {
+        "calls": {},
+        "events": 0,
+        "final_response_bytes": 0,
+        "jsonl_bytes": 0,
+        "mcp_result_bytes": 0,
+        "tokens": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "reasoning_output_tokens": 0
+        }
+      },
+      "timed_out": false,
+      "valid": false
+    },
+    {
+      "answer": null,
+      "case_id": "jefferson-2025",
+      "condition": "native",
+      "failures": [
+        "codex_exit_2",
+        "invalid_final_json:JSONDecodeError"
+      ],
+      "latency_ms": 37.95,
+      "native_web_retrieved_bytes": null,
+      "native_web_retrieved_bytes_note": "Codex JSONL does not expose native web response byte counts.",
+      "repetition": 0,
+      "returncode": 2,
+      "sequence": 2,
+      "stderr_tail": "error: unexpected argument '-a' found\n\n  tip: to pass '-a' as a value, use '-- -a'\n\nUsage: codex exec [OPTIONS] [PROMPT]\n       codex exec [OPTIONS] <COMMAND> [ARGS]\n\nFor more information, try '--help'.\n",
+      "telemetry": {
+        "calls": {},
+        "events": 0,
+        "final_response_bytes": 0,
+        "jsonl_bytes": 0,
+        "mcp_result_bytes": 0,
+        "tokens": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "reasoning_output_tokens": 0
+        }
+      },
+      "timed_out": false,
+      "valid": false
+    },
+    {
+      "answer": null,
+      "case_id": "jefferson-2025",
+      "condition": "plugin",
+      "failures": [
+        "codex_exit_2",
+        "plugin_tool_not_used",
+        "invalid_final_json:JSONDecodeError"
+      ],
+      "latency_ms": 38.365,
+      "native_web_retrieved_bytes": null,
+      "native_web_retrieved_bytes_note": "Codex JSONL does not expose native web response byte counts.",
+      "repetition": 0,
+      "returncode": 2,
+      "sequence": 3,
+      "stderr_tail": "error: unexpected argument '-a' found\n\n  tip: to pass '-a' as a value, use '-- -a'\n\nUsage: codex exec [OPTIONS] [PROMPT]\n       codex exec [OPTIONS] <COMMAND> [ARGS]\n\nFor more information, try '--help'.\n",
+      "telemetry": {
+        "calls": {},
+        "events": 0,
+        "final_response_bytes": 0,
+        "jsonl_bytes": 0,
+        "mcp_result_bytes": 0,
+        "tokens": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "reasoning_output_tokens": 0
+        }
+      },
+      "timed_out": false,
+      "valid": false
+    },
+    {
+      "answer": null,
+      "case_id": "mainehealth-2024",
+      "condition": "plugin",
+      "failures": [
+        "codex_exit_2",
+        "plugin_tool_not_used",
+        "invalid_final_json:JSONDecodeError"
+      ],
+      "latency_ms": 42.379,
+      "native_web_retrieved_bytes": null,
+      "native_web_retrieved_bytes_note": "Codex JSONL does not expose native web response byte counts.",
+      "repetition": 0,
+      "returncode": 2,
+      "sequence": 4,
+      "stderr_tail": "error: unexpected argument '-a' found\n\n  tip: to pass '-a' as a value, use '-- -a'\n\nUsage: codex exec [OPTIONS] [PROMPT]\n       codex exec [OPTIONS] <COMMAND> [ARGS]\n\nFor more information, try '--help'.\n",
+      "telemetry": {
+        "calls": {},
+        "events": 0,
+        "final_response_bytes": 0,
+        "jsonl_bytes": 0,
+        "mcp_result_bytes": 0,
+        "tokens": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "reasoning_output_tokens": 0
+        }
+      },
+      "timed_out": false,
+      "valid": false
+    },
+    {
+      "answer": null,
+      "case_id": "mainehealth-2024",
+      "condition": "native",
+      "failures": [
+        "codex_exit_2",
+        "invalid_final_json:JSONDecodeError"
+      ],
+      "latency_ms": 36.485,
+      "native_web_retrieved_bytes": null,
+      "native_web_retrieved_bytes_note": "Codex JSONL does not expose native web response byte counts.",
+      "repetition": 0,
+      "returncode": 2,
+      "sequence": 5,
+      "stderr_tail": "error: unexpected argument '-a' found\n\n  tip: to pass '-a' as a value, use '-- -a'\n\nUsage: codex exec [OPTIONS] [PROMPT]\n       codex exec [OPTIONS] <COMMAND> [ARGS]\n\nFor more information, try '--help'.\n",
+      "telemetry": {
+        "calls": {},
+        "events": 0,
+        "final_response_bytes": 0,
+        "jsonl_bytes": 0,
+        "mcp_result_bytes": 0,
+        "tokens": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "reasoning_output_tokens": 0
+        }
+      },
+      "timed_out": false,
+      "valid": false
+    },
+    {
+      "answer": null,
+      "case_id": "rush-2025",
+      "condition": "native",
+      "failures": [
+        "codex_exit_2",
+        "invalid_final_json:JSONDecodeError"
+      ],
+      "latency_ms": 36.909,
+      "native_web_retrieved_bytes": null,
+      "native_web_retrieved_bytes_note": "Codex JSONL does not expose native web response byte counts.",
+      "repetition": 0,
+      "returncode": 2,
+      "sequence": 6,
+      "stderr_tail": "error: unexpected argument '-a' found\n\n  tip: to pass '-a' as a value, use '-- -a'\n\nUsage: codex exec [OPTIONS] [PROMPT]\n       codex exec [OPTIONS] <COMMAND> [ARGS]\n\nFor more information, try '--help'.\n",
+      "telemetry": {
+        "calls": {},
+        "events": 0,
+        "final_response_bytes": 0,
+        "jsonl_bytes": 0,
+        "mcp_result_bytes": 0,
+        "tokens": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "reasoning_output_tokens": 0
+        }
+      },
+      "timed_out": false,
+      "valid": false
+    },
+    {
+      "answer": null,
+      "case_id": "rush-2025",
+      "condition": "plugin",
+      "failures": [
+        "codex_exit_2",
+        "plugin_tool_not_used",
+        "invalid_final_json:JSONDecodeError"
+      ],
+      "latency_ms": 39.501,
+      "native_web_retrieved_bytes": null,
+      "native_web_retrieved_bytes_note": "Codex JSONL does not expose native web response byte counts.",
+      "repetition": 0,
+      "returncode": 2,
+      "sequence": 7,
+      "stderr_tail": "error: unexpected argument '-a' found\n\n  tip: to pass '-a' as a value, use '-- -a'\n\nUsage: codex exec [OPTIONS] [PROMPT]\n       codex exec [OPTIONS] <COMMAND> [ARGS]\n\nFor more information, try '--help'.\n",
+      "telemetry": {
+        "calls": {},
+        "events": 0,
+        "final_response_bytes": 0,
+        "jsonl_bytes": 0,
+        "mcp_result_bytes": 0,
+        "tokens": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "reasoning_output_tokens": 0
+        }
+      },
+      "timed_out": false,
+      "valid": false
+    }
+  ],
+  "warm_target": true
+}

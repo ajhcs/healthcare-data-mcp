@@ -1,0 +1,24 @@
+{
+  "benchmark": "cold_official_irs_ingestion_validation",
+  "cold_elapsed_seconds": 205.4,
+  "cold_included_in_user_facing_latency": false,
+  "filers": 16,
+  "returns": 36,
+  "facts": 144,
+  "official_archive_parts_used": 12,
+  "archives_retained_after_validation": false,
+  "indexes": [
+    2024,
+    2025,
+    2026
+  ],
+  "validation": {
+    "all_manifest_rows_ingested": true,
+    "ein_tax_period_form_header_match": true,
+    "object_member_match": true,
+    "xml_sha256_recorded": true,
+    "actual_split_archive_url_recorded": true,
+    "missing_data_explicit": true
+  },
+  "note": "IRS May index rows collapsed under part A were resolved against bounded official part B only when the exact member was absent. Deflate64 members were decoded with the host unzip utility before the same size, XML, header, and hash checks."
+}

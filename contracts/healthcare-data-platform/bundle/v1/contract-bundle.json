@@ -1,0 +1,658 @@
+{
+  "schema_version": "hdp.contract-bundle.v1",
+  "record_type": "contract_bundle",
+  "record_id": "hdp:contract-bundle:healthcare-data-platform-v1",
+  "tracking_bead": "healthcare-toolkit-rrna.13",
+  "frozen_dispatch_base": "cbc86bd1f03e10e9c88e8a7e5913c8c8399c1de4",
+  "bundle_id": "bundle:healthcare-data-platform:v1",
+  "bundle_semver": "1.0.0",
+  "compatibility_floor": "1.0",
+  "canonical_owner": {
+    "owner_id": "data-platform-contract-owner",
+    "repository": "healthcare-toolkit",
+    "canonical_path": "contracts/healthcare-data-platform/bundle/v1",
+    "semantic_authority": "manifest_indexes_existing_source_contracts",
+    "approval_state": "human_merge_required"
+  },
+  "versioning": {
+    "scheme": "semver",
+    "current": "1.0.0",
+    "compatibility_floor": "1.0",
+    "unknown_fields": "reject",
+    "removed_field_policy": "required_field_removal_is_major",
+    "artifact_identity_policy": "immutable_id_and_sha256",
+    "breaking_change_categories": [
+      "required_field_removal",
+      "field_type_or_meaning_change",
+      "constraint_tightening",
+      "enum_value_removal",
+      "source_scope_narrowing",
+      "temporal_semantics_change",
+      "unit_semantics_change"
+    ],
+    "non_breaking_change_categories": [
+      "documentation_or_example_correction",
+      "unchanged_artifact_hash_republication"
+    ],
+    "minor_release_policy": "reserved_for_explicit_consumer_opt_in",
+    "strict_consumer_breaking_categories": [
+      "optional_field_addition",
+      "enum_value_addition",
+      "new_artifact_or_contract_family"
+    ]
+  },
+  "source_contracts": [
+    {
+      "contract_id": "ontology",
+      "family": "ontology",
+      "artifact_id": "artifact:hdp-bundle-v1:ontology-schema",
+      "path": "contracts/healthcare-data-platform/ontology/v1/ontology-delta.schema.json",
+      "semver": "1.0.0",
+      "source_scope": "bounded_ontology_source_scope",
+      "temporal_semantics": "validity_interval_with_as_of",
+      "unit_semantics": "explicit_or_not_applicable"
+    },
+    {
+      "contract_id": "observation",
+      "family": "observation",
+      "artifact_id": "artifact:hdp-bundle-v1:observation-schema",
+      "path": "contracts/healthcare-data-platform/observation/v1/observation-envelope.schema.json",
+      "semver": "1.0.0",
+      "source_scope": "source_release_artifact_observation_scope",
+      "temporal_semantics": "valid_time_and_transaction_time",
+      "unit_semantics": "explicit_source_unit_no_implicit_conversion"
+    },
+    {
+      "contract_id": "fact_coverage",
+      "family": "fact_coverage",
+      "artifact_id": "artifact:hdp-bundle-v1:fact-coverage-schema",
+      "path": "contracts/healthcare-data-platform/fact/v1/fact-coverage-projection-delta.schema.json",
+      "semver": "1.0.0",
+      "source_scope": "catalog_identity_period_fact_scope",
+      "temporal_semantics": "validity_interval_with_period_as_of",
+      "unit_semantics": "catalog_allowed_unit_no_implicit_conversion"
+    },
+    {
+      "contract_id": "storage_workload",
+      "family": "storage_workload",
+      "artifact_id": "artifact:hdp-bundle-v1:storage-workload-schema",
+      "path": "contracts/healthcare-data-platform/storage/v1/storage-workload.schema.json",
+      "semver": "1.0.0",
+      "source_scope": "synthetic_storage_workload_scope",
+      "temporal_semantics": "capture_timestamp_and_declared_validity",
+      "unit_semantics": "explicit_or_not_applicable"
+    },
+    {
+      "contract_id": "storage_benchmark",
+      "family": "storage_benchmark",
+      "artifact_id": "artifact:hdp-bundle-v1:storage-benchmark-schema",
+      "path": "contracts/healthcare-data-platform/storage/v1/storage-benchmark.schema.json",
+      "semver": "1.0.0",
+      "source_scope": "synthetic_storage_benchmark_scope",
+      "temporal_semantics": "capture_timestamp_and_benchmark_window",
+      "unit_semantics": "explicit_or_not_applicable"
+    }
+  ],
+  "artifacts": [
+    {
+      "artifact_id": "artifact:hdp-bundle-v1:ontology-schema",
+      "family": "ontology",
+      "role": "source_schema",
+      "path": "contracts/healthcare-data-platform/ontology/v1/ontology-delta.schema.json",
+      "media_type": "application/schema+json",
+      "sha256": "sha256:5d4c9187421b232afad9fad31240396f1fcadf6acbcd30bfa5ae5572a3ec5eb5",
+      "source_contract_id": "ontology",
+      "semver": "1.0.0",
+      "required": true,
+      "generated": false,
+      "generator": "none"
+    },
+    {
+      "artifact_id": "artifact:hdp-bundle-v1:observation-schema",
+      "family": "observation",
+      "role": "source_schema",
+      "path": "contracts/healthcare-data-platform/observation/v1/observation-envelope.schema.json",
+      "media_type": "application/schema+json",
+      "sha256": "sha256:75f3f28f6682cb1ab665aff7a036722ce0bd3cb4ed083c03101bffd53b951d6c",
+      "source_contract_id": "observation",
+      "semver": "1.0.0",
+      "required": true,
+      "generated": false,
+      "generator": "none"
+    },
+    {
+      "artifact_id": "artifact:hdp-bundle-v1:fact-coverage-schema",
+      "family": "fact_coverage",
+      "role": "source_schema",
+      "path": "contracts/healthcare-data-platform/fact/v1/fact-coverage-projection-delta.schema.json",
+      "media_type": "application/schema+json",
+      "sha256": "sha256:6ec20e6694b2b58dbf0cacdde086a540b9496c49adb8e722f5968461231a7250",
+      "source_contract_id": "fact_coverage",
+      "semver": "1.0.0",
+      "required": true,
+      "generated": false,
+      "generator": "none"
+    },
+    {
+      "artifact_id": "artifact:hdp-bundle-v1:storage-workload-schema",
+      "family": "storage_workload",
+      "role": "source_schema",
+      "path": "contracts/healthcare-data-platform/storage/v1/storage-workload.schema.json",
+      "media_type": "application/schema+json",
+      "sha256": "sha256:e5ace5ba95186712ff43ad33f3571098982c863cd4a4931726daa6b650dc98b4",
+      "source_contract_id": "storage_workload",
+      "semver": "1.0.0",
+      "required": true,
+      "generated": false,
+      "generator": "none"
+    },
+    {
+      "artifact_id": "artifact:hdp-bundle-v1:storage-benchmark-schema",
+      "family": "storage_benchmark",
+      "role": "source_schema",
+      "path": "contracts/healthcare-data-platform/storage/v1/storage-benchmark.schema.json",
+      "media_type": "application/schema+json",
+      "sha256": "sha256:b647136b040f56f8cb98b410358b78b83e931477c8930bfb6cc9a6cf43606143",
+      "source_contract_id": "storage_benchmark",
+      "semver": "1.0.0",
+      "required": true,
+      "generated": false,
+      "generator": "none"
+    },
+    {
+      "artifact_id": "artifact:hdp-bundle-v1:bundle-schema",
+      "family": "bundle",
+      "role": "bundle_schema",
+      "path": "contracts/healthcare-data-platform/bundle/v1/contract-bundle.schema.json",
+      "media_type": "application/schema+json",
+      "sha256": "sha256:38deffb645e7f1ebd054277e6d249df30b7125c0b11364f90c0303c7b23d2136",
+      "source_contract_id": "bundle",
+      "semver": "1.0.0",
+      "required": true,
+      "generated": false,
+      "generator": "none"
+    },
+    {
+      "artifact_id": "artifact:hdp-bundle-v1:openapi",
+      "family": "bundle",
+      "role": "openapi_representation",
+      "path": "contracts/healthcare-data-platform/bundle/v1/openapi.yaml",
+      "media_type": "application/yaml",
+      "sha256": "sha256:48c738a9868861674620cea25409f1c1955d31b32913eb5390d7e7b6acb9fbd0",
+      "source_contract_id": "bundle",
+      "semver": "1.0.0",
+      "required": true,
+      "generated": true,
+      "generator": "p0-13-openapi-view-v1"
+    },
+    {
+      "artifact_id": "artifact:hdp-bundle-v1:arrow",
+      "family": "bundle",
+      "role": "arrow_representation",
+      "path": "contracts/healthcare-data-platform/bundle/v1/arrow-schema.json",
+      "media_type": "application/json",
+      "sha256": "sha256:51c3907dc616668ae7bd6a07bd551d62df12e74a1f0de71979db6ccb37357d44",
+      "source_contract_id": "bundle",
+      "semver": "1.0.0",
+      "required": true,
+      "generated": true,
+      "generator": "p0-13-arrow-view-v1"
+    }
+  ],
+  "field_compatibility": [
+    {
+      "family": "ontology",
+      "source_contract_id": "ontology",
+      "artifact_id": "artifact:hdp-bundle-v1:ontology-schema",
+      "supported_fields": [
+        "schema_version",
+        "record_type",
+        "record_id",
+        "packet_id",
+        "tracking_bead",
+        "frozen_dispatch_base",
+        "authority_boundary",
+        "vocabulary_terms",
+        "entity_examples",
+        "identifier_examples",
+        "relationship_examples",
+        "observation_examples",
+        "validation_policy"
+      ],
+      "required_fields": [
+        "schema_version",
+        "record_type",
+        "record_id",
+        "packet_id",
+        "tracking_bead",
+        "frozen_dispatch_base",
+        "authority_boundary",
+        "vocabulary_terms",
+        "entity_examples",
+        "identifier_examples",
+        "relationship_examples",
+        "observation_examples",
+        "validation_policy"
+      ],
+      "removed_fields": [],
+      "source_scope": "bounded_ontology_source_scope",
+      "temporal_semantics": "validity_interval_with_as_of",
+      "unit_semantics": "explicit_or_not_applicable",
+      "unknown_fields": "reject",
+      "compatibility_class": "A",
+      "breaking_change_categories": [
+        "required_field_removal",
+        "field_type_or_meaning_change",
+        "constraint_tightening",
+        "enum_value_removal",
+        "source_scope_narrowing",
+        "temporal_semantics_change",
+        "unit_semantics_change"
+      ]
+    },
+    {
+      "family": "observation",
+      "source_contract_id": "observation",
+      "artifact_id": "artifact:hdp-bundle-v1:observation-schema",
+      "supported_fields": [
+        "schema_version",
+        "record_type",
+        "record_id",
+        "packet_id",
+        "tracking_bead",
+        "frozen_dispatch_base",
+        "source_release",
+        "artifact",
+        "receipt",
+        "activity",
+        "observations",
+        "lineage",
+        "authority_limits"
+      ],
+      "required_fields": [
+        "schema_version",
+        "record_type",
+        "record_id",
+        "packet_id",
+        "tracking_bead",
+        "frozen_dispatch_base",
+        "source_release",
+        "artifact",
+        "receipt",
+        "activity",
+        "observations",
+        "lineage",
+        "authority_limits"
+      ],
+      "removed_fields": [],
+      "source_scope": "source_release_artifact_observation_scope",
+      "temporal_semantics": "valid_time_and_transaction_time",
+      "unit_semantics": "explicit_source_unit_no_implicit_conversion",
+      "unknown_fields": "reject",
+      "compatibility_class": "A",
+      "breaking_change_categories": [
+        "required_field_removal",
+        "field_type_or_meaning_change",
+        "constraint_tightening",
+        "enum_value_removal",
+        "source_scope_narrowing",
+        "temporal_semantics_change",
+        "unit_semantics_change"
+      ]
+    },
+    {
+      "family": "fact_coverage",
+      "source_contract_id": "fact_coverage",
+      "artifact_id": "artifact:hdp-bundle-v1:fact-coverage-schema",
+      "supported_fields": [
+        "schema_version",
+        "record_type",
+        "record_id",
+        "packet_id",
+        "tracking_bead",
+        "frozen_dispatch_base",
+        "source_release",
+        "artifact",
+        "identity_scopes",
+        "metric_catalog",
+        "observations",
+        "evidence",
+        "denominator_bindings",
+        "profile_sources",
+        "profile_metric_values",
+        "facts",
+        "coverage_records",
+        "profile_knowledge_objects",
+        "projections",
+        "completeness_policy",
+        "authority_limits"
+      ],
+      "required_fields": [
+        "schema_version",
+        "record_type",
+        "record_id",
+        "packet_id",
+        "tracking_bead",
+        "frozen_dispatch_base",
+        "source_release",
+        "artifact",
+        "identity_scopes",
+        "metric_catalog",
+        "observations",
+        "evidence",
+        "denominator_bindings",
+        "profile_sources",
+        "profile_metric_values",
+        "facts",
+        "coverage_records",
+        "profile_knowledge_objects",
+        "projections",
+        "completeness_policy",
+        "authority_limits"
+      ],
+      "removed_fields": [],
+      "source_scope": "catalog_identity_period_fact_scope",
+      "temporal_semantics": "validity_interval_with_period_as_of",
+      "unit_semantics": "catalog_allowed_unit_no_implicit_conversion",
+      "unknown_fields": "reject",
+      "compatibility_class": "A",
+      "breaking_change_categories": [
+        "required_field_removal",
+        "field_type_or_meaning_change",
+        "constraint_tightening",
+        "enum_value_removal",
+        "source_scope_narrowing",
+        "temporal_semantics_change",
+        "unit_semantics_change"
+      ]
+    },
+    {
+      "family": "storage_workload",
+      "source_contract_id": "storage_workload",
+      "artifact_id": "artifact:hdp-bundle-v1:storage-workload-schema",
+      "supported_fields": [
+        "schema_version",
+        "record_type",
+        "record_id",
+        "packet_id",
+        "tracking_bead",
+        "frozen_dispatch_base",
+        "source_contracts",
+        "measurement_mode",
+        "git_sha",
+        "fixture_release",
+        "source_release",
+        "hardware_or_service_class",
+        "captured_at",
+        "owner",
+        "workloads",
+        "storage_targets",
+        "benchmark_receipts",
+        "quota_policy",
+        "retention_policy",
+        "cost_envelope",
+        "rollback",
+        "limitations",
+        "variances"
+      ],
+      "required_fields": [
+        "schema_version",
+        "record_type",
+        "record_id",
+        "packet_id",
+        "tracking_bead",
+        "frozen_dispatch_base",
+        "source_contracts",
+        "measurement_mode",
+        "git_sha",
+        "fixture_release",
+        "source_release",
+        "hardware_or_service_class",
+        "captured_at",
+        "owner",
+        "workloads",
+        "storage_targets",
+        "benchmark_receipts",
+        "quota_policy",
+        "retention_policy",
+        "cost_envelope",
+        "rollback",
+        "limitations",
+        "variances"
+      ],
+      "removed_fields": [],
+      "source_scope": "synthetic_storage_workload_scope",
+      "temporal_semantics": "capture_timestamp_and_declared_validity",
+      "unit_semantics": "explicit_or_not_applicable",
+      "unknown_fields": "reject",
+      "compatibility_class": "A",
+      "breaking_change_categories": [
+        "required_field_removal",
+        "field_type_or_meaning_change",
+        "constraint_tightening",
+        "enum_value_removal",
+        "source_scope_narrowing",
+        "temporal_semantics_change",
+        "unit_semantics_change"
+      ]
+    },
+    {
+      "family": "storage_benchmark",
+      "source_contract_id": "storage_benchmark",
+      "artifact_id": "artifact:hdp-bundle-v1:storage-benchmark-schema",
+      "supported_fields": [
+        "schema_version",
+        "record_type",
+        "record_id",
+        "packet_id",
+        "tracking_bead",
+        "frozen_dispatch_base",
+        "workload_contract_ref",
+        "benchmark_fixture_ref",
+        "measurement_mode",
+        "git_sha",
+        "fixture_release",
+        "source_release",
+        "hardware_or_service_class",
+        "captured_at",
+        "percentile_method",
+        "sample_count",
+        "benchmarks",
+        "method",
+        "limitations",
+        "owner"
+      ],
+      "required_fields": [
+        "schema_version",
+        "record_type",
+        "record_id",
+        "packet_id",
+        "tracking_bead",
+        "frozen_dispatch_base",
+        "workload_contract_ref",
+        "benchmark_fixture_ref",
+        "measurement_mode",
+        "git_sha",
+        "fixture_release",
+        "source_release",
+        "hardware_or_service_class",
+        "captured_at",
+        "percentile_method",
+        "sample_count",
+        "benchmarks",
+        "method",
+        "limitations",
+        "owner"
+      ],
+      "removed_fields": [],
+      "source_scope": "synthetic_storage_benchmark_scope",
+      "temporal_semantics": "capture_timestamp_and_benchmark_window",
+      "unit_semantics": "explicit_or_not_applicable",
+      "unknown_fields": "reject",
+      "compatibility_class": "A",
+      "breaking_change_categories": [
+        "required_field_removal",
+        "field_type_or_meaning_change",
+        "constraint_tightening",
+        "enum_value_removal",
+        "source_scope_narrowing",
+        "temporal_semantics_change",
+        "unit_semantics_change"
+      ]
+    }
+  ],
+  "consumer_matrix": [
+    {
+      "consumer_id": "hc-ingest",
+      "repository": "healthcare-toolkit",
+      "mode": "strict_conformance",
+      "required_artifact_ids": [
+        "artifact:hdp-bundle-v1:bundle-schema",
+        "artifact:hdp-bundle-v1:ontology-schema",
+        "artifact:hdp-bundle-v1:observation-schema",
+        "artifact:hdp-bundle-v1:fact-coverage-schema",
+        "artifact:hdp-bundle-v1:storage-workload-schema",
+        "artifact:hdp-bundle-v1:storage-benchmark-schema"
+      ],
+      "supported_semver": "1.0.x",
+      "strict": true,
+      "source_scope_required": true,
+      "runtime_state": "test_only"
+    },
+    {
+      "consumer_id": "healthcare-data-mcp",
+      "repository": "healthcare-data-mcp",
+      "mode": "source_bound_receipt",
+      "required_artifact_ids": [
+        "artifact:hdp-bundle-v1:observation-schema",
+        "artifact:hdp-bundle-v1:fact-coverage-schema"
+      ],
+      "supported_semver": "1.0.x",
+      "strict": true,
+      "source_scope_required": true,
+      "runtime_state": "external_producer_seam"
+    },
+    {
+      "consumer_id": "hc-api",
+      "repository": "healthcare-toolkit",
+      "mode": "read_only_admission",
+      "required_artifact_ids": [
+        "artifact:hdp-bundle-v1:observation-schema",
+        "artifact:hdp-bundle-v1:fact-coverage-schema"
+      ],
+      "supported_semver": "1.0.x",
+      "strict": true,
+      "source_scope_required": true,
+      "runtime_state": "not_adopted"
+    },
+    {
+      "consumer_id": "hc-web",
+      "repository": "healthcare-toolkit",
+      "mode": "documentation_generation",
+      "required_artifact_ids": [
+        "artifact:hdp-bundle-v1:openapi",
+        "artifact:hdp-bundle-v1:arrow"
+      ],
+      "supported_semver": "1.0.x",
+      "strict": true,
+      "source_scope_required": true,
+      "runtime_state": "not_adopted"
+    },
+    {
+      "consumer_id": "storage-reviewers",
+      "repository": "healthcare-toolkit",
+      "mode": "evidence_review",
+      "required_artifact_ids": [
+        "artifact:hdp-bundle-v1:storage-workload-schema",
+        "artifact:hdp-bundle-v1:storage-benchmark-schema"
+      ],
+      "supported_semver": "1.0.x",
+      "strict": true,
+      "source_scope_required": true,
+      "runtime_state": "evidence_only"
+    }
+  ],
+  "generated_bindings": {
+    "source_of_truth": "json_schema_source_artifacts",
+    "representations": [
+      {
+        "representation": "openapi",
+        "artifact_id": "artifact:hdp-bundle-v1:openapi",
+        "generator": "p0-13-openapi-view-v1",
+        "source_artifact_ids": [
+          "artifact:hdp-bundle-v1:ontology-schema",
+          "artifact:hdp-bundle-v1:observation-schema",
+          "artifact:hdp-bundle-v1:fact-coverage-schema",
+          "artifact:hdp-bundle-v1:storage-workload-schema",
+          "artifact:hdp-bundle-v1:storage-benchmark-schema"
+        ],
+        "source_hashes_required": true,
+        "hand_edit_policy": "forbidden"
+      },
+      {
+        "representation": "arrow",
+        "artifact_id": "artifact:hdp-bundle-v1:arrow",
+        "generator": "p0-13-arrow-view-v1",
+        "source_artifact_ids": [
+          "artifact:hdp-bundle-v1:ontology-schema",
+          "artifact:hdp-bundle-v1:observation-schema",
+          "artifact:hdp-bundle-v1:fact-coverage-schema",
+          "artifact:hdp-bundle-v1:storage-workload-schema",
+          "artifact:hdp-bundle-v1:storage-benchmark-schema"
+        ],
+        "source_hashes_required": true,
+        "hand_edit_policy": "forbidden"
+      }
+    ],
+    "reproducibility": "manifest_hashes_and_generator_versions_must_match",
+    "hand_edit_policy": "forbidden",
+    "generated_output_policy": "commit_only_with_source_hashes"
+  },
+  "conformance_policy": {
+    "class_a_gate": "blocking",
+    "unknown_fields": "reject",
+    "required_field_removal": "reject_as_major",
+    "source_scope_loss": "reject",
+    "temporal_semantics": "exact_match_required",
+    "unit_semantics": "exact_match_required",
+    "duplicate_artifact_ids": "reject",
+    "stale_hashes": "reject",
+    "hash_algorithm": "sha256",
+    "publication_convenience": "non_blocking"
+  },
+  "release": {
+    "release_id": "release:healthcare-data-platform-bundle-v1",
+    "state": "published_non_runtime",
+    "published_at": "2026-08-28T00:00:00Z",
+    "runtime_adoption": "not_adopted",
+    "required_checks": [
+      "draft_2020_12_schema_validation",
+      "artifact_hash_and_path_validation",
+      "strict_compatibility_fixture_gate",
+      "openapi_and_arrow_representation_validation",
+      "class_a_provenance_review"
+    ],
+    "approval": "human_merge_required"
+  },
+  "rollback": {
+    "strategy": "revert_additive_commits",
+    "commit_order_newest_first": [
+      "test(contracts): add compatibility and fixture gate",
+      "feat(contracts): publish v1 schema bundle",
+      "docs(contracts): define ownership and versioning"
+    ],
+    "preserve_prior_artifacts": true,
+    "runtime_action": "none",
+    "approval": "human_merge_required"
+  },
+  "authority_limits": {
+    "source_acquisition": false,
+    "producer_mutation": false,
+    "artifact_deletion": false,
+    "runtime_adoption": false,
+    "database_migration": false,
+    "deployment": false,
+    "production_release": false,
+    "current_projection": false
+  }
+}

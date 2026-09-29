@@ -1,0 +1,26 @@
+[
+  {
+    "case_id": "houston-methodist-2024",
+    "legal_filer": "THE METHODIST HOSPITAL",
+    "ein": "741180155",
+    "tax_year": 2024
+  },
+  {
+    "case_id": "jefferson-2025",
+    "legal_filer": "THOMAS JEFFERSON UNIVERSITY HOSPITALS INC",
+    "ein": "232829095",
+    "tax_year": 2025
+  },
+  {
+    "case_id": "mainehealth-2024",
+    "legal_filer": "MaineHealth",
+    "ein": "010238552",
+    "tax_year": 2024
+  },
+  {
+    "case_id": "rush-2025",
+    "legal_filer": "Rush University Medical Center",
+    "ein": "362174823",
+    "tax_year": 2025
+  }
+]

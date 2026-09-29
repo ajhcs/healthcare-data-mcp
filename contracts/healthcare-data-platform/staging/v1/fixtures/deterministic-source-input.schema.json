@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.ushso.org/healthcare-data-platform/staging/v1/deterministic-source-input.schema.json",
+  "title": "Healthcare Data MCP deterministic staging input v1",
+  "description": "Offline-only source-shaped fixture; it is not an official source response.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "record_type",
+    "source_id",
+    "source_url",
+    "baseline_release_id",
+    "changed_release_id",
+    "media_type",
+    "baseline_payload",
+    "changed_payload",
+    "quarantine_payload",
+    "rights_status"
+  ],
+  "properties": {
+    "schema_version": {"const": "hdp.staging-fixture-input.v1"},
+    "record_type": {"const": "staging_fixture_input"},
+    "source_id": {"const": "source:ahrq:lighthouse"},
+    "source_url": {"type": "string", "format": "uri", "pattern": "^https://"},
+    "baseline_release_id": {"type": "string", "pattern": "^release:[a-z0-9][a-z0-9._:-]*$"},
+    "changed_release_id": {"type": "string", "pattern": "^release:[a-z0-9][a-z0-9._:-]*$"},
+    "media_type": {"const": "application/octet-stream"},
+    "baseline_payload": {"type": "string", "minLength": 1, "maxLength": 131072},
+    "changed_payload": {"type": "string", "minLength": 1, "maxLength": 131072},
+    "quarantine_payload": {"type": "string", "minLength": 1, "maxLength": 131072},
+    "rights_status": {"const": "approved_public"}
+  }
+}

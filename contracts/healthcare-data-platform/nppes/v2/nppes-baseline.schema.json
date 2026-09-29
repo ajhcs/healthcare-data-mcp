@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.ushso.org/healthcare-data-platform/nppes/v2/nppes-baseline.schema.json",
+  "title": "Healthcare Data Platform NPPES V2 full-baseline receipt",
+  "description": "Secret-free, source-scoped NPPES baseline evidence that never grants canonical authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "record_type", "receipt_id", "producer", "receipt_schema", "source_id", "source_url",
+    "release_id", "release_label", "release_sha256", "probe_state", "state", "final_url", "http_status",
+    "recorded_at", "evidence_locator", "files", "deactivation_opportunities", "deactivation_count",
+    "current_projection_preserved", "failure_code", "receipt_sha256"
+  ],
+  "properties": {
+    "schema_version": {"const": "hdp.nppes-baseline.v2", "type": "string"},
+    "record_type": {"const": "nppes_baseline_receipt", "type": "string"},
+    "receipt_id": {"type": "string", "pattern": "^receipt:[a-z0-9][a-z0-9._:-]*$"},
+    "producer": {"const": "healthcare-data-mcp:nppes-baseline-producer", "type": "string"},
+    "receipt_schema": {"const": "hdp.nppes-baseline-receipt.v2", "type": "string"},
+    "source_id": {"const": "source:nppes:registry", "type": "string"},
+    "source_url": {"type": "string", "pattern": "^https://[A-Za-z0-9._:/-]+$"},
+    "release_id": {"type": "string", "pattern": "^release:[a-z0-9][a-z0-9._:-]*$"},
+    "release_label": {"type": "string", "minLength": 1, "maxLength": 200},
+    "release_sha256": {"$ref": "#/$defs/sha256"},
+    "probe_state": {"enum": ["changed", "not_modified", "failed_probe"]},
+    "state": {"enum": ["changed", "no_op", "failed_probe", "schema_drift", "replayed", "blocked"]},
+    "final_url": {"type": ["string", "null"], "pattern": "^https://[A-Za-z0-9._:/-]+$"},
+    "http_status": {"type": ["integer", "null"], "minimum": 100, "maximum": 599},
+    "recorded_at": {"type": "string", "format": "date-time"},
+    "evidence_locator": {"$ref": "#/$defs/locator"},
+    "files": {"type": "array", "maxItems": 5, "items": {"$ref": "#/$defs/file_receipt"}},
+    "deactivation_opportunities": {"type": "array", "maxItems": 256, "items": {"$ref": "#/$defs/deactivation"}},
+    "deactivation_count": {"type": "integer", "minimum": 0},
+    "current_projection_preserved": {"const": true, "type": "boolean"},
+    "failure_code": {"type": ["string", "null"], "maxLength": 120},
+    "receipt_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "locator": {"type": "string", "minLength": 1, "maxLength": 500, "pattern": "^(?:https://|object://|parquet://|docs/|contracts/)[A-Za-z0-9._:/-]+$"},
+    "npi": {"type": "string", "pattern": "^[0-9]{10}$"},
+    "file_receipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "file_kind", "source_file_name", "source_url", "evidence_locator", "state", "content_sha256",
+        "byte_length", "chunk_count", "row_count", "identifier_count", "row_sha256", "identifier_samples",
+        "deactivation_count", "error_code"
+      ],
+      "properties": {
+        "file_kind": {"enum": ["provider", "location", "endpoint", "reference", "deactivation"]},
+        "source_file_name": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,255}$"},
+        "source_url": {"type": "string", "pattern": "^https://[A-Za-z0-9._:/-]+$"},
+        "evidence_locator": {"$ref": "#/$defs/locator"},
+        "state": {"enum": ["accepted", "unavailable_public", "not_applicable", "not_consumed", "interrupted", "schema_drift"]},
+        "content_sha256": {"type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$"},
+        "byte_length": {"type": "integer", "minimum": 0},
+        "chunk_count": {"type": "integer", "minimum": 0},
+        "row_count": {"type": "integer", "minimum": 0},
+        "identifier_count": {"type": "integer", "minimum": 0},
+        "row_sha256": {"type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$"},
+        "identifier_samples": {"type": "array", "maxItems": 64, "items": {"$ref": "#/$defs/npi"}},
+        "deactivation_count": {"type": "integer", "minimum": 0},
+        "error_code": {"type": ["string", "null"], "maxLength": 120}
+      }
+    },
+    "deactivation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["npi", "source_row_id", "deactivation_date", "evidence_locator", "review_state"],
+      "properties": {
+        "npi": {"$ref": "#/$defs/npi"},
+        "source_row_id": {"type": "string", "pattern": "^[a-z][a-z0-9._:-]{0,199}$"},
+        "deactivation_date": {"type": "string", "format": "date"},
+        "evidence_locator": {"$ref": "#/$defs/locator"},
+        "review_state": {"const": "review_required", "type": "string"}
+      }
+    }
+  }
+}

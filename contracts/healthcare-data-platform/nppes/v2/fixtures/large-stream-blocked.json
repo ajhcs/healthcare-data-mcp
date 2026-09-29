@@ -1,0 +1,30 @@
+{
+  "schema_version": "hdp.nppes-baseline.v2",
+  "record_type": "nppes_baseline_receipt",
+  "receipt_id": "receipt:nppes:d675d0132128dfdb46dc6fed8d1971fb",
+  "producer": "healthcare-data-mcp:nppes-baseline-producer",
+  "receipt_schema": "hdp.nppes-baseline-receipt.v2",
+  "source_id": "source:nppes:registry",
+  "source_url": "https://download.cms.gov/nppes/NPPES_Data_Dissemination.html",
+  "release_id": "release:nppes:2026-08-large",
+  "release_label": "NPPES August 2026 large stream",
+  "release_sha256": "sha256:38a54b8da0c70c30a4a1cc659affb9c0773f69c85c340a5011e8a4583afdf57b",
+  "probe_state": "changed",
+  "state": "blocked",
+  "final_url": "https://download.cms.gov/nppes/NPPES_Data_Dissemination.html",
+  "http_status": 200,
+  "recorded_at": "2026-08-29T00:00:00Z",
+  "evidence_locator": "https://download.cms.gov/nppes/NPPES_Data_Dissemination.html",
+  "files": [
+    {"file_kind": "provider", "source_file_name": "nppes_provider.csv", "source_url": "https://download.cms.gov/nppes/NPPES_Data_Dissemination.html", "evidence_locator": "https://download.cms.gov/nppes/NPPES_Data_Dissemination.html", "state": "interrupted", "content_sha256": "sha256:a9f78a03f667d7d41201b06bbbc6dc4286c2aa8a9e9e70d5abf8b5d218c29463", "byte_length": 40, "chunk_count": 2, "row_count": 1, "identifier_count": 1, "row_sha256": "sha256:f38c978f6ecdcae7d8ec4a0889fadb899b177a0c86d10bb49045c3eaafaad2d8", "identifier_samples": ["0123456789"], "deactivation_count": 0, "error_code": "stream_interrupted"},
+    {"file_kind": "location", "source_file_name": "nppes_location.csv", "source_url": "https://download.cms.gov/nppes/NPPES_Data_Dissemination.html", "evidence_locator": "https://download.cms.gov/nppes/NPPES_Data_Dissemination.html", "state": "unavailable_public", "content_sha256": null, "byte_length": 0, "chunk_count": 0, "row_count": 0, "identifier_count": 0, "row_sha256": null, "identifier_samples": [], "deactivation_count": 0, "error_code": null},
+    {"file_kind": "endpoint", "source_file_name": "nppes_endpoint.csv", "source_url": "https://download.cms.gov/nppes/NPPES_Data_Dissemination.html", "evidence_locator": "https://download.cms.gov/nppes/NPPES_Data_Dissemination.html", "state": "unavailable_public", "content_sha256": null, "byte_length": 0, "chunk_count": 0, "row_count": 0, "identifier_count": 0, "row_sha256": null, "identifier_samples": [], "deactivation_count": 0, "error_code": null},
+    {"file_kind": "reference", "source_file_name": "nppes_reference.csv", "source_url": "https://download.cms.gov/nppes/NPPES_Data_Dissemination.html", "evidence_locator": "https://download.cms.gov/nppes/NPPES_Data_Dissemination.html", "state": "unavailable_public", "content_sha256": null, "byte_length": 0, "chunk_count": 0, "row_count": 0, "identifier_count": 0, "row_sha256": null, "identifier_samples": [], "deactivation_count": 0, "error_code": null},
+    {"file_kind": "deactivation", "source_file_name": "nppes_deactivation.csv", "source_url": "https://download.cms.gov/nppes/NPPES_Data_Dissemination.html", "evidence_locator": "https://download.cms.gov/nppes/NPPES_Data_Dissemination.html", "state": "unavailable_public", "content_sha256": null, "byte_length": 0, "chunk_count": 0, "row_count": 0, "identifier_count": 0, "row_sha256": null, "identifier_samples": [], "deactivation_count": 0, "error_code": null}
+  ],
+  "deactivation_opportunities": [],
+  "deactivation_count": 0,
+  "current_projection_preserved": true,
+  "failure_code": "stream_interrupted",
+  "receipt_sha256": "sha256:7fed0e194b0503c8f29f65f796330202ba52bda12a755223784345217b6a3462"
+}

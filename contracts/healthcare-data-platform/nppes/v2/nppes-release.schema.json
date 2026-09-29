@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.ushso.org/healthcare-data-platform/nppes/v2/nppes-release.schema.json",
+  "title": "Healthcare Data Platform NPPES V2 release descriptor v2",
+  "description": "NPPES release and conditional probe metadata before bounded source consumption.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "record_type", "release_id", "release_label", "source_id", "source_url",
+    "probe_state", "final_url", "http_status", "published_at", "evidence_locator", "files",
+    "failure_reason", "release_sha256"
+  ],
+  "properties": {
+    "schema_version": {"const": "hdp.nppes-release.v2", "type": "string"},
+    "record_type": {"const": "nppes_release", "type": "string"},
+    "release_id": {"type": "string", "pattern": "^release:[a-z0-9][a-z0-9._:-]*$"},
+    "release_label": {"type": "string", "minLength": 1, "maxLength": 200},
+    "source_id": {"const": "source:nppes:registry", "type": "string"},
+    "source_url": {"type": "string", "pattern": "^https://[A-Za-z0-9._:/-]+$"},
+    "probe_state": {"enum": ["changed", "not_modified", "failed_probe"]},
+    "final_url": {"type": ["string", "null"], "pattern": "^https://[A-Za-z0-9._:/-]+$"},
+    "http_status": {"type": ["integer", "null"], "minimum": 100, "maximum": 599},
+    "published_at": {"type": ["string", "null"], "format": "date-time"},
+    "evidence_locator": {"$ref": "#/$defs/locator"},
+    "files": {"type": "array", "maxItems": 5, "items": {"$ref": "#/$defs/file"}},
+    "failure_reason": {"type": ["string", "null"], "maxLength": 300},
+    "release_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"probe_state": {"const": "changed"}}},
+      "then": {
+        "required": ["final_url", "published_at"],
+        "properties": {"final_url": {"type": "string"}, "published_at": {"type": "string"}, "files": {"minItems": 1}}
+      }
+    },
+    {
+      "if": {"properties": {"probe_state": {"const": "not_modified"}}},
+      "then": {
+        "properties": {"http_status": {"const": 304}, "files": {"maxItems": 0}, "failure_reason": {"type": "null"}}
+      }
+    },
+    {
+      "if": {"properties": {"probe_state": {"const": "failed_probe"}}},
+      "then": {
+        "required": ["failure_reason"],
+        "properties": {"files": {"maxItems": 0}, "failure_reason": {"type": "string", "minLength": 1}}
+      }
+    }
+  ],
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "locator": {"type": "string", "minLength": 1, "maxLength": 500, "pattern": "^(?:https://|object://|parquet://|docs/|contracts/)[A-Za-z0-9._:/-]+$"},
+    "file": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file_kind", "source_file_name", "source_url", "evidence_locator", "availability", "expected_sha256"],
+      "properties": {
+        "file_kind": {"enum": ["provider", "location", "endpoint", "reference", "deactivation"]},
+        "source_file_name": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,255}$"},
+        "source_url": {"type": "string", "pattern": "^https://[A-Za-z0-9._:/-]+$"},
+        "evidence_locator": {"$ref": "#/$defs/locator"},
+        "availability": {"enum": ["present", "unavailable_public", "not_applicable"]},
+        "expected_sha256": {"type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$"}
+      }
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "schema_version": "hdp.ahrq-release-probe.v1",
+  "record_type": "ahrq_release_probe",
+  "fixture_id": "fixture:ahrq:failed-release-probe",
+  "source_id": "source:ahrq:lighthouse",
+  "source_url": "https://example.gov/ahrq/release.json",
+  "probe_state": "failed_probe",
+  "failure_reason": "official release endpoint timed out within the bounded probe budget"
+}

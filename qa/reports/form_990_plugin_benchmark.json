@@ -1,0 +1,1226 @@
+{
+  "aggregate": {
+    "native": {
+      "call_totals": {
+        "mcp_tool_call": 62,
+        "web_search": 37
+      },
+      "coverage_correct": 8,
+      "coverage_total": 16,
+      "fact_correct": 20,
+      "fact_total": 40,
+      "median_latency_ms": 290548.084,
+      "native_web_retrieved_bytes": null,
+      "observable_mcp_result_bytes": 269878,
+      "provenance_correct": 40,
+      "provenance_total": 112,
+      "runs": 4,
+      "scope_honest_runs": 2,
+      "token_totals": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 2547968,
+        "input_tokens": 2750654,
+        "output_tokens": 18148,
+        "reasoning_output_tokens": 8276
+      },
+      "valid_run_fact_correct": 20,
+      "valid_run_fact_total": 20,
+      "valid_run_provenance_correct": 40,
+      "valid_run_provenance_total": 56,
+      "valid_runs": 2
+    },
+    "plugin": {
+      "call_totals": {
+        "mcp_tool_call": 4
+      },
+      "coverage_correct": 16,
+      "coverage_total": 16,
+      "fact_correct": 40,
+      "fact_total": 40,
+      "median_latency_ms": 23055.077,
+      "native_web_retrieved_bytes": null,
+      "observable_mcp_result_bytes": 56048,
+      "provenance_correct": 112,
+      "provenance_total": 112,
+      "runs": 4,
+      "scope_honest_runs": 4,
+      "token_totals": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 162816,
+        "input_tokens": 266452,
+        "output_tokens": 4508,
+        "reasoning_output_tokens": 1212
+      },
+      "valid_run_fact_correct": 40,
+      "valid_run_fact_total": 40,
+      "valid_run_provenance_correct": 112,
+      "valid_run_provenance_total": 112,
+      "valid_runs": 4
+    }
+  },
+  "benchmark": "sealed plugin-enabled versus plugin-disabled native research",
+  "cases": [
+    {
+      "case_id": "houston-methodist-2024",
+      "ein": "741180155",
+      "legal_filer": "THE METHODIST HOSPITAL",
+      "tax_year": 2024
+    },
+    {
+      "case_id": "jefferson-2025",
+      "ein": "232829095",
+      "legal_filer": "THOMAS JEFFERSON UNIVERSITY HOSPITALS INC",
+      "tax_year": 2025
+    },
+    {
+      "case_id": "mainehealth-2024",
+      "ein": "010238552",
+      "legal_filer": "MaineHealth",
+      "tax_year": 2024
+    },
+    {
+      "case_id": "rush-2025",
+      "ein": "362174823",
+      "legal_filer": "Rush University Medical Center",
+      "tax_year": 2025
+    }
+  ],
+  "codex_version": "codex-cli 0.145.0",
+  "cold_ingestion_included": false,
+  "condition_order": "deterministic alternating AB/BA",
+  "condition_verification": "Before every run, codex plugin list and codex debug prompt-input verified the persisted enabled state and skill visibility matched the condition.",
+  "config_restored_sha256": "910e499d16a4b65ff9812c6f1db19693f8c743bfd861708b71d0ab49b75fcf73",
+  "excluded_infrastructure_preflight": {
+    "reason": "obsolete -a approval flag rejected before session startup",
+    "report": "qa/reports/form_990_plugin_benchmark_preflight_failed.json",
+    "runs": 8
+  },
+  "generated_at_utc": "2026-07-24T16:09:33Z",
+  "gold_exposed_to_model": false,
+  "matched_prompt_and_output_schema": true,
+  "model": "gpt-5.6-sol",
+  "native_mcp_call_note": "Native MCP calls were other visible research tools: the Form 990 plugin was disabled and its skill absent. The retained JSONL summary did not break those calls down by server/tool.",
+  "plugin_finished_enabled": true,
+  "reasoning": "xhigh",
+  "repetitions": 1,
+  "retrieved_bytes_limit": "MCP result bytes are observable; native web response bytes are not exposed by Codex JSONL and are reported as null.",
+  "runs": [
+    {
+      "answer": {
+        "ein": "741180155",
+        "form_type": "990",
+        "legal_filer": "THE METHODIST HOSPITAL",
+        "net_assets": 8456530640,
+        "provenance": {
+          "net_assets": {
+            "metric_key": "net_assets",
+            "object_id": "202533119349301948",
+            "reported_label": "Net assets or fund balances, end of year",
+            "source_url": "https://apps.irs.gov/pub/epostcard/990/xml/2025/2025_TEOS_XML_11B.zip",
+            "units": "USD",
+            "xml_field_paths": [
+              "/Return/ReturnData/IRS990/NetAssetsOrFundBalancesEOYAmt"
+            ],
+            "xml_sha256": "6a907b7a1ab6fbacc960f084fbac086acaa1e4a05723f278fdc3865aa8b17191"
+          },
+          "top_reported_executive": {
+            "metric_key": "top_reported_executive",
+            "object_id": "202533119349301948",
+            "reported_label": "Total compensation (Part VII columns D + E + F)",
+            "source_url": "https://apps.irs.gov/pub/epostcard/990/xml/2025/2025_TEOS_XML_11B.zip",
+            "units": "USD",
+            "xml_field_paths": [],
+            "xml_sha256": "6a907b7a1ab6fbacc960f084fbac086acaa1e4a05723f278fdc3865aa8b17191"
+          },
+          "total_expenses": {
+            "metric_key": "total_expenses",
+            "object_id": "202533119349301948",
+            "reported_label": "Total expenses",
+            "source_url": "https://apps.irs.gov/pub/epostcard/990/xml/2025/2025_TEOS_XML_11B.zip",
+            "units": "USD",
+            "xml_field_paths": [
+              "/Return/ReturnData/IRS990/CYTotalExpensesAmt"
+            ],
+            "xml_sha256": "6a907b7a1ab6fbacc960f084fbac086acaa1e4a05723f278fdc3865aa8b17191"
+          },
+          "total_revenue": {
+            "metric_key": "total_revenue",
+            "object_id": "202533119349301948",
+            "reported_label": "Total revenue",
+            "source_url": "https://apps.irs.gov/pub/epostcard/990/xml/2025/2025_TEOS_XML_11B.zip",
+            "units": "USD",
+            "xml_field_paths": [
+              "/Return/ReturnData/IRS990/CYTotalRevenueAmt"
+            ],
+            "xml_sha256": "6a907b7a1ab6fbacc960f084fbac086acaa1e4a05723f278fdc3865aa8b17191"
+          }
+        },
+        "scope_caveat": "Facts are reported by this exact legal filer. No natural-brand resolution, affiliate roll-up, or cross-system comparison was performed. No individual executive was reported for this exact filer, so top_reported_executive is null.",
+        "status": "ready",
+        "tax_period_end": "2024-12-31",
+        "top_reported_executive": null,
+        "total_expenses": 3282593264,
+        "total_revenue": 3595725127
+      },
+      "case_id": "houston-methodist-2024",
+      "condition": "plugin",
+      "failures": [],
+      "latency_ms": 25680.077,
+      "native_web_retrieved_bytes": null,
+      "native_web_retrieved_bytes_note": "Codex JSONL does not expose native web response byte counts.",
+      "repetition": 0,
+      "returncode": 0,
+      "score": {
+        "coverage_checks": {
+          "net_assets": true,
+          "top_reported_executive": true,
+          "total_expenses": true,
+          "total_revenue": true
+        },
+        "coverage_correct": 4,
+        "coverage_total": 4,
+        "fact_checks": {
+          "ein": true,
+          "executive_compensation": true,
+          "executive_name": true,
+          "executive_title": true,
+          "form_type": true,
+          "legal_filer": true,
+          "net_assets": true,
+          "tax_period_end": true,
+          "total_expenses": true,
+          "total_revenue": true
+        },
+        "fact_correct": 10,
+        "fact_total": 10,
+        "provenance_checks": {
+          "net_assets.metric_key": true,
+          "net_assets.object_id": true,
+          "net_assets.reported_label": true,
+          "net_assets.source_url": true,
+          "net_assets.units": true,
+          "net_assets.xml_field_paths": true,
+          "net_assets.xml_sha256": true,
+          "top_reported_executive.metric_key": true,
+          "top_reported_executive.object_id": true,
+          "top_reported_executive.reported_label": true,
+          "top_reported_executive.source_url": true,
+          "top_reported_executive.units": true,
+          "top_reported_executive.xml_field_paths": true,
+          "top_reported_executive.xml_sha256": true,
+          "total_expenses.metric_key": true,
+          "total_expenses.object_id": true,
+          "total_expenses.reported_label": true,
+          "total_expenses.source_url": true,
+          "total_expenses.units": true,
+          "total_expenses.xml_field_paths": true,
+          "total_expenses.xml_sha256": true,
+          "total_revenue.metric_key": true,
+          "total_revenue.object_id": true,
+          "total_revenue.reported_label": true,
+          "total_revenue.source_url": true,
+          "total_revenue.units": true,
+          "total_revenue.xml_field_paths": true,
+          "total_revenue.xml_sha256": true
+        },
+        "provenance_correct": 28,
+        "provenance_total": 28,
+        "scope_honest": true
+      },
+      "sequence": 0,
+      "stderr_tail": "Reading additional input from stdin...\n",
+      "telemetry": {
+        "calls": {
+          "mcp_tool_call": 1
+        },
+        "events": 7,
+        "final_response_bytes": 1970,
+        "jsonl_bytes": 16555,
+        "mcp_result_bytes": 13061,
+        "tokens": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 39424,
+          "input_tokens": 65233,
+          "output_tokens": 1323,
+          "reasoning_output_tokens": 463
+        }
+      },
+      "timed_out": false,
+      "valid": true
+    },
+    {
+      "answer": {
+        "ein": "741180155",
+        "form_type": "990",
+        "legal_filer": "THE METHODIST HOSPITAL",
+        "net_assets": 8456530640,
+        "provenance": {
+          "net_assets": {
+            "metric_key": "net_assets",
+            "object_id": "202533119349301948",
+            "reported_label": "Net assets or fund balances at end of year",
+            "source_url": "https://apps.irs.gov/pub/epostcard/990/xml/2025/2025_TEOS_XML_11B.zip",
+            "units": "USD",
+            "xml_field_paths": [
+              "Return/ReturnData/IRS990/NetAssetsOrFundBalancesEOYAmt"
+            ],
+            "xml_sha256": "6a907b7a1ab6fbacc960f084fbac086acaa1e4a05723f278fdc3865aa8b17191"
+          },
+          "top_reported_executive": {
+            "metric_key": "top_reported_executive.total_reported_compensation",
+            "object_id": "202533119349301948",
+            "reported_label": "Part VII, Section A, columns (D) + (E) + (F); no individual executive row reported",
+            "source_url": "https://apps.irs.gov/pub/epostcard/990/xml/2025/2025_TEOS_XML_11B.zip",
+            "units": "USD",
+            "xml_field_paths": [
+              "Return/ReturnData/IRS990/Form990PartVIISectionAGrp/PersonNm",
+              "Return/ReturnData/IRS990/Form990PartVIISectionAGrp/TitleTxt",
+              "Return/ReturnData/IRS990/Form990PartVIISectionAGrp/ReportableCompFromOrgAmt",
+              "Return/ReturnData/IRS990/Form990PartVIISectionAGrp/ReportableCompFromRltdOrgAmt",
+              "Return/ReturnData/IRS990/Form990PartVIISectionAGrp/OtherCompensationAmt"
+            ],
+            "xml_sha256": "6a907b7a1ab6fbacc960f084fbac086acaa1e4a05723f278fdc3865aa8b17191"
+          },
+          "total_expenses": {
+            "metric_key": "total_expenses",
+            "object_id": "202533119349301948",
+            "reported_label": "Total expenses",
+            "source_url": "https://apps.irs.gov/pub/epostcard/990/xml/2025/2025_TEOS_XML_11B.zip",
+            "units": "USD",
+            "xml_field_paths": [
+              "Return/ReturnData/IRS990/CYTotalExpensesAmt"
+            ],
+            "xml_sha256": "6a907b7a1ab6fbacc960f084fbac086acaa1e4a05723f278fdc3865aa8b17191"
+          },
+          "total_revenue": {
+            "metric_key": "total_revenue",
+            "object_id": "202533119349301948",
+            "reported_label": "Total revenue",
+            "source_url": "https://apps.irs.gov/pub/epostcard/990/xml/2025/2025_TEOS_XML_11B.zip",
+            "units": "USD",
+            "xml_field_paths": [
+              "Return/ReturnData/IRS990/CYTotalRevenueAmt"
+            ],
+            "xml_sha256": "6a907b7a1ab6fbacc960f084fbac086acaa1e4a05723f278fdc3865aa8b17191"
+          }
+        },
+        "scope_caveat": "Exact-filer boundary: values are the amounts reported in the IRS XML for THE METHODIST HOSPITAL, EIN 741180155, Object ID 202533119349301948, and are not rolled up from or substituted with Houston Methodist brand, affiliate, or Schedule R related-organization data. Part VII contains only aggregated category rows referring to the Methodist Hospital Group Return schedule, not an individually identified executive; therefore the top reported executive is null.",
+        "status": "ready",
+        "tax_period_end": "2024-12-31",
+        "top_reported_executive": null,
+        "total_expenses": 3282593264,
+        "total_revenue": 3595725127
+      },
+      "case_id": "houston-methodist-2024",
+      "condition": "native",
+      "failures": [],
+      "latency_ms": 281092.389,
+      "native_web_retrieved_bytes": null,
+      "native_web_retrieved_bytes_note": "Codex JSONL does not expose native web response byte counts.",
+      "repetition": 0,
+      "returncode": 0,
+      "score": {
+        "coverage_checks": {
+          "net_assets": true,
+          "top_reported_executive": true,
+          "total_expenses": true,
+          "total_revenue": true
+        },
+        "coverage_correct": 4,
+        "coverage_total": 4,
+        "fact_checks": {
+          "ein": true,
+          "executive_compensation": true,
+          "executive_name": true,
+          "executive_title": true,
+          "form_type": true,
+          "legal_filer": true,
+          "net_assets": true,
+          "tax_period_end": true,
+          "total_expenses": true,
+          "total_revenue": true
+        },
+        "fact_correct": 10,
+        "fact_total": 10,
+        "provenance_checks": {
+          "net_assets.metric_key": true,
+          "net_assets.object_id": true,
+          "net_assets.reported_label": false,
+          "net_assets.source_url": true,
+          "net_assets.units": true,
+          "net_assets.xml_field_paths": false,
+          "net_assets.xml_sha256": true,
+          "top_reported_executive.metric_key": false,
+          "top_reported_executive.object_id": true,
+          "top_reported_executive.reported_label": false,
+          "top_reported_executive.source_url": true,
+          "top_reported_executive.units": true,
+          "top_reported_executive.xml_field_paths": false,
+          "top_reported_executive.xml_sha256": true,
+          "total_expenses.metric_key": true,
+          "total_expenses.object_id": true,
+          "total_expenses.reported_label": true,
+          "total_expenses.source_url": true,
+          "total_expenses.units": true,
+          "total_expenses.xml_field_paths": false,
+          "total_expenses.xml_sha256": true,
+          "total_revenue.metric_key": true,
+          "total_revenue.object_id": true,
+          "total_revenue.reported_label": true,
+          "total_revenue.source_url": true,
+          "total_revenue.units": true,
+          "total_revenue.xml_field_paths": false,
+          "total_revenue.xml_sha256": true
+        },
+        "provenance_correct": 21,
+        "provenance_total": 28,
+        "scope_honest": true
+      },
+      "sequence": 1,
+      "stderr_tail": "Reading additional input from stdin...\n",
+      "telemetry": {
+        "calls": {
+          "mcp_tool_call": 15,
+          "web_search": 11
+        },
+        "events": 56,
+        "final_response_bytes": 2620,
+        "jsonl_bytes": 134734,
+        "mcp_result_bytes": 94676,
+        "tokens": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 1754112,
+          "input_tokens": 1880289,
+          "output_tokens": 11079,
+          "reasoning_output_tokens": 4851
+        }
+      },
+      "timed_out": false,
+      "valid": true
+    },
+    {
+      "answer": {
+        "ein": "",
+        "form_type": null,
+        "legal_filer": null,
+        "net_assets": null,
+        "provenance": {
+          "net_assets": null,
+          "top_reported_executive": null,
+          "total_expenses": null,
+          "total_revenue": null
+        },
+        "scope_caveat": "I\u2019m checking the IRS\u2019s own TEOS index and return XML for the exact EIN and tax-period end; no local files or non-IRS evidence are being used.",
+        "status": "ready",
+        "tax_period_end": null,
+        "top_reported_executive": null,
+        "total_expenses": null,
+        "total_revenue": null
+      },
+      "case_id": "jefferson-2025",
+      "condition": "native",
+      "failures": [
+        "timeout"
+      ],
+      "latency_ms": 300003.778,
+      "native_web_retrieved_bytes": null,
+      "native_web_retrieved_bytes_note": "Codex JSONL does not expose native web response byte counts.",
+      "repetition": 0,
+      "returncode": null,
+      "score": {
+        "coverage_checks": {
+          "net_assets": true,
+          "top_reported_executive": true,
+          "total_expenses": true,
+          "total_revenue": true
+        },
+        "coverage_correct": 4,
+        "coverage_total": 4,
+        "fact_checks": {
+          "ein": false,
+          "executive_compensation": false,
+          "executive_name": false,
+          "executive_title": false,
+          "form_type": false,
+          "legal_filer": false,
+          "net_assets": false,
+          "tax_period_end": false,
+          "total_expenses": false,
+          "total_revenue": false
+        },
+        "fact_correct": 0,
+        "fact_total": 10,
+        "provenance_checks": {
+          "net_assets.metric_key": false,
+          "net_assets.object_id": false,
+          "net_assets.reported_label": false,
+          "net_assets.source_url": false,
+          "net_assets.units": false,
+          "net_assets.xml_field_paths": false,
+          "net_assets.xml_sha256": false,
+          "top_reported_executive.metric_key": false,
+          "top_reported_executive.object_id": false,
+          "top_reported_executive.reported_label": false,
+          "top_reported_executive.source_url": false,
+          "top_reported_executive.units": false,
+          "top_reported_executive.xml_field_paths": false,
+          "top_reported_executive.xml_sha256": false,
+          "total_expenses.metric_key": false,
+          "total_expenses.object_id": false,
+          "total_expenses.reported_label": false,
+          "total_expenses.source_url": false,
+          "total_expenses.units": false,
+          "total_expenses.xml_field_paths": false,
+          "total_expenses.xml_sha256": false,
+          "total_revenue.metric_key": false,
+          "total_revenue.object_id": false,
+          "total_revenue.reported_label": false,
+          "total_revenue.source_url": false,
+          "total_revenue.units": false,
+          "total_revenue.xml_field_paths": false,
+          "total_revenue.xml_sha256": false
+        },
+        "provenance_correct": 0,
+        "provenance_total": 28,
+        "scope_honest": false
+      },
+      "sequence": 2,
+      "stderr_tail": "Reading additional input from stdin...\n",
+      "telemetry": {
+        "calls": {
+          "mcp_tool_call": 22,
+          "web_search": 13
+        },
+        "events": 73,
+        "final_response_bytes": 445,
+        "jsonl_bytes": 140238,
+        "mcp_result_bytes": 108763,
+        "tokens": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "reasoning_output_tokens": 0
+        }
+      },
+      "timed_out": true,
+      "valid": false
+    },
+    {
+      "answer": {
+        "ein": "232829095",
+        "form_type": "990",
+        "legal_filer": "THOMAS JEFFERSON UNIVERSITY HOSPITALS INC",
+        "net_assets": 1717171305,
+        "provenance": {
+          "net_assets": {
+            "metric_key": "net_assets",
+            "object_id": "202641349349301439",
+            "reported_label": "Net assets or fund balances, end of year",
+            "source_url": "https://apps.irs.gov/pub/epostcard/990/xml/2026/2026_TEOS_XML_05B.zip",
+            "units": "USD",
+            "xml_field_paths": [
+              "/Return/ReturnData/IRS990/NetAssetsOrFundBalancesEOYAmt"
+            ],
+            "xml_sha256": "d6c57a3882b81c561e4d365096390ac97be6685e1f83824833daff27a5684c29"
+          },
+          "top_reported_executive": {
+            "metric_key": "top_reported_executive",
+            "object_id": "202641349349301439",
+            "reported_label": "Total compensation (Part VII columns D + E + F)",
+            "source_url": "https://apps.irs.gov/pub/epostcard/990/xml/2026/2026_TEOS_XML_05B.zip",
+            "units": "USD",
+            "xml_field_paths": [
+              "/Return/ReturnData/IRS990/Form990PartVIISectionAGrp[3]/ReportableCompFromOrgAmt",
+              "/Return/ReturnData/IRS990/Form990PartVIISectionAGrp[3]/ReportableCompFromRltdOrgAmt",
+              "/Return/ReturnData/IRS990/Form990PartVIISectionAGrp[3]/OtherCompensationAmt"
+            ],
+            "xml_sha256": "d6c57a3882b81c561e4d365096390ac97be6685e1f83824833daff27a5684c29"
+          },
+          "total_expenses": {
+            "metric_key": "total_expenses",
+            "object_id": "202641349349301439",
+            "reported_label": "Total expenses",
+            "source_url": "https://apps.irs.gov/pub/epostcard/990/xml/2026/2026_TEOS_XML_05B.zip",
+            "units": "USD",
+            "xml_field_paths": [
+              "/Return/ReturnData/IRS990/CYTotalExpensesAmt"
+            ],
+            "xml_sha256": "d6c57a3882b81c561e4d365096390ac97be6685e1f83824833daff27a5684c29"
+          },
+          "total_revenue": {
+            "metric_key": "total_revenue",
+            "object_id": "202641349349301439",
+            "reported_label": "Total revenue",
+            "source_url": "https://apps.irs.gov/pub/epostcard/990/xml/2026/2026_TEOS_XML_05B.zip",
+            "units": "USD",
+            "xml_field_paths": [
+              "/Return/ReturnData/IRS990/CYTotalRevenueAmt"
+            ],
+            "xml_sha256": "d6c57a3882b81c561e4d365096390ac97be6685e1f83824833daff27a5684c29"
+          }
+        },
+        "scope_caveat": "Facts are reported by this exact legal filer. No natural-brand resolution, affiliate roll-up, or cross-system comparison was performed.",
+        "status": "ready",
+        "tax_period_end": "2025-06-30",
+        "top_reported_executive": {
+          "name": "CHRISTOPHER CULLOM",
+          "title": "Chief Operating Officer TJH",
+          "total_reported_compensation": 804079
+        },
+        "total_expenses": 2777854723,
+        "total_revenue": 2987121392
+      },
+      "case_id": "jefferson-2025",
+      "condition": "plugin",
+      "failures": [],
+      "latency_ms": 23128.309,
+      "native_web_retrieved_bytes": null,
+      "native_web_retrieved_bytes_note": "Codex JSONL does not expose native web response byte counts.",
+      "repetition": 0,
+      "returncode": 0,
+      "score": {
+        "coverage_checks": {
+          "net_assets": true,
+          "top_reported_executive": true,
+          "total_expenses": true,
+          "total_revenue": true
+        },
+        "coverage_correct": 4,
+        "coverage_total": 4,
+        "fact_checks": {
+          "ein": true,
+          "executive_compensation": true,
+          "executive_name": true,
+          "executive_title": true,
+          "form_type": true,
+          "legal_filer": true,
+          "net_assets": true,
+          "tax_period_end": true,
+          "total_expenses": true,
+          "total_revenue": true
+        },
+        "fact_correct": 10,
+        "fact_total": 10,
+        "provenance_checks": {
+          "net_assets.metric_key": true,
+          "net_assets.object_id": true,
+          "net_assets.reported_label": true,
+          "net_assets.source_url": true,
+          "net_assets.units": true,
+          "net_assets.xml_field_paths": true,
+          "net_assets.xml_sha256": true,
+          "top_reported_executive.metric_key": true,
+          "top_reported_executive.object_id": true,
+          "top_reported_executive.reported_label": true,
+          "top_reported_executive.source_url": true,
+          "top_reported_executive.units": true,
+          "top_reported_executive.xml_field_paths": true,
+          "top_reported_executive.xml_sha256": true,
+          "total_expenses.metric_key": true,
+          "total_expenses.object_id": true,
+          "total_expenses.reported_label": true,
+          "total_expenses.source_url": true,
+          "total_expenses.units": true,
+          "total_expenses.xml_field_paths": true,
+          "total_expenses.xml_sha256": true,
+          "total_revenue.metric_key": true,
+          "total_revenue.object_id": true,
+          "total_revenue.reported_label": true,
+          "total_revenue.source_url": true,
+          "total_revenue.units": true,
+          "total_revenue.xml_field_paths": true,
+          "total_revenue.xml_sha256": true
+        },
+        "provenance_correct": 28,
+        "provenance_total": 28,
+        "scope_honest": true
+      },
+      "sequence": 3,
+      "stderr_tail": "Reading additional input from stdin...\n",
+      "telemetry": {
+        "calls": {
+          "mcp_tool_call": 1
+        },
+        "events": 6,
+        "final_response_bytes": 2240,
+        "jsonl_bytes": 17733,
+        "mcp_result_bytes": 14537,
+        "tokens": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 40448,
+          "input_tokens": 66093,
+          "output_tokens": 1088,
+          "reasoning_output_tokens": 277
+        }
+      },
+      "timed_out": false,
+      "valid": true
+    },
+    {
+      "answer": {
+        "ein": "010238552",
+        "form_type": "990",
+        "legal_filer": "MaineHealth",
+        "net_assets": 2491599605,
+        "provenance": {
+          "net_assets": {
+            "metric_key": "net_assets",
+            "object_id": "202542269349301509",
+            "reported_label": "Net assets or fund balances, end of year",
+            "source_url": "https://apps.irs.gov/pub/epostcard/990/xml/2025/2025_TEOS_XML_08A.zip",
+            "units": "USD",
+            "xml_field_paths": [
+              "/Return/ReturnData/IRS990/NetAssetsOrFundBalancesEOYAmt"
+            ],
+            "xml_sha256": "c541a6df740f4cee7415fa810975818b92b02d0677156b01f99324a4d551c2f7"
+          },
+          "top_reported_executive": {
+            "metric_key": "top_reported_executive",
+            "object_id": "202542269349301509",
+            "reported_label": "Total compensation (Part VII columns D + E + F)",
+            "source_url": "https://apps.irs.gov/pub/epostcard/990/xml/2025/2025_TEOS_XML_08A.zip",
+            "units": "USD",
+            "xml_field_paths": [
+              "/Return/ReturnData/IRS990/Form990PartVIISectionAGrp[25]/ReportableCompFromOrgAmt",
+              "/Return/ReturnData/IRS990/Form990PartVIISectionAGrp[25]/ReportableCompFromRltdOrgAmt",
+              "/Return/ReturnData/IRS990/Form990PartVIISectionAGrp[25]/OtherCompensationAmt"
+            ],
+            "xml_sha256": "c541a6df740f4cee7415fa810975818b92b02d0677156b01f99324a4d551c2f7"
+          },
+          "total_expenses": {
+            "metric_key": "total_expenses",
+            "object_id": "202542269349301509",
+            "reported_label": "Total expenses",
+            "source_url": "https://apps.irs.gov/pub/epostcard/990/xml/2025/2025_TEOS_XML_08A.zip",
+            "units": "USD",
+            "xml_field_paths": [
+              "/Return/ReturnData/IRS990/CYTotalExpensesAmt"
+            ],
+            "xml_sha256": "c541a6df740f4cee7415fa810975818b92b02d0677156b01f99324a4d551c2f7"
+          },
+          "total_revenue": {
+            "metric_key": "total_revenue",
+            "object_id": "202542269349301509",
+            "reported_label": "Total revenue",
+            "source_url": "https://apps.irs.gov/pub/epostcard/990/xml/2025/2025_TEOS_XML_08A.zip",
+            "units": "USD",
+            "xml_field_paths": [
+              "/Return/ReturnData/IRS990/CYTotalRevenueAmt"
+            ],
+            "xml_sha256": "c541a6df740f4cee7415fa810975818b92b02d0677156b01f99324a4d551c2f7"
+          }
+        },
+        "scope_caveat": "Facts are reported by this exact legal filer. No natural-brand resolution, affiliate roll-up, or cross-system comparison was performed.",
+        "status": "ready",
+        "tax_period_end": "2024-09-30",
+        "top_reported_executive": {
+          "name": "Andrew Mueller MD",
+          "title": "CEO and President",
+          "total_reported_compensation": 2277317
+        },
+        "total_expenses": 3970262728,
+        "total_revenue": 4114078544
+      },
+      "case_id": "mainehealth-2024",
+      "condition": "plugin",
+      "failures": [],
+      "latency_ms": 22981.846,
+      "native_web_retrieved_bytes": null,
+      "native_web_retrieved_bytes_note": "Codex JSONL does not expose native web response byte counts.",
+      "repetition": 0,
+      "returncode": 0,
+      "score": {
+        "coverage_checks": {
+          "net_assets": true,
+          "top_reported_executive": true,
+          "total_expenses": true,
+          "total_revenue": true
+        },
+        "coverage_correct": 4,
+        "coverage_total": 4,
+        "fact_checks": {
+          "ein": true,
+          "executive_compensation": true,
+          "executive_name": true,
+          "executive_title": true,
+          "form_type": true,
+          "legal_filer": true,
+          "net_assets": true,
+          "tax_period_end": true,
+          "total_expenses": true,
+          "total_revenue": true
+        },
+        "fact_correct": 10,
+        "fact_total": 10,
+        "provenance_checks": {
+          "net_assets.metric_key": true,
+          "net_assets.object_id": true,
+          "net_assets.reported_label": true,
+          "net_assets.source_url": true,
+          "net_assets.units": true,
+          "net_assets.xml_field_paths": true,
+          "net_assets.xml_sha256": true,
+          "top_reported_executive.metric_key": true,
+          "top_reported_executive.object_id": true,
+          "top_reported_executive.reported_label": true,
+          "top_reported_executive.source_url": true,
+          "top_reported_executive.units": true,
+          "top_reported_executive.xml_field_paths": true,
+          "top_reported_executive.xml_sha256": true,
+          "total_expenses.metric_key": true,
+          "total_expenses.object_id": true,
+          "total_expenses.reported_label": true,
+          "total_expenses.source_url": true,
+          "total_expenses.units": true,
+          "total_expenses.xml_field_paths": true,
+          "total_expenses.xml_sha256": true,
+          "total_revenue.metric_key": true,
+          "total_revenue.object_id": true,
+          "total_revenue.reported_label": true,
+          "total_revenue.source_url": true,
+          "total_revenue.units": true,
+          "total_revenue.xml_field_paths": true,
+          "total_revenue.xml_sha256": true
+        },
+        "provenance_correct": 28,
+        "provenance_total": 28,
+        "scope_honest": true
+      },
+      "sequence": 4,
+      "stderr_tail": "Reading additional input from stdin...\n",
+      "telemetry": {
+        "calls": {
+          "mcp_tool_call": 1
+        },
+        "events": 7,
+        "final_response_bytes": 2203,
+        "jsonl_bytes": 17489,
+        "mcp_result_bytes": 14049,
+        "tokens": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 43520,
+          "input_tokens": 71127,
+          "output_tokens": 1088,
+          "reasoning_output_tokens": 288
+        }
+      },
+      "timed_out": false,
+      "valid": true
+    },
+    {
+      "answer": {
+        "ein": "010238552",
+        "form_type": "990",
+        "legal_filer": "MaineHealth",
+        "net_assets": 2491599605,
+        "provenance": {
+          "net_assets": {
+            "metric_key": "net_assets_end_of_year",
+            "object_id": "202542269349301509",
+            "reported_label": "Net assets or fund balances",
+            "source_url": "https://apps.irs.gov/pub/epostcard/990/xml/2025/2025_TEOS_XML_08A.zip",
+            "units": "USD, whole dollars",
+            "xml_field_paths": [
+              "/Return/ReturnData/IRS990/NetAssetsOrFundBalancesEOYAmt"
+            ],
+            "xml_sha256": "c541a6df740f4cee7415fa810975818b92b02d0677156b01f99324a4d551c2f7"
+          },
+          "top_reported_executive": {
+            "metric_key": "top_reported_executive_total_compensation_d_plus_e_plus_f",
+            "object_id": "202542269349301509",
+            "reported_label": "Form 990 Part VII, Section A, columns D + E + F (derived sum)",
+            "source_url": "https://apps.irs.gov/pub/epostcard/990/xml/2025/2025_TEOS_XML_08A.zip",
+            "units": "USD, whole dollars",
+            "xml_field_paths": [
+              "/Return/ReturnData/IRS990/Form990PartVIISectionAGrp[25]/PersonNm",
+              "/Return/ReturnData/IRS990/Form990PartVIISectionAGrp[25]/TitleTxt",
+              "/Return/ReturnData/IRS990/Form990PartVIISectionAGrp[25]/ReportableCompFromOrgAmt",
+              "/Return/ReturnData/IRS990/Form990PartVIISectionAGrp[25]/ReportableCompFromRltdOrgAmt",
+              "/Return/ReturnData/IRS990/Form990PartVIISectionAGrp[25]/OtherCompensationAmt"
+            ],
+            "xml_sha256": "c541a6df740f4cee7415fa810975818b92b02d0677156b01f99324a4d551c2f7"
+          },
+          "total_expenses": {
+            "metric_key": "total_expenses",
+            "object_id": "202542269349301509",
+            "reported_label": "Total expenses",
+            "source_url": "https://apps.irs.gov/pub/epostcard/990/xml/2025/2025_TEOS_XML_08A.zip",
+            "units": "USD, whole dollars",
+            "xml_field_paths": [
+              "/Return/ReturnData/IRS990/CYTotalExpensesAmt"
+            ],
+            "xml_sha256": "c541a6df740f4cee7415fa810975818b92b02d0677156b01f99324a4d551c2f7"
+          },
+          "total_revenue": {
+            "metric_key": "total_revenue",
+            "object_id": "202542269349301509",
+            "reported_label": "Total revenue",
+            "source_url": "https://apps.irs.gov/pub/epostcard/990/xml/2025/2025_TEOS_XML_08A.zip",
+            "units": "USD, whole dollars",
+            "xml_field_paths": [
+              "/Return/ReturnData/IRS990/CYTotalRevenueAmt"
+            ],
+            "xml_sha256": "c541a6df740f4cee7415fa810975818b92b02d0677156b01f99324a4d551c2f7"
+          }
+        },
+        "scope_caveat": "Exact filer only: MaineHealth, EIN 010238552, for the tax period ended 2024-09-30. These facts come solely from that legal filer's Form 990; no amounts or individuals were rolled up, substituted, or inferred from any MaineHealth brand entity, affiliate, related organization, hospital, or subsidiary.",
+        "status": "ready",
+        "tax_period_end": "2024-09-30",
+        "top_reported_executive": {
+          "name": "Andrew Mueller MD",
+          "title": "CEO and President",
+          "total_reported_compensation": 2277317
+        },
+        "total_expenses": 3970262728,
+        "total_revenue": 4114078544
+      },
+      "case_id": "mainehealth-2024",
+      "condition": "native",
+      "failures": [],
+      "latency_ms": 196487.543,
+      "native_web_retrieved_bytes": null,
+      "native_web_retrieved_bytes_note": "Codex JSONL does not expose native web response byte counts.",
+      "repetition": 0,
+      "returncode": 0,
+      "score": {
+        "coverage_checks": {
+          "net_assets": true,
+          "top_reported_executive": true,
+          "total_expenses": true,
+          "total_revenue": true
+        },
+        "coverage_correct": 4,
+        "coverage_total": 4,
+        "fact_checks": {
+          "ein": true,
+          "executive_compensation": true,
+          "executive_name": true,
+          "executive_title": true,
+          "form_type": true,
+          "legal_filer": true,
+          "net_assets": true,
+          "tax_period_end": true,
+          "total_expenses": true,
+          "total_revenue": true
+        },
+        "fact_correct": 10,
+        "fact_total": 10,
+        "provenance_checks": {
+          "net_assets.metric_key": false,
+          "net_assets.object_id": true,
+          "net_assets.reported_label": false,
+          "net_assets.source_url": true,
+          "net_assets.units": false,
+          "net_assets.xml_field_paths": true,
+          "net_assets.xml_sha256": true,
+          "top_reported_executive.metric_key": false,
+          "top_reported_executive.object_id": true,
+          "top_reported_executive.reported_label": false,
+          "top_reported_executive.source_url": true,
+          "top_reported_executive.units": false,
+          "top_reported_executive.xml_field_paths": false,
+          "top_reported_executive.xml_sha256": true,
+          "total_expenses.metric_key": true,
+          "total_expenses.object_id": true,
+          "total_expenses.reported_label": true,
+          "total_expenses.source_url": true,
+          "total_expenses.units": false,
+          "total_expenses.xml_field_paths": true,
+          "total_expenses.xml_sha256": true,
+          "total_revenue.metric_key": true,
+          "total_revenue.object_id": true,
+          "total_revenue.reported_label": true,
+          "total_revenue.source_url": true,
+          "total_revenue.units": false,
+          "total_revenue.xml_field_paths": true,
+          "total_revenue.xml_sha256": true
+        },
+        "provenance_correct": 19,
+        "provenance_total": 28,
+        "scope_honest": true
+      },
+      "sequence": 5,
+      "stderr_tail": "Reading additional input from stdin...\n",
+      "telemetry": {
+        "calls": {
+          "mcp_tool_call": 11,
+          "web_search": 5
+        },
+        "events": 36,
+        "final_response_bytes": 2610,
+        "jsonl_bytes": 73444,
+        "mcp_result_bytes": 50523,
+        "tokens": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 793856,
+          "input_tokens": 870365,
+          "output_tokens": 7069,
+          "reasoning_output_tokens": 3425
+        }
+      },
+      "timed_out": false,
+      "valid": true
+    },
+    {
+      "answer": {
+        "ein": "362174823",
+        "form_type": null,
+        "legal_filer": "Rush University Medical Center",
+        "net_assets": null,
+        "provenance": {
+          "net_assets": null,
+          "top_reported_executive": null,
+          "total_expenses": null,
+          "total_revenue": null
+        },
+        "scope_caveat": "I\u2019m locating the exact IRS e-file and will return only the completed schema in the final response.",
+        "status": "ready",
+        "tax_period_end": null,
+        "top_reported_executive": null,
+        "total_expenses": null,
+        "total_revenue": null
+      },
+      "case_id": "rush-2025",
+      "condition": "native",
+      "failures": [
+        "timeout"
+      ],
+      "latency_ms": 300017.333,
+      "native_web_retrieved_bytes": null,
+      "native_web_retrieved_bytes_note": "Codex JSONL does not expose native web response byte counts.",
+      "repetition": 0,
+      "returncode": null,
+      "score": {
+        "coverage_checks": {
+          "net_assets": true,
+          "top_reported_executive": true,
+          "total_expenses": true,
+          "total_revenue": true
+        },
+        "coverage_correct": 4,
+        "coverage_total": 4,
+        "fact_checks": {
+          "ein": true,
+          "executive_compensation": false,
+          "executive_name": false,
+          "executive_title": false,
+          "form_type": false,
+          "legal_filer": true,
+          "net_assets": false,
+          "tax_period_end": false,
+          "total_expenses": false,
+          "total_revenue": false
+        },
+        "fact_correct": 2,
+        "fact_total": 10,
+        "provenance_checks": {
+          "net_assets.metric_key": false,
+          "net_assets.object_id": false,
+          "net_assets.reported_label": false,
+          "net_assets.source_url": false,
+          "net_assets.units": false,
+          "net_assets.xml_field_paths": false,
+          "net_assets.xml_sha256": false,
+          "top_reported_executive.metric_key": false,
+          "top_reported_executive.object_id": false,
+          "top_reported_executive.reported_label": false,
+          "top_reported_executive.source_url": false,
+          "top_reported_executive.units": false,
+          "top_reported_executive.xml_field_paths": false,
+          "top_reported_executive.xml_sha256": false,
+          "total_expenses.metric_key": false,
+          "total_expenses.object_id": false,
+          "total_expenses.reported_label": false,
+          "total_expenses.source_url": false,
+          "total_expenses.units": false,
+          "total_expenses.xml_field_paths": false,
+          "total_expenses.xml_sha256": false,
+          "total_revenue.metric_key": false,
+          "total_revenue.object_id": false,
+          "total_revenue.reported_label": false,
+          "total_revenue.source_url": false,
+          "total_revenue.units": false,
+          "total_revenue.xml_field_paths": false,
+          "total_revenue.xml_sha256": false
+        },
+        "provenance_correct": 0,
+        "provenance_total": 28,
+        "scope_honest": false
+      },
+      "sequence": 6,
+      "stderr_tail": "Reading additional input from stdin...\n",
+      "telemetry": {
+        "calls": {
+          "mcp_tool_call": 14,
+          "web_search": 8
+        },
+        "events": 48,
+        "final_response_bytes": 437,
+        "jsonl_bytes": 44067,
+        "mcp_result_bytes": 15916,
+        "tokens": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "reasoning_output_tokens": 0
+        }
+      },
+      "timed_out": true,
+      "valid": false
+    },
+    {
+      "answer": {
+        "ein": "362174823",
+        "form_type": "990",
+        "legal_filer": "Rush University Medical Center",
+        "net_assets": 3295855783,
+        "provenance": {
+          "net_assets": {
+            "metric_key": "net_assets",
+            "object_id": "202631349349312808",
+            "reported_label": "Net assets or fund balances, end of year",
+            "source_url": "https://apps.irs.gov/pub/epostcard/990/xml/2026/2026_TEOS_XML_05B.zip",
+            "units": "USD",
+            "xml_field_paths": [
+              "/Return/ReturnData/IRS990/NetAssetsOrFundBalancesEOYAmt"
+            ],
+            "xml_sha256": "93509369dab5d8097eb7ee37214da3fb4c6961ba05f12e80868c6b5133c794ca"
+          },
+          "top_reported_executive": {
+            "metric_key": "top_reported_executive",
+            "object_id": "202631349349312808",
+            "reported_label": "Total compensation (Part VII columns D + E + F)",
+            "source_url": "https://apps.irs.gov/pub/epostcard/990/xml/2026/2026_TEOS_XML_05B.zip",
+            "units": "USD",
+            "xml_field_paths": [
+              "/Return/ReturnData/IRS990/Form990PartVIISectionAGrp[59]/ReportableCompFromOrgAmt",
+              "/Return/ReturnData/IRS990/Form990PartVIISectionAGrp[59]/ReportableCompFromRltdOrgAmt",
+              "/Return/ReturnData/IRS990/Form990PartVIISectionAGrp[59]/OtherCompensationAmt"
+            ],
+            "xml_sha256": "93509369dab5d8097eb7ee37214da3fb4c6961ba05f12e80868c6b5133c794ca"
+          },
+          "total_expenses": {
+            "metric_key": "total_expenses",
+            "object_id": "202631349349312808",
+            "reported_label": "Total expenses",
+            "source_url": "https://apps.irs.gov/pub/epostcard/990/xml/2026/2026_TEOS_XML_05B.zip",
+            "units": "USD",
+            "xml_field_paths": [
+              "/Return/ReturnData/IRS990/CYTotalExpensesAmt"
+            ],
+            "xml_sha256": "93509369dab5d8097eb7ee37214da3fb4c6961ba05f12e80868c6b5133c794ca"
+          },
+          "total_revenue": {
+            "metric_key": "total_revenue",
+            "object_id": "202631349349312808",
+            "reported_label": "Total revenue",
+            "source_url": "https://apps.irs.gov/pub/epostcard/990/xml/2026/2026_TEOS_XML_05B.zip",
+            "units": "USD",
+            "xml_field_paths": [
+              "/Return/ReturnData/IRS990/CYTotalRevenueAmt"
+            ],
+            "xml_sha256": "93509369dab5d8097eb7ee37214da3fb4c6961ba05f12e80868c6b5133c794ca"
+          }
+        },
+        "scope_caveat": "Facts are reported by this exact legal filer, Rush University Medical Center (EIN 362174823), for the tax period ending 2025-06-30. No natural-brand resolution, affiliate roll-up, or cross-system comparison was performed.",
+        "status": "ready",
+        "tax_period_end": "2025-06-30",
+        "top_reported_executive": {
+          "name": "Omar B Lateef DO",
+          "title": "President & Chief Executive Officer, RUSH",
+          "total_reported_compensation": 4819778
+        },
+        "total_expenses": 2347044424,
+        "total_revenue": 2758712727
+      },
+      "case_id": "rush-2025",
+      "condition": "plugin",
+      "failures": [],
+      "latency_ms": 20226.253,
+      "native_web_retrieved_bytes": null,
+      "native_web_retrieved_bytes_note": "Codex JSONL does not expose native web response byte counts.",
+      "repetition": 0,
+      "returncode": 0,
+      "score": {
+        "coverage_checks": {
+          "net_assets": true,
+          "top_reported_executive": true,
+          "total_expenses": true,
+          "total_revenue": true
+        },
+        "coverage_correct": 4,
+        "coverage_total": 4,
+        "fact_checks": {
+          "ein": true,
+          "executive_compensation": true,
+          "executive_name": true,
+          "executive_title": true,
+          "form_type": true,
+          "legal_filer": true,
+          "net_assets": true,
+          "tax_period_end": true,
+          "total_expenses": true,
+          "total_revenue": true
+        },
+        "fact_correct": 10,
+        "fact_total": 10,
+        "provenance_checks": {
+          "net_assets.metric_key": true,
+          "net_assets.object_id": true,
+          "net_assets.reported_label": true,
+          "net_assets.source_url": true,
+          "net_assets.units": true,
+          "net_assets.xml_field_paths": true,
+          "net_assets.xml_sha256": true,
+          "top_reported_executive.metric_key": true,
+          "top_reported_executive.object_id": true,
+          "top_reported_executive.reported_label": true,
+          "top_reported_executive.source_url": true,
+          "top_reported_executive.units": true,
+          "top_reported_executive.xml_field_paths": true,
+          "top_reported_executive.xml_sha256": true,
+          "total_expenses.metric_key": true,
+          "total_expenses.object_id": true,
+          "total_expenses.reported_label": true,
+          "total_expenses.source_url": true,
+          "total_expenses.units": true,
+          "total_expenses.xml_field_paths": true,
+          "total_expenses.xml_sha256": true,
+          "total_revenue.metric_key": true,
+          "total_revenue.object_id": true,
+          "total_revenue.reported_label": true,
+          "total_revenue.source_url": true,
+          "total_revenue.units": true,
+          "total_revenue.xml_field_paths": true,
+          "total_revenue.xml_sha256": true
+        },
+        "provenance_correct": 28,
+        "provenance_total": 28,
+        "scope_honest": true
+      },
+      "sequence": 7,
+      "stderr_tail": "Reading additional input from stdin...\n",
+      "telemetry": {
+        "calls": {
+          "mcp_tool_call": 1
+        },
+        "events": 6,
+        "final_response_bytes": 2331,
+        "jsonl_bytes": 17688,
+        "mcp_result_bytes": 14401,
+        "tokens": {
+          "cache_write_input_tokens": 0,
+          "cached_input_tokens": 39424,
+          "input_tokens": 63999,
+          "output_tokens": 1009,
+          "reasoning_output_tokens": 184
+        }
+      },
+      "timed_out": false,
+      "valid": true
+    }
+  ],
+  "warm_target": true
+}

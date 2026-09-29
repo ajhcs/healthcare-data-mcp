@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.ushso.org/healthcare-data-platform/storage/v1/raw-artifact-lifecycle.schema.json",
+  "title": "Healthcare Data Platform raw-artifact lifecycle metadata v1",
+  "description": "Mutable lifecycle metadata bound to immutable raw custody. Quarantine is recoverable; permanent deletion is outside this contract.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "record_type",
+    "artifact_id",
+    "content_sha256",
+    "byte_length",
+    "retention_class",
+    "reference_count",
+    "legal_hold",
+    "created_at",
+    "grace_until",
+    "expires_at",
+    "state",
+    "quarantined_at",
+    "quarantine_manifest",
+    "quarantine_object",
+    "object_retained"
+  ],
+  "properties": {
+    "schema_version": {"const": "hdp.raw-lifecycle.v1", "type": "string"},
+    "record_type": {"const": "raw_artifact_lifecycle", "type": "string"},
+    "artifact_id": {"type": "string", "pattern": "^artifact:[a-z0-9][a-z0-9._:-]*$"},
+    "content_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "byte_length": {"type": "integer", "minimum": 1},
+    "retention_class": {"enum": ["hot", "warm", "cold", "rebuildable", "append_only", "indefinite", "legal_hold"]},
+    "reference_count": {"type": "integer", "minimum": 0},
+    "legal_hold": {"type": "boolean"},
+    "created_at": {"type": "string", "format": "date-time"},
+    "grace_until": {"type": ["string", "null"], "format": "date-time"},
+    "expires_at": {"type": ["string", "null"], "format": "date-time"},
+    "state": {"enum": ["active", "quarantined"]},
+    "quarantined_at": {"type": ["string", "null"], "format": "date-time"},
+    "quarantine_manifest": {"type": ["string", "null"], "pattern": "^lifecycle/quarantine/[A-Za-z0-9._:/-]+$"},
+    "quarantine_object": {"type": ["string", "null"], "pattern": "^lifecycle/quarantine/[A-Za-z0-9._:/-]+$"},
+    "object_retained": {"type": "boolean"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"state": {"const": "active"}}},
+      "then": {
+        "properties": {
+          "quarantined_at": {"type": "null"},
+          "quarantine_manifest": {"type": "null"},
+          "quarantine_object": {"type": "null"},
+          "object_retained": {"const": false}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"state": {"const": "quarantined"}}},
+      "then": {
+        "required": ["quarantined_at", "quarantine_manifest"],
+        "properties": {"quarantined_at": {"type": "string"}}
+      }
+    },
+    {
+      "if": {"properties": {"retention_class": {"enum": ["legal_hold"]}}},
+      "then": {"properties": {"legal_hold": {"const": true}}}
+    }
+  ]
+}
