@@ -1,0 +1,27 @@
+{
+  "schema_version": "hdp.lighthouse-fixture.v1",
+  "record_type": "lighthouse_fixture",
+  "fixture_id": "fixture:lighthouse:ahrq-changed",
+  "source_id": "source:ahrq:lighthouse",
+  "source_url": "https://example.gov/ahrq/lighthouse/release.json",
+  "release_id": "release:ahrq:2026-08-22",
+  "release_label": "AHRQ synthetic official release 2026-08-22",
+  "release_fingerprint": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+  "response_fingerprint": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+  "prior_release_fingerprint": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "probe_state": "changed",
+  "failure_reason": null,
+  "body": "{\"release\":\"2026-08-22\",\"facilities\":[{\"id\":\"ahrq-001\",\"name\":\"Synthetic General\"}]}\n",
+  "artifact": {
+    "artifact_id": "artifact:lighthouse:ahrq-changed",
+    "content_sha256": "sha256:83bd13b2f570b2b55d37cf6b8baaa3071a280d501bb48fd8441db98cbdd554cf",
+    "byte_length": 85,
+    "media_type": "application/json"
+  },
+  "budget": {
+    "max_bytes": 4096,
+    "max_chunks": 8,
+    "chunk_size": 32,
+    "max_seconds": 5
+  }
+}

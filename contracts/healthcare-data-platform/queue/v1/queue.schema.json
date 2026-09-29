@@ -1,0 +1,226 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.ushso.org/healthcare-data-platform/queue/v1/queue.schema.json",
+  "title": "Healthcare Data Platform durable queue v1",
+  "oneOf": [
+    {"$ref": "#/$defs/queuePolicy"},
+    {"$ref": "#/$defs/workItem"},
+    {"$ref": "#/$defs/leaseReceipt"},
+    {"$ref": "#/$defs/enqueueReceipt"},
+    {"$ref": "#/$defs/claimResult"},
+    {"$ref": "#/$defs/recoveryReceipt"}
+  ],
+  "$defs": {
+    "sourceId": {
+      "type": "string",
+      "pattern": "^source:[a-z0-9][a-z0-9._:-]*$",
+      "maxLength": 200
+    },
+    "workId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+    },
+    "fingerprint": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "reason": {
+      "type": ["string", "null"],
+      "maxLength": 512
+    },
+    "sourceBudget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["max_active_items", "max_active_bytes"],
+      "properties": {
+        "max_active_items": {"type": "integer", "minimum": 1, "maximum": 100000},
+        "max_active_bytes": {"type": "integer", "minimum": 1, "maximum": 1073741824}
+      }
+    },
+    "queuePolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "record_type",
+        "max_active_items",
+        "max_active_bytes",
+        "lease_ttl_seconds",
+        "heartbeat_extension_seconds",
+        "retry_delay_seconds",
+        "max_attempts",
+        "source_budgets"
+      ],
+      "properties": {
+        "schema_version": {"const": "hdp.queue.v1"},
+        "record_type": {"const": "queue_policy"},
+        "max_active_items": {"type": "integer", "minimum": 1, "maximum": 100000},
+        "max_active_bytes": {"type": "integer", "minimum": 1, "maximum": 1073741824},
+        "lease_ttl_seconds": {"type": "number", "exclusiveMinimum": 0, "maximum": 86400},
+        "heartbeat_extension_seconds": {"type": "number", "exclusiveMinimum": 0, "maximum": 86400},
+        "retry_delay_seconds": {"type": "number", "minimum": 0, "maximum": 86400},
+        "max_attempts": {"type": "integer", "minimum": 1, "maximum": 100},
+        "source_budgets": {
+          "type": "object",
+          "propertyNames": {"pattern": "^source:[a-z0-9][a-z0-9._:-]*$", "maxLength": 200},
+          "additionalProperties": {"$ref": "#/$defs/sourceBudget"}
+        }
+      }
+    },
+    "workItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "record_type",
+        "work_id",
+        "source_id",
+        "work_identity",
+        "payload_sha256",
+        "payload_ref",
+        "byte_size",
+        "state",
+        "priority",
+        "available_at",
+        "attempt_count",
+        "max_attempts",
+        "created_at",
+        "updated_at",
+        "claimed_at",
+        "lease_expires_at",
+        "lease_owner",
+        "last_error",
+        "blocked_reason",
+        "poison_reason",
+        "completed_at"
+      ],
+      "properties": {
+        "schema_version": {"const": "hdp.queue.v1"},
+        "record_type": {"const": "queue_work_item"},
+        "work_id": {"$ref": "#/$defs/workId"},
+        "source_id": {"$ref": "#/$defs/sourceId"},
+        "work_identity": {"$ref": "#/$defs/workId"},
+        "payload_sha256": {"$ref": "#/$defs/fingerprint"},
+        "payload_ref": {"type": "string", "minLength": 1, "maxLength": 512, "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,511}$"},
+        "byte_size": {"type": "integer", "minimum": 1, "maximum": 1073741824},
+        "state": {"enum": ["queued", "leased", "retry_wait", "completed", "poison"]},
+        "priority": {"type": "integer", "minimum": 0, "maximum": 100},
+        "available_at": {"$ref": "#/$defs/timestamp"},
+        "attempt_count": {"type": "integer", "minimum": 0, "maximum": 100},
+        "max_attempts": {"type": "integer", "minimum": 1, "maximum": 100},
+        "created_at": {"$ref": "#/$defs/timestamp"},
+        "updated_at": {"$ref": "#/$defs/timestamp"},
+        "claimed_at": {"type": ["string", "null"], "format": "date-time"},
+        "lease_expires_at": {"type": ["string", "null"], "format": "date-time"},
+        "lease_owner": {"type": ["string", "null"], "maxLength": 128},
+        "last_error": {"$ref": "#/$defs/reason"},
+        "blocked_reason": {"$ref": "#/$defs/reason"},
+        "poison_reason": {"$ref": "#/$defs/reason"},
+        "completed_at": {"type": ["string", "null"], "format": "date-time"}
+      }
+    },
+    "leaseReceipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "record_type",
+        "work_id",
+        "source_id",
+        "work_identity",
+        "payload_sha256",
+        "payload_ref",
+        "byte_size",
+        "owner",
+        "attempt",
+        "leased_at",
+        "lease_expires_at"
+      ],
+      "properties": {
+        "schema_version": {"const": "hdp.queue.v1"},
+        "record_type": {"const": "queue_lease_receipt"},
+        "work_id": {"$ref": "#/$defs/workId"},
+        "source_id": {"$ref": "#/$defs/sourceId"},
+        "work_identity": {"$ref": "#/$defs/workId"},
+        "payload_sha256": {"$ref": "#/$defs/fingerprint"},
+        "payload_ref": {"type": "string", "minLength": 1, "maxLength": 512, "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,511}$"},
+        "byte_size": {"type": "integer", "minimum": 1, "maximum": 1073741824},
+        "owner": {"type": "string", "minLength": 1, "maxLength": 128},
+        "attempt": {"type": "integer", "minimum": 1, "maximum": 100},
+        "leased_at": {"$ref": "#/$defs/timestamp"},
+        "lease_expires_at": {"$ref": "#/$defs/timestamp"},
+        "lease_token": {"type": "string", "minLength": 1, "maxLength": 256}
+      }
+    },
+    "enqueueReceipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "record_type",
+        "action",
+        "work_id",
+        "source_id",
+        "work_identity",
+        "payload_sha256",
+        "byte_size"
+      ],
+      "properties": {
+        "schema_version": {"const": "hdp.queue.v1"},
+        "record_type": {"const": "queue_enqueue_receipt"},
+        "action": {"enum": ["enqueued", "duplicate"]},
+        "work_id": {"$ref": "#/$defs/workId"},
+        "source_id": {"$ref": "#/$defs/sourceId"},
+        "work_identity": {"$ref": "#/$defs/workId"},
+        "payload_sha256": {"$ref": "#/$defs/fingerprint"},
+        "byte_size": {"type": "integer", "minimum": 1, "maximum": 1073741824}
+      }
+    },
+    "claimResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "record_type", "state", "leases", "decisions"],
+      "properties": {
+        "schema_version": {"const": "hdp.queue.v1"},
+        "record_type": {"const": "queue_claim_result"},
+        "state": {"enum": ["claimed", "backpressure", "empty"]},
+        "leases": {"type": "array", "items": {"$ref": "#/$defs/leaseReceipt"}},
+        "decisions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["work_id", "source_id", "reason", "active_items", "active_bytes"],
+            "properties": {
+              "work_id": {"$ref": "#/$defs/workId"},
+              "source_id": {"$ref": "#/$defs/sourceId"},
+              "reason": {"enum": ["global_item_budget", "global_byte_budget", "source_item_budget", "source_byte_budget"]},
+              "active_items": {"type": "integer", "minimum": 0},
+              "active_bytes": {"type": "integer", "minimum": 0}
+            }
+          }
+        }
+      }
+    },
+    "recoveryReceipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "record_type", "work_id", "source_id", "state", "attempt", "reason"],
+      "properties": {
+        "schema_version": {"const": "hdp.queue.v1"},
+        "record_type": {"const": "queue_recovery_receipt"},
+        "work_id": {"$ref": "#/$defs/workId"},
+        "source_id": {"$ref": "#/$defs/sourceId"},
+        "state": {"enum": ["requeued", "poisoned"]},
+        "attempt": {"type": "integer", "minimum": 1, "maximum": 100},
+        "reason": {"type": "string", "minLength": 1, "maxLength": 512}
+      }
+    }
+  }
+}

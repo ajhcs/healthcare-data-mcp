@@ -1,0 +1,268 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.ushso.org/healthcare-data-platform/replay/v1/replay.schema.json",
+  "title": "Healthcare Data Platform replay and backfill v1",
+  "oneOf": [
+    {"$ref": "#/$defs/plan"},
+    {"$ref": "#/$defs/checkpoint"},
+    {"$ref": "#/$defs/dryRunDiff"},
+    {"$ref": "#/$defs/submission"},
+    {"$ref": "#/$defs/execution"}
+  ],
+  "$defs": {
+    "sourceId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "pattern": "^source:[A-Za-z0-9][A-Za-z0-9._:-]*$"
+    },
+    "versionId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^(?:version|release):[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+    },
+    "contractVersion": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+    },
+    "planId": {
+      "type": "string",
+      "pattern": "^replay:plan:[0-9a-f]{64}$",
+      "maxLength": 77
+    },
+    "itemId": {
+      "type": "string",
+      "pattern": "^replay:item:[0-9a-f]{64}$",
+      "maxLength": 78
+    },
+    "workIdentity": {
+      "type": "string",
+      "pattern": "^replay:work:[0-9a-f]{64}$",
+      "maxLength": 78
+    },
+    "idempotencyKey": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^replay:[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+    },
+    "fingerprint": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "boundedError": {
+      "type": ["string", "null"],
+      "maxLength": 512,
+      "pattern": "^[^\\u0000-\\u001f\\u007f]*$"
+    },
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["result_sha256", "result_ref", "result_bytes"],
+      "properties": {
+        "result_sha256": {"$ref": "#/$defs/fingerprint"},
+        "result_ref": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,511}$"
+        },
+        "result_bytes": {"type": "integer", "minimum": 1, "maximum": 1073741824}
+      }
+    },
+    "item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "item_id",
+        "work_identity",
+        "source_id",
+        "version",
+        "ordinal",
+        "estimated_bytes",
+        "state",
+        "attempts",
+        "result_sha256",
+        "result_ref",
+        "result_bytes",
+        "error",
+        "started_at",
+        "completed_at"
+      ],
+      "properties": {
+        "item_id": {"$ref": "#/$defs/itemId"},
+        "work_identity": {"$ref": "#/$defs/workIdentity"},
+        "source_id": {"$ref": "#/$defs/sourceId"},
+        "version": {"$ref": "#/$defs/versionId"},
+        "ordinal": {"type": "integer", "minimum": 0, "maximum": 100000},
+        "estimated_bytes": {"type": "integer", "minimum": 1, "maximum": 1073741824},
+        "state": {"enum": ["pending", "in_progress", "completed", "failed"]},
+        "attempts": {"type": "integer", "minimum": 0, "maximum": 100},
+        "result_sha256": {"anyOf": [{"$ref": "#/$defs/fingerprint"}, {"type": "null"}]},
+        "result_ref": {
+          "anyOf": [
+            {"type": "null"},
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,511}$"
+            }
+          ]
+        },
+        "result_bytes": {
+          "anyOf": [
+            {"type": "null"},
+            {"type": "integer", "minimum": 1, "maximum": 1073741824}
+          ]
+        },
+        "error": {"$ref": "#/$defs/boundedError"},
+        "started_at": {"anyOf": [{"$ref": "#/$defs/timestamp"}, {"type": "null"}]},
+        "completed_at": {"anyOf": [{"$ref": "#/$defs/timestamp"}, {"type": "null"}]}
+      }
+    },
+    "plan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "record_type",
+        "plan_id",
+        "idempotency_key",
+        "plan_sha256",
+        "source_id",
+        "from_version",
+        "to_version",
+        "contract_version",
+        "max_items",
+        "max_bytes",
+        "state",
+        "cancel_requested",
+        "created_at",
+        "updated_at",
+        "items"
+      ],
+      "properties": {
+        "schema_version": {"const": "hdp.replay.v1"},
+        "record_type": {"const": "replay_plan"},
+        "plan_id": {"$ref": "#/$defs/planId"},
+        "idempotency_key": {"$ref": "#/$defs/idempotencyKey"},
+        "plan_sha256": {"$ref": "#/$defs/fingerprint"},
+        "source_id": {"$ref": "#/$defs/sourceId"},
+        "from_version": {"$ref": "#/$defs/versionId"},
+        "to_version": {"$ref": "#/$defs/versionId"},
+        "contract_version": {"$ref": "#/$defs/contractVersion"},
+        "max_items": {"type": "integer", "minimum": 1, "maximum": 100000},
+        "max_bytes": {"type": "integer", "minimum": 1, "maximum": 1073741824},
+        "state": {"enum": ["planned", "running", "cancel_requested", "cancelled", "completed", "failed"]},
+        "cancel_requested": {"type": "boolean"},
+        "created_at": {"anyOf": [{"$ref": "#/$defs/timestamp"}, {"type": "null"}]},
+        "updated_at": {"anyOf": [{"$ref": "#/$defs/timestamp"}, {"type": "null"}]},
+        "items": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 100000,
+          "items": {"$ref": "#/$defs/item"}
+        }
+      }
+    },
+    "checkpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "record_type",
+        "plan_id",
+        "next_ordinal",
+        "completed_items",
+        "completed_bytes",
+        "last_item_id",
+        "checkpoint_sha256",
+        "updated_at"
+      ],
+      "properties": {
+        "schema_version": {"const": "hdp.replay.v1"},
+        "record_type": {"const": "replay_checkpoint"},
+        "plan_id": {"$ref": "#/$defs/planId"},
+        "next_ordinal": {"type": "integer", "minimum": 0, "maximum": 100000},
+        "completed_items": {"type": "integer", "minimum": 0, "maximum": 100000},
+        "completed_bytes": {"type": "integer", "minimum": 0, "maximum": 1073741824},
+        "last_item_id": {"anyOf": [{"$ref": "#/$defs/itemId"}, {"type": "null"}]},
+        "checkpoint_sha256": {"$ref": "#/$defs/fingerprint"},
+        "updated_at": {"$ref": "#/$defs/timestamp"}
+      }
+    },
+    "idList": {
+      "type": "array",
+      "maxItems": 100000,
+      "items": {"$ref": "#/$defs/itemId"}
+    },
+    "dryRunDiff": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "record_type",
+        "plan_id",
+        "plan_sha256",
+        "new_items",
+        "already_completed",
+        "in_progress",
+        "conflicts"
+      ],
+      "properties": {
+        "schema_version": {"const": "hdp.replay.v1"},
+        "record_type": {"const": "replay_dry_run_diff"},
+        "plan_id": {"$ref": "#/$defs/planId"},
+        "plan_sha256": {"$ref": "#/$defs/fingerprint"},
+        "new_items": {"$ref": "#/$defs/idList"},
+        "already_completed": {"$ref": "#/$defs/idList"},
+        "in_progress": {"$ref": "#/$defs/idList"},
+        "conflicts": {"$ref": "#/$defs/idList"}
+      }
+    },
+    "submission": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "record_type", "action", "plan"],
+      "properties": {
+        "schema_version": {"const": "hdp.replay.v1"},
+        "record_type": {"const": "replay_submission"},
+        "action": {"enum": ["created", "duplicate"]},
+        "plan": {"$ref": "#/$defs/plan"}
+      }
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "record_type",
+        "plan_id",
+        "state",
+        "attempted_items",
+        "completed_items",
+        "remaining_items",
+        "checkpoint"
+      ],
+      "properties": {
+        "schema_version": {"const": "hdp.replay.v1"},
+        "record_type": {"const": "replay_execution"},
+        "plan_id": {"$ref": "#/$defs/planId"},
+        "state": {"enum": ["planned", "running", "cancel_requested", "cancelled", "completed", "failed"]},
+        "attempted_items": {"type": "integer", "minimum": 0, "maximum": 100000},
+        "completed_items": {"type": "integer", "minimum": 0, "maximum": 100000},
+        "remaining_items": {"type": "integer", "minimum": 0, "maximum": 100000},
+        "checkpoint": {"$ref": "#/$defs/checkpoint"},
+        "error": {"$ref": "#/$defs/boundedError"}
+      }
+    }
+  }
+}

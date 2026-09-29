@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "form-990-facts": {
+      "url": "http://192.168.1.60:8022/mcp",
+      "required": true,
+      "startup_timeout_sec": 10,
+      "tool_timeout_sec": 10,
+      "enabled_tools": [
+        "get_form_990_facts"
+      ],
+      "default_tools_approval_mode": "auto"
+    }
+  }
+}

@@ -1,0 +1,27 @@
+# R3 deterministic staging fixture lock.
+#
+# This is the intentionally small lock for the one-shot fixture control plane,
+# not a replacement for the full application environment.  Every dependency
+# needed by scripts/run_data_mcp_staging_fixture.py and its shared package
+# initialization/import seams is pinned, including pandas/duckdb and their
+# selected base dependencies.  Install with the repository's selected pip
+# workflow:
+#
+#   python -m pip install --requirement requirements/staging-fixture.lock
+#
+# The lock is network-neutral at runtime: the runner itself denies source
+# egress.  A clean installation still requires an approved package index or a
+# separately verified wheelhouse; no package artifact or credential is embedded
+# here.
+attrs==26.1.0
+duckdb==1.4.4
+jsonschema==4.26.0
+jsonschema-specifications==2025.9.1
+numpy==2.4.4
+pandas==3.0.2
+PyYAML==6.0.3
+referencing==0.37.0
+rpds-py==0.30.0
+python-dateutil==2.9.0.post0
+six==1.17.0
+typing-extensions==4.15.0

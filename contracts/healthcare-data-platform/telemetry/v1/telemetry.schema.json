@@ -1,0 +1,236 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.ushso.org/healthcare-data-platform/telemetry/v1/telemetry.schema.json",
+  "title": "Healthcare Data Platform correlated run telemetry v1",
+  "oneOf": [
+    {"$ref": "#/$defs/runTelemetry"},
+    {"$ref": "#/$defs/telemetryReceipt"},
+    {"$ref": "#/$defs/runSummary"}
+  ],
+  "$defs": {
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "runId": {
+      "type": "string",
+      "maxLength": 128,
+      "pattern": "^run:[a-z0-9][a-z0-9._:/-]*$"
+    },
+    "sourceId": {
+      "type": "string",
+      "maxLength": 200,
+      "pattern": "^source:[a-z0-9][a-z0-9._:-]*$"
+    },
+    "artifactId": {
+      "type": "string",
+      "maxLength": 256,
+      "pattern": "^artifact:[a-z0-9][a-z0-9._:-]*$"
+    },
+    "envelopeId": {
+      "type": "string",
+      "maxLength": 256,
+      "pattern": "^hdp:observation-envelope:[a-z0-9][a-z0-9._:-]*$"
+    },
+    "telemetryId": {
+      "type": "string",
+      "maxLength": 160,
+      "pattern": "^telemetry:run:[a-z0-9][a-z0-9._:/-]*$"
+    },
+    "boundedText": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512,
+      "pattern": "\\S"
+    },
+    "failureCode": {
+      "type": ["string", "null"],
+      "maxLength": 96,
+      "pattern": "^[a-z0-9][a-z0-9._:-]*$"
+    },
+    "failureMessage": {
+      "type": ["string", "null"],
+      "maxLength": 512,
+      "pattern": "\\S"
+    },
+    "nonNegativeSeconds": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 315360000
+    },
+    "optionalSeconds": {
+      "type": ["number", "null"],
+      "minimum": 0,
+      "maximum": 315360000
+    },
+    "boundedCount": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000000000000
+    },
+    "dimensionKey": {
+      "type": "string",
+      "maxLength": 32,
+      "pattern": "^[a-z][a-z0-9_]{0,31}$"
+    },
+    "dimensionValue": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$"
+    },
+    "dimensions": {
+      "type": "object",
+      "maxProperties": 8,
+      "propertyNames": {"$ref": "#/$defs/dimensionKey"},
+      "additionalProperties": {"$ref": "#/$defs/dimensionValue"}
+    },
+    "runTelemetry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "record_type",
+        "telemetry_id",
+        "telemetry_sha256",
+        "run_id",
+        "source_id",
+        "artifact_id",
+        "envelope_id",
+        "observed_at",
+        "status",
+        "freshness_state",
+        "freshness_seconds",
+        "source_observed_at",
+        "failure_code",
+        "failure_message",
+        "failure_retryable",
+        "lag_seconds",
+        "bytes_in",
+        "bytes_out",
+        "rows_in",
+        "rows_out",
+        "retry_count",
+        "dlq_state",
+        "dlq_count",
+        "dlq_reason",
+        "dimensions"
+      ],
+      "properties": {
+        "schema_version": {"const": "hdp.telemetry.v1"},
+        "record_type": {"const": "run_telemetry"},
+        "telemetry_id": {"$ref": "#/$defs/telemetryId"},
+        "telemetry_sha256": {"$ref": "#/$defs/sha256"},
+        "run_id": {"$ref": "#/$defs/runId"},
+        "source_id": {"$ref": "#/$defs/sourceId"},
+        "artifact_id": {"$ref": "#/$defs/artifactId"},
+        "envelope_id": {"$ref": "#/$defs/envelopeId"},
+        "observed_at": {"$ref": "#/$defs/timestamp"},
+        "status": {"enum": ["started", "succeeded", "failed", "partial", "dead_lettered"]},
+        "freshness_state": {"enum": ["fresh", "stale", "unknown"]},
+        "freshness_seconds": {"$ref": "#/$defs/optionalSeconds"},
+        "source_observed_at": {"type": ["string", "null"], "format": "date-time"},
+        "failure_code": {"$ref": "#/$defs/failureCode"},
+        "failure_message": {"$ref": "#/$defs/failureMessage"},
+        "failure_retryable": {"type": ["boolean", "null"]},
+        "lag_seconds": {"$ref": "#/$defs/nonNegativeSeconds"},
+        "bytes_in": {"$ref": "#/$defs/boundedCount"},
+        "bytes_out": {"$ref": "#/$defs/boundedCount"},
+        "rows_in": {"$ref": "#/$defs/boundedCount"},
+        "rows_out": {"$ref": "#/$defs/boundedCount"},
+        "retry_count": {"$ref": "#/$defs/boundedCount"},
+        "dlq_state": {"enum": ["none", "queued", "resolved"]},
+        "dlq_count": {"$ref": "#/$defs/boundedCount"},
+        "dlq_reason": {"$ref": "#/$defs/failureMessage"},
+        "dimensions": {"$ref": "#/$defs/dimensions"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"freshness_state": {"const": "unknown"}}},
+          "then": {"properties": {"freshness_seconds": {"type": "null"}, "source_observed_at": {"type": "null"}}},
+          "else": {"required": ["freshness_seconds"], "properties": {"freshness_seconds": {"type": "number"}}}
+        },
+        {
+          "if": {"properties": {"status": {"enum": ["failed", "dead_lettered"]}}},
+          "then": {"required": ["failure_code"], "properties": {"failure_code": {"type": "string"}}}
+        },
+        {
+          "if": {"properties": {"dlq_state": {"const": "none"}}},
+          "then": {"properties": {"dlq_count": {"const": 0}, "dlq_reason": {"type": "null"}}}
+        },
+        {
+          "if": {"properties": {"dlq_state": {"const": "queued"}}},
+          "then": {"properties": {"dlq_count": {"minimum": 1}}}
+        }
+      ]
+    },
+    "telemetryReceipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "record_type", "action", "telemetry_id", "run_id", "telemetry_sha256", "durable"],
+      "properties": {
+        "schema_version": {"const": "hdp.telemetry.v1"},
+        "record_type": {"const": "telemetry_receipt"},
+        "action": {"enum": ["recorded", "duplicate"]},
+        "telemetry_id": {"$ref": "#/$defs/telemetryId"},
+        "run_id": {"$ref": "#/$defs/runId"},
+        "telemetry_sha256": {"$ref": "#/$defs/sha256"},
+        "durable": {"const": true}
+      }
+    },
+    "runSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "record_type",
+        "run_id",
+        "source_id",
+        "artifact_id",
+        "envelope_id",
+        "event_count",
+        "status_counts",
+        "failure_count",
+        "first_observed_at",
+        "last_observed_at",
+        "freshness_max_seconds",
+        "lag_max_seconds",
+        "bytes_in",
+        "bytes_out",
+        "rows_in",
+        "rows_out",
+        "retry_count",
+        "dlq_count"
+      ],
+      "properties": {
+        "schema_version": {"const": "hdp.telemetry.v1"},
+        "record_type": {"const": "run_telemetry_summary"},
+        "run_id": {"$ref": "#/$defs/runId"},
+        "source_id": {"type": ["string", "null"], "pattern": "^source:[a-z0-9][a-z0-9._:-]*$"},
+        "artifact_id": {"type": ["string", "null"], "pattern": "^artifact:[a-z0-9][a-z0-9._:-]*$"},
+        "envelope_id": {"type": ["string", "null"], "pattern": "^hdp:observation-envelope:[a-z0-9][a-z0-9._:-]*$"},
+        "event_count": {"$ref": "#/$defs/boundedCount"},
+        "status_counts": {
+          "type": "object",
+          "propertyNames": {"enum": ["started", "succeeded", "failed", "partial", "dead_lettered"]},
+          "additionalProperties": {"$ref": "#/$defs/boundedCount"}
+        },
+        "failure_count": {"$ref": "#/$defs/boundedCount"},
+        "first_observed_at": {"$ref": "#/$defs/timestamp"},
+        "last_observed_at": {"$ref": "#/$defs/timestamp"},
+        "freshness_max_seconds": {"$ref": "#/$defs/optionalSeconds"},
+        "lag_max_seconds": {"$ref": "#/$defs/nonNegativeSeconds"},
+        "bytes_in": {"$ref": "#/$defs/boundedCount"},
+        "bytes_out": {"$ref": "#/$defs/boundedCount"},
+        "rows_in": {"$ref": "#/$defs/boundedCount"},
+        "rows_out": {"$ref": "#/$defs/boundedCount"},
+        "retry_count": {"$ref": "#/$defs/boundedCount"},
+        "dlq_count": {"$ref": "#/$defs/boundedCount"}
+      }
+    }
+  }
+}

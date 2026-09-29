@@ -1,0 +1,143 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "status",
+    "legal_filer",
+    "ein",
+    "tax_period_end",
+    "form_type",
+    "total_revenue",
+    "total_expenses",
+    "net_assets",
+    "top_reported_executive",
+    "provenance",
+    "scope_caveat"
+  ],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": ["ready", "not_found"]
+    },
+    "legal_filer": {
+      "type": ["string", "null"]
+    },
+    "ein": {
+      "type": "string"
+    },
+    "tax_period_end": {
+      "type": ["string", "null"]
+    },
+    "form_type": {
+      "type": ["string", "null"]
+    },
+    "total_revenue": {
+      "type": ["integer", "null"]
+    },
+    "total_expenses": {
+      "type": ["integer", "null"]
+    },
+    "net_assets": {
+      "type": ["integer", "null"]
+    },
+    "top_reported_executive": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "title", "total_reported_compensation"],
+          "properties": {
+            "name": {
+              "type": ["string", "null"]
+            },
+            "title": {
+              "type": ["string", "null"]
+            },
+            "total_reported_compensation": {
+              "type": ["integer", "null"]
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "total_revenue",
+        "total_expenses",
+        "net_assets",
+        "top_reported_executive"
+      ],
+      "properties": {
+        "total_revenue": {
+          "$ref": "#/$defs/provenance"
+        },
+        "total_expenses": {
+          "$ref": "#/$defs/provenance"
+        },
+        "net_assets": {
+          "$ref": "#/$defs/provenance"
+        },
+        "top_reported_executive": {
+          "$ref": "#/$defs/provenance"
+        }
+      }
+    },
+    "scope_caveat": {
+      "type": "string"
+    }
+  },
+  "$defs": {
+    "provenance": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "source_url",
+            "object_id",
+            "xml_sha256",
+            "metric_key",
+            "reported_label",
+            "units",
+            "xml_field_paths"
+          ],
+          "properties": {
+            "source_url": {
+              "type": "string"
+            },
+            "object_id": {
+              "type": "string"
+            },
+            "xml_sha256": {
+              "type": "string"
+            },
+            "metric_key": {
+              "type": "string"
+            },
+            "reported_label": {
+              "type": "string"
+            },
+            "units": {
+              "type": "string"
+            },
+            "xml_field_paths": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  }
+}

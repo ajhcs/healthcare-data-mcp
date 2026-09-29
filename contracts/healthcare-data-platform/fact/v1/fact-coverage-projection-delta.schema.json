@@ -1,0 +1,1603 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.ushso.org/healthcare-data-platform/fact/v1/fact-coverage-projection-delta.schema.json",
+  "title": "Healthcare Data Platform fact, coverage, and projection delta v1",
+  "description": "An additive, source-bound contract that reconciles canonical facts, catalog-backed profile metrics, explicit coverage, typed profile context, and bounded public projections without changing runtime or storage behavior.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "record_type",
+    "record_id",
+    "packet_id",
+    "tracking_bead",
+    "frozen_dispatch_base",
+    "source_release",
+    "artifact",
+    "identity_scopes",
+    "metric_catalog",
+    "observations",
+    "evidence",
+    "denominator_bindings",
+    "profile_sources",
+    "profile_metric_values",
+    "facts",
+    "coverage_records",
+    "profile_knowledge_objects",
+    "projections",
+    "completeness_policy",
+    "authority_limits"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "hdp.fact-coverage-projection-delta.v1",
+      "type": "string"
+    },
+    "record_type": {
+      "const": "fact_coverage_projection_delta",
+      "type": "string"
+    },
+    "record_id": {
+      "type": "string",
+      "pattern": "^hdp:fact-coverage-projection:[a-z0-9][a-z0-9._:-]*$"
+    },
+    "packet_id": {
+      "const": "p0-10-fact-coverage-projection-delta-v1",
+      "type": "string"
+    },
+    "tracking_bead": {
+      "const": "healthcare-toolkit-rrna.10",
+      "type": "string"
+    },
+    "frozen_dispatch_base": {
+      "const": "4e0970c26ba38bf45131d237306765374edcd47d",
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "source_release": {
+      "$ref": "#/$defs/sourceRelease"
+    },
+    "artifact": {
+      "$ref": "#/$defs/artifact"
+    },
+    "identity_scopes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/identityScope"
+      }
+    },
+    "metric_catalog": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/metricCatalog"
+      }
+    },
+    "observations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/observation"
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/evidence"
+      }
+    },
+    "denominator_bindings": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/denominator"
+      }
+    },
+    "profile_sources": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/profileSource"
+      }
+    },
+    "profile_metric_values": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/profileMetricValue"
+      }
+    },
+    "facts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/fact"
+      }
+    },
+    "coverage_records": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/coverageRecord"
+      }
+    },
+    "profile_knowledge_objects": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/profileKnowledgeObject"
+      }
+    },
+    "projections": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/projection"
+      }
+    },
+    "completeness_policy": {
+      "$ref": "#/$defs/completenessPolicy"
+    },
+    "authority_limits": {
+      "$ref": "#/$defs/authorityLimits"
+    }
+  },
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500,
+      "pattern": "\\S"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "dateOrNull": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date"
+    },
+    "safeLocator": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500,
+      "pattern": "^(?:https://|object://|parquet://|docs/|contracts/)[A-Za-z0-9._:/-]+$"
+    },
+    "selector": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300,
+      "pattern": "^(?:row|record|field|json-pointer):[A-Za-z0-9._:/-]+$"
+    },
+    "sourceId": {
+      "type": "string",
+      "pattern": "^source:[a-z0-9][a-z0-9._:-]*$"
+    },
+    "releaseId": {
+      "type": "string",
+      "pattern": "^release:[a-z0-9][a-z0-9._:-]*$"
+    },
+    "artifactId": {
+      "type": "string",
+      "pattern": "^artifact:[a-z0-9][a-z0-9._:-]*$"
+    },
+    "observationId": {
+      "type": "string",
+      "pattern": "^observation:[a-z0-9][a-z0-9._:-]*$"
+    },
+    "evidenceId": {
+      "type": "string",
+      "pattern": "^evidence:[a-z0-9][a-z0-9._:-]*$"
+    },
+    "identityScopeId": {
+      "type": "string",
+      "pattern": "^identity:[a-z0-9][a-z0-9._:-]*$"
+    },
+    "metricKey": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)+$"
+    },
+    "metricValueId": {
+      "type": "string",
+      "pattern": "^profile-metric-value:[a-z0-9][a-z0-9._:-]*$"
+    },
+    "factId": {
+      "type": "string",
+      "pattern": "^fact:[a-z0-9][a-z0-9._:-]*$"
+    },
+    "coverageId": {
+      "type": "string",
+      "pattern": "^coverage:[a-z0-9][a-z0-9._:-]*$"
+    },
+    "denominatorId": {
+      "type": "string",
+      "pattern": "^denom:[a-z0-9][a-z0-9._:-]*$"
+    },
+    "profileSourceId": {
+      "type": "string",
+      "pattern": "^profile-source:[a-z0-9][a-z0-9._:-]*$"
+    },
+    "profileObjectId": {
+      "type": "string",
+      "pattern": "^profile-object:[a-z0-9][a-z0-9._:-]*$"
+    },
+    "projectionId": {
+      "type": "string",
+      "pattern": "^projection:[a-z0-9][a-z0-9._:-]*$"
+    },
+    "subjectRef": {
+      "type": "string",
+      "pattern": "^(?:entity|source-record):[a-z0-9][a-z0-9._:-]*$"
+    },
+    "profileSourceRef": {
+      "$ref": "#/$defs/profileSourceId"
+    },
+    "value": {
+      "type": [
+        "array",
+        "boolean",
+        "number",
+        "object",
+        "string",
+        "null"
+      ]
+    },
+    "missingnessState": {
+      "enum": [
+        "populated",
+        "not_yet_researched",
+        "unavailable_public",
+        "not_applicable",
+        "blocked_source_conflict"
+      ]
+    },
+    "zeroSemantics": {
+      "enum": [
+        "not_zero",
+        "observed_zero",
+        "derived_zero"
+      ]
+    },
+    "completenessSupport": {
+      "enum": [
+        "not_supported",
+        "bounded_denominator",
+        "validated_universe"
+      ]
+    },
+    "period": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "precision",
+        "label",
+        "as_of",
+        "start",
+        "end"
+      ],
+      "properties": {
+        "precision": {
+          "enum": [
+            "instant",
+            "day",
+            "month",
+            "quarter",
+            "year",
+            "interval",
+            "current",
+            "unknown",
+            "not_applicable"
+          ]
+        },
+        "label": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "as_of": {
+          "$ref": "#/$defs/date"
+        },
+        "start": {
+          "$ref": "#/$defs/dateOrNull"
+        },
+        "end": {
+          "$ref": "#/$defs/dateOrNull"
+        }
+      }
+    },
+    "geography": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scope",
+        "reference",
+        "display_name",
+        "as_of"
+      ],
+      "properties": {
+        "scope": {
+          "enum": [
+            "system",
+            "facility",
+            "state",
+            "county",
+            "zip",
+            "market",
+            "national"
+          ]
+        },
+        "reference": {
+          "type": "string",
+          "pattern": "^geo:[a-z0-9][a-z0-9._:-]*$"
+        },
+        "display_name": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "as_of": {
+          "$ref": "#/$defs/dateOrNull"
+        }
+      }
+    },
+    "reportingSubject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "subject_ref",
+        "subject_type",
+        "identity_scope_ref",
+        "display_name"
+      ],
+      "properties": {
+        "subject_ref": {
+          "$ref": "#/$defs/subjectRef"
+        },
+        "subject_type": {
+          "enum": [
+            "health_system",
+            "facility",
+            "payer",
+            "health_plan",
+            "academic_unit",
+            "physician_group",
+            "service_line",
+            "market",
+            "program"
+          ]
+        },
+        "identity_scope_ref": {
+          "$ref": "#/$defs/identityScopeId"
+        },
+        "display_name": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "sourceRelease": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_id",
+        "release_id",
+        "release_label",
+        "source_kind",
+        "release_sha256",
+        "evidence_locator",
+        "coverage_state",
+        "completeness_support"
+      ],
+      "properties": {
+        "source_id": {
+          "$ref": "#/$defs/sourceId"
+        },
+        "release_id": {
+          "$ref": "#/$defs/releaseId"
+        },
+        "release_label": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "source_kind": {
+          "enum": [
+            "official_dataset",
+            "filing",
+            "registry",
+            "profile_source",
+            "contract",
+            "synthetic_fixture",
+            "research_note"
+          ]
+        },
+        "release_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "evidence_locator": {
+          "$ref": "#/$defs/safeLocator"
+        },
+        "coverage_state": {
+          "enum": [
+            "present",
+            "not_yet_researched",
+            "unavailable_public",
+            "not_applicable",
+            "blocked_source_conflict"
+          ]
+        },
+        "completeness_support": {
+          "enum": [
+            "not_supported",
+            "bounded_denominator",
+            "validated_universe"
+          ]
+        }
+      }
+    },
+    "custody": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "locator",
+        "storage_plane",
+        "immutable",
+        "retention"
+      ],
+      "properties": {
+        "locator": {
+          "$ref": "#/$defs/safeLocator"
+        },
+        "storage_plane": {
+          "enum": [
+            "object_storage",
+            "parquet",
+            "evidence_ledger"
+          ]
+        },
+        "immutable": {
+          "const": true,
+          "type": "boolean"
+        },
+        "retention": {
+          "enum": [
+            "indefinite",
+            "legal_hold",
+            "append_only"
+          ]
+        }
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_id",
+        "release_ref",
+        "artifact_kind",
+        "media_type",
+        "content_sha256",
+        "byte_length",
+        "custody"
+      ],
+      "properties": {
+        "artifact_id": {
+          "$ref": "#/$defs/artifactId"
+        },
+        "release_ref": {
+          "$ref": "#/$defs/releaseId"
+        },
+        "artifact_kind": {
+          "enum": [
+            "raw_source",
+            "source_receipt",
+            "normalized_rows",
+            "fact_batch",
+            "evidence_bundle",
+            "projection_bundle"
+          ]
+        },
+        "media_type": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9.+/-]*$"
+        },
+        "content_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "byte_length": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "custody": {
+          "$ref": "#/$defs/custody"
+        }
+      }
+    },
+    "sourceBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_id",
+        "release_ref",
+        "artifact_ref",
+        "observation_ref",
+        "evidence_ref",
+        "selector"
+      ],
+      "properties": {
+        "source_id": {
+          "$ref": "#/$defs/sourceId"
+        },
+        "release_ref": {
+          "$ref": "#/$defs/releaseId"
+        },
+        "artifact_ref": {
+          "$ref": "#/$defs/artifactId"
+        },
+        "observation_ref": {
+          "$ref": "#/$defs/observationId"
+        },
+        "evidence_ref": {
+          "$ref": "#/$defs/evidenceId"
+        },
+        "selector": {
+          "$ref": "#/$defs/selector"
+        }
+      }
+    },
+    "identityScope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "identity_scope_id",
+        "subject_ref",
+        "subject_type",
+        "canonical_key",
+        "geography",
+        "resolution_state",
+        "source_binding"
+      ],
+      "properties": {
+        "identity_scope_id": {
+          "$ref": "#/$defs/identityScopeId"
+        },
+        "subject_ref": {
+          "$ref": "#/$defs/subjectRef"
+        },
+        "subject_type": {
+          "enum": [
+            "health_system",
+            "facility",
+            "payer",
+            "health_plan",
+            "academic_unit",
+            "physician_group",
+            "service_line",
+            "market",
+            "program"
+          ]
+        },
+        "canonical_key": {
+          "$ref": "#/$defs/identityScopeId"
+        },
+        "geography": {
+          "$ref": "#/$defs/geography"
+        },
+        "resolution_state": {
+          "enum": [
+            "reviewed",
+            "ambiguous",
+            "unresolved"
+          ]
+        },
+        "source_binding": {
+          "$ref": "#/$defs/sourceBinding"
+        }
+      }
+    },
+    "metricCatalog": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "metric_key",
+        "label",
+        "domain",
+        "module_key",
+        "definition",
+        "value_type",
+        "default_unit",
+        "allowed_units",
+        "default_scope",
+        "expected_periodicity",
+        "reporting_subject_types",
+        "geography_scope",
+        "source_policy",
+        "status",
+        "public_authority"
+      ],
+      "properties": {
+        "metric_key": {
+          "$ref": "#/$defs/metricKey"
+        },
+        "label": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "domain": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "module_key": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "definition": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "value_type": {
+          "enum": [
+            "integer",
+            "decimal",
+            "percent",
+            "currency",
+            "text",
+            "boolean",
+            "geography_set",
+            "score",
+            "ratio"
+          ]
+        },
+        "default_unit": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "allowed_units": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/nonEmptyString"
+          }
+        },
+        "default_scope": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "expected_periodicity": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "reporting_subject_types": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "health_system",
+              "facility",
+              "payer",
+              "health_plan",
+              "academic_unit",
+              "physician_group",
+              "service_line",
+              "market",
+              "program"
+            ]
+          }
+        },
+        "geography_scope": {
+          "enum": [
+            "system",
+            "facility",
+            "state",
+            "county",
+            "zip",
+            "market",
+            "national"
+          ]
+        },
+        "source_policy": {
+          "enum": [
+            "required",
+            "optional",
+            "not_applicable"
+          ]
+        },
+        "status": {
+          "enum": [
+            "proposed",
+            "active",
+            "retired"
+          ]
+        },
+        "public_authority": {
+          "const": "profile_metric_catalog"
+        }
+      }
+    },
+    "observation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "observation_id",
+        "identity_scope_ref",
+        "metric_key",
+        "source_release_ref",
+        "artifact_ref",
+        "evidence_ref",
+        "selector",
+        "period",
+        "unit",
+        "value_state",
+        "zero_semantics",
+        "value"
+      ],
+      "properties": {
+        "observation_id": {
+          "$ref": "#/$defs/observationId"
+        },
+        "identity_scope_ref": {
+          "$ref": "#/$defs/identityScopeId"
+        },
+        "metric_key": {
+          "$ref": "#/$defs/metricKey"
+        },
+        "source_release_ref": {
+          "$ref": "#/$defs/releaseId"
+        },
+        "artifact_ref": {
+          "$ref": "#/$defs/artifactId"
+        },
+        "evidence_ref": {
+          "$ref": "#/$defs/evidenceId"
+        },
+        "selector": {
+          "$ref": "#/$defs/selector"
+        },
+        "period": {
+          "$ref": "#/$defs/period"
+        },
+        "unit": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "value_state": {
+          "$ref": "#/$defs/missingnessState"
+        },
+        "zero_semantics": {
+          "$ref": "#/$defs/zeroSemantics"
+        },
+        "value": {
+          "$ref": "#/$defs/value"
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evidence_id",
+        "source_release_ref",
+        "artifact_ref",
+        "observation_ref",
+        "identity_scope_ref",
+        "locator",
+        "selector",
+        "evidence_kind",
+        "captured_at",
+        "content_sha256"
+      ],
+      "properties": {
+        "evidence_id": {
+          "$ref": "#/$defs/evidenceId"
+        },
+        "source_release_ref": {
+          "$ref": "#/$defs/releaseId"
+        },
+        "artifact_ref": {
+          "$ref": "#/$defs/artifactId"
+        },
+        "observation_ref": {
+          "$ref": "#/$defs/observationId"
+        },
+        "identity_scope_ref": {
+          "$ref": "#/$defs/identityScopeId"
+        },
+        "locator": {
+          "$ref": "#/$defs/safeLocator"
+        },
+        "selector": {
+          "$ref": "#/$defs/selector"
+        },
+        "evidence_kind": {
+          "enum": [
+            "official_dataset",
+            "filing",
+            "registry",
+            "contract",
+            "synthetic_fixture",
+            "research_note"
+          ]
+        },
+        "captured_at": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "content_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "denominator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "denominator_id",
+        "label",
+        "identity_scope_ref",
+        "reporting_subject",
+        "period",
+        "source_binding",
+        "expected",
+        "included",
+        "unresolved",
+        "excluded",
+        "unavailable",
+        "accounted",
+        "support_level"
+      ],
+      "properties": {
+        "denominator_id": {
+          "$ref": "#/$defs/denominatorId"
+        },
+        "label": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "identity_scope_ref": {
+          "$ref": "#/$defs/identityScopeId"
+        },
+        "reporting_subject": {
+          "$ref": "#/$defs/reportingSubject"
+        },
+        "period": {
+          "$ref": "#/$defs/period"
+        },
+        "source_binding": {
+          "$ref": "#/$defs/sourceBinding"
+        },
+        "expected": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "included": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unresolved": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "excluded": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unavailable": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "accounted": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "support_level": {
+          "enum": [
+            "bounded_denominator",
+            "validated_universe"
+          ]
+        }
+      }
+    },
+    "profileSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "profile_source_id",
+        "source_id",
+        "release_ref",
+        "artifact_ref",
+        "evidence_ref",
+        "identity_scope_ref",
+        "source_type",
+        "locator",
+        "accessed_at",
+        "publication_date",
+        "authority_state",
+        "description"
+      ],
+      "properties": {
+        "profile_source_id": {
+          "$ref": "#/$defs/profileSourceId"
+        },
+        "source_id": {
+          "$ref": "#/$defs/sourceId"
+        },
+        "release_ref": {
+          "$ref": "#/$defs/releaseId"
+        },
+        "artifact_ref": {
+          "$ref": "#/$defs/artifactId"
+        },
+        "evidence_ref": {
+          "$ref": "#/$defs/evidenceId"
+        },
+        "identity_scope_ref": {
+          "$ref": "#/$defs/identityScopeId"
+        },
+        "source_type": {
+          "enum": [
+            "federal_dataset",
+            "filing",
+            "state_filing",
+            "rating_agency",
+            "press_release",
+            "news",
+            "scraped_website",
+            "web_search",
+            "mcp_server",
+            "analyst_inference",
+            "other"
+          ]
+        },
+        "locator": {
+          "$ref": "#/$defs/safeLocator"
+        },
+        "accessed_at": {
+          "$ref": "#/$defs/date"
+        },
+        "publication_date": {
+          "$ref": "#/$defs/dateOrNull"
+        },
+        "authority_state": {
+          "enum": [
+            "source_backed",
+            "candidate_only",
+            "abstained"
+          ]
+        },
+        "description": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "profileMetricValue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "profile_metric_value_id",
+        "metric_key",
+        "identity_scope_ref",
+        "reporting_subject",
+        "period",
+        "unit",
+        "missingness_state",
+        "zero_semantics",
+        "value",
+        "source_profile_ids",
+        "status",
+        "projection_eligible",
+        "source_binding",
+        "public_authority"
+      ],
+      "properties": {
+        "profile_metric_value_id": {
+          "$ref": "#/$defs/metricValueId"
+        },
+        "metric_key": {
+          "$ref": "#/$defs/metricKey"
+        },
+        "identity_scope_ref": {
+          "$ref": "#/$defs/identityScopeId"
+        },
+        "reporting_subject": {
+          "$ref": "#/$defs/reportingSubject"
+        },
+        "period": {
+          "$ref": "#/$defs/period"
+        },
+        "unit": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "missingness_state": {
+          "$ref": "#/$defs/missingnessState"
+        },
+        "zero_semantics": {
+          "$ref": "#/$defs/zeroSemantics"
+        },
+        "value": {
+          "$ref": "#/$defs/value"
+        },
+        "source_profile_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/profileSourceRef"
+          }
+        },
+        "status": {
+          "enum": [
+            "draft",
+            "reviewed",
+            "approved",
+            "retired"
+          ]
+        },
+        "projection_eligible": {
+          "type": "boolean"
+        },
+        "source_binding": {
+          "$ref": "#/$defs/sourceBinding"
+        },
+        "public_authority": {
+          "const": "profile_metric_values"
+        }
+      }
+    },
+    "supersession": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "predecessor_fact_ref",
+        "successor_fact_ref",
+        "reason"
+      ],
+      "properties": {
+        "state": {
+          "enum": [
+            "none",
+            "supersedes",
+            "superseded_by"
+          ]
+        },
+        "predecessor_fact_ref": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^fact:[a-z0-9][a-z0-9._:-]*$"
+        },
+        "successor_fact_ref": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^fact:[a-z0-9][a-z0-9._:-]*$"
+        },
+        "reason": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "conflict": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "reason",
+        "competing_fact_refs",
+        "resolution"
+      ],
+      "properties": {
+        "state": {
+          "enum": [
+            "none",
+            "source_conflict",
+            "identity_conflict",
+            "period_conflict",
+            "unit_conflict"
+          ]
+        },
+        "reason": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "competing_fact_refs": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/factId"
+          }
+        },
+        "resolution": {
+          "enum": [
+            "not_required",
+            "unresolved",
+            "adjudicated"
+          ]
+        }
+      }
+    },
+    "denominatorRef": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^denom:[a-z0-9][a-z0-9._:-]*$"
+    },
+    "fact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fact_id",
+        "metric_key",
+        "profile_metric_value_ref",
+        "identity_scope_ref",
+        "reporting_subject",
+        "period",
+        "geography",
+        "unit",
+        "missingness_state",
+        "value",
+        "source_binding",
+        "fact_status",
+        "confidence_state",
+        "promotion_state",
+        "supersession",
+        "conflict",
+        "denominator_ref",
+        "zero_semantics",
+        "projection_eligible"
+      ],
+      "properties": {
+        "fact_id": {
+          "$ref": "#/$defs/factId"
+        },
+        "metric_key": {
+          "$ref": "#/$defs/metricKey"
+        },
+        "profile_metric_value_ref": {
+          "$ref": "#/$defs/metricValueId"
+        },
+        "identity_scope_ref": {
+          "$ref": "#/$defs/identityScopeId"
+        },
+        "reporting_subject": {
+          "$ref": "#/$defs/reportingSubject"
+        },
+        "period": {
+          "$ref": "#/$defs/period"
+        },
+        "geography": {
+          "$ref": "#/$defs/geography"
+        },
+        "unit": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "missingness_state": {
+          "$ref": "#/$defs/missingnessState"
+        },
+        "value": {
+          "$ref": "#/$defs/value"
+        },
+        "source_binding": {
+          "$ref": "#/$defs/sourceBinding"
+        },
+        "fact_status": {
+          "enum": [
+            "candidate",
+            "admitted",
+            "current_authority",
+            "superseded",
+            "retracted"
+          ]
+        },
+        "confidence_state": {
+          "enum": [
+            "reported",
+            "derived",
+            "estimated",
+            "source_conflict",
+            "unresolved"
+          ]
+        },
+        "promotion_state": {
+          "enum": [
+            "candidate",
+            "admitted",
+            "current_authority",
+            "superseded",
+            "retracted"
+          ]
+        },
+        "supersession": {
+          "$ref": "#/$defs/supersession"
+        },
+        "conflict": {
+          "$ref": "#/$defs/conflict"
+        },
+        "denominator_ref": {
+          "$ref": "#/$defs/denominatorRef"
+        },
+        "zero_semantics": {
+          "$ref": "#/$defs/zeroSemantics"
+        },
+        "projection_eligible": {
+          "type": "boolean"
+        }
+      }
+    },
+    "coverageRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "coverage_id",
+        "metric_key",
+        "identity_scope_ref",
+        "reporting_subject",
+        "period",
+        "geography",
+        "coverage_state",
+        "missingness_state",
+        "denominator_ref",
+        "completeness_claim",
+        "support_level",
+        "source_binding"
+      ],
+      "properties": {
+        "coverage_id": {
+          "$ref": "#/$defs/coverageId"
+        },
+        "metric_key": {
+          "$ref": "#/$defs/metricKey"
+        },
+        "identity_scope_ref": {
+          "$ref": "#/$defs/identityScopeId"
+        },
+        "reporting_subject": {
+          "$ref": "#/$defs/reportingSubject"
+        },
+        "period": {
+          "$ref": "#/$defs/period"
+        },
+        "geography": {
+          "$ref": "#/$defs/geography"
+        },
+        "coverage_state": {
+          "enum": [
+            "validated",
+            "partial_source_coverage",
+            "not_imported",
+            "unavailable_public",
+            "source_conflict",
+            "stale_source",
+            "not_applicable"
+          ]
+        },
+        "missingness_state": {
+          "$ref": "#/$defs/missingnessState"
+        },
+        "denominator_ref": {
+          "$ref": "#/$defs/denominatorRef"
+        },
+        "completeness_claim": {
+          "enum": [
+            "not_claimed",
+            "bounded_coverage",
+            "validated_complete"
+          ]
+        },
+        "support_level": {
+          "$ref": "#/$defs/completenessSupport"
+        },
+        "source_binding": {
+          "$ref": "#/$defs/sourceBinding"
+        }
+      }
+    },
+    "profileKnowledgeObject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "object_id",
+        "identity_scope_ref",
+        "module_key",
+        "object_type",
+        "status",
+        "source_profile_ids",
+        "title",
+        "statement",
+        "content",
+        "metric_key",
+        "period",
+        "scope",
+        "value",
+        "unit",
+        "public_authority",
+        "source_binding"
+      ],
+      "properties": {
+        "object_id": {
+          "$ref": "#/$defs/profileObjectId"
+        },
+        "identity_scope_ref": {
+          "$ref": "#/$defs/identityScopeId"
+        },
+        "module_key": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "object_type": {
+          "enum": [
+            "source",
+            "fact",
+            "metric",
+            "definition",
+            "expert_interpretation",
+            "strategic_implication",
+            "risk_signal",
+            "comparison_point",
+            "chart_recommendation",
+            "open_question"
+          ]
+        },
+        "status": {
+          "enum": [
+            "draft",
+            "reviewed",
+            "approved",
+            "retired"
+          ]
+        },
+        "source_profile_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/profileSourceRef"
+          }
+        },
+        "title": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "statement": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "content": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "metric_key": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)+$"
+        },
+        "period": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "scope": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "value": {
+          "$ref": "#/$defs/value"
+        },
+        "unit": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "public_authority": {
+          "const": false,
+          "type": "boolean"
+        },
+        "source_binding": {
+          "$ref": "#/$defs/sourceBinding"
+        }
+      }
+    },
+    "projection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "projection_id",
+        "projection_type",
+        "metric_key",
+        "fact_ref",
+        "profile_metric_value_ref",
+        "coverage_ref",
+        "identity_scope_ref",
+        "reporting_subject",
+        "period",
+        "geography",
+        "unit",
+        "missingness_state",
+        "zero_semantics",
+        "value",
+        "source_binding",
+        "projection_authority",
+        "status",
+        "public",
+        "projection_sha256",
+        "completeness_claim",
+        "completeness_support",
+        "legacy_metric_object_refs"
+      ],
+      "properties": {
+        "projection_id": {
+          "$ref": "#/$defs/projectionId"
+        },
+        "projection_type": {
+          "enum": [
+            "public_metric_card",
+            "profile_snapshot",
+            "compare_metric"
+          ]
+        },
+        "metric_key": {
+          "$ref": "#/$defs/metricKey"
+        },
+        "fact_ref": {
+          "$ref": "#/$defs/factId"
+        },
+        "profile_metric_value_ref": {
+          "$ref": "#/$defs/metricValueId"
+        },
+        "coverage_ref": {
+          "$ref": "#/$defs/coverageId"
+        },
+        "identity_scope_ref": {
+          "$ref": "#/$defs/identityScopeId"
+        },
+        "reporting_subject": {
+          "$ref": "#/$defs/reportingSubject"
+        },
+        "period": {
+          "$ref": "#/$defs/period"
+        },
+        "geography": {
+          "$ref": "#/$defs/geography"
+        },
+        "unit": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "missingness_state": {
+          "$ref": "#/$defs/missingnessState"
+        },
+        "zero_semantics": {
+          "$ref": "#/$defs/zeroSemantics"
+        },
+        "value": {
+          "$ref": "#/$defs/value"
+        },
+        "source_binding": {
+          "$ref": "#/$defs/sourceBinding"
+        },
+        "projection_authority": {
+          "const": "profile_metric_catalog_plus_profile_metric_values"
+        },
+        "status": {
+          "enum": [
+            "candidate",
+            "approved",
+            "retired"
+          ]
+        },
+        "public": {
+          "type": "boolean"
+        },
+        "projection_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "completeness_claim": {
+          "enum": [
+            "not_claimed",
+            "bounded_coverage",
+            "validated_complete"
+          ]
+        },
+        "completeness_support": {
+          "$ref": "#/$defs/completenessSupport"
+        },
+        "legacy_metric_object_refs": {
+          "type": "array",
+          "maxItems": 0,
+          "items": {
+            "$ref": "#/$defs/profileObjectId"
+          }
+        }
+      }
+    },
+    "completenessPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "claim",
+        "denominator_ref",
+        "support_level",
+        "scope"
+      ],
+      "properties": {
+        "claim": {
+          "enum": [
+            "not_claimed",
+            "bounded_coverage",
+            "validated_complete"
+          ]
+        },
+        "denominator_ref": {
+          "$ref": "#/$defs/denominatorRef"
+        },
+        "support_level": {
+          "enum": [
+            "not_supported",
+            "bounded_denominator",
+            "validated_universe"
+          ]
+        },
+        "scope": {
+          "enum": [
+            "release",
+            "identity_scope",
+            "metric"
+          ]
+        }
+      }
+    },
+    "authorityLimits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "new_tables_allowed",
+        "runtime_activation_allowed",
+        "source_acquisition_allowed",
+        "production_mutation_allowed",
+        "narrative_authority_allowed",
+        "legacy_metric_object_public_authority_allowed",
+        "public_projection_without_catalog_value_allowed",
+        "completeness_claim_without_denominator_allowed"
+      ],
+      "properties": {
+        "new_tables_allowed": {
+          "const": false,
+          "type": "boolean"
+        },
+        "runtime_activation_allowed": {
+          "const": false,
+          "type": "boolean"
+        },
+        "source_acquisition_allowed": {
+          "const": false,
+          "type": "boolean"
+        },
+        "production_mutation_allowed": {
+          "const": false,
+          "type": "boolean"
+        },
+        "narrative_authority_allowed": {
+          "const": false,
+          "type": "boolean"
+        },
+        "legacy_metric_object_public_authority_allowed": {
+          "const": false,
+          "type": "boolean"
+        },
+        "public_projection_without_catalog_value_allowed": {
+          "const": false,
+          "type": "boolean"
+        },
+        "completeness_claim_without_denominator_allowed": {
+          "const": false,
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

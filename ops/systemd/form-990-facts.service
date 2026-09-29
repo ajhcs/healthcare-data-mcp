@@ -1,0 +1,23 @@
+[Unit]
+Description=LAN-only Form 990 exact-facts MCP service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/mnt/d/Coding Projects/healthcare-data-mcp
+Environment="HC_990_FACTS_DB=/mnt/d/Coding Projects/healthcare-data-mcp/.local/irs990-facts.sqlite3"
+Environment=MCP_TRANSPORT=streamable-http
+Environment=MCP_HOST=192.168.1.60
+Environment=MCP_PORT=8022
+ExecStart="/mnt/d/Coding Projects/healthcare-data-mcp/.venv/bin/python" -m servers.form_990_facts.server
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths="/mnt/d/Coding Projects/healthcare-data-mcp/.local"
+
+[Install]
+WantedBy=default.target

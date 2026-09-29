@@ -1,0 +1,726 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.ushso.org/healthcare-data-platform/ontology/v1/ontology-delta.schema.json",
+  "title": "Healthcare Data Platform bounded ontology delta v1",
+  "description": "A source-scoped, additive vocabulary for the P0 platform. This contract describes terms and challenge examples; it does not create storage, grant identity promotion authority, or replace the existing Toolkit entity model.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "record_type",
+    "record_id",
+    "packet_id",
+    "tracking_bead",
+    "frozen_dispatch_base",
+    "authority_boundary",
+    "vocabulary_terms",
+    "entity_examples",
+    "identifier_examples",
+    "relationship_examples",
+    "observation_examples",
+    "validation_policy"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "hdp.ontology-delta.v1",
+      "type": "string"
+    },
+    "record_type": {
+      "const": "ontology_delta",
+      "type": "string"
+    },
+    "record_id": {
+      "type": "string",
+      "pattern": "^hdp:ontology-delta:[a-z0-9.-]+$"
+    },
+    "packet_id": {
+      "const": "p0-08-ontology-delta-v1",
+      "type": "string"
+    },
+    "tracking_bead": {
+      "const": "healthcare-toolkit-rrna.8",
+      "type": "string"
+    },
+    "frozen_dispatch_base": {
+      "const": "35e15a30eac8d9533741f9adb970d2028f73aab6",
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "authority_boundary": {
+      "$ref": "#/$defs/authorityBoundary"
+    },
+    "vocabulary_terms": {
+      "type": "array",
+      "minItems": 10,
+      "items": {
+        "$ref": "#/$defs/vocabularyTerm"
+      }
+    },
+    "entity_examples": {
+      "type": "array",
+      "minItems": 3,
+      "items": {
+        "$ref": "#/$defs/entityExample"
+      }
+    },
+    "identifier_examples": {
+      "type": "array",
+      "minItems": 3,
+      "items": {
+        "$ref": "#/$defs/identifierExample"
+      }
+    },
+    "relationship_examples": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "$ref": "#/$defs/relationshipExample"
+      }
+    },
+    "observation_examples": {
+      "type": "array",
+      "minItems": 3,
+      "items": {
+        "$ref": "#/$defs/observationExample"
+      }
+    },
+    "validation_policy": {
+      "$ref": "#/$defs/validationPolicy"
+    }
+  },
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "dateOrNull": {
+      "oneOf": [
+        {
+          "type": "string",
+          "format": "date"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "authorityBoundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "canonical_entity_home",
+        "canonical_identifier_home",
+        "canonical_relationship_home",
+        "no_new_tables",
+        "no_runtime_activation",
+        "promotion_authority",
+        "missingness_states"
+      ],
+      "properties": {
+        "canonical_entity_home": {
+          "const": "packages/hc-ingest/src/hc_ingest/models_entities.py",
+          "type": "string"
+        },
+        "canonical_identifier_home": {
+          "const": "entity_identifiers",
+          "type": "string"
+        },
+        "canonical_relationship_home": {
+          "const": "entity_relationships",
+          "type": "string"
+        },
+        "no_new_tables": {
+          "const": true,
+          "type": "boolean"
+        },
+        "no_runtime_activation": {
+          "const": true,
+          "type": "boolean"
+        },
+        "promotion_authority": {
+          "const": "source_backed_admission_else_abstain",
+          "type": "string"
+        },
+        "missingness_states": {
+          "type": "array",
+          "minItems": 4,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "not_yet_researched",
+              "unavailable_public",
+              "not_applicable",
+              "blocked_source_conflict"
+            ]
+          }
+        }
+      }
+    },
+    "sourceScope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scope_id",
+        "source_kind",
+        "authority_state",
+        "evidence_locator"
+      ],
+      "properties": {
+        "scope_id": {
+          "type": "string",
+          "pattern": "^scope:[a-z0-9][a-z0-9._-]*$"
+        },
+        "source_kind": {
+          "type": "string",
+          "enum": [
+            "official_dataset",
+            "legacy_field",
+            "registry",
+            "contract",
+            "synthetic_fixture",
+            "research_note"
+          ]
+        },
+        "authority_state": {
+          "type": "string",
+          "enum": [
+            "source_scoped",
+            "candidate_only",
+            "abstained"
+          ]
+        },
+        "evidence_locator": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "temporalScope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "precision",
+        "as_of",
+        "valid_from",
+        "valid_to"
+      ],
+      "properties": {
+        "precision": {
+          "type": "string",
+          "enum": [
+            "day",
+            "month",
+            "year",
+            "interval",
+            "as_of",
+            "unknown",
+            "not_applicable"
+          ]
+        },
+        "as_of": {
+          "type": "string",
+          "format": "date"
+        },
+        "valid_from": {
+          "$ref": "#/$defs/dateOrNull"
+        },
+        "valid_to": {
+          "$ref": "#/$defs/dateOrNull"
+        }
+      }
+    },
+    "vocabularyTerm": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "term_id",
+        "kind",
+        "canonical_name",
+        "definition",
+        "canonical_home",
+        "source_scopes",
+        "temporal_precision",
+        "examples",
+        "promotion_policy"
+      ],
+      "properties": {
+        "term_id": {
+          "type": "string",
+          "pattern": "^term:[a-z][a-z0-9-]*$"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "entity",
+            "attribute",
+            "identifier",
+            "relationship",
+            "observation",
+            "temporal"
+          ]
+        },
+        "canonical_name": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "definition": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "canonical_home": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "source_scopes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/sourceScope"
+          }
+        },
+        "temporal_precision": {
+          "type": "string",
+          "enum": [
+            "point",
+            "day",
+            "month",
+            "year",
+            "interval",
+            "as_of",
+            "not_applicable"
+          ]
+        },
+        "examples": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/nonEmptyString"
+          }
+        },
+        "promotion_policy": {
+          "const": "bounded_vocabulary_only",
+          "type": "string"
+        }
+      }
+    },
+    "entityExample": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "entity_ref",
+        "term_ref",
+        "entity_type",
+        "entity_role",
+        "display_name",
+        "source_scopes",
+        "temporal_scope",
+        "state"
+      ],
+      "properties": {
+        "entity_ref": {
+          "type": "string",
+          "pattern": "^entity:[a-z0-9][a-z0-9._-]*$"
+        },
+        "term_ref": {
+          "const": "term:entity",
+          "type": "string"
+        },
+        "entity_type": {
+          "type": "string",
+          "enum": [
+            "health_system",
+            "facility",
+            "payer",
+            "health_plan",
+            "academic_unit",
+            "physician_group",
+            "service_line",
+            "market",
+            "program"
+          ]
+        },
+        "entity_role": {
+          "type": "string",
+          "enum": [
+            "delivery_system",
+            "hospital",
+            "outpatient_site",
+            "payer_brand",
+            "payer_legal_entity",
+            "academic_parent",
+            "physician_network",
+            "service_category",
+            "geographic_market",
+            "operational_program",
+            "unknown"
+          ]
+        },
+        "display_name": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "source_scopes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/sourceScope"
+          }
+        },
+        "temporal_scope": {
+          "$ref": "#/$defs/temporalScope"
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "source_backed",
+            "ambiguous",
+            "abstained",
+            "not_yet_researched"
+          ]
+        }
+      }
+    },
+    "identifierExample": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "example_id",
+        "subject_ref",
+        "subject_term_ref",
+        "identifier_type",
+        "value",
+        "issuer",
+        "source_scopes",
+        "temporal_scope",
+        "confidence_state",
+        "state",
+        "promotable"
+      ],
+      "properties": {
+        "example_id": {
+          "type": "string",
+          "pattern": "^identifier-example:[a-z0-9][a-z0-9._-]*$"
+        },
+        "subject_ref": {
+          "type": "string",
+          "pattern": "^entity:[a-z0-9][a-z0-9._-]*$"
+        },
+        "subject_term_ref": {
+          "type": "string",
+          "pattern": "^term:[a-z][a-z0-9-]*$"
+        },
+        "identifier_type": {
+          "type": "string",
+          "enum": [
+            "cms_ccn",
+            "npi",
+            "ein",
+            "source_local_id",
+            "generated_internal_id",
+            "slug",
+            "ahrq_health_sys_id",
+            "fast_hsid",
+            "location_id",
+            "role_id",
+            "other"
+          ]
+        },
+        "value": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/nonEmptyString"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "issuer": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "source_scopes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/sourceScope"
+          }
+        },
+        "temporal_scope": {
+          "$ref": "#/$defs/temporalScope"
+        },
+        "confidence_state": {
+          "type": "string",
+          "enum": [
+            "verified",
+            "source_backed",
+            "generated",
+            "disputed",
+            "unknown"
+          ]
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "source_backed",
+            "ambiguous",
+            "abstained"
+          ]
+        },
+        "candidate_refs": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^entity:[a-z0-9][a-z0-9._-]*$"
+          }
+        },
+        "ambiguity_reason": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "abstention_reason": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "promotable": {
+          "const": false,
+          "type": "boolean"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "source_backed"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "value"
+            ],
+            "properties": {
+              "value": {
+                "$ref": "#/$defs/nonEmptyString"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "ambiguous"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "candidate_refs",
+              "ambiguity_reason"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "abstained"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "abstention_reason"
+            ],
+            "properties": {
+              "value": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "relationshipExample": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "relationship_id",
+        "subject_ref",
+        "object_ref",
+        "term_ref",
+        "predicate",
+        "source_scopes",
+        "temporal_scope",
+        "status",
+        "confidence_state",
+        "transitive",
+        "promotion_state"
+      ],
+      "properties": {
+        "relationship_id": {
+          "type": "string",
+          "pattern": "^relationship-example:[a-z0-9][a-z0-9._-]*$"
+        },
+        "subject_ref": {
+          "type": "string",
+          "pattern": "^entity:[a-z0-9][a-z0-9._-]*$"
+        },
+        "object_ref": {
+          "type": "string",
+          "pattern": "^entity:[a-z0-9][a-z0-9._-]*$"
+        },
+        "term_ref": {
+          "const": "term:relationship",
+          "type": "string"
+        },
+        "predicate": {
+          "type": "string",
+          "enum": [
+            "owns",
+            "operates",
+            "affiliated_with",
+            "subsidiary_of",
+            "payer_arm_of",
+            "academic_affiliate",
+            "clinically_integrated_network",
+            "joint_venture"
+          ]
+        },
+        "source_scopes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/sourceScope"
+          }
+        },
+        "temporal_scope": {
+          "$ref": "#/$defs/temporalScope"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "active",
+            "inactive",
+            "proposed",
+            "historical",
+            "unknown"
+          ]
+        },
+        "confidence_state": {
+          "type": "string",
+          "enum": [
+            "source_backed",
+            "source_conflict",
+            "unavailable_public",
+            "not_applicable",
+            "unknown"
+          ]
+        },
+        "transitive": {
+          "const": false,
+          "type": "boolean"
+        },
+        "promotion_state": {
+          "const": "not_promoted",
+          "type": "string"
+        }
+      }
+    },
+    "observationExample": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "observation_id",
+        "subject_ref",
+        "attribute_term_ref",
+        "value",
+        "value_state",
+        "source_scopes",
+        "temporal_scope"
+      ],
+      "properties": {
+        "observation_id": {
+          "type": "string",
+          "pattern": "^observation-example:[a-z0-9][a-z0-9._-]*$"
+        },
+        "subject_ref": {
+          "type": "string",
+          "pattern": "^(entity|source-record):[a-z0-9][a-z0-9._-]*$"
+        },
+        "attribute_term_ref": {
+          "type": "string",
+          "pattern": "^term:[a-z][a-z0-9-]*$"
+        },
+        "value": {},
+        "value_state": {
+          "type": "string",
+          "enum": [
+            "observed",
+            "ambiguous",
+            "abstained",
+            "not_yet_researched",
+            "unavailable_public",
+            "not_applicable",
+            "blocked_source_conflict"
+          ]
+        },
+        "source_scopes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/sourceScope"
+          }
+        },
+        "temporal_scope": {
+          "$ref": "#/$defs/temporalScope"
+        }
+      }
+    },
+    "validationPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "identifier_scope_required",
+        "as_of_precision_required",
+        "relationship_transitivity_explicit",
+        "temporal_order_required",
+        "entity_role_separation",
+        "unknown_terms_rejected",
+        "silent_missingness_rejected"
+      ],
+      "properties": {
+        "identifier_scope_required": {
+          "const": true,
+          "type": "boolean"
+        },
+        "as_of_precision_required": {
+          "const": true,
+          "type": "boolean"
+        },
+        "relationship_transitivity_explicit": {
+          "const": true,
+          "type": "boolean"
+        },
+        "temporal_order_required": {
+          "const": true,
+          "type": "boolean"
+        },
+        "entity_role_separation": {
+          "const": true,
+          "type": "boolean"
+        },
+        "unknown_terms_rejected": {
+          "const": true,
+          "type": "boolean"
+        },
+        "silent_missingness_rejected": {
+          "const": true,
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

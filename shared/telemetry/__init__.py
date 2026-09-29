@@ -1,0 +1,43 @@
+"""Versioned, bounded correlation telemetry for source-plane runs."""
+
+from shared.telemetry.recorder import (
+    CorrelatedRunTelemetryRecorder,
+    DEFAULT_DIMENSION_KEYS,
+    DlqState,
+    FreshnessState,
+    RunTelemetry,
+    RunTelemetrySummary,
+    TelemetryAction,
+    TelemetryCapacityError,
+    TelemetryCollisionError,
+    TelemetryError,
+    TelemetryEvent,
+    TelemetryNotFoundError,
+    TelemetryReceipt,
+    TelemetryRecorder,
+    TelemetryStatus,
+    TelemetryStateError,
+    TelemetryValidationError,
+    build_run_telemetry,
+)
+
+__all__ = [
+    "CorrelatedRunTelemetryRecorder",
+    "DEFAULT_DIMENSION_KEYS",
+    "DlqState",
+    "FreshnessState",
+    "RunTelemetry",
+    "RunTelemetrySummary",
+    "TelemetryAction",
+    "TelemetryCapacityError",
+    "TelemetryCollisionError",
+    "TelemetryError",
+    "TelemetryEvent",
+    "TelemetryNotFoundError",
+    "TelemetryReceipt",
+    "TelemetryRecorder",
+    "TelemetryStatus",
+    "TelemetryStateError",
+    "TelemetryValidationError",
+    "build_run_telemetry",
+]

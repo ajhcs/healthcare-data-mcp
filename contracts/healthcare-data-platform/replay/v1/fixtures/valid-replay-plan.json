@@ -1,0 +1,51 @@
+{
+  "schema_version": "hdp.replay.v1",
+  "record_type": "replay_plan",
+  "plan_id": "replay:plan:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "idempotency_key": "replay:idem:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "plan_sha256": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "source_id": "source:ahrq:lighthouse",
+  "from_version": "release:ahrq:2026-08-01",
+  "to_version": "release:ahrq:2026-08-02",
+  "contract_version": "hdp.replay.v1",
+  "max_items": 2,
+  "max_bytes": 2048,
+  "state": "planned",
+  "cancel_requested": false,
+  "created_at": "2026-08-29T00:00:00Z",
+  "updated_at": "2026-08-29T00:00:00Z",
+  "items": [
+    {
+      "item_id": "replay:item:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "work_identity": "replay:work:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "source_id": "source:ahrq:lighthouse",
+      "version": "release:ahrq:2026-08-01",
+      "ordinal": 0,
+      "estimated_bytes": 1024,
+      "state": "pending",
+      "attempts": 0,
+      "result_sha256": null,
+      "result_ref": null,
+      "result_bytes": null,
+      "error": null,
+      "started_at": null,
+      "completed_at": null
+    },
+    {
+      "item_id": "replay:item:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "work_identity": "replay:work:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "source_id": "source:ahrq:lighthouse",
+      "version": "release:ahrq:2026-08-02",
+      "ordinal": 1,
+      "estimated_bytes": 1024,
+      "state": "pending",
+      "attempts": 0,
+      "result_sha256": null,
+      "result_ref": null,
+      "result_bytes": null,
+      "error": null,
+      "started_at": null,
+      "completed_at": null
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+interface:
+  display_name: "Form 990 Exact Facts"
+  short_description: "Retrieve exact IRS Form 990 facts with XML provenance"
+  default_prompt: "Use $form-990-facts to answer this known-EIN and tax-year Form 990 question."
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "form-990-facts"
+      description: "LAN-only read-only exact Form 990 fact store"
+      transport: "streamable_http"
+      url: "http://192.168.1.60:8022/mcp"
+
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.ushso.org/healthcare-data-platform/staging/v1/staging-activation-receipt.schema.json",
+  "title": "Healthcare Data MCP staging activation receipt v1",
+  "description": "Approval-gated evidence contract. A pending receipt is preparation evidence only and never proves activation.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "record_type", "receipt_id", "bundle_release_id", "source_commit", "environment", "state", "activation_performed", "approval", "outcomes", "prohibitions"],
+  "properties": {
+    "schema_version": {"const": "hdp.staging-activation-receipt.v1"},
+    "record_type": {"const": "staging_activation_receipt"},
+    "receipt_id": {"type": "string", "pattern": "^receipt:staging-activation:[a-z0-9][a-z0-9._:-]*$"},
+    "bundle_release_id": {"type": "string", "pattern": "^p1-31-[a-z0-9-]+$"},
+    "source_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "environment": {"const": "staging"},
+    "state": {"enum": ["pending_approval", "approved", "denied", "completed"]},
+    "activation_performed": {"const": false},
+    "approval": {
+      "type": "object", "additionalProperties": false,
+      "required": ["state", "scope", "required_before"],
+      "properties": {
+        "state": {"enum": ["pending", "approved", "denied"]},
+        "scope": {"const": "staging-activation"},
+        "required_before": {"enum": ["restart", "migration", "activation"]},
+        "approved_by": {"type": ["string", "null"], "pattern": "^[^\\s].{0,127}$"},
+        "approved_at": {"type": ["string", "null"], "format": "date-time"}
+      }
+    },
+    "outcomes": {
+      "type": "object", "additionalProperties": false,
+      "required": ["restart", "no_op", "change", "custody", "lifecycle", "telemetry", "rollback"],
+      "properties": {
+        "restart": {"$ref": "#/$defs/outcome"},
+        "no_op": {"$ref": "#/$defs/outcome"},
+        "change": {"$ref": "#/$defs/outcome"},
+        "custody": {"$ref": "#/$defs/outcome"},
+        "lifecycle": {"$ref": "#/$defs/outcome"},
+        "telemetry": {"$ref": "#/$defs/outcome"},
+        "rollback": {"$ref": "#/$defs/outcome"}
+      }
+    },
+    "prohibitions": {
+      "type": "object", "additionalProperties": false,
+      "required": ["services_started", "ports_bound", "migrations_applied", "credentials_resolved", "sources_probed", "runtime_state_written"],
+      "properties": {
+        "services_started": {"const": false}, "ports_bound": {"const": false},
+        "migrations_applied": {"const": false}, "credentials_resolved": {"const": false},
+        "sources_probed": {"const": false}, "runtime_state_written": {"const": false}
+      }
+    }
+  },
+  "$defs": {
+    "outcome": {
+      "type": "object", "additionalProperties": false,
+      "required": ["state", "approval_required", "mutation_performed", "evidence_refs"],
+      "properties": {
+        "state": {"enum": ["pending_approval", "not_run", "passed", "failed", "blocked"]},
+        "approval_required": {"const": true},
+        "mutation_performed": {"const": false},
+        "evidence_refs": {"type": "array", "maxItems": 16, "items": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._:/-]{0,159}$"}},
+        "note": {"type": "string", "maxLength": 512}
+      }
+    }
+  },
+  "allOf": [{"if": {"properties": {"state": {"const": "pending_approval"}}}, "then": {"properties": {"approval": {"properties": {"state": {"const": "pending"}}}}}}]
+}

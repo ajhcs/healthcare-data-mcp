@@ -1,0 +1,24 @@
+{
+  "schema_version": "hdp.raw-artifact.v1",
+  "record_type": "raw_artifact_manifest",
+  "artifact": {
+    "schema_version": "hdp.raw-artifact.v1",
+    "record_type": "raw_artifact",
+    "artifact_id": "artifact:raw:c53bae244743049189a7196998373800",
+    "source_id": "source:ahrq:lighthouse",
+    "source_url": "https://example.org/ahrq/release.json",
+    "release_id": "release:ahrq:2026-08-22",
+    "media_type": "application/json",
+    "content_sha256": "sha256:ff7dd2bc7ecb60035b8d4c4213c5ae405fdebc225016918cf38b02856decf92c",
+    "byte_length": 54,
+    "chunk_count": 4,
+    "chunk_size": 16,
+    "idempotency_key": "idempotency:raw:c53bae244743049189a7196998373800",
+    "captured_at": "2026-08-28T23:00:00Z",
+    "rights_status": "approved_public",
+    "prior_artifact_id": null,
+    "response_fingerprint": null
+  },
+  "object_key": "objects/sha256/ff/ff7dd2bc7ecb60035b8d4c4213c5ae405fdebc225016918cf38b02856decf92c",
+  "metadata_sha256": "sha256:c2c788e3e0b02e8ccd443af37e9ae2edc13736caf279254566ca36140469358e"
+}

@@ -1,0 +1,17 @@
+{
+  "all_queries_ready": true,
+  "benchmark": "warm_post_ingestion_exact_ein_year_query",
+  "cold_ingestion_included": false,
+  "comparison_note": "Native-research time must be observed separately for the same exact fact set; the benchmark never folds cold IRS archive retrieval into user-facing latency.",
+  "database": ".local/irs990-facts.sqlite3",
+  "iterations": 2000,
+  "native_research_reference_seconds": 290.548084,
+  "queries": 36,
+  "speedup_vs_native_research_median": 1105906.1,
+  "warm_latency_ms": {
+    "max": 2.583,
+    "median": 0.263,
+    "min": 0.237,
+    "p95": 0.388
+  }
+}
